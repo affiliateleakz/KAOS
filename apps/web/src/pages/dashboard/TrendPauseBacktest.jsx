@@ -7,6 +7,7 @@ function readCandles(text,label){
  return data.map((row,i)=>{
   if(!row||typeof row!=="object")throw Error(label+" row "+i+" is not an object");
   const ts=Number(row.ts),open=Number(row.open),high=Number(row.high),low=Number(row.low),close=Number(row.close);
+  if(!Number.isSafeInteger(ts)||ts<1000000000000||ts>9999999999999)throw Error(label+" row "+i+" requires a Unix millisecond timestamp");
   if(![ts,open,high,low,close].every(Number.isFinite))throw Error(label+" row "+i+" contains invalid OHLC or timestamp");
   return {ts,open,high,low,close};
  });
@@ -36,11 +37,11 @@ export default function TrendPauseBacktest(){
  };
  return <section className="card-surface p-5 space-y-4" data-testid="trend-pause-backtest">
    <h2 className="font-heading text-lg font-bold">KAOS Trend-Pause Backtest · Historical Research</h2>
-   <p className="text-xs text-slate-400">Paste real chronological candle arrays containing ts (Unix seconds), open, high, low and close. One-minute and 15-second data must refer to the same market and period. No synthetic candles or broker orders.</p>
+   <p className="text-xs text-slate-400">Paste real chronological candle arrays containing ts (Unix milliseconds), open, high, low and close. One-minute and 15-second data must refer to the same market and period. No synthetic candles or broker orders.</p>
    <form onSubmit={run} className="space-y-3">\n    <div className="grid gap-3 md:grid-cols-2">\n      <label className="text-xs">Import 1-minute JSON file<input type="file" accept=".json,application/json" onChange={e=>importFile(e,setMinutes)} className="mt-1 block w-full text-xs"/></label>\n      <label className="text-xs">Import 15-second JSON file<input type="file" accept=".json,application/json" onChange={e=>importFile(e,setSeconds)} className="mt-1 block w-full text-xs"/></label>\n    </div>
      <div className="grid gap-3 md:grid-cols-2">
-      <label className="text-sm">1-minute candles (at least 53)<textarea value={minutes} onChange={e=>setMinutes(e.target.value)} required rows={5} spellCheck={false} placeholder='[{"ts":1760000000,"open":1,"high":2,"low":1,"close":2}]' className="mt-1 w-full rounded border border-[#333] bg-[#0c0c0c] p-2 font-mono text-xs"/></label>
-      <label className="text-sm">15-second candles (at least 24)<textarea value={seconds} onChange={e=>setSeconds(e.target.value)} required rows={5} spellCheck={false} placeholder='[{"ts":1760000000,"open":1,"high":2,"low":1,"close":2}]' className="mt-1 w-full rounded border border-[#333] bg-[#0c0c0c] p-2 font-mono text-xs"/></label>
+      <label className="text-sm">1-minute candles (at least 53)<textarea value={minutes} onChange={e=>setMinutes(e.target.value)} required rows={5} spellCheck={false} placeholder='[{"ts":1760054400000,"open":1,"high":2,"low":1,"close":2}]' className="mt-1 w-full rounded border border-[#333] bg-[#0c0c0c] p-2 font-mono text-xs"/></label>
+      <label className="text-sm">15-second candles (at least 24)<textarea value={seconds} onChange={e=>setSeconds(e.target.value)} required rows={5} spellCheck={false} placeholder='[{"ts":1760054400000,"open":1,"high":2,"low":1,"close":2}]' className="mt-1 w-full rounded border border-[#333] bg-[#0c0c0c] p-2 font-mono text-xs"/></label>
      </div>
      <label className="block text-sm">Expiry / exit horizon<select value={horizon} onChange={e=>setHorizon(e.target.value)} className="ml-2 rounded border border-[#333] bg-[#111] p-2">{[15,30,60,120,300,900].map(s=><option key={s} value={s}>{s}s</option>)}</select></label>
      <button disabled={loading} type="submit" className="rounded bg-[#2F8CFF] px-4 py-2 text-sm font-semibold text-black disabled:opacity-40">{loading?"Running replay…":"Run Historical Backtest"}</button>
