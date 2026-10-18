@@ -17,6 +17,7 @@ import * as DP from "./pages/dashboard/pages";
 import Trading from "./pages/dashboard/Trading";
 import OpportunityRadar from "./pages/dashboard/OpportunityRadar";
 import BrokerConnections from "./pages/dashboard/BrokerConnections";
+import PaperTrading from "./pages/dashboard/PaperTrading";
 import { AffiliatePage, AIPage } from "./pages/dashboard/AffiliateAI";
 import AdminLayout from "./pages/admin/AdminLayout";
 import * as AP from "./pages/admin/pages";
@@ -61,6 +62,7 @@ function AppRouter() {
         <Route path="trading" element={<Trading />} />
         <Route path="opportunities" element={<OpportunityRadar />} />
         <Route path="brokers" element={<BrokerConnections />} />
+        <Route path="paper" element={<PaperTrading />} />
         <Route path="kaos-ai" element={<AIPage />} />
         <Route path="affiliate" element={<AffiliatePage />} />
         <Route path="strategies" element={<DP.MyStrategies />} />
