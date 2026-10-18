@@ -29,9 +29,28 @@ def test_encrypted_at_rest_and_never_echoed(monkeypatch):
             assert "fake-secret" not in str(update)
     class FakeDB:
         admin_free_api_credentials=Collection()
+    audited=[]
+    async def audit(actor,action,target_type,target_id):
+        audited.append((actor["id"],action,target_type,target_id))
+    monkeypatch.setattr(api,"audit_log",audit)
     monkeypatch.setattr(api,"vault",lambda:Cipher())
     monkeypatch.setattr(api,"db",FakeDB())
     result=run(api.save_key("fred_free",api.KeyInput(api_key="fake-secret-1234"),admin={"id":"admin"}))
     assert result["key_saved"] is True
+    assert audited==[("admin","free_api_key_saved","data_api","fred_free")]
     assert result["connected"] is False
     assert "api_key" not in result and "key_enc" not in result
+
+def test_revocation_is_audited_without_key_material(monkeypatch):
+    calls=[]
+    class Collection:
+        async def delete_one(self,selector):
+            assert selector=={"provider":"fred_free"}
+    class FakeDB: admin_free_api_credentials=Collection()
+    async def audit(actor,action,target_type,target_id):
+        calls.append((actor["id"],action,target_type,target_id))
+    monkeypatch.setattr(api,"db",FakeDB())
+    monkeypatch.setattr(api,"audit_log",audit)
+    result=run(api.delete_key("fred_free",admin={"id":"admin"}))
+    assert result=={"provider":"fred_free","key_saved":False}
+    assert calls==[("admin","free_api_key_revoked","data_api","fred_free")]
