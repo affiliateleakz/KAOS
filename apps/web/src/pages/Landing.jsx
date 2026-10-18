@@ -9,9 +9,9 @@ import { Link } from "react-router-dom";
    KAOS BOT, FEATURES, PRICING, RESULTS, FAQ + footer.
    ===================================================================================== */
 
-const GOLD = "#f0c35d";
-const GOLD_DEEP = "#d4a94e";
-const GOLD_BORDER = "#6d5522";
+const GOLD = "#2F8CFF"; // primary accent: electric blue (name kept for diff size)
+const GOLD_DEEP = "#1A5FCC";
+const GOLD_BORDER = "#2a3a52";
 const GREEN = "#35d07f";
 const RED = "#ff5c5c";
 
@@ -77,17 +77,17 @@ function Toggle({ on = true }) {
     <span style={{
       width: 34, height: 19, borderRadius: 999, display: "inline-flex", alignItems: "center",
       justifyContent: on ? "flex-end" : "flex-start", padding: 2,
-      background: on ? "#12503a" : "#26231c", border: `1px solid ${on ? "#1f7a54" : "#3a362b"}`,
+      background: on ? "#12503a" : "#26231c", border: `1px solid ${on ? "#1f7a54" : "#31353d"}`,
       boxShadow: on ? "0 0 8px rgba(53,208,127,.45)" : "none", flexShrink: 0,
     }}>
-      <span style={{ width: 13, height: 13, borderRadius: "50%", background: on ? GREEN : "#6b6553" }} />
+      <span style={{ width: 13, height: 13, borderRadius: "50%", background: on ? GREEN : "#60646c" }} />
     </span>
   );
 }
 
 const Kpi = ({ label, value, color = GOLD }) => (
-  <div style={{ flex: 1, background: "#0e0c08", border: "1px solid #2c2415", borderRadius: 8, padding: "8px 10px", minWidth: 0 }}>
-    <div style={{ fontSize: 9, letterSpacing: ".12em", color: "#8d8266", textTransform: "uppercase", whiteSpace: "nowrap" }}>{label}</div>
+  <div style={{ flex: 1, background: "#0e0c08", border: "1px solid #20242c", borderRadius: 8, padding: "8px 10px", minWidth: 0 }}>
+    <div style={{ fontSize: 9, letterSpacing: ".12em", color: "#7e828a", textTransform: "uppercase", whiteSpace: "nowrap" }}>{label}</div>
     <div style={{ fontSize: 17, fontWeight: 700, color, lineHeight: 1.25, whiteSpace: "nowrap" }}>{value}</div>
   </div>
 );
@@ -98,9 +98,9 @@ const SYSTEMS = [
     name: "Dashboard", tag: "REAL-TIME TRADING CONTROL",
     visual: (
       <div>
-        <div style={{ display: "flex", gap: 6, marginBottom: 8, fontSize: 10, color: "#b7ad92" }}>
-          <span style={{ background: "#141109", border: "1px solid #2c2415", borderRadius: 6, padding: "3px 8px" }}>AUDUSD_otc</span>
-          <span style={{ background: "#141109", border: "1px solid #2c2415", borderRadius: 6, padding: "3px 8px" }}>30s</span>
+        <div style={{ display: "flex", gap: 6, marginBottom: 8, fontSize: 10, color: "#a8acb4" }}>
+          <span style={{ background: "#141109", border: "1px solid #20242c", borderRadius: 6, padding: "3px 8px" }}>AUDUSD_otc</span>
+          <span style={{ background: "#141109", border: "1px solid #20242c", borderRadius: 6, padding: "3px 8px" }}>30s</span>
           <span style={{ marginLeft: "auto", color: GREEN }}>AUTO</span>
         </div>
         <CandleChart height={120} />
@@ -120,8 +120,8 @@ const SYSTEMS = [
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {[["Timeframe", "30 Seconds"], ["Expiration", "30 Seconds"], ["Continuation Mode", true], ["Reversal Mode", true],
           ["ZigZag 5 / 3 / 1", true], ["Supertrend 3 / 1.75", true], ["Parabolic SAR 0.02 / 0.20", true]].map(([k, v]) => (
-          <div key={k} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#0e0c08", border: "1px solid #2c2415", borderRadius: 7, padding: "7px 10px", fontSize: 12 }}>
-            <span style={{ color: "#cfc5a8" }}>{k}</span>
+          <div key={k} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#0e0c08", border: "1px solid #20242c", borderRadius: 7, padding: "7px 10px", fontSize: 12 }}>
+            <span style={{ color: "#c0c4cc" }}>{k}</span>
             {typeof v === "string"
               ? <span style={{ color: GOLD, fontWeight: 700, fontSize: 11 }}>{v}</span>
               : <Toggle on={v} />}
@@ -137,8 +137,8 @@ const SYSTEMS = [
     visual: (
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
         {["AUDUSD_otc", "EURNZD_otc", "GBPUSD_otc", "BTCUSD_otc"].map((m, i) => (
-          <div key={m} style={{ background: "#0e0c08", border: "1px solid #2c2415", borderRadius: 8, padding: "6px 8px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9.5, color: "#b7ad92", marginBottom: 4 }}>
+          <div key={m} style={{ background: "#0e0c08", border: "1px solid #20242c", borderRadius: 8, padding: "6px 8px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9.5, color: "#a8acb4", marginBottom: 4 }}>
               <span>{m}</span><span style={{ color: GOLD }}>30s</span>
             </div>
             <MiniLine rising={i % 2 === 0} height={58} />
@@ -163,7 +163,7 @@ const SYSTEMS = [
             <span key={i} style={{ flex: 1, height: `${h}%`, background: `linear-gradient(180deg,${GREEN},${GREEN}55)`, borderRadius: 3 }} />
           ))}
         </div>
-        <div style={{ fontSize: 11, lineHeight: 1.9, color: "#cfc5a8" }}>
+        <div style={{ fontSize: 11, lineHeight: 1.9, color: "#c0c4cc" }}>
           <div><b style={{ color: GREEN }}>Trade Win</b> — Added to model</div>
           <div><b style={{ color: RED }}>Trade Loss</b> — Added to model</div>
           <div><b style={{ color: GOLD }}>Pattern Match</b> — High probability setup</div>
@@ -233,8 +233,8 @@ const FAQS = [
 const sectionHead = (kicker, title, sub) => (
   <div style={{ textAlign: "center", maxWidth: 860, margin: "0 auto 42px" }}>
     <div style={{ fontSize: 12, letterSpacing: ".35em", color: GOLD_DEEP, marginBottom: 12, textTransform: "uppercase" }}>{kicker}</div>
-    <h2 style={{ margin: 0, fontFamily: "'Oswald','Inter',sans-serif", fontSize: "clamp(28px,3.4vw,44px)", lineHeight: 1.12, letterSpacing: ".02em", color: "#f3ead2", textTransform: "uppercase" }}>{title}</h2>
-    {sub && <p style={{ margin: "14px auto 0", color: "#a99f86", fontSize: 15, lineHeight: 1.7 }}>{sub}</p>}
+    <h2 style={{ margin: 0, fontFamily: "'Oswald','Inter',sans-serif", fontSize: "clamp(28px,3.4vw,44px)", lineHeight: 1.12, letterSpacing: ".02em", color: "#e5e9f1", textTransform: "uppercase" }}>{title}</h2>
+    {sub && <p style={{ margin: "14px auto 0", color: "#9b9fa7", fontSize: 15, lineHeight: 1.7 }}>{sub}</p>}
   </div>
 );
 
@@ -288,11 +288,11 @@ export default function Landing() {
   ];
 
   return (
-    <div id="top" style={{ background: "#020303", color: "#e8e2d4", margin: 0 }}>
+    <div id="top" style={{ background: "#020303", color: "#dee2ea", margin: 0 }}>
       <style>{`
         html{scroll-behavior:smooth}
         .kx-section{scroll-margin-top:74px}
-        .kx-navlink{position:relative;padding:6px 2px;color:#d9d0b8;text-decoration:none;font-size:12.5px;letter-spacing:.14em;white-space:nowrap;transition:color .2s}
+        .kx-navlink{position:relative;padding:6px 2px;color:#cbcfd7;text-decoration:none;font-size:12.5px;letter-spacing:.14em;white-space:nowrap;transition:color .2s}
         .kx-navlink:hover{color:${GOLD}}
         .kx-navlink.active{color:${GOLD}}
         .kx-navlink.active:after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:${GOLD};border-radius:2px}
@@ -300,7 +300,7 @@ export default function Landing() {
         .kx-card:hover{transform:translateY(-4px);border-color:${GOLD_DEEP};box-shadow:0 22px 60px rgba(0,0,0,.6),0 0 0 1px rgba(240,195,93,.15)}
         .kx-cta{display:inline-flex;align-items:center;gap:10px;background:linear-gradient(180deg,#f4cd6d,#c9963a);color:#1c1204;font-weight:800;letter-spacing:.08em;border-radius:10px;padding:14px 26px;text-decoration:none;box-shadow:0 10px 26px rgba(212,169,78,.35);transition:transform .2s,box-shadow .2s}
         .kx-cta:hover{transform:translateY(-2px);box-shadow:0 14px 32px rgba(212,169,78,.5)}
-        .kx-ghost{display:inline-flex;align-items:center;gap:10px;border:1px solid ${GOLD_BORDER};color:#e9dfc4;border-radius:10px;padding:14px 26px;text-decoration:none;letter-spacing:.08em;font-weight:600;background:rgba(20,17,9,.6);transition:border-color .2s,color .2s}
+        .kx-ghost{display:inline-flex;align-items:center;gap:10px;border:1px solid ${GOLD_BORDER};color:#dadee6;border-radius:10px;padding:14px 26px;text-decoration:none;letter-spacing:.08em;font-weight:600;background:rgba(20,17,9,.6);transition:border-color .2s,color .2s}
         .kx-ghost:hover{border-color:${GOLD};color:${GOLD}}
         details summary::-webkit-details-marker{display:none}
       `}</style>
@@ -323,24 +323,24 @@ export default function Landing() {
         <div style={{ maxWidth: 1280, margin: "36px auto 0", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(340px,1fr))", gap: 44, alignItems: "center" }}>
           <div>
             <p style={{ color: GOLD, letterSpacing: ".3em", fontSize: 12, margin: 0 }}>TRADE WITH KAOS</p>
-            <h1 style={{ fontFamily: "'Oswald',sans-serif", fontSize: "clamp(40px,6vw,76px)", lineHeight: 1.02, margin: "14px 0 18px", color: "#f5efe0", letterSpacing: ".02em" }}>KAOS TRADING BOT</h1>
-            <p style={{ fontSize: 17, lineHeight: 1.7, color: "#c9c0a8", maxWidth: 560, margin: 0 }}>
+            <h1 style={{ fontFamily: "'Oswald',sans-serif", fontSize: "clamp(40px,6vw,76px)", lineHeight: 1.02, margin: "14px 0 18px", color: "#ebeff7", letterSpacing: ".02em" }}>KAOS TRADING BOT</h1>
+            <p style={{ fontSize: 17, lineHeight: 1.7, color: "#bbbfc7", maxWidth: 560, margin: 0 }}>
               Rule-based KAOS strategies, AI market analysis, multi-market tools and risk limits in one command center. Start free in Strategy mode and practise with paper trading before you risk real money.
             </p>
             <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginTop: 28 }}>
               <Link to="/register" className="kx-cta">GET KAOS FREE <span aria-hidden="true">→</span></Link>
               <a href="#kaos-bot" className="kx-ghost">SEE HOW IT WORKS</a>
             </div>
-            <ul style={{ listStyle: "none", padding: 0, margin: "26px 0 0", display: "flex", gap: "10px 22px", flexWrap: "wrap", color: "#b7ad92", fontSize: 13, letterSpacing: ".06em" }}>
+            <ul style={{ listStyle: "none", padding: 0, margin: "26px 0 0", display: "flex", gap: "10px 22px", flexWrap: "wrap", color: "#a8acb4", fontSize: 13, letterSpacing: ".06em" }}>
               {["Works with Pocket Option", "Paper trading included", "Free plan · no card required"].map((t) => (
                 <li key={t}><span style={{ color: GREEN }} aria-hidden="true">✓</span> {t}</li>
               ))}
             </ul>
           </div>
           <figure style={{ margin: 0, ...cardStyle, padding: 18 }}>
-            <div style={{ display: "flex", gap: 6, marginBottom: 8, fontSize: 10, color: "#b7ad92" }}>
-              <span style={{ background: "#141109", border: "1px solid #2c2415", borderRadius: 6, padding: "3px 8px" }}>EURUSD</span>
-              <span style={{ background: "#141109", border: "1px solid #2c2415", borderRadius: 6, padding: "3px 8px" }}>30s</span>
+            <div style={{ display: "flex", gap: 6, marginBottom: 8, fontSize: 10, color: "#a8acb4" }}>
+              <span style={{ background: "#141109", border: "1px solid #20242c", borderRadius: 6, padding: "3px 8px" }}>EURUSD</span>
+              <span style={{ background: "#141109", border: "1px solid #20242c", borderRadius: 6, padding: "3px 8px" }}>30s</span>
               <span style={{ marginLeft: "auto", color: GOLD }}>STRATEGY · PAPER</span>
             </div>
             <CandleChart height={170} />
@@ -349,7 +349,7 @@ export default function Landing() {
               <Kpi label="Trades" value="—" />
               <Kpi label="P/L" value="—" />
             </div>
-            <figcaption style={{ marginTop: 10, fontSize: 11, color: "#6f6753", lineHeight: 1.5 }}>Illustrative interface layout. Not real trades or performance.</figcaption>
+            <figcaption style={{ marginTop: 10, fontSize: 11, color: "#63676f", lineHeight: 1.5 }}>Illustrative interface layout. Not real trades or performance.</figcaption>
           </figure>
         </div>
       </main>
@@ -377,7 +377,7 @@ export default function Landing() {
           </nav>
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
             <Link to="/login" className="kx-navlink">LOGIN</Link>
-            <Link to="/register" style={{ background: "linear-gradient(180deg,#f4cd6d,#c9963a)", color: "#1c1204", fontWeight: 800, fontSize: 12.5, letterSpacing: ".1em", padding: "9px 18px", borderRadius: 8, textDecoration: "none", whiteSpace: "nowrap" }}>GET KAOS →</Link>
+            <Link to="/register" style={{ background: "linear-gradient(180deg,#6FB2FF,#2F7FEA)", color: "#021022", fontWeight: 800, fontSize: 12.5, letterSpacing: ".1em", padding: "9px 18px", borderRadius: 8, textDecoration: "none", whiteSpace: "nowrap" }}>GET KAOS →</Link>
           </div>
         </div>
       </div>
@@ -392,15 +392,15 @@ export default function Landing() {
                 <header>
                   <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
                     <h3 style={{ margin: 0, fontFamily: "'Oswald',sans-serif", fontSize: 23, letterSpacing: ".06em", color: GOLD, textTransform: "uppercase" }}>{s.name}</h3>
-                    <span style={{ fontSize: 9.5, letterSpacing: ".18em", color: "#8d8266" }}>0{i + 1}</span>
+                    <span style={{ fontSize: 9.5, letterSpacing: ".18em", color: "#7e828a" }}>0{i + 1}</span>
                   </div>
-                  <div style={{ fontSize: 10.5, letterSpacing: ".22em", color: "#a99f86", marginTop: 4 }}>{s.tag}</div>
+                  <div style={{ fontSize: 10.5, letterSpacing: ".22em", color: "#9b9fa7", marginTop: 4 }}>{s.tag}</div>
                 </header>
-                <div style={{ background: "#070604", border: "1px solid #241e11", borderRadius: 10, padding: 10 }}>{s.visual}</div>
-                <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.75, color: "#c9c0a8" }}>{s.text}</p>
+                <div style={{ background: "#070604", border: "1px solid #1a1e26", borderRadius: 10, padding: 10 }}>{s.visual}</div>
+                <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.75, color: "#bbbfc7" }}>{s.text}</p>
                 <ul style={{ margin: "auto 0 0", padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 7 }}>
                   {s.bullets.map((b) => (
-                    <li key={b} style={{ display: "flex", gap: 9, fontSize: 12.5, color: "#b7ad92", lineHeight: 1.5 }}>
+                    <li key={b} style={{ display: "flex", gap: 9, fontSize: 12.5, color: "#a8acb4", lineHeight: 1.5 }}>
                       <span style={{ color: GREEN, fontWeight: 800 }}>✓</span>{b}
                     </li>
                   ))}
@@ -408,24 +408,24 @@ export default function Landing() {
               </article>
             ))}
           </div>
-          <p style={{ textAlign: "center", color: "#6f6753", fontSize: 11.5, marginTop: 22 }}>
+          <p style={{ textAlign: "center", color: "#63676f", fontSize: 11.5, marginTop: 22 }}>
             Interface previews use sample data from the KAOS demo environment.
           </p>
         </div>
       </section>
 
       {/* ============================ FEATURES ============================ */}
-      <section id="features" className="kx-section" aria-labelledby="h-feat" style={{ padding: "70px 22px", borderTop: `1px solid #17130a`, background: "#050403" }}>
+      <section id="features" className="kx-section" aria-labelledby="h-feat" style={{ padding: "70px 22px", borderTop: `1px solid #0f1722`, background: "#050403" }}>
         <div style={{ maxWidth: 1180, margin: "0 auto" }}>
           {sectionHead("Features", "Built To Trade While You Don't", "Every layer of KAOS exists for one reason: execute a consistent plan, learn from real outcomes, and keep risk under control.")}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(290px,1fr))", gap: 18 }}>
             {FEATURES.map((f) => (
               <div key={f.t} className="kx-card" style={{ ...cardStyle, padding: "22px 22px 24px" }}>
-                <div style={{ width: 46, height: 46, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(180deg,#1c1608,#0e0b06)", border: `1px solid ${GOLD_BORDER}`, marginBottom: 14 }}>
+                <div style={{ width: 46, height: 46, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(180deg,#12161e,#0e0b06)", border: `1px solid ${GOLD_BORDER}`, marginBottom: 14 }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={f.icon} /></svg>
                 </div>
-                <h3 style={{ margin: "0 0 8px", fontFamily: "'Oswald',sans-serif", fontSize: 18, letterSpacing: ".05em", color: "#f3ead2", textTransform: "uppercase" }}>{f.t}</h3>
-                <p style={{ margin: 0, fontSize: 13, lineHeight: 1.75, color: "#b3aa92" }}>{f.d}</p>
+                <h3 style={{ margin: "0 0 8px", fontFamily: "'Oswald',sans-serif", fontSize: 18, letterSpacing: ".05em", color: "#e5e9f1", textTransform: "uppercase" }}>{f.t}</h3>
+                <p style={{ margin: 0, fontSize: 13, lineHeight: 1.75, color: "#a5a9b1" }}>{f.d}</p>
               </div>
             ))}
           </div>
@@ -443,19 +443,19 @@ export default function Landing() {
             {PLANS.map((p) => (
               <div key={p.id} className="kx-card" style={{ ...cardStyle, position: "relative", padding: "30px 28px 28px", display: "flex", flexDirection: "column", borderColor: p.best ? GOLD_DEEP : GOLD_BORDER, boxShadow: p.best ? "0 0 0 1px rgba(240,195,93,.25), 0 24px 60px rgba(0,0,0,.6)" : cardStyle.boxShadow }}>
                 {p.best && (
-                  <div style={{ position: "absolute", top: -13, left: "50%", transform: "translateX(-50%)", background: "linear-gradient(180deg,#f4cd6d,#c9963a)", color: "#1c1204", fontWeight: 800, fontSize: 10.5, letterSpacing: ".18em", padding: "6px 14px", borderRadius: 999, whiteSpace: "nowrap" }}>
+                  <div style={{ position: "absolute", top: -13, left: "50%", transform: "translateX(-50%)", background: "linear-gradient(180deg,#6FB2FF,#2F7FEA)", color: "#021022", fontWeight: 800, fontSize: 10.5, letterSpacing: ".18em", padding: "6px 14px", borderRadius: 999, whiteSpace: "nowrap" }}>
                     MOST POWERFUL
                   </div>
                 )}
                 <h3 style={{ margin: 0, fontFamily: "'Oswald',sans-serif", fontSize: 21, letterSpacing: ".12em", color: GOLD }}>{p.name.toUpperCase()}</h3>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 6, margin: "14px 0 4px" }}>
-                  <span style={{ fontFamily: "'Oswald',sans-serif", fontSize: 52, fontWeight: 700, color: "#f3ead2", lineHeight: 1 }}>{p.price}</span>
-                  <span style={{ color: "#8d8266", fontSize: 14 }}>{p.per}</span>
+                  <span style={{ fontFamily: "'Oswald',sans-serif", fontSize: 52, fontWeight: 700, color: "#e5e9f1", lineHeight: 1 }}>{p.price}</span>
+                  <span style={{ color: "#7e828a", fontSize: 14 }}>{p.per}</span>
                 </div>
-                <div style={{ color: "#8d8266", fontSize: 12.5, marginBottom: 20 }}>{p.note}</div>
+                <div style={{ color: "#7e828a", fontSize: 12.5, marginBottom: 20 }}>{p.note}</div>
                 <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 11, marginBottom: 26 }}>
                   {p.features.map((f) => (
-                    <li key={f} style={{ display: "flex", gap: 10, fontSize: 13.5, color: "#cfc5a8", alignItems: "flex-start" }}>
+                    <li key={f} style={{ display: "flex", gap: 10, fontSize: 13.5, color: "#c0c4cc", alignItems: "flex-start" }}>
                       <span style={{ color: GREEN, fontWeight: 800, lineHeight: 1.4 }}>✓</span>{f}
                     </li>
                   ))}
@@ -464,17 +464,17 @@ export default function Landing() {
               </div>
             ))}
           </div>
-          <p style={{ textAlign: "center", color: "#6f6753", fontSize: 12, marginTop: 26, lineHeight: 1.7 }}>
+          <p style={{ textAlign: "center", color: "#63676f", fontSize: 12, marginTop: 26, lineHeight: 1.7 }}>
             Membership covers the KAOS license, cloud strategies and AI data sync. The bot trades on your own Pocket Option account — demo or real, your choice, always under your risk limits.
           </p>
         </div>
       </section>
 
       {/* ============================ RESULTS ============================ */}
-      <section id="results" className="kx-section" aria-labelledby="h-results" style={{ padding: "70px 22px", borderTop: "1px solid #17130a", background: "#050403" }}>
+      <section id="results" className="kx-section" aria-labelledby="h-results" style={{ padding: "70px 22px", borderTop: "1px solid #0f1722", background: "#050403" }}>
         <div style={{ maxWidth: 1180, margin: "0 auto" }}>
           {sectionHead("Results", "Track Your Results", "Full transparency, trade by trade. Wins, losses, streaks and equity — everything KAOS does is logged and visible.")}
-          <div className="kx-card" style={{ ...cardStyle, padding: "22px 24px", fontSize: 14, lineHeight: 1.75, color: "#cfc5a8" }}>
+          <div className="kx-card" style={{ ...cardStyle, padding: "22px 24px", fontSize: 14, lineHeight: 1.75, color: "#c0c4cc" }}>
             <h3 style={{ margin: "0 0 10px", fontFamily: "'Oswald',sans-serif", fontSize: 16, letterSpacing: ".14em", color: GOLD }}>NO PUBLISHED PERFORMANCE YET</h3>
             <p style={{ margin: "0 0 10px" }}>
               KAOS does not publish win rates, profits or returns until they are independently documented. Any result we publish will state the dates it covers, whether it comes from live, paper or backtest trading, the costs included, and the risks.
@@ -483,7 +483,7 @@ export default function Landing() {
               In the member portal you can track your own paper trading: every order, fill price, open position, cash balance and realized profit or loss is recorded.
             </p>
           </div>
-          <div style={{ marginTop: 24, border: `1px solid ${GOLD_BORDER}`, background: "#0d0a05", borderRadius: 12, padding: "16px 20px", fontSize: 12.5, lineHeight: 1.75, color: "#a99f86" }}>
+          <div style={{ marginTop: 24, border: `1px solid ${GOLD_BORDER}`, background: "#0d0a05", borderRadius: 12, padding: "16px 20px", fontSize: 12.5, lineHeight: 1.75, color: "#9b9fa7" }}>
             <b style={{ color: GOLD }}>Performance disclaimer:</b> charts on this page are illustrative layouts, not real trades or results. Trading short-expiration contracts carries a substantial risk of loss. Past performance, real or simulated, is not indicative of future results. Never trade money you cannot afford to lose.
           </div>
         </div>
@@ -505,11 +505,11 @@ export default function Landing() {
                     style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, background: "none", border: 0, cursor: "pointer", padding: "18px 22px", textAlign: "left" }}
                   >
                     <span style={{ color: GOLD, fontWeight: 800, fontSize: 13, flexShrink: 0 }}>{String(i + 1).padStart(2, "0")}</span>
-                    <span style={{ flex: 1, color: "#f0e8d2", fontWeight: 600, fontSize: 15 }}>{f.q}</span>
+                    <span style={{ flex: 1, color: "#e3e7ef", fontWeight: 600, fontSize: 15 }}>{f.q}</span>
                     <span style={{ color: GOLD, fontSize: 18, transform: open ? "rotate(45deg)" : "none", transition: "transform .2s", flexShrink: 0 }}>+</span>
                   </button>
                   {open && (
-                    <div id={`faq-panel-${i}`} style={{ padding: "0 22px 20px 52px", color: "#b3aa92", fontSize: 13.5, lineHeight: 1.8 }}>
+                    <div id={`faq-panel-${i}`} style={{ padding: "0 22px 20px 52px", color: "#a5a9b1", fontSize: 13.5, lineHeight: 1.8 }}>
                       {f.a}
                     </div>
                   )}
@@ -531,33 +531,33 @@ export default function Landing() {
               <img src="/kaos-viking.png" alt="" style={{ width: 34, height: 34, objectFit: "contain" }} />
               <div>
                 <div style={{ fontFamily: "'Oswald',sans-serif", color: GOLD, letterSpacing: ".14em", fontWeight: 700, fontSize: 15 }}>KAOS TRADING</div>
-                <div style={{ fontSize: 9.5, letterSpacing: ".3em", color: "#8d8266" }}>TRADE WITH KAOS</div>
+                <div style={{ fontSize: 9.5, letterSpacing: ".3em", color: "#7e828a" }}>TRADE WITH KAOS</div>
               </div>
             </div>
-            <p style={{ margin: 0, color: "#8d8266", fontSize: 12, lineHeight: 1.7, maxWidth: 320 }}>Your bot. Your data. Your KAOS — one command center for the KAOS Trading Bot, KAOS AI, private trading statistics and affiliate earnings.</p>
+            <p style={{ margin: 0, color: "#7e828a", fontSize: 12, lineHeight: 1.7, maxWidth: 320 }}>Your bot. Your data. Your KAOS — one command center for the KAOS Trading Bot, KAOS AI, private trading statistics and affiliate earnings.</p>
           </div>
           <nav aria-label="Footer" style={{ display: "flex", gap: 42, flexWrap: "wrap" }}>
             <div>
               <div style={{ fontSize: 10.5, letterSpacing: ".22em", color: GOLD_DEEP, marginBottom: 12 }}>SECTIONS</div>
               {[["KAOS Bot", "kaos-bot"], ["Features", "features"], ["Pricing", "pricing"], ["Results", "results"], ["FAQ", "faq"]].map(([l, id]) => (
-                <a key={id} href={`#${id}`} style={{ display: "block", color: "#b3aa92", textDecoration: "none", fontSize: 13, marginBottom: 8 }}>{l}</a>
+                <a key={id} href={`#${id}`} style={{ display: "block", color: "#a5a9b1", textDecoration: "none", fontSize: 13, marginBottom: 8 }}>{l}</a>
               ))}
             </div>
             <div>
               <div style={{ fontSize: 10.5, letterSpacing: ".22em", color: GOLD_DEEP, marginBottom: 12 }}>ACCOUNT</div>
-              <Link to="/login" style={{ display: "block", color: "#b3aa92", textDecoration: "none", fontSize: 13, marginBottom: 8 }}>Login</Link>
-              <Link to="/register" style={{ display: "block", color: "#b3aa92", textDecoration: "none", fontSize: 13, marginBottom: 8 }}>Get KAOS</Link>
-              <Link to="/dashboard" style={{ display: "block", color: "#b3aa92", textDecoration: "none", fontSize: 13, marginBottom: 8 }}>Dashboard</Link>
-              <Link to="/dashboard/affiliate" style={{ display: "block", color: "#b3aa92", textDecoration: "none", fontSize: 13, marginBottom: 8 }}>Affiliates</Link>
+              <Link to="/login" style={{ display: "block", color: "#a5a9b1", textDecoration: "none", fontSize: 13, marginBottom: 8 }}>Login</Link>
+              <Link to="/register" style={{ display: "block", color: "#a5a9b1", textDecoration: "none", fontSize: 13, marginBottom: 8 }}>Get KAOS</Link>
+              <Link to="/dashboard" style={{ display: "block", color: "#a5a9b1", textDecoration: "none", fontSize: 13, marginBottom: 8 }}>Dashboard</Link>
+              <Link to="/dashboard/affiliate" style={{ display: "block", color: "#a5a9b1", textDecoration: "none", fontSize: 13, marginBottom: 8 }}>Affiliates</Link>
               <a href="/privacy.html" style={{ display: "block", color: "#e9c879", textDecoration: "none", fontSize: 13, marginBottom: 8 }}>Privacy Policy</a>
             </div>
           </nav>
         </div>
-        <div style={{ maxWidth: 1180, margin: "28px auto 0", borderTop: "1px solid #17130a", paddingTop: 18 }}>
-          <p style={{ margin: "0 0 10px", color: "#5f5845", fontSize: 11, lineHeight: 1.7 }}>
+        <div style={{ maxWidth: 1180, margin: "28px auto 0", borderTop: "1px solid #0f1722", paddingTop: 18 }}>
+          <p style={{ margin: "0 0 10px", color: "#53575f", fontSize: 11, lineHeight: 1.7 }}>
             Risk warning: trading short-expiration contracts involves substantial risk of loss and is not suitable for every investor. Charts on this site are illustrative layouts, not real trades or results. Nothing here is investment advice or a guarantee of results.
           </p>
-          <p style={{ margin: 0, color: "#5f5845", fontSize: 11 }}>© 2026 KAOS Trading. All rights reserved.</p>
+          <p style={{ margin: 0, color: "#53575f", fontSize: 11 }}>© 2026 KAOS Trading. All rights reserved.</p>
         </div>
       </footer>
     </div>
