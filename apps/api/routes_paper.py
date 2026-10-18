@@ -24,6 +24,8 @@ from kaos_paper_journal import PaperOrderJournal
 from kaos_risk_engine import RiskLimits, RiskSnapshot, RiskRejected
 from kaos_durable_paper_pipeline import DurablePaperPipeline
 from kaos_paper_book import base_units, build_book, book_view, money
+from kaos_risk_engine import check_order
+import kaos_structure_v2
 import market_data
 
 router = APIRouter(prefix="/api/v1/paper", tags=["paper-trading"])
@@ -31,6 +33,17 @@ admin_dep = require_role("admin")
 
 PAPER_ACCOUNT = "paper-default"
 PAPER_STARTING_BALANCE = Decimal("100")
+# Simulated taker fee applied to every paper fill. An assumption, not a broker-quoted rate.
+PAPER_FEE_RATE = Decimal(os.environ.get("KAOS_PAPER_FEE_RATE", "0.006"))
+SIGNAL_TTL_SECONDS = 120
+PAPER_BROKERS = [
+    {"id": "kaos_paper_coinbase", "name": "KAOS Paper (Coinbase market data)", "available": True,
+     "asset_classes": ["CRYPTO_SPOT"], "note": "Simulated fills at live Coinbase public quotes. No real orders."},
+    {"id": "pocket_option", "name": "Pocket Option", "available": False,
+     "note": "No authorized market-data API. Pocket Option trading runs in the KAOS Chrome extension."},
+    {"id": "coinbase_live", "name": "Coinbase (live)", "available": False,
+     "note": "Real-money trading is locked pending review."},
+]
 
 _registry = BrokerRegistry()
 _registry.register(PaperAdapter(), enabled=True, paper_only=True)
@@ -92,7 +105,8 @@ async def _reject(user, now, client_order_id, symbol, side, quantity, quote_pric
     raise HTTPException(status_code=422, detail=f"Paper order rejected: {reason}")
 
 
-async def _submit(user, symbol, asset_class, side, quantity, quote_price, client_order_id, *, close_all=False):
+async def _submit(user, symbol, asset_class, side, quantity, quote_price, client_order_id, *, close_all=False,
+                  signal_id=None):
     now = datetime.now(timezone.utc)
     symbol = symbol.upper()
     client_order_id = client_order_id or f"web-{uuid.uuid4().hex[:16]}"
@@ -137,7 +151,7 @@ async def _submit(user, symbol, asset_class, side, quantity, quote_price, client
         user_id=user["id"], broker="kaos_paper", account_id=f"{user['id']}:{PAPER_ACCOUNT}",
         client_order_id=client_order_id, symbol=symbol, asset_class=AssetClass(asset_class),
         side=side, order_kind=OrderKind.MARKET, quantity=quantity, quantity_unit="QUOTE",
-        strategy_signal_id="manual", metadata=metadata)
+        strategy_signal_id=signal_id or "manual", metadata=metadata)
     snapshot = build_snapshot(book, quote_price, now, await kill_switch_active(), quote_ts)
     try:
         report = await _pipeline.submit(intent, snapshot, closing_position=closing)
@@ -149,11 +163,13 @@ async def _submit(user, symbol, asset_class, side, quantity, quote_price, client
            "side": side, "quantity": quantity, "quote_price": quote_price, "fill_price": quote_price,
            "base_qty": format(units, "f"), "fill_type": "SIMULATED",
            "execution_kind": "market_data_paper" if quote else "manual_demo",
+           "signal_id": signal_id, "fee_rate": str(PAPER_FEE_RATE),
+           "fee": format((Decimal(quantity) * PAPER_FEE_RATE).quantize(Decimal("0.00000001")), "f"),
            "quote": quote.provenance() if quote else None,
            "state": report.state.value, "broker": report.broker, "paper": True, "created_at": now.isoformat()}
     if side == "SELL":
         avg = pos["cost"] / pos["units"]
-        doc["realized_pnl"] = money(Decimal(quantity) - avg * units)
+        doc["realized_pnl"] = money(Decimal(quantity) - Decimal(doc["fee"]) - avg * units)
     await db.paper_orders.update_one(key, {"$setOnInsert": doc}, upsert=True)
     return await db.paper_orders.find_one(key, {"_id": 0})
 
@@ -190,3 +206,128 @@ async def set_kill_switch(req: KillSwitchReq, admin: dict = Depends(admin_dep)):
     await set_setting("paper_kill_switch", req.active)
     await audit_log(admin, "paper.kill_switch", "settings", "paper_kill_switch", {"active": req.active})
     return {"kill_switch": req.active}
+
+
+# ----- connected paper trading session: broker -> candles -> strategy signal -> risk -> paper fill -----
+
+class SessionReq(BaseModel):
+    broker: str = "kaos_paper_coinbase"
+    symbol: str = Field(default="BTC-USD", min_length=1, max_length=30)
+    granularity: int = 60
+    notional: str = "10"
+
+
+class ExecuteSignalReq(BaseModel):
+    notional: str = "10"
+
+
+@router.get("/brokers")
+async def paper_brokers(user: dict = Depends(get_current_user)):
+    return {"brokers": PAPER_BROKERS}
+
+
+@router.get("/session")
+async def get_session(user: dict = Depends(get_current_user)):
+    doc = await db.paper_sessions.find_one({"user_id": user["id"]}, {"_id": 0})
+    return doc or {"user_id": user["id"], **SessionReq().model_dump()}
+
+
+@router.put("/session")
+async def put_session(req: SessionReq, user: dict = Depends(get_current_user)):
+    broker = next((b for b in PAPER_BROKERS if b["id"] == req.broker), None)
+    if not broker or not broker["available"]:
+        raise HTTPException(status_code=422, detail=(broker or {}).get("note", "Unknown broker"))
+    if req.granularity not in market_data.GRANULARITIES:
+        raise HTTPException(status_code=422, detail="Unsupported candle size")
+    _positive(req.notional, "notional")
+    doc = {**req.model_dump(), "symbol": req.symbol.upper(), "user_id": user["id"],
+           "updated_at": datetime.now(timezone.utc).isoformat()}
+    await db.paper_sessions.update_one({"user_id": user["id"]}, {"$set": doc}, upsert=True)
+    return doc
+
+
+@router.get("/candles/{symbol}")
+async def paper_candles(symbol: str, granularity: int = 60, user: dict = Depends(get_current_user)):
+    try:
+        return await market_data.get_candles(symbol, "CRYPTO_SPOT", granularity)
+    except market_data.QuoteUnavailable as exc:
+        raise HTTPException(status_code=503, detail=f"Market data unavailable: {exc}")
+
+
+async def _risk_preview(user, symbol, action, notional, quote):
+    """Run the same risk engine the order path uses, without submitting anything."""
+    now = datetime.now(timezone.utc)
+    book = await _user_book(user, now)
+    pos = book["positions"].get(symbol)
+    if action == "HOLD":
+        return {"approved": False, "reason": "No trade: the strategy did not signal."}
+    if action == "SELL" and not (pos and pos["units"] > 0):
+        return {"approved": False, "reason": "SELL signal but no open paper position (paper trading is long-only)."}
+    price = quote.ask if action == "BUY" else quote.bid
+    closing = action == "SELL"
+    qty = format((pos["units"] * price).quantize(Decimal("0.00000001")), "f") if closing else notional
+    intent = OrderIntent(
+        user_id=user["id"], broker="kaos_paper", account_id=f"{user['id']}:{PAPER_ACCOUNT}",
+        client_order_id="preview", symbol=symbol, asset_class=AssetClass.CRYPTO_SPOT, side=action,
+        order_kind=OrderKind.MARKET, quantity=qty, quantity_unit="QUOTE", strategy_signal_id="preview",
+        metadata={"source_position_id": f"{user['id']}:{symbol}"} if closing else {})
+    snap = build_snapshot(book, str(price), now, await kill_switch_active(), quote.quote_time)
+    try:
+        check_order(intent, PaperAdapter().capabilities, _pipeline.limits, snap, closing_position=closing)
+    except RiskRejected as exc:
+        return {"approved": False, "reason": str(exc)}
+    return {"approved": True, "reason": ("Exit of open position" if closing else f"BUY ${notional}") +
+            f" at {price} passes notional, exposure, daily-loss, position-count, quote-age and kill-switch checks."}
+
+
+@router.post("/signals/{symbol}")
+async def generate_signal(symbol: str, req: ExecuteSignalReq, granularity: int = 60,
+                          user: dict = Depends(get_current_user)):
+    """Run the KAOS strategy on the latest closed candles and record the signal with its reasons and risk decision."""
+    symbol = symbol.upper()
+    _positive(req.notional, "notional")
+    try:
+        candles = await market_data.get_candles(symbol, "CRYPTO_SPOT", granularity)
+        quote = await market_data.get_quote(symbol, "CRYPTO_SPOT")
+    except market_data.QuoteUnavailable as exc:
+        raise HTTPException(status_code=503, detail=f"Market data unavailable: {exc}")
+    result = kaos_structure_v2.evaluate(candles["candles"])
+    risk = await _risk_preview(user, symbol, result["action"], req.notional, quote)
+    doc = {"signal_id": f"sig-{uuid.uuid4().hex[:16]}", "user_id": user["id"], "symbol": symbol,
+           "strategy": kaos_structure_v2.STRATEGY_NAME, "strategy_status": kaos_structure_v2.STRATEGY_STATUS,
+           "granularity": granularity, **result, "quote": quote.provenance(), "notional": req.notional,
+           "risk": risk, "status": "PENDING" if risk["approved"] else "NOT_TRADED",
+           "created_at": datetime.now(timezone.utc).isoformat()}
+    await db.paper_signals.insert_one(dict(doc))
+    return doc
+
+
+@router.post("/signals/{signal_id}/execute")
+async def execute_signal(signal_id: str, user: dict = Depends(get_current_user)):
+    sig = await db.paper_signals.find_one({"signal_id": signal_id, "user_id": user["id"]}, {"_id": 0})
+    if not sig:
+        raise HTTPException(status_code=404, detail="Signal not found")
+    cid = f"exec-{signal_id}"
+    if sig.get("status") == "EXECUTED":
+        return await db.paper_orders.find_one({"user_id": user["id"], "client_order_id": cid}, {"_id": 0})
+    if sig["action"] == "HOLD" or not sig["risk"]["approved"]:
+        raise HTTPException(status_code=409, detail=f"Signal not tradable: {sig['risk']['reason']}")
+    age = (datetime.now(timezone.utc) - datetime.fromisoformat(sig["created_at"])).total_seconds()
+    if age > SIGNAL_TTL_SECONDS:
+        await db.paper_signals.update_one({"signal_id": signal_id}, {"$set": {"status": "EXPIRED"}})
+        raise HTTPException(status_code=409, detail="Signal expired; generate a new one")
+    try:
+        if sig["action"] == "BUY":
+            order = await _submit(user, sig["symbol"], "CRYPTO_SPOT", "BUY", sig["notional"], None, cid, signal_id=signal_id)
+        else:
+            order = await _submit(user, sig["symbol"], "CRYPTO_SPOT", "SELL", "0", None, cid, close_all=True, signal_id=signal_id)
+    except HTTPException as exc:
+        await db.paper_signals.update_one({"signal_id": signal_id}, {"$set": {"status": "REJECTED", "reject_reason": str(exc.detail)}})
+        raise
+    await db.paper_signals.update_one({"signal_id": signal_id}, {"$set": {"status": "EXECUTED", "client_order_id": cid}})
+    return order
+
+
+@router.get("/signals")
+async def list_signals(user: dict = Depends(get_current_user)):
+    return {"signals": await db.paper_signals.find({"user_id": user["id"]}, {"_id": 0}).sort("created_at", -1).to_list(50)}

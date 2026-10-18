@@ -48,13 +48,17 @@ class FakeCollection:
         self.docs.append(dict(doc))
 
     async def update_one(self, q, upd, upsert=False):
-        if not any(self._match(d, q) for d in self.docs) and upsert:
-            self.docs.append({**q, **upd.get("$setOnInsert", {})})
+        hit = next((d for d in self.docs if self._match(d, q)), None)
+        if hit is not None:
+            hit.update(upd.get("$set", {}))
+        elif upsert:
+            self.docs.append({**q, **upd.get("$setOnInsert", {}), **upd.get("$set", {})})
 
 
 class FakeDB:
     def __init__(self):
         self.paper_orders, self.paper_order_rejections = FakeCollection(), FakeCollection()
+        self.paper_signals, self.paper_sessions = FakeCollection(), FakeCollection()
 
 
 @pytest.fixture
@@ -72,7 +76,12 @@ def env(monkeypatch):
 
     monkeypatch.setattr(routes_paper, "db", fdb)
     monkeypatch.setattr(routes_paper, "get_setting", setting)
+    async def candles(symbol, granularity):
+        t = int(datetime.now(timezone.utc).timestamp()) // 60 * 60  # newest bar still forming
+        return [[t - 60 * i, 99.0, 101.0, 100.0, 100.5, 1.0] for i in range(120)]
+
     monkeypatch.setattr(market_data, "fetch_crypto_quote", fetch)
+    monkeypatch.setattr(market_data, "fetch_crypto_candles", candles)
     return fdb, state, {"id": f"u-{uuid.uuid4().hex[:8]}"}
 
 
@@ -144,4 +153,60 @@ def test_book_survives_reconnect_from_stored_orders(env):
     fdb, state, user = env
     order(user)
     view = routes_paper.book_view(run(routes_paper._user_book(user, datetime.now(timezone.utc))))
-    assert view["cash"] == "90.00" and view["positions"][0]["symbol"] == "BTC-USD"
+    assert view["cash"] == "89.94" and view["fees_paid"] == "0.06"  # $10 + 0.6% simulated fee
+    assert view["positions"][0]["symbol"] == "BTC-USD"
+
+
+def test_fee_charged_on_both_sides_and_in_realized_pnl(env):
+    fdb, state, user = env
+    buy = order(user)
+    assert buy["fee"] == "0.06000000" and buy["fee_rate"] == "0.006"
+    sell = run(routes_paper._submit(user, "BTC-USD", "CRYPTO_SPOT", "SELL", "0", None, uuid.uuid4().hex, close_all=True))
+    # proceeds 10/101*100 = 9.90099..., minus sell fee, minus cost 10.06
+    assert Decimal(sell["realized_pnl"]) == Decimal("-0.22")
+
+
+def test_candles_drop_forming_bar_and_flat_market_holds_with_reason(env):
+    c = run(market_data.get_candles("BTC-USD", "CRYPTO_SPOT", 60))
+    assert c["source"] == market_data.COINBASE_PUBLIC_SOURCE and len(c["candles"]) == 119
+    assert c["candles"][0]["time"] < c["candles"][-1]["time"]
+    sig = run(routes_paper.generate_signal("BTC-USD", routes_paper.ExecuteSignalReq(notional="10"), 60, env[2]))
+    assert sig["action"] == "HOLD" and sig["reasons"] and sig["risk"]["approved"] is False
+    assert sig["strategy"] == "KAOS Structure v2" and "FAIL" in sig["strategy_status"]
+    with pytest.raises(HTTPException) as e:
+        run(routes_paper.execute_signal(sig["signal_id"], env[2]))
+    assert e.value.status_code == 409
+
+
+def test_buy_signal_risk_approved_executes_once_at_market_price(env, monkeypatch):
+    fdb, state, user = env
+    monkeypatch.setattr(routes_paper.kaos_structure_v2, "evaluate", lambda c: {
+        "action": "BUY", "setup": "breakout_long", "reasons": ["test breakout"], "indicators": {}, "candle_time": 0})
+    sig = run(routes_paper.generate_signal("BTC-USD", routes_paper.ExecuteSignalReq(notional="10"), 60, user))
+    assert sig["risk"]["approved"] is True and sig["status"] == "PENDING"
+    o = run(routes_paper.execute_signal(sig["signal_id"], user))
+    assert o["signal_id"] == sig["signal_id"] and o["fill_price"] == "101" and o["execution_kind"] == "market_data_paper"
+    assert run(routes_paper.execute_signal(sig["signal_id"], user)) == o  # refresh/retry: no second order
+    assert len(fdb.paper_orders.docs) == 1
+    assert fdb.paper_signals.docs[0]["status"] == "EXECUTED"
+
+
+def test_risk_rejects_oversized_signal_and_sell_without_position(env, monkeypatch):
+    fdb, state, user = env
+    act = {"a": "BUY"}
+    monkeypatch.setattr(routes_paper.kaos_structure_v2, "evaluate", lambda c: {
+        "action": act["a"], "setup": "x", "reasons": ["r"], "indicators": {}, "candle_time": 0})
+    big = run(routes_paper.generate_signal("BTC-USD", routes_paper.ExecuteSignalReq(notional="500"), 60, user))
+    assert big["risk"]["approved"] is False and big["status"] == "NOT_TRADED"
+    act["a"] = "SELL"
+    s = run(routes_paper.generate_signal("BTC-USD", routes_paper.ExecuteSignalReq(notional="10"), 60, user))
+    assert s["risk"]["approved"] is False and "long-only" in s["risk"]["reason"]
+
+
+def test_session_persists_and_unavailable_broker_refused(env):
+    user = env[2]
+    run(routes_paper.put_session(routes_paper.SessionReq(symbol="eth-usd", notional="5"), user))
+    assert run(routes_paper.get_session(user))["symbol"] == "ETH-USD"
+    with pytest.raises(HTTPException) as e:
+        run(routes_paper.put_session(routes_paper.SessionReq(broker="pocket_option"), user))
+    assert "market-data" in e.value.detail

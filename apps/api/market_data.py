@@ -69,7 +69,45 @@ async def _fetch_coinbase(symbol: str) -> Quote:
     return parse_coinbase_ticker(symbol, r.json(), datetime.now(timezone.utc))
 
 
+COINBASE_CANDLES_URL = "https://api.exchange.coinbase.com/products/{product}/candles"
+GRANULARITIES = {60, 300, 900}
+
+
+async def _fetch_coinbase_candles(symbol: str, granularity: int) -> list:
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            r = await client.get(COINBASE_CANDLES_URL.format(product=symbol), params={"granularity": granularity},
+                                 headers={"User-Agent": "kaos-paper-quotes/1.0"})
+    except httpx.HTTPError:
+        raise QuoteUnavailable("Market data provider unreachable")
+    if r.status_code != 200:
+        raise QuoteUnavailable(f"Market data provider error ({r.status_code})")
+    return r.json()
+
+
+def closed_candles(rows: list, granularity: int, now: datetime) -> list:
+    """Coinbase rows are [time, low, high, open, close, volume], newest first. Drop the still-forming bar."""
+    out = []
+    for t, low, high, op, close, vol in rows:
+        if t + granularity <= now.timestamp():
+            out.append({"time": int(t), "open": float(op), "high": float(high), "low": float(low),
+                        "close": float(close), "volume": float(vol)})
+    return sorted(out, key=lambda c: c["time"])
+
+
 fetch_crypto_quote = _fetch_coinbase  # swapped in tests
+fetch_crypto_candles = _fetch_coinbase_candles  # swapped in tests
+
+
+async def get_candles(symbol: str, asset_class: str, granularity: int = 60) -> dict:
+    symbol = symbol.upper()
+    if asset_class != "CRYPTO_SPOT":
+        raise QuoteUnavailable(f"No authorized market-data feed for {asset_class} yet")
+    if not CRYPTO_PRODUCT.match(symbol) or granularity not in GRANULARITIES:
+        raise QuoteUnavailable("Unsupported symbol or candle size")
+    now = datetime.now(timezone.utc)
+    return {"symbol": symbol, "granularity": granularity, "source": COINBASE_PUBLIC_SOURCE, "fetched_at": now.isoformat(),
+            "candles": closed_candles(await fetch_crypto_candles(symbol, granularity), granularity, now)}
 
 
 async def get_quote(symbol: str, asset_class: str) -> Quote:

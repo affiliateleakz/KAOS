@@ -5,6 +5,7 @@ import { Button } from "../../components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 import { toast } from "sonner";
 import { FlaskConical, ShieldAlert } from "lucide-react";
+import PaperSession from "./PaperSession";
 
 const field = "w-full rounded border border-[#2E2E2E] bg-[#080808] px-3 py-2 font-mono text-sm text-white";
 
@@ -58,9 +59,10 @@ export default function PaperTrading() {
           <ShieldAlert className="h-4 w-4" /> Emergency stop is active. All paper orders are blocked by an administrator.
         </div>
       )}
+      <PaperSession orders={data.orders} killSwitch={data.kill_switch} onTraded={load} />
       <div className="grid gap-6 lg:grid-cols-3">
         <form onSubmit={submit} className="card-surface space-y-3 p-5" data-testid="paper-order-form">
-          <h3 className="font-heading font-semibold">New paper order</h3>
+          <h3 className="font-heading font-semibold">Manual paper order</h3>
           <label className="block"><span className="label-mono">Symbol</span><input data-testid="paper-symbol" className={field} value={form.symbol} onChange={set("symbol")} required maxLength={30} /></label>
           <label className="block"><span className="label-mono">Asset class</span>
             <select className={field} value={form.asset_class} onChange={set("asset_class")}><option>CRYPTO_SPOT</option><option>FOREX</option><option>EQUITY</option></select></label>
@@ -85,8 +87,8 @@ export default function PaperTrading() {
           <Button data-testid="paper-submit" disabled={busy || data.kill_switch} className="w-full bg-[#22C55E] font-semibold text-black">{busy ? "Submitting…" : "Place paper order"}</Button>
         </form>
         <div className="space-y-4 lg:col-span-2">
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-            {[["Starting balance", book.starting_balance, "starting"], ["Cash", book.cash, "cash"], ["Open cost", book.open_cost, "open"], ["Realized P&L", book.realized_pnl, "pnl"]].map(([l, v, id]) => (
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+            {[["Starting balance", book.starting_balance, "starting"], ["Cash", book.cash, "cash"], ["Open cost", book.open_cost, "open"], ["Fees paid", book.fees_paid || "0", "fees"], ["Realized P&L", book.realized_pnl, "pnl"]].map(([l, v, id]) => (
               <div key={l} className="card-surface p-4"><div className="label-mono">{l}</div><div className={`mt-1 font-mono text-2xl font-bold ${id === "pnl" ? pnlColor : "text-[#2F8CFF]"}`} data-testid={`paper-${id}`}>{usd(v)}</div></div>
             ))}
           </div>
