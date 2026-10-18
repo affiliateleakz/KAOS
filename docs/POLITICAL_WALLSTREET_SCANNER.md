@@ -8,7 +8,7 @@ This module is distinct from Freebuff's social media scanner. It displays **docu
 - SEC 13F quarterly institutional portfolio disclosures: **holdings**, not buy/sell orders. Comparing two snapshots can indicate a position change but does not establish exactly when or how a trade occurred.
 
 ## Data pipeline status
-The source-verified ingestion API, authenticated member search, entitlement check, and read-only UI are included here. **No scheduled live collector is connected by this PR.** The dashboard will show no records until a collector imports verified filing data. Never fabricate sample records as actual trades.
+The source-verified ingestion API, authenticated member search, entitlement check, and read-only UI are included here. An on-demand, collector-key-protected SEC Form 4 sync is available through `POST /api/v1/disclosures/refresh-sec/{cik}`, using an explicit issuer CIK and `KAOS_SEC_USER_AGENT` to identify the requesting service. **No scheduled live collector is connected by this PR.** The dashboard will show no records until a collector imports verified filing data. Never fabricate sample records as actual trades.
 
 ## Commercial usage gate
 The House disclosure site warns against certain commercial use of its content, subject to a news/media dissemination exception; KAOS must obtain a qualified legal review before relying on an exception or ingesting House filings into a paid feature. Server variable `KAOS_HOUSE_DISCLOSURE_RIGHTS=approved` is disabled by default. Review Senate terms and each data license before commercial republishing as well.
