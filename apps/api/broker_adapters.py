@@ -65,6 +65,32 @@ REGISTRY = {a.id: a for a in [
                   "MT5 account at a broker that permits API/EA access; a running terminal or bridge"),
     BrokerAdapter("pocketoption", "Pocket Option", ("binary options",), "adapter_development", "Chrome extension on the broker page (no public API); repair in progress",
                   "Written permission from Pocket Option for any API/automated access"),
+    # Popular retail brokers: listed for discovery only. No account or order endpoints are enabled.
+    # API access and commercial authorization must be established broker-by-broker.
+    BrokerAdapter("robinhood", "Robinhood", ("stocks", "options", "crypto"), "planned",
+                  "Official crypto API; stock/options third-party execution not established",
+                  "Confirm broker-authorized commercial access and asset-specific execution permissions"),
+    BrokerAdapter("schwab", "Charles Schwab / thinkorswim", ("stocks", "options", "futures"), "planned",
+                  "Schwab developer platform; thinkorswim is a trading interface",
+                  "Approved Schwab developer application, OAuth scopes, and commercial access"),
+    BrokerAdapter("fidelity", "Fidelity", ("stocks", "options"), "planned",
+                  "Third-party retail trading API availability unverified",
+                  "Written broker approval and documented account/trading API"),
+    BrokerAdapter("webull", "Webull", ("stocks", "options", "futures", "crypto"), "planned",
+                  "Official OpenAPI; product availability depends on account and region",
+                  "OpenAPI access eligibility, app approval, permissions and commercial terms"),
+    BrokerAdapter("etrade", "E*TRADE", ("stocks", "options"), "planned",
+                  "E*TRADE developer API, subject to eligibility and approval",
+                  "Approved developer credentials, OAuth and permitted account/order scopes"),
+    BrokerAdapter("crypto_com", "Crypto.com", ("crypto",), "planned",
+                  "Crypto.com Exchange API, distinct from retail app",
+                  "Eligible exchange account and authorized Exchange API key"),
+    BrokerAdapter("tradestation", "TradeStation", ("stocks", "options", "futures"), "planned",
+                  "TradeStation API subject to eligibility and application approval",
+                  "Approved API access and brokerage account"),
+    BrokerAdapter("forex_com", "FOREX.com", ("forex",), "planned",
+                  "Broker API availability and regional permissions require verification",
+                  "Eligible account and approved broker API access"),
 ]}
 
 router = APIRouter(prefix="/api/v1/brokers", tags=["brokers"])
