@@ -54,11 +54,8 @@ def test_preview_rejects_bad_sizes(env):
         run(rc.preview(rc.PreviewRequest(product_id="BTC-USD", side="BUY", base_size="1"), user={"id": "u"}))
 
 
-def test_cancel_and_submit_blocked_while_live_disabled(env):
+def test_submit_blocked_while_live_disabled(env):
     user = {"id": "u", "membership_status": "ACTIVE"}
-    with pytest.raises(HTTPException) as e:
-        run(rc.cancel(rc.ReconcileRequest(client_order_id="c" * 16), Req(), user))
-    assert e.value.status_code == 403
     with pytest.raises(HTTPException) as e:
         run(rc.order(rc.OrderRequest(client_order_id="c" * 16, product_id="BTC-USD", side="BUY", quote_size="5"), Req(), user))
     assert e.value.status_code == 403 and env.placed == [] and env.cancelled == []
