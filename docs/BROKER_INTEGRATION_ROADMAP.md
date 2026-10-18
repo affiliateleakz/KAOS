@@ -7,8 +7,8 @@ This document describes product targets, **not** verified connectivity, permissi
 | Broker ID | Customer segment | State at creation | Next evidence needed |
 | --- | --- | --- | --- |
 | coinbase | Crypto | authentication_implemented | Real user-initiated read-only connection; verify balances, fills, errors; no live orders |
-| alpaca | Stocks and ETFs | planned | Developer/sandbox account, authenticated balances, market data permissions |
-| oanda | Forex | planned | Practice v20 API credentials, account and instrument read |
+| alpaca | Stocks and ETFs | authentication_implemented (paper API only; not real-account verified) | Member-connected paper API credentials and demonstration across clients; no live orders |
+| oanda | Forex | authentication_implemented (practice API only; not verified) | Member-connected practice v20 account and UI demonstration; no live orders |
 | pocketoption | Short-duration contracts | adapter_development | Permission/compliance review and repair of legacy extension |
 | webull | Stocks/options and eligible assets | planned | Approved OpenAPI access and allowed commercial use |
 | schwab | Stocks/options | planned | Developer app/OAuth eligibility and commercial API authorization |
