@@ -17,7 +17,7 @@ async def collect_issuer_form4(cik: int, *, max_filings=15, client=None):
         raise ValueError("Maximum 25 filings per request")
     agent=os.environ.get("KAOS_SEC_USER_AGENT","")
     if "@" not in agent:
-        raise RuntimeError("Set KAOS_SEC_USER_AGENT to an identifiable app and contact email")
+        raise RuntimeError("Set SEC User-Agent (KAOS_SEC_USER_AGENT) to an identifiable app and contact email")
     headers={"User-Agent":agent,"Accept":"application/json, application/xml, text/xml"}
     owned=client is None
     if owned: client=httpx.AsyncClient(timeout=20,headers=headers,follow_redirects=False)
