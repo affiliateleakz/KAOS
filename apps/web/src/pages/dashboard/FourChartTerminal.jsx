@@ -46,11 +46,25 @@ function Tile({index,config,onChange}){
 export default function FourChartTerminal({entitlements}){
  const maxCharts=Math.max(1,Math.min(4,Number(entitlements?.chartLimit)||1));
  const [count,setCount]=useState(1),[configs,setConfigs]=useState(DEFAULTS);
- const change=(i,v)=>setConfigs(old=>old.map((c,j)=>j===i?v:c));
+ const [message,setMessage]=useState("");
+ useEffect(()=>{
+   let active=true;
+   api.get("/api/v1/trading/charts").then(r=>{
+     if(!active)return;
+     const rows=r.data?.charts||[];
+     setConfigs(old=>old.map((cfg,i)=>{const row=rows.find(x=>x.slot===i);return row?{broker:row.broker,symbol:row.symbol,seconds:row.seconds}:cfg}));
+   }).catch(()=>{if(active)setMessage("Chart settings unavailable; selections may not be saved.")});
+   return ()=>{active=false};
+ },[]);
+ const change=(i,v)=>{
+   setConfigs(old=>old.map((c,j)=>j===i?v:c));
+   api.put("/api/v1/trading/charts/"+i,v).then(()=>setMessage("Chart "+(i+1)+" settings saved.")).catch(()=>setMessage("Chart changes not saved; check membership and connection."));
+ };
  return <section className="mb-6 space-y-3" data-testid="kaos-four-chart-terminal">
   <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-semibold">KAOS Multi-Chart Terminal</h2><p className="text-xs text-slate-400">Independent chart settings · current source supports 1m, 5m and 15m Coinbase public candles only. Other feeds are unavailable. No real orders.</p></div>
    <label className="text-sm">Charts <select value={Math.min(count,maxCharts)} onChange={e=>setCount(Number(e.target.value))} className="ml-2 rounded bg-[#222] p-2">{Array.from({length:maxCharts},(_,i)=><option key={i} value={i+1}>{i+1}</option>)}</select></label>
   </div>
+  {message && <p role="status" className="text-xs text-slate-400">{message}</p>}
   <div className="grid gap-3 lg:grid-cols-2">{configs.slice(0,Math.min(count,maxCharts)).map((cfg,i)=><Tile key={i} index={i} config={cfg} onChange={v=>change(i,v)}/>)}</div>
  </section>;
 }
