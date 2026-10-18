@@ -6,6 +6,7 @@ Keys with transfer permission are refused. Nothing here places or cancels orders
 live order submission lives in routes_coinbase and stays disabled by default.
 """
 import asyncio
+from decimal import Decimal
 import json
 import os
 import re
@@ -172,12 +173,64 @@ async def account(user: dict = Depends(get_current_user)):
            "key_hint": row.get("key_hint"), "balances": balances,
            "open_orders": [{k: o.get(k) for k in keep} for o in opened.get("orders", [])],
            "fills": [{k: f.get(k) for k in ("entry_id", "trade_id", "order_id", "product_id", "side", "price", "size",
-                                             "commission", "trade_time", "liquidity_indicator")} for f in fills.get("fills", [])],
+                                             "commission", "trade_time", "liquidity_indicator", "size_in_quote")} for f in fills.get("fills", [])],
            "fees": {"tier": tier.get("pricing_tier"), "maker_rate": tier.get("maker_fee_rate"),
                     "taker_rate": tier.get("taker_fee_rate"), "total_fees": fees.get("total_fees"),
                     "total_volume": fees.get("total_volume")}}
+    held = [f'{b["currency"]}-USD' for b in balances if b["currency"] not in CASH]
+    out["positions"] = positions_from(balances, out["fills"], await _bids(c, held))
+    out["buying_power_usd"] = str(sum((Decimal(b["available"]) for b in balances if b["currency"] in CASH), Decimal(0)))
     _cache[user["id"]] = (time.monotonic(), out)
     return out
+
+
+CASH = ("USD", "USDC")
+
+
+def positions_from(balances, fills, bids):
+    """Average-cost positions and P&L from Coinbase fills, valued at the current best bid.
+
+    Only the fills Coinbase returned are used; if they do not explain the whole holding the cost basis is
+    marked incomplete and unrealized P&L is not reported rather than guessed.
+    """
+    out = []
+    for b in balances:
+        cur = b["currency"]
+        held = Decimal(b["available"]) + Decimal(b["hold"])
+        if cur in CASH or held <= 0:
+            continue
+        product = f"{cur}-USD"
+        qty = cost = realized = fees = Decimal(0)
+        for f in sorted((f for f in fills if f.get("product_id") == product), key=lambda f: f.get("trade_time") or ""):
+            price, size, fee = Decimal(str(f["price"])), Decimal(str(f["size"])), Decimal(str(f.get("commission") or 0))
+            if f.get("size_in_quote"):
+                size = size / price
+            fees += fee
+            if f.get("side") == "BUY":
+                qty += size; cost += size * price + fee
+            elif qty > 0:
+                sold = min(size, qty); avg = cost / qty
+                realized += sold * price - fee - avg * sold; qty -= sold; cost -= avg * sold
+        bid = bids.get(product)
+        complete = qty > 0 and abs(qty - held) <= held * Decimal("0.000001")
+        avg = cost / qty if qty > 0 else None
+        out.append({"product_id": product, "quantity": str(held), "bid": str(bid) if bid else None,
+                    "market_value": str((held * bid).quantize(Decimal("0.01"))) if bid else None,
+                    "avg_cost": str(avg.quantize(Decimal("0.00000001"))) if complete and avg else None,
+                    "unrealized_pnl": str(((bid - avg) * held).quantize(Decimal("0.01"))) if complete and bid and avg else None,
+                    "realized_pnl_recent": str(realized.quantize(Decimal("0.01"))), "fees_recent": str(fees.quantize(Decimal("0.01"))),
+                    "cost_basis_complete": complete})
+    return out
+
+
+async def _bids(c, products):
+    if not products or not hasattr(c, "get_best_bid_ask"):
+        return {}
+    try:
+        books = await _call(c.get_best_bid_ask, product_ids=products)
+    except HTTPException:
+        return {}
+    return {b["product_id"]: Decimal(str(b["bids"][0]["price"])) for b in books.get("pricebooks", []) if b.get("bids")}
 
 
 @router.get("/coinbase/products")

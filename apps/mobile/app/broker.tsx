@@ -19,6 +19,8 @@ export default function Broker(){
   {connected===false&&<Text style={s.muted}>No Coinbase account connected. Connect it on tradingwithkaos.com → Broker Connections.</Text>}
   {acct&&<>
    <Text style={s.muted}>Live from Coinbase Advanced API · key {acct.key_hint} · fetched {acct.fetched_at.slice(11,19)} UTC · KAOS does not place orders on this account.</Text>
+   <Text style={s.txt}>Buying power: ${acct.buying_power_usd??'–'}</Text>
+   <Text style={s.sec}>Positions</Text><Rows items={acct.positions||[]} cols={['product_id','quantity','market_value','unrealized_pnl']} empty="No crypto holdings"/>
    <Text style={s.sec}>Balances</Text><Rows items={acct.balances} cols={['currency','available','hold']} empty="No non-zero balances"/>
    <Text style={s.sec}>Open orders</Text><Rows items={acct.open_orders} cols={['product_id','side','status','filled_size']} empty="No open orders"/>
    <Text style={s.sec}>Recent fills</Text><Rows items={acct.fills} cols={['product_id','side','size','price','commission']} empty="No fills yet"/>

@@ -155,3 +155,23 @@ def test_coinbase_error_does_not_leak_details(env):
         assert "eyJ" not in e.value.detail and e.value.status_code == 502
     finally:
         del FakeClient.get_accounts
+
+
+def test_positions_average_cost_and_pnl():
+    from decimal import Decimal
+    from routes_broker_coinbase import positions_from
+    bal = [{"currency": "BTC", "available": "0.15", "hold": "0"}, {"currency": "USD", "available": "50", "hold": "0"}]
+    fills = [{"product_id": "BTC-USD", "side": "BUY", "price": "100", "size": "0.1", "commission": "0.1", "trade_time": "1"},
+             {"product_id": "BTC-USD", "side": "BUY", "price": "200", "size": "0.1", "commission": "0.1", "trade_time": "2"},
+             {"product_id": "BTC-USD", "side": "SELL", "price": "300", "size": "0.05", "commission": "0.1", "trade_time": "3"}]
+    p, = positions_from(bal, fills, {"BTC-USD": Decimal("250")})
+    assert p["cost_basis_complete"] and p["avg_cost"] == "151.00000000"
+    assert p["unrealized_pnl"] == "14.85" and p["realized_pnl_recent"] == "7.35" and p["market_value"] == "37.50"
+
+
+def test_positions_incomplete_basis_reports_no_pnl():
+    from decimal import Decimal
+    from routes_broker_coinbase import positions_from
+    p, = positions_from([{"currency": "ETH", "available": "2", "hold": "0"}],
+                        [{"product_id": "ETH-USD", "side": "BUY", "price": "10", "size": "1", "commission": "0"}], {"ETH-USD": Decimal("12")})
+    assert not p["cost_basis_complete"] and p["unrealized_pnl"] is None and p["market_value"] == "24.00"
