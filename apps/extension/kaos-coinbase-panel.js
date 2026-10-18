@@ -22,6 +22,38 @@
       ${table('Open orders',['Market','Side','Type','Status','Filled'],rows(d.open_orders,['product_id','side','order_type','status','filled_size'],'No open orders'))}
       ${table('Recent fills',['Market','Side','Size','Price','Fee'],rows(d.fills,['product_id','side','size','price','commission'],'No fills yet'))}
       <div style="margin-top:8px">Fee tier: ${esc(d.fees.tier||'–')} · maker ${esc(d.fees.maker_rate??'–')} · taker ${esc(d.fees.taker_rate??'–')}</div>`;
+    await loadOtherBrokers(el);
+  }
+  // Other linked brokers are read-only practice/paper views. No credentials or order actions in extension.
+  async function loadOtherBrokers(el) {
+    const links=await call('/broker-connections');
+    if(!links?.ok || !Array.isArray(links.data?.connections))return;
+    for(const brokerId of ['alpaca','oanda']){
+      const saved=links.data.connections.find(c=>c.broker===brokerId && c.verified);
+      if(!saved)continue;
+      const part=document.createElement('section');
+      part.style.marginTop='14px';
+      const heading=document.createElement('b');
+      heading.textContent=brokerId==='alpaca'?'ALPACA PAPER · READ-ONLY':'OANDA PRACTICE · READ-ONLY';
+      part.appendChild(heading);
+      const response=await call('/broker-connections/'+brokerId+'/account');
+      const line=document.createElement('div');
+      line.style.marginTop='4px';
+      if(!response?.ok){
+        line.textContent='Account currently unavailable. Manage connection on the KAOS website.';
+      }else{
+        const d=response.data||{};
+        const summary=d.account||{};
+        line.textContent='Fetched '+(d.fetched_at||'unknown')+' · '+Object.entries(summary)
+          .filter(([k])=>['currency','cash','buying_power','equity','balance','NAV','marginAvailable'].includes(k))
+          .map(([k,v])=>k+': '+String(v)).join(' · ');
+        const counts=document.createElement('div');
+        counts.textContent='Positions: '+(d.positions||[]).length+' · Orders: '+(d.orders||[]).length;
+        part.appendChild(counts);
+      }
+      part.appendChild(line);
+      el.appendChild(part);
+    }
   }
   let timer=null;
   document.addEventListener('click',e=>{
