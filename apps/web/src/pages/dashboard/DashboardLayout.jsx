@@ -58,7 +58,7 @@ export default function DashboardLayout() {
         {NAV.map(([path, label, Icon]) => (
           <NavLink key={path} to={`/dashboard/${path}`} end={path === ""} onClick={onNavigate}
             data-testid={`${onNavigate ? "mobile-" : ""}nav-${label.toLowerCase().replace(/ /g, "-")}-link`}
-            className={({ isActive }) => `flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${isActive ? "bg-[#D4AF37]/10 text-[#D4AF37]" : "text-slate-400 hover:bg-[#111111] hover:text-white"}`}>
+            className={({ isActive }) => `flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${isActive ? "bg-[#2F8CFF]/10 text-[#2F8CFF]" : "text-slate-400 hover:bg-[#111111] hover:text-white"}`}>
             <Icon className="h-4 w-4" />{label}
           </NavLink>
         ))}
@@ -114,7 +114,7 @@ export default function DashboardLayout() {
               )}
             </div>
             <Link to={`/u/${user?.username}`} className="flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1A1A1A] text-sm font-bold text-[#D4AF37]">{(user?.name || "U")[0]}</span>
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1A1A1A] text-sm font-bold text-[#2F8CFF]">{(user?.name || "U")[0]}</span>
             </Link>
           </div>
         </header>
