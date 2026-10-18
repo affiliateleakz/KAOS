@@ -11,17 +11,21 @@ const field = "w-full rounded border border-[#2E2E2E] bg-[#080808] px-3 py-2 fon
 
 export default function PaperTrading() {
   const [data, setData] = useState(null);
+  const [syncedAt, setSyncedAt] = useState(null);
+  const [syncErr, setSyncErr] = useState(false);
+  const [, tick] = useState(0);
   const [form, setForm] = useState({ symbol: "BTC-USD", asset_class: "CRYPTO_SPOT", side: "BUY", quantity: "10", quote_price: "", pricing: "market" });
   const [quote, setQuote] = useState(null);
   const [busy, setBusy] = useState(false);
-  const load = useCallback(() => api.get("/api/v1/paper/orders").then((r) => setData(r.data)).catch((e) => toast.error(errMsg(e))), []);
+  const load = useCallback(() => api.get("/api/v1/paper/orders").then((r) => { setData(r.data); setSyncedAt(Date.now()); setSyncErr(false); }).catch((e) => { setSyncErr(true); toast.error(errMsg(e)); }), []);
   useEffect(() => {
     load();
     // Keep the book in sync with orders placed from the extension or mobile app (same server-side account).
-    const sync = () => { if (!document.hidden) api.get("/api/v1/paper/orders").then((r) => setData(r.data)).catch(() => {}); };
+    const sync = () => { if (!document.hidden) api.get("/api/v1/paper/orders").then((r) => { setData(r.data); setSyncedAt(Date.now()); setSyncErr(false); }).catch(() => setSyncErr(true)); };
+    const clock = setInterval(() => tick((n) => n + 1), 1000);
     const t = setInterval(sync, 5000);
     window.addEventListener("focus", sync);
-    return () => { clearInterval(t); window.removeEventListener("focus", sync); };
+    return () => { clearInterval(t); clearInterval(clock); window.removeEventListener("focus", sync); };
   }, [load]);
   const marketMode = form.pricing === "market";
   useEffect(() => {
@@ -66,6 +70,9 @@ export default function PaperTrading() {
           <ShieldAlert className="h-4 w-4" /> Emergency stop is active. All paper orders are blocked by an administrator.
         </div>
       )}
+      <p data-testid="paper-sync" className={`text-xs ${syncErr ? "text-amber-300" : "text-slate-400"}`}>
+        Shared account book: {syncErr ? "sync failed, showing last loaded data · " : ""}last synced {syncedAt ? Math.round((Date.now() - syncedAt) / 1000) : "–"}s ago · polled every 5 s (not streaming), so changes from the extension or mobile appear within about 5 s
+      </p>
       <PaperSession orders={data.orders} killSwitch={data.kill_switch} onTraded={load} />
       <div className="grid gap-6 lg:grid-cols-3">
         <form onSubmit={submit} className="card-surface space-y-3 p-5" data-testid="paper-order-form">
