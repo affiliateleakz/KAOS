@@ -828,6 +828,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         case 'KAOS_PREDICT': sendResponse({ ok: true, prediction: await self.KaosCloud.predict(msg.featureVector, msg.context) }); break;
         case 'KAOS_TRADE_EVENT': await kaosOnTradeEvent(msg.eventType, msg.trade); sendResponse({ ok: true }); break;
         case 'KAOS_SYNC_FLUSH': sendResponse({ ok: true, result: await (await kaosSync()).flush() }); break;
+        case 'KAOS_PAPER': break; // answered by the dedicated KAOS_PAPER listener below
         default: sendResponse({ ok: false, error: 'unknown KAOS message' });
       }
     } catch (e) { sendResponse({ ok: false, error: String((e && e.message) || e), kind: (e && e.kind) || null }); }
@@ -862,6 +863,21 @@ chrome.action.onClicked.addListener(()=>{kaosOpenSingleAppWindow().catch(()=>{})
 
 // KAOS Research Agents: live closed-candle feed (shadow-only).
 importScripts('kaos-agent-live-bridge.js');
+
+// KAOS paper session: same server-side paper account, signals and journal as the website Paper Trading tab.
+const KAOS_PAPER_PATH=/^\/paper\/(session|brokers|orders|signals|quote\/[A-Z0-9-]{3,20}|candles\/[A-Z0-9-]{3,20}\?granularity=\d+|signals\/[A-Z0-9-]{3,20}\?granularity=\d+|signals\/sig-[0-9a-f]{16}\/execute|positions\/[A-Z0-9-]{3,20}\/close)$/;
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (!msg || msg.type !== 'KAOS_PAPER') return;
+  (async () => {
+    try {
+      const method = msg.method || 'GET';
+      if (!['GET','POST','PUT'].includes(method) || !KAOS_PAPER_PATH.test(msg.path||'')) throw Error('Paper request not allowed');
+      const response = await self.KaosCloud.authFetch(msg.path, {method, headers:{'Content-Type':'application/json'}, ...(method!=='GET'?{body:JSON.stringify(msg.payload||{})}:{})});
+      sendResponse({ok:response.ok,status:response.status,data:await response.json()});
+    } catch (e) {sendResponse({ok:false,error:String(e.message||e)});}
+  })();
+  return true;
+});
 
 // KAOS member broker vault — proxy requests via the existing authenticated cloud client.
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {

@@ -3806,6 +3806,9 @@ body.kaos-page-performance [class*="apply-strategy"]{
 #screen-chart .kaos-terminal-workspace > #terminal-analytics.active{
   display:block!important;
 }
+#screen-chart .kaos-terminal-workspace > #terminal-paper.active{
+  display:block!important;
+}
 
 /* Extra hard stop: charts + chart toolbar cannot render unless LIVE is active. */
 #terminal-live:not(.active),
@@ -4250,6 +4253,7 @@ body.kaos-fullpage #screen-main.view-dashboard #kaos-dashboard-live{
     <button class="kaos-nav-btn active" data-kaos-view="dashboard"><span class="k14-ni"><svg viewBox="0 0 16 16" width="15" height="15"><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" d="M2.5 7.5 8 2.8l5.5 4.7V13a1 1 0 0 1-1 1H10v-3.6H6V14H3.5a1 1 0 0 1-1-1z"/></svg></span><span>Dashboard</span></button>
     <button class="kaos-nav-btn" data-kaos-view="strategy"><span class="k14-ni"><svg viewBox="0 0 16 16" width="15" height="15"><circle cx="8" cy="8" r="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path fill="none" stroke="currentColor" stroke-width="1.5" d="M8 1.8v2.4M8 11.8v2.4M1.8 8h2.4M11.8 8h2.4M3.6 3.6l1.7 1.7M10.7 10.7l1.7 1.7M12.4 3.6l-1.7 1.7M5.3 10.7l-1.7 1.7"/></svg></span><span>Build Strategy</span></button>
     <button class="kaos-nav-btn" data-kaos-view="charts"><span class="k14-ni"><svg viewBox="0 0 16 16" width="15" height="15"><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" d="M2 13.5h12M3 12V8M6.3 12V5M9.6 12V9.5M12.9 12V3.5"/></svg></span><span>Charts</span></button>
+    <button class="kaos-nav-btn" data-kaos-view="paper"><span>Paper Session</span></button>
     <button class="kaos-nav-btn" data-kaos-view="ai"><span class="k14-ni"><svg viewBox="0 0 16 16" width="15" height="15"><path fill="none" stroke="currentColor" stroke-width="1.4" d="M8 2.2c1.9 0 3.4 1.2 3.9 2.9 1.6.38 2.6 1.8 2.6 3.4 0 1.9-1.6 3.5-3.5 3.5h-.5A3.9 3.9 0 0 1 8 13.8a3.9 3.9 0 0 1-2.5-.8H5a3.5 3.5 0 0 1-3.5-3.5c0-1.6 1.1-3 2.6-3.4C4.6 3.4 6.1 2.2 8 2.2z"/><path stroke="currentColor" stroke-width="1.2" d="M5.6 8.4h4.8M6.4 10.2h3.2" opacity=".7"/></svg></span><span>KAOS AI</span></button>
     <button id="kaos-open-research" class="kaos-nav-btn" type="button" title="Open separate TradingAgents research lab"><span>TradingAgents Lab ↗</span></button>
    <button class="kaos-nav-btn" data-kaos-view="performance"><span class="k14-ni"><svg viewBox="0 0 16 16" width="15" height="15"><path fill="none" stroke="currentColor" stroke-width="1.5" d="M5 2h6v3a3 3 0 0 1-6 0zM5 3H3.2c0 2 1 3.2 2.4 3.5M11 3h1.8c0 2-1 3.2-2.4 3.5M8 8v3M5.6 13.8h4.8M6.8 11h2.4v2.8H6.8z"/></svg></span><span>Performance</span></button>
@@ -4282,7 +4286,7 @@ body.kaos-fullpage #screen-main.view-dashboard #kaos-dashboard-live{
         <div class="k14-pill k14-pill-bot" data-state="wait"><span class="k14-pill-dot"></span><span class="k14-pill-ic"><svg viewBox="0 0 16 16" width="12" height="12"><rect x="3" y="5" width="10" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="6" cy="9" r="1.1" fill="currentColor"/><circle cx="10" cy="9" r="1.1" fill="currentColor"/></svg></span><span class="k14-pill-tx"><b>Bot Status</b><i>—</i></span></div>
         <div class="k14-pill k14-pill-ai" data-state="wait"><span class="k14-pill-dot"></span><span class="k14-pill-ic"><svg viewBox="0 0 16 16" width="12" height="12"><path fill="none" stroke="currentColor" stroke-width="1.4" d="M8 2.2c1.9 0 3.4 1.2 3.9 2.9 1.6.38 2.6 1.8 2.6 3.4 0 1.9-1.6 3.5-3.5 3.5h-.5A3.9 3.9 0 0 1 8 13.8a3.9 3.9 0 0 1-2.5-.8H5a3.5 3.5 0 0 1-3.5-3.5c0-1.6 1.1-3 2.6-3.4C4.6 3.4 6.1 2.2 8 2.2z"/></svg></span><span class="k14-pill-tx"><b>AI Learning</b><i>—</i></span></div>
       </div>
-      <span class="kaos-page-state">● POCKET OPTION: CONNECTED</span>
+      <span class="kaos-page-state kaos-broker-state">● BROKER: NOT SELECTED</span>
       <span class="k14-title-badge" id="k14-title-badge" style="display:none"><i class="badge-dot"></i><span id="k14-title-badge-txt">ID: ···</span></span>
       <div class="k14-title-actions">
         <button class="k14-icon-btn" data-kaos-view="charts" title="Charts &amp; analytics"><svg viewBox="0 0 16 16" width="14" height="14"><circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.4"/><path stroke="currentColor" stroke-width="1.4" stroke-linecap="round" d="M8 1.6v3.2M8 11.2v3.2M1.6 8h3.2M11.2 8h3.2"/></svg></button>
@@ -4775,6 +4779,7 @@ body.kaos-fullpage #screen-main.view-dashboard #kaos-dashboard-live{
   <button class="kaos-nav-btn" data-kaos-view="dashboard"><span>Dashboard</span></button>
   <button class="kaos-nav-btn" data-kaos-view="strategy"><span>Build Strategy</span></button>
   <button class="kaos-nav-btn active" data-kaos-view="charts"><span>Charts</span></button>
+  <button class="kaos-nav-btn" data-kaos-view="paper"><span>Paper Session</span></button>
   <button class="kaos-nav-btn" data-kaos-view="backtester"><span>Backtester</span></button>
   <button class="kaos-nav-btn" data-kaos-view="ai"><span>KAOS AI</span></button>
   <button class="kaos-nav-btn" data-kaos-view="performance"><span>Performance</span></button>
@@ -4792,11 +4797,12 @@ body.kaos-fullpage #screen-main.view-dashboard #kaos-dashboard-live{
   </div>
 </aside>
   <div class="kaos-app-workspace kaos-terminal-workspace" data-page-title="KAOS MULTI-CHART · TRADE MULTIPLE MARKETS">
-  <div class="kaos-page-title kaos-terminal-title" id="kaos-terminal-title"><img src="kaos_social.png"><div><b>KAOS TRADING BOT</b><small>TRADE WITH KAOS</small></div><span class="kaos-page-state">● POCKET OPTION: CONNECTED</span><div class="kaos-mini-viewmode"><button class="kaos-view-btn" data-kaos-mode="mini">Mini</button><button class="kaos-view-btn" data-kaos-mode="max">Max</button></div><div class="kaos-win-controls"><button class="kaos-win-btn" id="kaos-win-min2" data-win="min" title="Mini view">—</button><button class="kaos-win-btn" id="kaos-win-max2" data-win="max" title="Max view (opens full screen)">⤢</button><button class="kaos-win-btn" id="kaos-fs-btn" data-win="fullscreen" title="Full screen">⛶</button><button class="kaos-win-btn kaos-win-close" id="kaos-win-close2" data-win="close" title="Close">×</button></div></div>
+  <div class="kaos-page-title kaos-terminal-title" id="kaos-terminal-title"><img src="kaos_social.png"><div><b>KAOS TRADING BOT</b><small>TRADE WITH KAOS</small></div><span class="kaos-page-state kaos-broker-state">● BROKER: NOT SELECTED</span><div class="kaos-mini-viewmode"><button class="kaos-view-btn" data-kaos-mode="mini">Mini</button><button class="kaos-view-btn" data-kaos-mode="max">Max</button></div><div class="kaos-win-controls"><button class="kaos-win-btn" id="kaos-win-min2" data-win="min" title="Mini view">—</button><button class="kaos-win-btn" id="kaos-win-max2" data-win="max" title="Max view (opens full screen)">⤢</button><button class="kaos-win-btn" id="kaos-fs-btn" data-win="fullscreen" title="Full screen">⛶</button><button class="kaos-win-btn kaos-win-close" id="kaos-win-close2" data-win="close" title="Close">×</button></div></div>
   <div class="terminal-nav">
     <button class="terminal-tab active" data-page="live">LIVE 4-CHART</button>
     <button class="terminal-tab" data-page="ai"> AI LEARNING</button>
     <button class="terminal-tab" data-page="analytics">ANALYTICS</button>
+    <button class="terminal-tab" data-page="paper">PAPER SESSION</button>
     <span class="spacer"></span><span class="learn-badge">KAOS STRATEGY · EXECUTION</span><span class="learn-badge">AI · SHADOW LEARNING</span>
     <button id="chart-back-btn">← BACK TO BOT</button>
   </div>
@@ -4822,6 +4828,7 @@ body.kaos-fullpage #screen-main.view-dashboard #kaos-dashboard-live{
   <div id="terminal-backtester" class="terminal-page" style="height:calc(100vh - 120px);min-height:650px;padding:0;overflow:hidden">
     <iframe id="kaos-backtester-frame" title="KAOS Strategy Backtester" src="kaos-backtest.html" style="width:100%;height:100%;border:0;display:block;background:#100e0b"></iframe>
   </div>
+  <div id="terminal-paper" class="terminal-page"><div id="kaos-paper-panel" class="terminal-panel" style="padding:12px;color:#d6dde6;font:12px/1.5 monospace">Sign in to KAOS to load your paper session.</div></div>
   <div id="terminal-ai" class="terminal-page">
     <div class="ai-grid">
       <div class="terminal-panel"><h3>AI / MODEL STATUS · SELECTED CHART</h3><div id="terminal-ai-selected" class="ai-truth"></div><div id="terminal-ai-markets" style="margin-top:8px"></div></div>
@@ -4872,6 +4879,7 @@ body.kaos-fullpage #screen-main.view-dashboard #kaos-dashboard-live{
   </div>
 </div>
 <div id="kaos-broker-overlay" aria-label="Choose trading broker"><div class="broker-wrap"><h2>KAOS Trading · Select Broker</h2><p>Choose the trading platform you want to use.</p><div class="broker-grid">
+<button data-kaos-broker="kaos_paper">KAOS Paper<small>Coinbase public market data · paper only · no broker account</small></button>
 <button data-kaos-broker="pocketoption">Pocket Option<small>Existing KAOS connection</small></button>
 <button data-kaos-broker="coinbase">Coinbase Advanced<small>Saved API account · trading adapter pending</small></button>
 <button data-kaos-broker="kraken">Kraken<small>Crypto · connector pending</small></button>
@@ -4885,5 +4893,6 @@ body.kaos-fullpage #screen-main.view-dashboard #kaos-dashboard-live{
 </div><div id="kaos-broker-status" class="broker-status" hidden></div></div></div><button id="kaos-broker-switch" type="button" hidden>Change Broker</button>
 <script src="kaos-broker-selector.js"></script>
 <script src="kaos-coinbase-connect.js"></script>
+<script src="kaos-paper-panel.js"></script>
 </body>
 </html>
