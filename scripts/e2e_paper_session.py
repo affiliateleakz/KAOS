@@ -147,6 +147,30 @@ cfill = next(o for o in final["website"]["orders"] if o["client_order_id"] == cc
 check(10, "close filled from a fresh quote at bid minus slippage", cfill.get("execution_kind") == "market_data_paper"
       and float(cfill["fill_price"]) <= float(cfill["quote"]["bid"]), f"bid={cfill['quote']['bid']} fill={cfill['fill_price']}")
 
+# Approved signal from recorded genuine Coinbase candles -> execution re-checks risk on a fresh live quote -> exactly one fill.
+rsym, rec = "BTC-USD", "coinbase_btc_usd_5m_breakout_long"
+rw = web_client(a.user)
+rs = rw.post(P + f"/signals/{rsym}", json={"notional": "5", "replay": rec})
+rsig = rs.json() if rs.status_code == 200 else {}
+check(3, "recorded genuine candles -> documented BUY approved by risk preview", rsig.get("action") == "BUY" and rsig.get("risk", {}).get("approved")
+      and rsig.get("reasons") and str(rsig.get("candle_source", "")).startswith("recorded:"), rs.text[:200])
+if rsig.get("status") == "PENDING":
+    rclients = [bearer_client(a.user, "e2e-extension"), bearer_client(a.user, "e2e-mobile"), rw]
+    with concurrent.futures.ThreadPoolExecutor(3) as pool:
+        ex = list(pool.map(lambda c: c.post(P + f"/signals/{rsig['signal_id']}/execute"), rclients))
+    orders = rw.get(P + "/orders").json()["orders"]
+    fills = [o for o in orders if o["client_order_id"] == f"exec-{rsig['signal_id']}"]
+    check(6, "approved signal executed from 3 clients at once -> exactly one fill", len(fills) == 1, str([x.status_code for x in ex]))
+    if fills:
+        f0 = fills[0]
+        check(4, "signal fill re-checked risk on a fresh quote (not the signal-time quote)", f0.get("execution_kind") == "market_data_paper"
+              and f0["quote"]["quote_time"] >= rsig["quote"]["quote_time"] and float(f0["fill_price"]) >= float(f0["quote"]["ask"]),
+              f"signal_quote={rsig['quote']['quote_time']} fill_quote={f0['quote']['quote_time']} ask={f0['quote']['ask']} fill={f0['fill_price']}")
+    sig_now = next((x for x in rw.get(P + "/signals").json()["signals"] if x["signal_id"] == rsig["signal_id"]), {})
+    check(6, "signal marked EXECUTED; replaying execute returns the same order", sig_now.get("status") == "EXECUTED"
+          and rw.post(P + f"/signals/{rsig['signal_id']}/execute").json().get("client_order_id") == f"exec-{rsig['signal_id']}")
+    rw.post(P + f"/positions/{rsym}/close", json={"client_order_id": "e2e-replay-close-" + uuid.uuid4().hex[:8]})
+
 json.dump({"api": a.api, "ran_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "results": results}, open(a.report, "w"), indent=2)
 failed = [r for r in results if not r["pass"]]
 print(f"\n{len(results) - len(failed)}/{len(results)} checks passed. Report: {a.report}")

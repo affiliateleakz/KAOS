@@ -320,3 +320,13 @@ def test_session_fee_and_slippage_applied_and_bounded(env):
         with pytest.raises(HTTPException) as e:
             run(routes_paper.put_session(bad, user))
         assert e.value.status_code == 422
+
+
+def test_replay_disabled_by_default(env, monkeypatch):
+    monkeypatch.delenv("KAOS_PAPER_REPLAY", raising=False)
+    from fastapi import HTTPException
+    import routes_paper
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(routes_paper.generate_signal(
+            "BTC-USD", routes_paper.ExecuteSignalReq(replay="coinbase_btc_usd_5m_breakout_long"), user={"id": "u-replay"}))
+    assert exc.value.status_code == 403

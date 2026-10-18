@@ -5,6 +5,7 @@ Two execution kinds, always labelled on the order:
   BUY at the ask / SELL at the bid; stale quotes are refused by the risk engine.
 - manual_demo: the caller types the price. Demo only, not a market fill.
 """
+import json
 import os
 import uuid
 from datetime import datetime, timezone
@@ -246,6 +247,8 @@ async def _session_costs(user):
 
 class ExecuteSignalReq(BaseModel):
     notional: str = "10"
+    # Recorded genuine Coinbase candles (apps/api/fixtures). Only when KAOS_PAPER_REPLAY=1 (local acceptance runs).
+    replay: Optional[str] = Field(default=None, pattern=r"^[a-z0-9_]{1,64}$")
 
 
 @router.get("/brokers")
@@ -321,8 +324,21 @@ async def generate_signal(symbol: str, req: ExecuteSignalReq, granularity: int =
     """Run the KAOS strategy on the latest closed candles and record the signal with its reasons and risk decision."""
     symbol = symbol.upper()
     _positive(req.notional, "notional")
+    candle_source = None
+    if req.replay:
+        if os.environ.get("KAOS_PAPER_REPLAY") != "1":
+            raise HTTPException(status_code=403, detail="Recorded-candle replay is disabled on this server")
+        path = os.path.join(os.path.dirname(__file__), "fixtures", req.replay + ".json")
+        if not os.path.isfile(path):
+            raise HTTPException(status_code=404, detail="Unknown recording")
+        with open(path) as fh:
+            rec = json.load(fh)
+        if rec["symbol"] != symbol:
+            raise HTTPException(status_code=422, detail=f"Recording is for {rec['symbol']}")
+        granularity, candle_source = rec["granularity"], f"recorded:{req.replay} ({rec['source']}, {rec['recorded_at']})"
     try:
-        candles = await market_data.get_candles(symbol, "CRYPTO_SPOT", granularity)
+        candles = ({"candles": rec["candles"]} if req.replay
+                   else await market_data.get_candles(symbol, "CRYPTO_SPOT", granularity))
         quote = await market_data.get_quote(symbol, "CRYPTO_SPOT")
     except market_data.QuoteUnavailable as exc:
         raise HTTPException(status_code=503, detail=f"Market data unavailable: {exc}")
@@ -331,6 +347,7 @@ async def generate_signal(symbol: str, req: ExecuteSignalReq, granularity: int =
     doc = {"signal_id": f"sig-{uuid.uuid4().hex[:16]}", "user_id": user["id"], "symbol": symbol,
            "strategy": kaos_structure_v2.STRATEGY_NAME, "strategy_status": kaos_structure_v2.STRATEGY_STATUS,
            "granularity": granularity, **result, "quote": quote.provenance(), "notional": req.notional,
+           "candle_source": candle_source or "live:" + candles.get("source", "coinbase"),
            "risk": risk, "status": "PENDING" if risk["approved"] else "NOT_TRADED",
            "created_at": datetime.now(timezone.utc).isoformat()}
     await db.paper_signals.insert_one(dict(doc))
