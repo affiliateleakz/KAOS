@@ -7,7 +7,7 @@ from services import get_setting, set_setting, audit_log
 from models import CheckoutReq
 
 router = APIRouter(prefix="/api/billing", tags=["billing"])
-stripe.api_key = os.environ.get("STRIPE_SECRET_KEY") or "sk_test_emergent"
+stripe.api_key = os.environ.get("STRIPE_SECRET_KEY") or None
 WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 
 DEFAULT_PLANS = [
