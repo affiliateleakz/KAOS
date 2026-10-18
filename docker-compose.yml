@@ -11,6 +11,9 @@ services:
   api:
     build: ./apps/api
     env_file: .env
+    environment:
+      KAOS_PAPER_JOURNAL_PATH: /var/lib/kaos/paper_journal.db
+    volumes: [paper-journal:/var/lib/kaos]
     ports: ["8001:8001"]
     depends_on:
       mongo: { condition: service_healthy }
@@ -27,5 +30,6 @@ services:
     volumes: [./apps/web:/app, web-node-modules:/app/node_modules]
     depends_on: [api]
 volumes:
+  paper-journal:
   mongo-data:
   web-node-modules:
