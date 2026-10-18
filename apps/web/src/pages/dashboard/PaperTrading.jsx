@@ -6,8 +6,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { toast } from "sonner";
 import { FlaskConical, ShieldAlert } from "lucide-react";
 
-const STARTING_BALANCE = 100;
-const OPEN = ["SUBMITTED", "PARTIALLY_FILLED", "FILLED"];
 const field = "w-full rounded border border-[#2E2E2E] bg-[#080808] px-3 py-2 font-mono text-sm text-white";
 
 export default function PaperTrading() {
@@ -33,7 +31,8 @@ export default function PaperTrading() {
   };
 
   if (!data) return <p className="text-slate-500">Loading…</p>;
-  const exposure = data.orders.filter((o) => OPEN.includes(o.state) && o.side === "BUY").reduce((s, o) => s + Number(o.quantity), 0);
+  const book = data.book || { starting_balance: "100.00", cash: "100.00", open_cost: "0.00", realized_pnl: "0.00", positions: [] };
+  const pnlColor = Number(book.realized_pnl) < 0 ? "text-red-400" : "text-[#22C55E]";
 
   return (
     <div>
@@ -60,11 +59,12 @@ export default function PaperTrading() {
           <Button data-testid="paper-submit" disabled={busy || data.kill_switch} className="w-full bg-[#22C55E] font-semibold text-black">{busy ? "Submitting…" : "Place paper order"}</Button>
         </form>
         <div className="space-y-4 lg:col-span-2">
-          <div className="grid grid-cols-3 gap-4">
-            {[["Paper balance", `$${STARTING_BALANCE}`], ["Open exposure", `$${exposure.toFixed(2)}`], ["Available", `$${Math.max(STARTING_BALANCE - exposure, 0).toFixed(2)}`]].map(([l, v]) => (
-              <div key={l} className="card-surface p-4"><div className="label-mono">{l}</div><div className="mt-1 font-mono text-2xl font-bold text-[#D4AF37]" data-testid={`paper-${l.split(" ")[0].toLowerCase()}`}>{v}</div></div>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            {[["Starting balance", book.starting_balance, "starting"], ["Cash", book.cash, "cash"], ["Open cost", book.open_cost, "open"], ["Realized P&L", book.realized_pnl, "pnl"]].map(([l, v, id]) => (
+              <div key={l} className="card-surface p-4"><div className="label-mono">{l}</div><div className={`mt-1 font-mono text-2xl font-bold ${id === "pnl" ? pnlColor : "text-[#D4AF37]"}`} data-testid={`paper-${id}`}>${v}</div></div>
             ))}
           </div>
+          <Positions positions={book.positions} disabled={data.kill_switch} onDone={load} />
           <OrdersTable title="Paper orders" rows={data.orders} testid="paper-orders" />
           <OrdersTable title="Rejected by risk checks" rows={data.rejected} testid="paper-rejected" reason />
         </div>
@@ -73,19 +73,63 @@ export default function PaperTrading() {
   );
 }
 
+function Positions({ positions, disabled, onDone }) {
+  const [marks, setMarks] = useState({});
+  const [busy, setBusy] = useState(null);
+  const close = async (symbol) => {
+    setBusy(symbol);
+    try {
+      const r = await api.post(`/api/v1/paper/positions/${encodeURIComponent(symbol)}/close`, { quote_price: marks[symbol] });
+      toast.success(`Closed ${symbol} · realized $${r.data.realized_pnl}`);
+    } catch (err) {
+      toast.error(errMsg(err));
+    } finally {
+      setBusy(null);
+      onDone();
+    }
+  };
+  return (
+    <div className="card-surface overflow-x-auto p-0" data-testid="paper-positions">
+      <div className="border-b border-[#2E2E2E] p-4"><h3 className="font-heading font-semibold">Open paper positions</h3>
+        <p className="mt-1 text-xs text-slate-500">Enter a price to see unrealized P&amp;L at that price, or close the whole position there.</p></div>
+      <Table><TableHeader><TableRow className="border-[#2E2E2E]"><TableHead>Symbol</TableHead><TableHead>Units</TableHead><TableHead>Avg price</TableHead><TableHead>Cost</TableHead><TableHead>Price</TableHead><TableHead>Unrealized</TableHead><TableHead /></TableRow></TableHeader>
+        <TableBody>
+          {positions.length === 0 && <TableRow><TableCell colSpan={7} className="text-slate-500">No open positions.</TableCell></TableRow>}
+          {positions.map((p) => {
+            const mark = Number(marks[p.symbol]);
+            const unreal = mark > 0 ? Number(p.units) * mark - Number(p.cost) : null;
+            return (
+              <TableRow key={p.symbol} className="border-[#2E2E2E]" data-testid={`paper-position-${p.symbol}`}>
+                <TableCell className="font-mono">{p.symbol}</TableCell>
+                <TableCell className="font-mono text-xs">{p.units}</TableCell>
+                <TableCell className="font-mono text-xs">{p.avg_price}</TableCell>
+                <TableCell className="font-mono text-xs">${p.cost}</TableCell>
+                <TableCell><input data-testid={`paper-mark-${p.symbol}`} className={`${field} w-28 py-1`} type="number" min="0.00000001" step="any" placeholder="price" value={marks[p.symbol] || ""} onChange={(e) => setMarks({ ...marks, [p.symbol]: e.target.value })} /></TableCell>
+                <TableCell className={`font-mono text-xs ${unreal == null ? "text-slate-500" : unreal < 0 ? "text-red-400" : "text-[#22C55E]"}`}>{unreal == null ? "—" : `${unreal < 0 ? "-" : ""}$${Math.abs(unreal).toFixed(2)}`}</TableCell>
+                <TableCell><Button data-testid={`paper-close-${p.symbol}`} size="sm" variant="outline" disabled={disabled || !(mark > 0) || busy === p.symbol} onClick={() => close(p.symbol)}>Close</Button></TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
 function OrdersTable({ title, rows, testid, reason }) {
   return (
     <div className="card-surface overflow-x-auto p-0" data-testid={testid}>
       <div className="border-b border-[#2E2E2E] p-4"><h3 className="font-heading font-semibold">{title}</h3></div>
-      <Table><TableHeader><TableRow className="border-[#2E2E2E]"><TableHead>Time</TableHead><TableHead>Symbol</TableHead><TableHead>Side</TableHead><TableHead>Notional</TableHead><TableHead>Quote</TableHead><TableHead>{reason ? "Reason" : "State"}</TableHead></TableRow></TableHeader>
+      <Table><TableHeader><TableRow className="border-[#2E2E2E]"><TableHead>Time</TableHead><TableHead>Symbol</TableHead><TableHead>Side</TableHead><TableHead>Notional</TableHead><TableHead>Quote</TableHead><TableHead>{reason ? "Reason" : "State"}</TableHead>{!reason && <TableHead>Realized</TableHead>}</TableRow></TableHeader>
         <TableBody>
-          {rows.length === 0 && <TableRow><TableCell colSpan={6} className="py-6 text-center text-slate-500">None yet</TableCell></TableRow>}
+          {rows.length === 0 && <TableRow><TableCell colSpan={reason ? 6 : 7} className="py-6 text-center text-slate-500">None yet</TableCell></TableRow>}
           {rows.map((o, i) => (
             <TableRow key={`${o.client_order_id}-${i}`} className="border-[#2E2E2E]">
               <TableCell className="font-mono text-xs text-slate-400">{o.created_at?.slice(0, 19).replace("T", " ")}</TableCell>
               <TableCell className="font-mono">{o.symbol}</TableCell><TableCell>{o.side}</TableCell>
               <TableCell className="font-mono">${o.quantity}</TableCell><TableCell className="font-mono text-slate-400">{o.quote_price}</TableCell>
-              <TableCell>{reason ? <span className="text-xs text-red-300">{o.reason}</span> : <StatusBadge value={o.state} />}</TableCell>
+              <TableCell>{reason ? <span className="text-xs text-red-300">{o.reason}</span> : <StatusBadge value={o.fill_type === "SIMULATED" ? "SIM FILLED" : o.state} />}</TableCell>
+              {!reason && <TableCell className={`font-mono text-xs ${Number(o.realized_pnl) < 0 ? "text-red-400" : "text-slate-300"}`}>{o.realized_pnl != null ? `$${o.realized_pnl}` : "—"}</TableCell>}
             </TableRow>
           ))}
         </TableBody></Table>
