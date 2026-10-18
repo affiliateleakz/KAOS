@@ -5,16 +5,16 @@ Founder priority (PR #6 comment 6253698228): a working path from login to the pa
 | # | Step | Status | Where / evidence |
 |---|------|--------|------------------|
 | 1 | Member login | Works (local) | Cookie JWT auth, `apps/api/auth.py`; browser login test on PR #1 |
-| 2 | Choose broker | Partial | Per-broker license, `compute_license(..., broker)` (#4). The Pocket Option referral rule applies only to Pocket Option. The portal has no broker picker yet; paper orders use the `kaos_paper` adapter. |
+| 2 | Choose broker | Works (paper) | Per-broker license, `compute_license(..., broker)` (#4). The Pocket Option referral rule applies only to Pocket Option. Paper Trading tab broker picker (`GET /api/v1/paper/brokers`): KAOS Paper (Coinbase market data) is available; Pocket Option and Coinbase live are listed as unavailable, each with its reason. |
 | 3 | Authorized market-data feed | **Works for crypto spot** | `apps/api/market_data.py`: Coinbase Exchange **public** ticker (`api.exchange.coinbase.com/products/{id}/ticker`), free, no account or key. `GET /api/v1/paper/quote/{symbol}`. **Stocks, options and forex: no licensed feed yet (returns 503).** Pocket Option has no public data API. |
-| 4 | Charts: Free 1, Pro/Ultimate max 4 | Partial | Extension 1–4 selector limited by the server `chartLimit`; server `chartSlot` checks (403 `chart_limit`). Web portal and mobile have no multi-chart view. Four concurrent charts not performance-tested. |
+| 4 | Charts: Free 1, Pro/Ultimate max 4 | Partial | Portal: one live candlestick chart (`GET /api/v1/paper/candles/{symbol}`, closed bars, EMA20/50, fill markers). Extension 1–4 selector limited by the server `chartLimit`; server `chartSlot` checks (403 `chart_limit`). Web portal and mobile have no multi-chart view. Four concurrent charts not performance-tested. |
 | 5 | Unlimited watchlists, separate from active charts | Not built | No watchlist model yet. Will not count against `chartLimit`. |
-| 6 | Strategy-mode signal | Partial | Extension strategies produce signals in Pocket Option; `/api/v1/trading/signal` records them. Not yet connected to market-data paper orders. |
+| 6 | Strategy-mode signal with documented reason | Works (paper, crypto) | `POST /api/v1/paper/signals/{symbol}` runs KAOS Structure v2 (`kaos_structure_v2.py`, vendored unchanged; v2.1 audit FAIL, labelled unvalidated) on the last closed candle and stores the action, setup, reasons, indicators and quote in `paper_signals`. On live data it is mostly HOLD. |
 | 7 | Paper order | Works | `POST /api/v1/paper/orders`, omitting `quote_price` |
 | 8 | Simulated fill from a timestamped quote | **Works (crypto)** | BUY fills at the ask, SELL at the bid. The quote is fetched server-side at order time. The full quote (bid/ask/last, `quote_time`, `fetched_at`, `source`) is stored on the order as `execution_kind: market_data_paper`. Manually priced orders are labelled `manual_demo`. |
-| 9 | Risk checks | Works | `kaos_risk_engine`: quote older than 10 s is refused; notional, exposure and position limits; kill switch; long-only. |
-| 10 | Portfolio / trade journal | Works | Cash, positions, average cost, realized P&L; durable SQLite journal plus Mongo `paper_orders`/`paper_order_rejections`. |
-| 11 | Persistence / reconnection | Works (book) | The book is rebuilt from stored orders on every request, and retries with the same `client_order_id` are idempotent. No live-streaming reconnect yet (quotes are polled every 5 s in the portal). |
+| 9 | Risk manager approves or rejects | Works | The signal carries a risk decision from the same `check_order` call the order path uses; `POST /signals/{id}/execute` only fills approved, unexpired (120 s) signals, once per signal. | `kaos_risk_engine`: quote older than 10 s is refused; notional, exposure and position limits; kill switch; long-only. |
+| 10 | Portfolio / fees / trade journal | Works | Cash, positions, average cost, realized P&L, simulated fee (`KAOS_PAPER_FEE_RATE`, default 0.6% per side, an assumption); durable SQLite journal plus Mongo `paper_orders`/`paper_order_rejections`. |
+| 11 | Persistence / reconnection | Works | The session (broker, market, candle size, size) is stored in `paper_sessions`; the book is rebuilt from stored orders; the signal journal persists; retries are idempotent. No live-streaming reconnect yet (quotes are polled every 5 s in the portal). |
 
 ## Known limits
 - The ticker's `time` is the last trade time, so thin products whose last trade is over 10 s old are refused as stale. That is by design.
