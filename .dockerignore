@@ -1,0 +1,10 @@
+**/__pycache__
+**/.pytest_cache
+**/node_modules
+.git
+.env
+data
+apps/web
+apps/mobile
+apps/extension
+research

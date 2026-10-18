@@ -6,6 +6,10 @@ on:
 jobs:
   python:
     runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:7
+        ports: ["27017:27017"]
     strategy:
       fail-fast: false
       matrix:
@@ -20,7 +24,7 @@ jobs:
           if [ "${{ matrix.suite }}" = "apps/api" ]; then pip install -r apps/api/requirements.txt; fi
       - name: Test
         working-directory: ${{ matrix.suite }}
-        env: { MONGO_URL: "mongodb://localhost:27017", DB_NAME: kaos_test }
+        env: { MONGO_URL: "mongodb://localhost:27017", DB_NAME: kaos_test, PYTHONPATH: "${{ github.workspace }}/packages/kaos-core" }
         run: python -m pytest -q
   web:
     runs-on: ubuntu-latest
