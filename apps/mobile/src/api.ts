@@ -21,3 +21,27 @@ export async function loadStatus(){return request<{mode:string;collector_configu
 export type SourceHealth={provider:string;asset_class:string;source:string;age_minutes:number;state:string;observations_in_sample:number};
 export type Health={mode:string;status_meaning:string;sample_observations:number;sample_truncated:boolean;sources:SourceHealth[]};
 export async function loadHealth():Promise<Health>{return request<Health>('/api/v1/intelligence/health')}
+
+export async function send<T>(path:string,method:'POST'|'PUT',body:unknown={}):Promise<T>{
+ const token=await getToken(); if(!token) throw new Error('Sign in required');
+ const response=await fetch(BASE+path,{method,headers:{Authorization:`Bearer ${token}`,Accept:'application/json','Content-Type':'application/json'},body:JSON.stringify(body)});
+ const data=await response.json().catch(()=>({}));
+ if(response.status===401) throw new Error('Session expired. Sign in again.');
+ if(!response.ok) throw new Error(typeof data.detail==='string'?data.detail:`KAOS API error ${response.status}`);
+ return data as T;
+}
+export type Candle={time:number;open:number;high:number;low:number;close:number;volume:number};
+export type PaperSession={broker:string;symbol:string;granularity:number;notional:string};
+export type Quote={bid:string;ask:string;quote_time:string;source:string};
+export type Signal={signal_id:string;symbol:string;action:string;setup:string;status:string;reasons:string[];risk:{approved:boolean;reason:string};created_at:string};
+export type PaperOrder={client_order_id:string;symbol:string;side:string;quantity:string;fill_price:string;fee?:string;execution_kind?:string;created_at:string};
+export type PaperBook={cash:string;open_cost:string;realized_pnl:string;fees_paid?:string};
+export const paper={
+ session:()=>request<PaperSession>('/api/v1/paper/session'),
+ quote:(s:string)=>request<Quote>(`/api/v1/paper/quote/${encodeURIComponent(s)}`),
+ candles:(s:string,g:number)=>request<{candles:Candle[];source:string}>(`/api/v1/paper/candles/${encodeURIComponent(s)}?granularity=${g}`),
+ orders:()=>request<{orders:PaperOrder[];book:PaperBook;kill_switch:boolean}>('/api/v1/paper/orders'),
+ signals:()=>request<{signals:Signal[]}>('/api/v1/paper/signals'),
+ runStrategy:(s:PaperSession)=>send<Signal>(`/api/v1/paper/signals/${encodeURIComponent(s.symbol)}?granularity=${s.granularity}`,'POST',{notional:s.notional}),
+ execute:(id:string)=>send<PaperOrder>(`/api/v1/paper/signals/${id}/execute`,'POST'),
+};

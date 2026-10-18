@@ -863,6 +863,21 @@ chrome.action.onClicked.addListener(()=>{kaosOpenSingleAppWindow().catch(()=>{})
 // KAOS Research Agents: live closed-candle feed (shadow-only).
 importScripts('kaos-agent-live-bridge.js');
 
+// KAOS paper session: same server-side paper account, signals and journal as the website Paper Trading tab.
+const KAOS_PAPER_PATH=/^\/paper\/(session|brokers|orders|signals|quote\/[A-Z0-9-]{3,20}|candles\/[A-Z0-9-]{3,20}\?granularity=\d+|signals\/[A-Z0-9-]{3,20}\?granularity=\d+|signals\/sig-[0-9a-f]{16}\/execute)$/;
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (!msg || msg.type !== 'KAOS_PAPER') return;
+  (async () => {
+    try {
+      const method = msg.method || 'GET';
+      if (!['GET','POST','PUT'].includes(method) || !KAOS_PAPER_PATH.test(msg.path||'')) throw Error('Paper request not allowed');
+      const response = await self.KaosCloud.authFetch(msg.path, {method, headers:{'Content-Type':'application/json'}, ...(method!=='GET'?{body:JSON.stringify(msg.payload||{})}:{})});
+      sendResponse({ok:response.ok,status:response.status,data:await response.json()});
+    } catch (e) {sendResponse({ok:false,error:String(e.message||e)});}
+  })();
+  return true;
+});
+
 // KAOS member broker vault — proxy requests via the existing authenticated cloud client.
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg || msg.type !== 'KAOS_BROKER_VAULT') return;

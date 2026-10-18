@@ -23,3 +23,15 @@ Founder priority (PR #6 comment 6253698228): a working path from login to the pa
 
 ## Tests
 `apps/api/test_market_data_paper.py`: ticker parsing, ask/bid fills with provenance, stale-quote refusal, kill switch, idempotent retry without a second fetch, conflict 409, manual-demo label, book rebuild, and a 503 for asset classes without a feed.
+
+## One session across clients
+
+All three clients read and write the same server-side paper account (`/api/v1/paper/*`, same user via cookie or bearer token):
+
+| Client | Where | Status |
+|---|---|---|
+| Website / member portal | Dashboard → Paper Trading (`PaperSession.jsx`) | Works: broker picker, live chart, strategy signal, risk decision, execute, fees, journal. |
+| Chrome extension | Bot terminal → PAPER SESSION tab (`kaos-paper-panel.js`, proxied by `background.js` `KAOS_PAPER` with a path allowlist) | Built: quote, book, fees, signal + risk, execute, journal. The bearer-token API path is verified with curl against the local stack; the panel has not been clicked through in a loaded extension yet. |
+| Mobile (Expo, Android/iPhone) | ★ Paper → `app/paper.tsx` | Built and type-checks (`tsc --noEmit`): live candle chart, quote, book, signal + risk, execute, journal. Not run on a device or simulator yet. |
+
+The extension's Pocket Option strategy bot is **not** connected to this paper session: Pocket Option has no authorized market-data API, so its trades cannot be priced from a server-side feed.

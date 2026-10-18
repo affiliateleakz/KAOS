@@ -4797,6 +4797,7 @@ body.kaos-fullpage #screen-main.view-dashboard #kaos-dashboard-live{
     <button class="terminal-tab active" data-page="live">LIVE 4-CHART</button>
     <button class="terminal-tab" data-page="ai"> AI LEARNING</button>
     <button class="terminal-tab" data-page="analytics">ANALYTICS</button>
+    <button class="terminal-tab" data-page="paper">PAPER SESSION</button>
     <span class="spacer"></span><span class="learn-badge">KAOS STRATEGY · EXECUTION</span><span class="learn-badge">AI · SHADOW LEARNING</span>
     <button id="chart-back-btn">← BACK TO BOT</button>
   </div>
@@ -4822,6 +4823,7 @@ body.kaos-fullpage #screen-main.view-dashboard #kaos-dashboard-live{
   <div id="terminal-backtester" class="terminal-page" style="height:calc(100vh - 120px);min-height:650px;padding:0;overflow:hidden">
     <iframe id="kaos-backtester-frame" title="KAOS Strategy Backtester" src="kaos-backtest.html" style="width:100%;height:100%;border:0;display:block;background:#100e0b"></iframe>
   </div>
+  <div id="terminal-paper" class="terminal-page"><div id="kaos-paper-panel" class="terminal-panel" style="padding:12px;color:#d6dde6;font:12px/1.5 monospace">Sign in to KAOS to load your paper session.</div></div>
   <div id="terminal-ai" class="terminal-page">
     <div class="ai-grid">
       <div class="terminal-panel"><h3>AI / MODEL STATUS · SELECTED CHART</h3><div id="terminal-ai-selected" class="ai-truth"></div><div id="terminal-ai-markets" style="margin-top:8px"></div></div>
@@ -4885,5 +4887,6 @@ body.kaos-fullpage #screen-main.view-dashboard #kaos-dashboard-live{
 </div><div id="kaos-broker-status" class="broker-status" hidden></div></div></div><button id="kaos-broker-switch" type="button" hidden>Change Broker</button>
 <script src="kaos-broker-selector.js"></script>
 <script src="kaos-coinbase-connect.js"></script>
+<script src="kaos-paper-panel.js"></script>
 </body>
 </html>
