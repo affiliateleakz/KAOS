@@ -12,6 +12,20 @@ function readCandles(text,label){
   return {ts,open,high,low,close};
  });
 }
+function csvToCandleJson(text){
+ const lines=text.replace(/^\uFEFF/,"").trim().split(/\r?\n/).filter(Boolean);
+ if(lines.length<2)throw Error("CSV needs a header and candle rows");
+ const headers=lines.shift().split(",").map(h=>h.trim().toLowerCase());
+ const keys=["ts","open","high","low","close"];
+ const index=keys.map(k=>headers.indexOf(k));
+ if(index.some(i=>i<0))throw Error("CSV headers must include ts,open,high,low,close");
+ const rows=lines.map((line,i)=>{
+  const fields=line.split(",").map(x=>x.trim());
+  if(fields.length!==headers.length)throw Error("CSV row "+(i+2)+" has the wrong column count");
+  return Object.fromEntries(keys.map((k,j)=>[k,fields[index[j]]]));
+ });
+ return JSON.stringify(rows);
+}
 export default function TrendPauseBacktest(){
  const [minutes,setMinutes]=useState(""),[seconds,setSeconds]=useState(""),[horizon,setHorizon]=useState("60");
  const [result,setResult]=useState(null),[error,setError]=useState(""),[loading,setLoading]=useState(false);
@@ -19,10 +33,11 @@ export default function TrendPauseBacktest(){
   const file=event.target.files?.[0];
   if(!file)return;
   try{
-   if(file.size>2500000)throw Error("JSON file exceeds the 2.5 MB limit");
+   if(file.size>2500000)throw Error("File exceeds the 2.5 MB limit");
    const content=await file.text();
-   readCandles(content,"Uploaded");
-   setter(content);setError("");setResult(null);
+   const normalized=file.name.toLowerCase().endsWith(".csv")?csvToCandleJson(content):content;
+   readCandles(normalized,"Uploaded");
+   setter(normalized);setError("");setResult(null);
   }catch(e){setError(e.message||"File could not be read");}
   finally{event.target.value="";}
  };
@@ -38,7 +53,7 @@ export default function TrendPauseBacktest(){
  return <section className="card-surface p-5 space-y-4" data-testid="trend-pause-backtest">
    <h2 className="font-heading text-lg font-bold">KAOS Trend-Pause Backtest · Historical Research</h2>
    <p className="text-xs text-slate-400">Paste real chronological candle arrays containing ts (Unix milliseconds), open, high, low and close. One-minute and 15-second data must refer to the same market and period. No synthetic candles or broker orders.</p>
-   <form onSubmit={run} className="space-y-3">\n    <div className="grid gap-3 md:grid-cols-2">\n      <label className="text-xs">Import 1-minute JSON file<input type="file" accept=".json,application/json" onChange={e=>importFile(e,setMinutes)} className="mt-1 block w-full text-xs"/></label>\n      <label className="text-xs">Import 15-second JSON file<input type="file" accept=".json,application/json" onChange={e=>importFile(e,setSeconds)} className="mt-1 block w-full text-xs"/></label>\n    </div>
+   <form onSubmit={run} className="space-y-3">\n    <div className="grid gap-3 md:grid-cols-2">\n      <label className="text-xs">Import 1-minute JSON or CSV<input type="file" accept=".json,.csv,application/json,text/csv" onChange={e=>importFile(e,setMinutes)} className="mt-1 block w-full text-xs"/></label>\n      <label className="text-xs">Import 15-second JSON or CSV<input type="file" accept=".json,.csv,application/json,text/csv" onChange={e=>importFile(e,setSeconds)} className="mt-1 block w-full text-xs"/></label>\n    </div>
      <div className="grid gap-3 md:grid-cols-2">
       <label className="text-sm">1-minute candles (at least 53)<textarea value={minutes} onChange={e=>setMinutes(e.target.value)} required rows={5} spellCheck={false} placeholder='[{"ts":1760054400000,"open":1,"high":2,"low":1,"close":2}]' className="mt-1 w-full rounded border border-[#333] bg-[#0c0c0c] p-2 font-mono text-xs"/></label>
       <label className="text-sm">15-second candles (at least 24)<textarea value={seconds} onChange={e=>setSeconds(e.target.value)} required rows={5} spellCheck={false} placeholder='[{"ts":1760054400000,"open":1,"high":2,"low":1,"close":2}]' className="mt-1 w-full rounded border border-[#333] bg-[#0c0c0c] p-2 font-mono text-xs"/></label>
