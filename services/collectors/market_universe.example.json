@@ -1,0 +1,72 @@
+{
+  "stocks": [
+    "AAPL",
+    "MSFT",
+    "NVDA",
+    "AMD",
+    "AMZN",
+    "META",
+    "GOOGL",
+    "TSLA",
+    "SPY",
+    "QQQ"
+  ],
+  "etfs": [
+    "SPY",
+    "QQQ"
+  ],
+  "alpaca_feed": "iex",
+  "options_underlyings": [
+    "AAPL",
+    "NVDA",
+    "SPY"
+  ],
+  "tradier_sandbox": true,
+  "crypto_spot": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT"
+  ],
+  "dex_queries": [
+    "SOL",
+    "ETH"
+  ],
+  "news_watchlist": [
+    {
+      "symbol": "AAPL",
+      "query": "\"Apple Inc\""
+    },
+    {
+      "symbol": "NVDA",
+      "query": "\"NVIDIA\""
+    }
+  ],
+  "sec_watchlist": [
+    {
+      "symbol": "AAPL",
+      "cik": "0000320193"
+    },
+    {
+      "symbol": "MSFT",
+      "cik": "0000789019"
+    }
+  ],
+  "eth_whales_enabled": false,
+  "eth_whales_min_eth": 500,
+  "institutional_managers": [],
+  "social_accounts": [],
+  "social_cashtags": [
+    "GME",
+    "AMC",
+    "AAPL",
+    "NVDA",
+    "TSLA",
+    "BTC"
+  ],
+  "options_activity_underlyings": [],
+  "social_search_cashtags": [
+    "GME",
+    "AMC",
+    "NVDA"
+  ]
+}

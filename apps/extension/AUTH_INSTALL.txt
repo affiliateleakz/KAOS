@@ -1,0 +1,3 @@
+KAOS 1.1.4 uses the same KAOS website account through api.tradingwithkaos.com.
+Google requires this Authorized redirect URI on the existing Web OAuth client:
+https://gbobopmnjgeeegniphckfpalhnebapjm.chromiumapp.org/kaos-google

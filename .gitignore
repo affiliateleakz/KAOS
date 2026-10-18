@@ -1,0 +1,24 @@
+# secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+test_credentials.md
+memory/
+# restricted market data / legacy exports (never commit)
+data/
+*.KAOS_ALL_DATA*.json
+KAOS_ALL_DATA_*.json
+reference/
+# build/runtime
+node_modules/
+build/
+dist/
+.expo/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.log
+.venv/
+venv/

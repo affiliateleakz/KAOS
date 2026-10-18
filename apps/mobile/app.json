@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "KAOS Trading",
+    "slug": "kaos-trading",
+    "scheme": "kaostrading",
+    "version": "0.2.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tradingwithkaos.mobile"
+    },
+    "android": {
+      "package": "com.tradingwithkaos.mobile"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": false
+    }
+  }
+}

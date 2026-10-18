@@ -1,0 +1,36 @@
+
+html.kaos-exact-home-active,
+body.kaos-exact-home-active {
+  margin:0 !important;
+  padding:0 !important;
+  width:100% !important;
+  min-height:100% !important;
+  background:#020303 !important;
+}
+body.kaos-exact-home-active { overflow-x:hidden !important; }
+.kaos-exact-home-active #root { width:100% !important; min-height:100vh !important; }
+.kx-home { width:100%; min-height:100vh; background:#020303; margin:0; padding:0; }
+.kx-stage { position:relative; width:100%; max-width:none; margin:0 auto; background:#020303; line-height:0; }
+.kx-reference { display:block; width:100%; height:auto; margin:0; padding:0; user-select:none; -webkit-user-drag:none; }
+.kx-hotspots { position:absolute; inset:0; pointer-events:none; }
+.kx-hit { position:absolute; display:block; pointer-events:auto; background:transparent; border:0; outline:0; }
+.kx-hit:focus-visible { outline:2px solid #f0c35d; outline-offset:2px; }
+
+/* Coordinates are percentages of the approved 1536×1024 target artwork. */
+.kx-home-link     { left:30.0%; top:1.0%; width:5.3%; height:5.4%; }
+.kx-bot-link      { left:36.2%; top:1.0%; width:7.3%; height:5.4%; }
+.kx-features-link { left:44.3%; top:1.0%; width:7.1%; height:5.4%; }
+.kx-pricing-link  { left:52.2%; top:1.0%; width:6.6%; height:5.4%; }
+.kx-results-link  { left:60.0%; top:1.0%; width:6.5%; height:5.4%; }
+.kx-faq-link      { left:67.2%; top:1.0%; width:5.0%; height:5.4%; }
+.kx-login-link    { left:76.7%; top:1.2%; width:8.2%; height:4.9%; }
+.kx-get-link      { left:85.4%; top:1.2%; width:11.0%; height:4.9%; }
+.kx-getbot-link   { left:6.1%; top:43.0%; width:24.5%; height:5.7%; }
+.kx-demo-link     { left:31.8%; top:43.0%; width:16.6%; height:5.7%; }
+.kx-start-link    { left:80.6%; top:92.0%; width:17.2%; height:5.4%; }
+.kx-system-anchor { position:absolute; left:0; top:54%; width:1px; height:1px; }
+
+@media (max-width:700px) {
+  .kx-stage { min-width:700px; transform-origin:top left; }
+  body.kaos-exact-home-active { overflow-x:auto !important; }
+}

@@ -1,0 +1,23 @@
+KAOS Trading - Asura/cPanel backend package
+
+Python: 3.11.16
+Application root: /home/itsabout/kaos_backend
+Startup file: passenger_wsgi.py
+Entry point: application
+
+IMPORTANT:
+The existing FastAPI routes already begin with /api.
+If cPanel mounts this Python app at tradingwithkaos.com/api, the public URLs may become /api/api/...
+Before final production routing, verify the mount behavior. A dedicated API subdomain is preferable if available.
+
+Required environment variables include:
+MONGO_URL
+DB_NAME
+JWT_SECRET
+FRONTEND_URL
+
+Stripe variables are required before live billing:
+STRIPE_SECRET_KEY
+STRIPE_WEBHOOK_SECRET
+
+Do not use placeholder production secrets.

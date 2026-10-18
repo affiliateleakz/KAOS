@@ -1,0 +1,21 @@
+{
+  "created": "2026-10-18",
+  "scope": "Recovered snapshots and cross-conversation requirements; not verified live production",
+  "additional_snapshots": [
+    {
+      "path": "mobile_snapshots/KAOS_TRADING_MOBILE_ANDROID_IOS_V0.2_DEV.zip",
+      "sha256": "844840e9d237237cf10a3c0982c6ab2405f81386145869f212896589adda5342",
+      "bytes": 11788
+    },
+    {
+      "path": "mobile_snapshots/KAOS_TRADING_MOBILE_ANDROID_IOS_DEV.zip",
+      "sha256": "51be7baa186ee9280fc68387dbe22b9e86d88bcbf1ca8181fa0d190f1713062d",
+      "bytes": 8228
+    },
+    {
+      "path": "supplemental_snapshots/KAOS_PRO_MULTIBROKER_TERMINAL_DEV.zip",
+      "sha256": "d9df51363141d43fbcbcb38bbc337c482e881bd35de081f6aadf3617431465bc",
+      "bytes": 1295905
+    }
+  ]
+}

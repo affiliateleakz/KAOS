@@ -1,0 +1,116 @@
+{
+  "action": {
+    "default_icon": {
+      "16": "kaos_icon_16.png",
+      "32": "kaos_icon_32.png",
+      "48": "kaos_icon_48.png",
+      "128": "kaos_icon_128.png"
+    },
+    "default_title": "KAOS Trading Bot — Trade With KAOS"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "js": [
+        "po-bridge.js"
+      ],
+      "matches": [
+        "https://*.pocketoption.com/*",
+        "https://p.finance/*",
+        "https://platform58.po2.capital/*",
+        "https://po.company/*",
+        "https://po1.capital/*",
+        "https://pocket-link22.co/*",
+        "https://pocketoption.com/*"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "js": [
+        "candidate7b_strategy.js",
+        "kaos_expiry_collector.js",
+        "content.js",
+        "kaos-cloud-ui.js"
+      ],
+      "matches": [
+        "https://*.pocketoption.com/*",
+        "https://p.finance/*",
+        "https://platform58.po2.capital/*",
+        "https://po.company/*",
+        "https://po1.capital/*",
+        "https://pocket-link22.co/*",
+        "https://pocketoption.com/*"
+      ],
+      "run_at": "document_idle",
+      "css": [
+        "kaos-cloud-ui.css"
+      ]
+    }
+  ],
+  "description": "KAOS specialist reversal runner breakout per-expiry training research",
+  "host_permissions": [
+    "https://pocketoption.com/*",
+    "https://*.pocketoption.com/*",
+    "https://platform58.po2.capital/*",
+    "https://p.finance/*",
+    "https://po.company/*",
+    "https://po1.capital/*",
+    "https://pocket-link22.co/*",
+    "https://skarfinans.com/*",
+    "https://tradingwithkaos.com/*",
+    "https://api.tradingwithkaos.com/*",
+    "https://tradewithkaos.com/*",
+    "https://*.tradewithkaos.com/*",
+    "http://127.0.0.1:8765/*",
+    "http://127.0.0.1:8766/*"
+  ],
+  "icons": {
+    "16": "kaos_icon_16.png",
+    "32": "kaos_icon_32.png",
+    "48": "kaos_icon_48.png",
+    "128": "kaos_icon_128.png"
+  },
+  "manifest_version": 3,
+  "name": "KAOS Trading Bot",
+  "permissions": [
+    "storage",
+    "unlimitedStorage",
+    "activeTab",
+    "scripting",
+    "tabs",
+    "alarms",
+    "downloads",
+    "nativeMessaging",
+    "identity"
+  ],
+  "version": "1.7.11",
+  "version_name": "1.7.11 · AI BOOTSTRAP ACCESS",
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "kaos_pretrained_bootstrap.json"
+      ],
+      "matches": [
+        "https://*.pocketoption.com/*",
+        "https://pocketoption.com/*",
+        "https://p.finance/*",
+        "https://platform58.po2.capital/*",
+        "https://po.company/*",
+        "https://po1.capital/*",
+        "https://pocket-link22.co/*"
+      ]
+    }
+  ],
+  "oauth2": {
+    "client_id": "588189138338-nmcjdlvabq878ovasphf309bu4ii2r02.apps.googleusercontent.com",
+    "scopes": [
+      "openid",
+      "email",
+      "profile"
+    ]
+  },
+  "homepage_url": "https://chromewebstore.google.com/detail/gbobopmnjgeeegniphckfpalhnebapjm"
+}

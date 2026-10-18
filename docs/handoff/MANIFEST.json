@@ -1,0 +1,74 @@
+{
+  "created_utc": "2026-10-18T15:48:34.763245+00:00",
+  "note": "Selected handoff, not all historic Library files",
+  "files": [
+    {
+      "file": "KAOS_All_In_One_Foundation_v0.7.zip",
+      "bytes": 14683,
+      "sha256": "49273c72ef12db6be36f5a591bd220f560694fef8a2b6803e3c42e3f6ee8f835",
+      "omitted_from_inner_zip": []
+    },
+    {
+      "file": "KAOS_MULTIBROKER_REGISTRY_1.7.32_DEV.zip",
+      "bytes": 99610,
+      "sha256": "35518c728a00f2eebc5be1d1f8dcaac8ccfc6675514a0f09baba12c2551f7305",
+      "omitted_from_inner_zip": []
+    },
+    {
+      "file": "KAOS_REPAIRED_2026-10-14.zip",
+      "bytes": 299464,
+      "sha256": "12107283405e20ad6606c95467eba56afde6f9979b0a22969bcc1fd574fd7e1e",
+      "omitted_from_inner_zip": []
+    },
+    {
+      "file": "KAOS_Strategy_Structure_v2.zip",
+      "bytes": 46269,
+      "sha256": "160c5f24b4919e53e51ea32f982bb440b66d49047a95d606644339baf54ad140",
+      "omitted_from_inner_zip": []
+    },
+    {
+      "file": "KAOS_Strategy_v2_1_Replay_Audit.zip",
+      "bytes": 12193,
+      "sha256": "06dc23023d96ebff2b22d55a0d807cdff8b4e2ad95687c2bc6fa7bd32833e995",
+      "omitted_from_inner_zip": []
+    },
+    {
+      "file": "KAOS_TRADING_3_0_SOCIAL_SQUEEZE_FUSION_V0_9_DEV.zip",
+      "bytes": 10210459,
+      "sha256": "4d46478e1af339538a3cc35c97fd5a1914cea62b839930a46c87c10e62995583",
+      "omitted_from_inner_zip": []
+    },
+    {
+      "file": "KAOS_TRADING_3_0_TRADER_FIRST_BRANDING_V0_8_1_DEV.zip",
+      "bytes": 10199692,
+      "sha256": "cfc766374b42714b9ab5699e224214eb3b74fb750ac40e9fea9ce8324f93b8a2",
+      "omitted_from_inner_zip": []
+    },
+    {
+      "file": "KAOS_TRADING_ENGINE_2.0.2_FINBERT_SHADOW_DEV.zip",
+      "bytes": 107635,
+      "sha256": "7b12643c47410a410310b69acdb6a440c89093a4a1434d48c76d9ae118599ea5",
+      "omitted_from_inner_zip": []
+    },
+    {
+      "file": "KAOS_WEBSITE_WITH_PRIVACY_POLICY_V0_7_1.zip",
+      "bytes": 8692883,
+      "sha256": "564336619bfdc180bcb9213fb1dd2f8c9cf25290ff528460ea22c39eed5af2b6",
+      "omitted_from_inner_zip": []
+    },
+    {
+      "file": "api.tradingwithkaos.com.zip",
+      "bytes": 289243,
+      "sha256": "f59051447d1817a324849e2bf815be532911d0a641a6ac082872aa9c944f5e2e",
+      "omitted_from_inner_zip": [
+        "api.tradingwithkaos.com/kaos_backend/.env",
+        "api.tradingwithkaos.com/kaos_backend/.env.backup"
+      ]
+    },
+    {
+      "file": "data/KAOS_ALL_DATA_2026-10-03T16-14-56.json",
+      "bytes": 197138751,
+      "sha256": "af5112f119d2e3f518ff05cdc4b065d7fb2afd219cd26f0e0a9afdbc16ba688f"
+    }
+  ]
+}

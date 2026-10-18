@@ -1,0 +1,49 @@
+{
+  "source": "KAOS archive 2026-10-03 OTC 5s, not stock/crypto/forex validation",
+  "aggregate": [
+    {
+      "tf_seconds": 5,
+      "fee_bps": 0,
+      "market_segments": 74,
+      "markets": 27,
+      "trades": 4698,
+      "wins": 730,
+      "losses": 3968,
+      "net_sim_pnl": -16114.22,
+      "win_rate_pct": 15.54
+    },
+    {
+      "tf_seconds": 5,
+      "fee_bps": 10,
+      "market_segments": 74,
+      "markets": 27,
+      "trades": 4698,
+      "wins": 286,
+      "losses": 4412,
+      "net_sim_pnl": -71978.06,
+      "win_rate_pct": 6.09
+    },
+    {
+      "tf_seconds": 60,
+      "fee_bps": 0,
+      "market_segments": 7,
+      "markets": 7,
+      "trades": 187,
+      "wins": 49,
+      "losses": 138,
+      "net_sim_pnl": -742.25,
+      "win_rate_pct": 26.2
+    },
+    {
+      "tf_seconds": 60,
+      "fee_bps": 10,
+      "market_segments": 7,
+      "markets": 7,
+      "trades": 187,
+      "wins": 41,
+      "losses": 146,
+      "net_sim_pnl": -3889.7700000000004,
+      "win_rate_pct": 21.93
+    }
+  ]
+}
