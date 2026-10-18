@@ -14,6 +14,12 @@ const BROKERS = [
   ["schwab", "Charles Schwab", "https://www.schwab.com/", "Adapter pending"],
 ];
 export default function BrokerConnections() {
+  const [activeBroker,setActiveBroker]=useState("");
+  const chooseBroker=async broker=>{
+    try{await api.put("/api/v1/broker-selection",{broker});setActiveBroker(broker);setNotice("Preferred broker saved. Verify your connection separately before trading.");}
+    catch(e){setError(errMsg(e))}
+  };
+  useEffect(()=>{api.get("/api/v1/broker-selection").then(r=>setActiveBroker(r.data.broker||"")).catch(()=>{})},[]);
   const [saved, setSaved] = useState({});
   const [catalog, setCatalog] = useState([]);
   const [form, setForm] = useState({key_name:"", private_key:""});
@@ -60,6 +66,15 @@ export default function BrokerConnections() {
   }
   return <section className="mx-auto max-w-4xl space-y-6 text-white" data-testid="member-broker-connections">
     <div><h1 className="text-2xl font-bold">KAOS Broker Connections</h1><p className="mt-2 text-sm text-slate-400">Manage broker access for your KAOS membership. Saved credentials remain encrypted on the website backend and are not returned to your extension.</p></div>
+    <div className="card-surface p-4">
+      <label htmlFor="kaos-preferred-broker" className="mb-2 block text-sm font-semibold">Your active broker preference</label>
+      <select id="kaos-preferred-broker" value={activeBroker} onChange={e=>chooseBroker(e.target.value)}
+        className="w-full rounded border border-slate-600 bg-[#111] p-2 text-sm">
+        <option value="" disabled>Select your broker</option>
+        {catalog.map(b=><option key={b.id} value={b.id}>{b.name} · {b.status.replace(/_/g," ")}</option>)}
+      </select>
+      <p className="mt-2 text-xs text-slate-400">Your selection is account-specific. It does not connect a brokerage or authorize live orders. Unsupported brokers remain unavailable for execution.</p>
+    </div>
     {error && <p role="alert" className="rounded border border-red-600 p-3 text-red-300">{error}</p>}
     {notice && <p role="status" className="rounded border border-green-700 p-3 text-green-300">{notice}</p>}
     <div className="grid gap-3 md:grid-cols-2">{(catalog.length ? catalog.map(b => [b.id,b.name,null,b.status]) : BROKERS).map(([id,name,url,status]) => <div key={id} className="rounded-lg border border-slate-700 bg-[#111] p-4">
