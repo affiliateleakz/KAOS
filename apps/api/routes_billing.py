@@ -13,18 +13,27 @@ router = APIRouter(prefix="/api/billing", tags=["billing"])
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY") or None
 WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 
+# Monthly billing only. Free is the tier of every account without a paid plan (not sold via checkout).
 DEFAULT_PLANS = [
-    {"id": "monthly", "name": "Monthly", "lookup_key": "membership_monthly", "amount": 2900,
+    {"id": "pro", "name": "Pro", "lookup_key": "membership_pro_monthly", "amount": 4900,
      "currency": "usd", "interval": "month", "deviceLimit": 3, "tier": "pro",
-     "features": ["KAOS Trading Bot", "KAOS Strategy mode", "Cloud Strategies", "Community", "3 Devices"],
-     "entitlements": {"botAccess": True, "modes": ["STRATEGY"], "connectors": ["pocket_option"],
-                      "cloudStrategies": True, "community": True, "premiumTools": False, "deviceLimit": 3}},
-    {"id": "yearly", "name": "Yearly", "lookup_key": "membership_yearly", "amount": 27900,
-     "currency": "usd", "interval": "year", "deviceLimit": 5, "tier": "ultimate",
-     "features": ["Everything in Monthly", "KAOS AI mode", "Strategy + AI mode", "Premium Tools", "5 Devices", "2 Months Free"],
+     "features": ["KAOS Trading Bot", "KAOS Strategy mode", "Scanners", "AI insights", "Cloud Strategies", "Community", "3 Devices"],
+     "entitlements": {"botAccess": True, "modes": ["STRATEGY"], "connectors": ["pocket_option"], "scanners": True,
+                      "aiInsights": True, "cloudStrategies": True, "community": True, "premiumTools": False, "deviceLimit": 3}},
+    {"id": "ultimate", "name": "Ultimate", "lookup_key": "membership_ultimate_monthly", "amount": 14900,
+     "currency": "usd", "interval": "month", "deviceLimit": 5, "tier": "ultimate",
+     "features": ["Everything in Pro", "KAOS AI mode", "Strategy + AI mode", "Premium Tools", "5 Devices"],
      "entitlements": {"botAccess": True, "modes": ["STRATEGY", "AI", "STRATEGY_AI"], "connectors": ["pocket_option"],
-                      "cloudStrategies": True, "community": True, "premiumTools": True, "deviceLimit": 5}},
+                      "scanners": True, "aiInsights": True, "cloudStrategies": True, "community": True,
+                      "premiumTools": True, "deviceLimit": 5}},
 ]
+# Members who subscribed under the retired plan ids keep working.
+LEGACY_PLAN_IDS = {"monthly": "pro", "yearly": "ultimate"}
+
+
+def find_plan(plans, plan_id):
+    plan_id = LEGACY_PLAN_IDS.get(plan_id, plan_id)
+    return next((p for p in plans if p["id"] == plan_id), None)
 
 
 async def get_plans():
@@ -85,7 +94,7 @@ async def status(session_id: str):
 
 async def _activate(user_id, plan_id, customer, subscription, session_id):
     plans = await get_plans()
-    plan = next((p for p in plans if p["id"] == plan_id), None)
+    plan = find_plan(plans, plan_id)
     from datetime import timedelta
     days = 365 if (plan and plan.get("interval") == "year") else 30
     expires = (now() + timedelta(days=days)).isoformat()
@@ -169,7 +178,7 @@ async def stripe_webhook(request: Request):
         if u and u.get("membership_status") == "PAST_DUE":
             await db.users.update_one({"id": u["id"]}, {"$set": {"membership_status": "ACTIVE", "updated_at": now_iso()}})
         if u and obj.get("billing_reason") == "subscription_cycle" and obj.get("amount_paid"):
-            plan = next((p for p in await get_plans() if p["id"] == u.get("membership_plan")), None)
+            plan = find_plan(await get_plans(), u.get("membership_plan"))
             if plan:
                 try:
                     from routes_affiliate import record_commission

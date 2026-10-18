@@ -19,9 +19,8 @@ def plan_tier(plan):
 async def member_tier(user):
     if not user or user.get("membership_status") not in ACTIVE_STATES:
         return "free"
-    from routes_billing import get_plans
-    plans = await get_plans()
-    return plan_tier(next((p for p in plans if p["id"] == user.get("membership_plan")), None))
+    from routes_billing import get_plans, find_plan
+    return plan_tier(find_plan(await get_plans(), user.get("membership_plan")))
 
 
 async def _referrer_id(user):

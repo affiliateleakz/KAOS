@@ -13,7 +13,8 @@
 - REPAIRED's parity tests can't run because `kaos_berserker`/`berserker_fixtures` are missing.
 - `content.js` still hard-codes legacy strategy labels (`7B`/`KAOS_BERSERKER`). REPAIRED's FIXES.md says this was fixed in the other runtime.
 - Emergent platform dependencies: email proxy, Google OAuth, and the (now removed) analytics.
-- Affiliate ledger is wired into the API, but plan→tier mapping is an assumption: `monthly` ($29) = Pro, `yearly` ($279) = Ultimate, while the spec prices Pro $49 / Ultimate $149. Founder must confirm pricing and tiers.
+- Pricing (founder decision 2026-10-18): monthly billing only — Free $0, Pro $49/mo, Ultimate $149/mo. Yearly is retired; legacy `monthly`/`yearly` plan ids map to Pro/Ultimate. Stripe prices are created at checkout from these amounts (no live Stripe change made).
+- Non-paying (Free) accounts still get no bot access via `get_entitlements`; the spec's Free `strategy` permission is not granted yet.
 - Recipient tier is the sponsor's tier when the payment is recorded; members who are not ACTIVE/TRIAL count as Free (10% L1 only).
 - Partial refunds reduce the ledger, but the legacy `commissions` mirror only flips to REVERSED on full reversals.
 - Membership gating uses the existing per-plan `entitlements`; the kaos-core `PERMISSIONS` map (free/pro/ultimate) is not yet the source of truth.

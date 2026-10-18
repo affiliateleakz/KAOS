@@ -73,12 +73,12 @@ async def get_trading_config():
 
 async def get_entitlements(user: dict) -> dict:
     """Feature entitlements derived from the user's active plan. Admin-configurable, never hardcoded per-component."""
-    from routes_billing import get_plans
+    from routes_billing import get_plans, find_plan
     active = user.get("membership_status") in ("ACTIVE", "TRIAL")
     if not active:
         return {**DEFAULT_ENTITLEMENTS, "botAccess": False}
     plans = await get_plans()
-    plan = next((p for p in plans if p["id"] == user.get("membership_plan")), None)
+    plan = find_plan(plans, user.get("membership_plan"))
     ent = (plan or {}).get("entitlements") if plan else None
     return ent or {**DEFAULT_ENTITLEMENTS, "botAccess": True, "modes": ["STRATEGY"],
                    "connectors": ["pocket_option"], "cloudStrategies": True}
