@@ -10,7 +10,9 @@ def test_registry_is_honest():
     rows = {b["id"]: b for b in asyncio.run(ba.list_brokers())["brokers"]}
     assert set(rows) >= {"coinbase", "alpaca", "ibkr", "oanda", "kraken", "tradier", "tastytrade", "pocketoption"}
     assert rows["coinbase"]["capabilities"]["submit"] == "disabled"
-    assert all(rows[b]["status"] == "planned" for b in ("ibkr", "oanda", "kraken", "tradier", "tastytrade", "mt5"))
+    assert all(rows[b]["status"] == "planned" for b in ("ibkr", "kraken", "tradier", "tastytrade", "mt5"))
+    assert rows["oanda"]["status"] == "authentication_implemented"
+    assert rows["oanda"]["capabilities"]["submit"] is False
     assert rows["alpaca"]["status"] == "authentication_implemented"
     assert rows["alpaca"]["capabilities"]["submit"] is False
     assert rows["pocketoption"]["status"] == "adapter_development"
