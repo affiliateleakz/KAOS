@@ -1,3 +1,4 @@
+import TrendPauseBacktest from "./TrendPauseBacktest";
 import React, { useEffect, useState } from "react";
 import { api, errMsg } from "../../lib/api";
 import { StatusBadge } from "../../components/Brand";
@@ -374,6 +375,7 @@ export default function Trading() {
         <StatusBadge value={ent.botAccess ? "ACTIVE" : "EXPIRED"} testid="trading-bot-access" />
       </div>
 
+      <div className="mb-6"><TrendPauseBacktest /></div>
       <div className="mb-6 rounded-lg border border-[#2F8CFF]/20 bg-[#2F8CFF]/5 p-3 text-xs text-[#2F8CFF]">
         The real KAOS Strategy (Berserker · Reversal/Runner/Breakout) runs server-side and returns live decisions when the extension streams market candles. KAOS AI serves live inference once a trained model is deployed. Broker execution happens only inside the extension — no live trades occur on this page.
       </div>
