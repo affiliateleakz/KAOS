@@ -4,13 +4,26 @@ import {api,errMsg} from "../../lib/api";
 function readCandles(text,label){
  const data=JSON.parse(text);
  if(!Array.isArray(data))throw Error(label+" must be a JSON array");
- return data.map((row,i)=>{
+ const converted=data.map((row,i)=>{
   if(!row||typeof row!=="object")throw Error(label+" row "+i+" is not an object");
   const ts=Number(row.ts),open=Number(row.open),high=Number(row.high),low=Number(row.low),close=Number(row.close);
   if(!Number.isSafeInteger(ts)||ts<1000000000000||ts>9999999999999)throw Error(label+" row "+i+" requires a Unix millisecond timestamp");
   if(![ts,open,high,low,close].every(Number.isFinite))throw Error(label+" row "+i+" contains invalid OHLC or timestamp");
+  if(Math.min(open,high,low,close)<=0 || low>Math.min(open,close) || high<Math.max(open,close) || high<low)throw Error(label+" row "+i+" has invalid OHLC range");
   return {ts,open,high,low,close};
  });
+ for(let i=1;i<converted.length;i++)if(converted[i].ts<=converted[i-1].ts)throw Error(label+" timestamp order or duplicate at row "+(i+1));
+ return converted;
+}
+function candleDiagnostics(text,label,period){
+ try{
+  if(!text.trim())return null;
+  const candles=readCandles(text,label);
+  let gaps=0;
+  for(let i=1;i<candles.length;i++)if(candles[i].ts-candles[i-1].ts!==period)gaps++;
+  const alignment=candles.filter(c=>c.ts%period!==0).length;
+  return {count:candles.length,gaps,alignment,start:new Date(candles[0].ts).toISOString(),end:new Date(candles[candles.length-1].ts).toISOString()};
+ }catch(e){return {error:e.message}}
 }
 function csvToCandleJson(text){
  const lines=text.replace(/^\uFEFF/,"").trim().split(/\r?\n/).filter(Boolean);
@@ -29,6 +42,8 @@ function csvToCandleJson(text){
 export default function TrendPauseBacktest(){
  const [minutes,setMinutes]=useState(""),[seconds,setSeconds]=useState(""),[horizon,setHorizon]=useState("60");
  const [result,setResult]=useState(null),[error,setError]=useState(""),[loading,setLoading]=useState(false);
+ const datasets=[["1-minute",minutes,60000],["15-second",seconds,15000]];
+ const diagnostics=datasets.map(([label,value,period])=>({label,info:candleDiagnostics(value,label,period)}));
  const importFile=async (event,setter)=>{
   const file=event.target.files?.[0];
   if(!file)return;
@@ -53,6 +68,16 @@ export default function TrendPauseBacktest(){
  return <section className="card-surface p-5 space-y-4" data-testid="trend-pause-backtest">
    <h2 className="font-heading text-lg font-bold">KAOS Trend-Pause Backtest · Historical Research</h2>
    <p className="text-xs text-slate-400">Paste real chronological candle arrays containing ts (Unix milliseconds), open, high, low and close. One-minute and 15-second data must refer to the same market and period. No synthetic candles or broker orders.</p>
+   <div className="grid gap-2 md:grid-cols-2">
+    {diagnostics.map(({label,info})=><div key={label} className="rounded border border-[#333] p-3 text-xs">
+     <p className="font-semibold">{label} dataset</p>
+     {!info?<p className="text-slate-400">No candles loaded</p>:info.error?<p role="alert" className="text-red-400">{info.error}</p>:<>
+      <p>{info.count} candles · {info.gaps} time gaps · {info.alignment} misaligned bars</p>
+      <p className="text-slate-400">{info.start} → {info.end}</p>
+      {(info.gaps>0||info.alignment>0)&&<p className="text-amber-300">Fix data gaps or alignment before interpreting replay results.</p>}
+     </>}
+    </div>)}
+   </div>
    <form onSubmit={run} className="space-y-3">\n    <div className="grid gap-3 md:grid-cols-2">\n      <label className="text-xs">Import 1-minute JSON or CSV<input type="file" accept=".json,.csv,application/json,text/csv" onChange={e=>importFile(e,setMinutes)} className="mt-1 block w-full text-xs"/></label>\n      <label className="text-xs">Import 15-second JSON or CSV<input type="file" accept=".json,.csv,application/json,text/csv" onChange={e=>importFile(e,setSeconds)} className="mt-1 block w-full text-xs"/></label>\n    </div>
      <div className="grid gap-3 md:grid-cols-2">
       <label className="text-sm">1-minute candles (at least 53)<textarea value={minutes} onChange={e=>setMinutes(e.target.value)} required rows={5} spellCheck={false} placeholder='[{"ts":1760054400000,"open":1,"high":2,"low":1,"close":2}]' className="mt-1 w-full rounded border border-[#333] bg-[#0c0c0c] p-2 font-mono text-xs"/></label>
