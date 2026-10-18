@@ -74,13 +74,13 @@ class FailReq(BaseModel):
     failureReason: Optional[str] = ""
 
 
-async def _require_authorized(request: Request, user: dict):
+async def _require_authorized(request: Request, user: dict, broker: str = "pocket_option"):
     """Trading endpoints require a live, server-authorized license + registered device."""
     did = request.headers.get("X-Device-Id")
     device = None
     if did:
         device = await db.devices.find_one({"installId": did, "userId": user["id"]})
-    lic = await compute_license(user, device)
+    lic = await compute_license(user, device, broker)
     if not lic["authorized"]:
         raise HTTPException(status_code=403, detail={"error": "not_authorized", "license": lic})
     return lic, (device or {})
@@ -115,7 +115,7 @@ async def trading_config(user: dict = Depends(get_current_user)):
 # ----- intelligence: STRATEGY / AI / both (shown separately) -----
 @v1t.post("/intelligence")
 async def intelligence(req: IntelReq, request: Request, user: dict = Depends(get_current_user)):
-    await _require_authorized(request, user)
+    await _require_authorized(request, user, req.platform)
     await _check_mode(user, req.mode)
     ctx = {"bucket": req.bucket or "", **(req.context or {})}
     strat = await kaos_strategy_predict(req.asset, req.platform, ctx) if req.mode in ("STRATEGY", "STRATEGY_AI") else None
@@ -137,7 +137,7 @@ async def intelligence(req: IntelReq, request: Request, user: dict = Depends(get
 # ----- record a signal the extension generated locally -----
 @v1t.post("/signal")
 async def record_signal(req: SignalRecordReq, request: Request, user: dict = Depends(get_current_user)):
-    await _require_authorized(request, user)
+    await _require_authorized(request, user, req.platform)
     await _check_mode(user, req.mode)
     if req.clientSignalId:
         existing = await db.signals.find_one({"clientSignalId": req.clientSignalId, "userId": user["id"]})
@@ -158,7 +158,7 @@ async def record_signal(req: SignalRecordReq, request: Request, user: dict = Dep
 # ----- ORDER_SUBMIT_ATTEMPT (idempotent on executionAttemptId) -----
 @v1t.post("/execution")
 async def order_attempt(req: ExecAttemptReq, request: Request, user: dict = Depends(get_current_user)):
-    lic, device = await _require_authorized(request, user)
+    lic, device = await _require_authorized(request, user, req.platform)
     existing = await db.trades.find_one({"executionAttemptId": req.executionAttemptId, "userId": user["id"]})
     if existing:
         return {"tradeId": existing["id"], "state": existing["state"], "idempotent": True}
