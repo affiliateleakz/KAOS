@@ -48,7 +48,34 @@ export default function TrendPauseBacktest(){
    {error&&<p role="alert" className="text-sm text-red-400">{error}</p>}
    {result&&<div aria-live="polite" className="rounded border border-[#333] p-3 text-sm">
     <p className="font-semibold">Research only · no executable trading signal</p>
-    <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap break-words font-mono text-xs">{JSON.stringify(result,null,2)}</pre>
+    <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
+     {[
+      ["Trades",result.summary?.trades],["Wins",result.summary?.wins],["Losses",result.summary?.losses],
+      ["Ties",result.summary?.ties],["Win rate (ex ties)",result.summary?.win_rate_ex_ties==null?"—":result.summary.win_rate_ex_ties+"%"],
+      ["Trades/hour",result.summary?.trades_per_hour??"—"],["Data hours",result.summary?.data_hours??"—"]
+     ].map(([label,value])=><div key={label} className="rounded bg-[#151515] p-3">
+      <p className="text-xs text-slate-400">{label}</p><p className="mt-1 font-mono text-lg">{value??"—"}</p>
+     </div>)}
+    </div>
+    <p className="mt-3 text-xs text-amber-300">Directional results only: no fees, spread, slippage, payout or profitability calculation. No historical performance guarantee.</p>
+    <div className="mt-3 max-h-80 overflow-auto">
+     <table className="w-full min-w-[650px] text-left text-xs">
+      <thead><tr className="border-b border-[#333] text-slate-400">
+       <th className="p-2">Entry (UTC)</th><th className="p-2">Direction</th><th className="p-2">Entry</th>
+       <th className="p-2">Exit (UTC)</th><th className="p-2">Exit</th><th className="p-2">Outcome</th>
+      </tr></thead>
+      <tbody>{(result.trades||[]).map((trade,i)=><tr key={i} className="border-b border-[#222]">
+       <td className="p-2">{new Date(trade.entry_ts).toISOString()}</td>
+       <td className="p-2">{trade.direction}</td><td className="p-2 font-mono">{trade.entry_price}</td>
+       <td className="p-2">{new Date(trade.exit_ts).toISOString()}</td><td className="p-2 font-mono">{trade.exit_price}</td>
+       <td className={"p-2 font-semibold "+(trade.outcome==="WIN"?"text-green-400":trade.outcome==="LOSS"?"text-red-400":"text-slate-400")}>{trade.outcome}</td>
+      </tr>)}</tbody>
+     </table>
+     {!result.trades?.length&&<p className="p-3 text-slate-400">No qualifying trades in this historical sample.</p>}
+    </div>
+    <details className="mt-3"><summary className="cursor-pointer text-xs text-slate-400">Raw backtest JSON</summary>
+     <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap break-words font-mono text-xs">{JSON.stringify(result,null,2)}</pre>
+    </details>
    </div>}
  </section>;
 }
