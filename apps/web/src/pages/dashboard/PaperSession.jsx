@@ -54,6 +54,13 @@ export default function PaperSession({ orders, killSwitch, onTraded }) {
     api.get("/api/v1/paper/brokers").then((r) => setBrokers(r.data.brokers)).catch((e) => toast.error(errMsg(e)));
     api.get("/api/v1/paper/session").then((r) => setSession(r.data)).catch((e) => toast.error(errMsg(e)));
     loadSignals();
+    const sync = () => {
+      if (document.hidden) return;
+      loadSignals();
+      api.get("/api/v1/paper/session").then((r) => setSession((cur) => (JSON.stringify(cur) === JSON.stringify(r.data) ? cur : r.data))).catch(() => {});
+    };
+    const t = setInterval(sync, 5000);
+    return () => clearInterval(t);
   }, [loadSignals]);
 
   const sym = session?.symbol, gran = session?.granularity;

@@ -15,7 +15,14 @@ export default function PaperTrading() {
   const [quote, setQuote] = useState(null);
   const [busy, setBusy] = useState(false);
   const load = useCallback(() => api.get("/api/v1/paper/orders").then((r) => setData(r.data)).catch((e) => toast.error(errMsg(e))), []);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    // Keep the book in sync with orders placed from the extension or mobile app (same server-side account).
+    const sync = () => { if (!document.hidden) api.get("/api/v1/paper/orders").then((r) => setData(r.data)).catch(() => {}); };
+    const t = setInterval(sync, 5000);
+    window.addEventListener("focus", sync);
+    return () => { clearInterval(t); window.removeEventListener("focus", sync); };
+  }, [load]);
   const marketMode = form.pricing === "market";
   useEffect(() => {
     if (!marketMode || form.asset_class !== "CRYPTO_SPOT" || !form.symbol) { setQuote(null); return undefined; }
