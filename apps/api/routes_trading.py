@@ -10,7 +10,8 @@ from fastapi import APIRouter, HTTPException, Depends, Request
 
 from db import db, new_id, now_iso, clean
 from auth import get_current_user, require_role
-from services import compute_license
+from services import compute_license, get_setting, set_setting, audit_log
+from services_trading import AI_EXECUTION_MODES, AI_EXECUTION_SETTING
 from services_trading import (get_official_strategy, get_trading_config, get_entitlements,
                               kaos_strategy_predict, kaos_ai_predict, telemetry_summary,
                               TRADING_MODES)
@@ -26,6 +27,7 @@ class IntelReq(BaseModel):
     asset: str
     platform: str = "pocket_option"
     mode: str = "STRATEGY"
+    chartSlot: Optional[int] = None
     bucket: Optional[str] = None
     context: dict = {}
 
@@ -35,6 +37,7 @@ class SignalRecordReq(BaseModel):
     asset: str
     platform: str = "pocket_option"
     mode: str = "STRATEGY"
+    chartSlot: Optional[int] = None
     direction: str
     engine: Optional[str] = None
     requestedAmount: float = 1.0
@@ -48,6 +51,7 @@ class ExecAttemptReq(BaseModel):
     signalId: str
     executionAttemptId: str  # client-generated; unique -> idempotent
     platform: str = "pocket_option"
+    chartSlot: Optional[int] = None
     asset: str
     direction: str
     requestedAmount: float
@@ -73,13 +77,13 @@ class FailReq(BaseModel):
     failureReason: Optional[str] = ""
 
 
-async def _require_authorized(request: Request, user: dict):
+async def _require_authorized(request: Request, user: dict, broker: str = "pocket_option"):
     """Trading endpoints require a live, server-authorized license + registered device."""
     did = request.headers.get("X-Device-Id")
     device = None
     if did:
         device = await db.devices.find_one({"installId": did, "userId": user["id"]})
-    lic = await compute_license(user, device)
+    lic = await compute_license(user, device, broker)
     if not lic["authorized"]:
         raise HTTPException(status_code=403, detail={"error": "not_authorized", "license": lic})
     return lic, (device or {})
@@ -91,9 +95,28 @@ async def _check_mode(user, mode):
         raise HTTPException(status_code=403, detail="Bot access not included in your plan")
     if mode not in TRADING_MODES:
         raise HTTPException(status_code=400, detail="Invalid trading mode")
+    if mode in AI_EXECUTION_MODES and ent.get("aiExecutionLocked"):
+        raise HTTPException(status_code=403, detail="AI-controlled trading is locked until independently validated")
     if mode not in (ent.get("modes") or []):
         raise HTTPException(status_code=403, detail=f"Mode {mode} not entitled by your plan")
     return ent
+
+
+def chart_limit_error(ent: dict, slot) -> Optional[dict]:
+    """0-based chart slot must be below the plan's chartLimit (Free 1, Pro 4, Ultimate 4)."""
+    if slot is None:
+        return None
+    limit = int(ent.get("chartLimit") or 1)
+    if isinstance(slot, bool) or not isinstance(slot, int) or slot < 0 or slot >= limit:
+        return {"error": "chart_limit", "chartLimit": limit,
+                "message": f"Your plan allows {limit} active trading chart{'s' if limit != 1 else ''}."}
+    return None
+
+
+async def _check_chart(user, slot):
+    err = chart_limit_error(await get_entitlements(user), slot)
+    if err:
+        raise HTTPException(status_code=403, detail=err)
 
 
 # ----- config the extension pulls -----
@@ -112,8 +135,9 @@ async def trading_config(user: dict = Depends(get_current_user)):
 # ----- intelligence: STRATEGY / AI / both (shown separately) -----
 @v1t.post("/intelligence")
 async def intelligence(req: IntelReq, request: Request, user: dict = Depends(get_current_user)):
-    await _require_authorized(request, user)
+    await _require_authorized(request, user, req.platform)
     await _check_mode(user, req.mode)
+    await _check_chart(user, req.chartSlot)
     ctx = {"bucket": req.bucket or "", **(req.context or {})}
     strat = await kaos_strategy_predict(req.asset, req.platform, ctx) if req.mode in ("STRATEGY", "STRATEGY_AI") else None
     ai = await kaos_ai_predict(req.asset, req.platform, ctx) if req.mode in ("AI", "STRATEGY_AI") else None
@@ -134,8 +158,9 @@ async def intelligence(req: IntelReq, request: Request, user: dict = Depends(get
 # ----- record a signal the extension generated locally -----
 @v1t.post("/signal")
 async def record_signal(req: SignalRecordReq, request: Request, user: dict = Depends(get_current_user)):
-    await _require_authorized(request, user)
+    await _require_authorized(request, user, req.platform)
     await _check_mode(user, req.mode)
+    await _check_chart(user, req.chartSlot)
     if req.clientSignalId:
         existing = await db.signals.find_one({"clientSignalId": req.clientSignalId, "userId": user["id"]})
         if existing:
@@ -155,7 +180,8 @@ async def record_signal(req: SignalRecordReq, request: Request, user: dict = Dep
 # ----- ORDER_SUBMIT_ATTEMPT (idempotent on executionAttemptId) -----
 @v1t.post("/execution")
 async def order_attempt(req: ExecAttemptReq, request: Request, user: dict = Depends(get_current_user)):
-    lic, device = await _require_authorized(request, user)
+    lic, device = await _require_authorized(request, user, req.platform)
+    await _check_chart(user, req.chartSlot)
     existing = await db.trades.find_one({"executionAttemptId": req.executionAttemptId, "userId": user["id"]})
     if existing:
         return {"tradeId": existing["id"], "state": existing["state"], "idempotent": True}
@@ -604,6 +630,24 @@ async def upsert_connector(req: ConnectorReq, admin: dict = Depends(admin_dep)):
     await set_setting("connectors", conns)
     await audit_log(admin, "upsert_connector", "connector", req.id, {"status": req.status})
     return {"ok": True, "connectors": conns}
+
+
+class AiExecutionReq(BaseModel):
+    validated: bool
+    note: str = Field(default="", max_length=500)
+
+
+@at.get("/ai-execution")
+async def get_ai_execution(admin: dict = Depends(admin_dep)):
+    return {"validated": await get_setting(AI_EXECUTION_SETTING, False) is True}
+
+
+@at.post("/ai-execution")
+async def set_ai_execution(req: AiExecutionReq, admin: dict = Depends(admin_dep)):
+    await set_setting(AI_EXECUTION_SETTING, req.validated)
+    await audit_log(admin, "trading.ai_execution", "settings", AI_EXECUTION_SETTING,
+                    {"validated": req.validated, "note": req.note})
+    return {"validated": req.validated}
 
 
 @at.get("/ai-models")

@@ -241,14 +241,19 @@ const FEATURES = [
 
 const PLANS = [
   {
-    id: "monthly", name: "Monthly", price: "$29", per: "/month", note: "Billed every month · cancel any time",
-    features: ["KAOS Trading Bot", "KAOS Strategy mode", "Cloud Strategies", "Community access", "Works on 3 devices"],
-    cta: "GET KAOS", best: false,
+    id: "free", name: "Free", price: "$0", per: "/month", note: "Create an account · no card required",
+    features: ["KAOS Trading Bot", "KAOS Strategy mode (no AI trading)", "1 chart", "Paper trading", "Community access", "Works on 1 device"],
+    cta: "JOIN FREE", best: false,
   },
   {
-    id: "yearly", name: "Yearly", price: "$279", per: "/year", note: "2 months free vs monthly",
-    features: ["Everything in Monthly", "KAOS AI mode", "Strategy + AI mode", "Premium Tools", "Works on 5 devices"],
-    cta: "GET KAOS", best: true,
+    id: "pro", name: "Pro", price: "$49", per: "/month", note: "Billed monthly · cancel any time",
+    features: ["KAOS Trading Bot", "KAOS Strategy mode", "Scanners & AI insights", "Up to 4 charts", "Cloud Strategies", "Works on 3 devices"],
+    cta: "GET PRO", best: false,
+  },
+  {
+    id: "ultimate", name: "Ultimate", price: "$149", per: "/month", note: "Billed monthly · cancel any time",
+    features: ["Everything in Pro", "KAOS AI & Strategy + AI modes (after independent validation)", "Premium Tools", "Works on 5 devices"],
+    cta: "GET ULTIMATE", best: true,
   },
 ];
 
@@ -268,8 +273,8 @@ const FAQS = [
   { q: "Which platform does KAOS work with?", a: "KAOS works with Pocket Option. The bot trades on your own Pocket Option account — demo or real — exactly as you have it selected in Pocket Option. KAOS never moves your funds anywhere else." },
   { q: "How does KAOS AI learn?", a: "Every settled trade — win or loss — is added to the model, and KAOS AI re-trains continuously on those real outcomes. It also shows out-of-sample holdout accuracy so you can judge performance honestly, and you can export or import your AI data at any time. Your bot, your data." },
   { q: "Do I need trading experience?", a: "No. KAOS ships with the Berserker strategy pre-configured, so you can start with defaults, watch how it behaves and tune timeframe, expiration, indicators and risk limits as you get comfortable." },
-  { q: "What do I get with membership?", a: "Membership unlocks the bot, cloud strategies and the community. Monthly covers the KAOS Strategy mode on 3 devices. Yearly adds KAOS AI mode, Strategy + AI mode, Premium Tools and 5 devices — with 2 months free compared to monthly." },
-  { q: "Can I use KAOS on multiple devices?", a: "Yes. Monthly members can run KAOS on up to 3 devices, yearly members on up to 5. Your strategies, stats and AI data stay in sync through your account." },
+  { q: "What do I get with membership?", a: "Membership unlocks the bot, cloud strategies and the community. All plans are billed monthly. Free gives you the KAOS bot in Strategy mode on 1 device, plus paper trading and the community — AI trading is not included. Pro adds the bot with KAOS Strategy mode, scanners and AI insights on 3 devices. Ultimate adds KAOS AI mode, Strategy + AI mode, Premium Tools and 5 devices." },
+  { q: "Can I use KAOS on multiple devices?", a: "Yes. Pro members can run KAOS on up to 3 devices, Ultimate members on up to 5. Your strategies, stats and AI data stay in sync through your account." },
   { q: "Where is my data stored?", a: "Your strategies and AI data belong to your account and can be exported at any time. KAOS is built around one principle: your bot, your data, your KAOS." },
   { q: "Is trading risky?", a: "Yes — and we won't pretend otherwise. Short-expiration trading carries a substantial risk of loss. KAOS is a tool that executes strategy and risk rules consistently; it does not guarantee profit. Never trade money you cannot afford to lose, and consider starting on a demo account." },
 ];
@@ -457,13 +462,13 @@ export default function Landing() {
       {/* ============================ PRICING ============================ */}
       <section id="pricing" className="kx-section" aria-labelledby="h-pricing" style={{ padding: "80px 22px", background: "linear-gradient(180deg,#020303,#0a0805 50%,#020303)" }}>
         <div style={{ maxWidth: 1020, margin: "0 auto" }}>
-          {sectionHead("Membership", "Choose Your KAOS Membership", "One membership unlocks the full command center. Upgrade, downgrade or cancel from your dashboard at any time.")}
+          {sectionHead("Membership", "Choose Your KAOS Membership", "Monthly memberships. Upgrade, downgrade or cancel from your dashboard at any time.")}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 24, alignItems: "stretch" }}>
             {PLANS.map((p) => (
               <div key={p.id} className="kx-card" style={{ ...cardStyle, position: "relative", padding: "30px 28px 28px", display: "flex", flexDirection: "column", borderColor: p.best ? GOLD_DEEP : GOLD_BORDER, boxShadow: p.best ? "0 0 0 1px rgba(240,195,93,.25), 0 24px 60px rgba(0,0,0,.6)" : cardStyle.boxShadow }}>
                 {p.best && (
                   <div style={{ position: "absolute", top: -13, left: "50%", transform: "translateX(-50%)", background: "linear-gradient(180deg,#f4cd6d,#c9963a)", color: "#1c1204", fontWeight: 800, fontSize: 10.5, letterSpacing: ".18em", padding: "6px 14px", borderRadius: 999, whiteSpace: "nowrap" }}>
-                    BEST VALUE · 2 MONTHS FREE
+                    MOST POWERFUL
                   </div>
                 )}
                 <h3 style={{ margin: 0, fontFamily: "'Oswald',sans-serif", fontSize: 21, letterSpacing: ".12em", color: GOLD }}>{p.name.toUpperCase()}</h3>

@@ -234,6 +234,18 @@ console.info('[KAOS BUILD] V24.1.287-B21 · BB WINNER PRO (15s BB20/2) + ACTIVE 
   // ── Bot state ────────────────────────────────────────────────
   let isRunning      = false;
   let botConfig      = null;
+  // AI-controlled (autonomous) execution needs the server to say so: fail closed when unknown.
+  let kaosAiExecutionAllowed = false;
+  let kaosChartLimit = 1;  // server plan limit (Free 1, Pro 4, Ultimate 4); unknown -> 1
+  function kaosApplyEntitlements(ent){
+    const cl = Number(ent && ent.chartLimit);
+    kaosChartLimit = Number.isInteger(cl) && cl > 0 ? Math.min(4, cl) : 1;
+    kaosAiExecutionAllowed = !!(ent && ent.aiExecutionLocked === false && Array.isArray(ent.modes) && ent.modes.includes('AI'));
+  }
+  try {
+    chrome.storage.local.get('kaosEntitlements', r => kaosApplyEntitlements(r && r.kaosEntitlements));
+    chrome.storage.onChanged.addListener((c, area) => { if (area === 'local' && c.kaosEntitlements) kaosApplyEntitlements(c.kaosEntitlements.newValue); });
+  } catch (_) {}
   let multiAssetMode = false;  // single (default) or multi-asset scanning
   let tradePending   = false;  // global: still used for single mode + staleness
   let currentAmount  = 5;
@@ -3234,7 +3246,7 @@ console.info('[KAOS BUILD] V24.1.287-B21 · BB WINNER PRO (15s BB20/2) + ACTIVE 
     const validated = aiState.trained >= AI_CTRL.minSamples && aiState.valTotal >= AI_CTRL.minValidation &&
       (aiState.valCorrect / Math.max(1, aiState.valTotal)) >= 0.50 + AI_CTRL.minEdge;
     const autonomousRequested = botConfig?.aiAutonomous === true || botConfig?.aiMode === 'autonomous';
-    const autonomous = autonomousRequested && validated;
+    const autonomous = autonomousRequested && validated && kaosAiExecutionAllowed;
 
     let action='WAIT', reason='AI abstain';
     if (regime.chop > AI_CTRL.maxChop && type.type === 'SKIP') reason='AI CHOP';
@@ -3257,6 +3269,12 @@ console.info('[KAOS BUILD] V24.1.287-B21 · BB WINNER PRO (15s BB20/2) + ACTIVE 
       regime:d.regime?.name, type:d.type?.type, autonomous:!!d.autonomous,
       validated:!!d.validated, modelDirection:d.modelDir, strategyDirection:d.strategyDir
     };
+    // Without server-granted AI execution (Free, Pro, or Ultimate before validation) the AI is
+    // advisory only: it must not place, veto or override the strategy's trade.
+    if (!kaosAiExecutionAllowed) {
+      lastIndicators.aiController.advisoryOnly = true;
+      return { sig:Object.assign({}, strategySig, { aiAdvisory:d }), aiDecision:d, advisoryOnly:true };
+    }
     if (d.action === 'WAIT') return { skip:true, reason:d.reason, aiDecision:d };
     const out = Object.assign({}, strategySig);
     if (d.autonomous) {
@@ -9515,7 +9533,7 @@ const t3MinConsensus = aiLearning ? 1 : 3;
   function sbSupertrend(rows,p=10,mult=3){if(rows.length<p+3)return 0;const atr=sbAtr(rows,p);let upper=0,lower=0,trend=1;for(let i=0;i<rows.length;i++){const mid=(rows[i].high+rows[i].low)/2,bu=mid+mult*(atr[i]||0),bl=mid-mult*(atr[i]||0);if(i===0){upper=bu;lower=bl;continue}upper=(bu<upper||rows[i-1].close>upper)?bu:upper;lower=(bl>lower||rows[i-1].close<lower)?bl:lower;if(trend>0&&rows[i].close<lower)trend=-1;else if(trend<0&&rows[i].close>upper)trend=1}return trend}
   function sbSar(rows,step=.02,max=.2){if(rows.length<4)return 0;let bull=rows[1].close>=rows[0].close,sar=bull?rows[0].low:rows[0].high,ep=bull?rows[0].high:rows[0].low,af=step;for(let i=1;i<rows.length;i++){sar=sar+af*(ep-sar);const r=rows[i];if(bull){sar=Math.min(sar,rows[i-1].low,i>1?rows[i-2].low:rows[i-1].low);if(r.low<sar){bull=false;sar=ep;ep=r.low;af=step}else if(r.high>ep){ep=r.high;af=Math.min(max,af+step)}}else{sar=Math.max(sar,rows[i-1].high,i>1?rows[i-2].high:rows[i-1].high);if(r.high>sar){bull=true;sar=ep;ep=r.high;af=step}else if(r.low<ep){ep=r.low;af=Math.min(max,af+step)}}}return bull?1:-1}
   function strategySlotForAsset(assetName){
-    const slots=Array.isArray(botConfig?.strategySlots)?botConfig.strategySlots:[];
+    const slots=(Array.isArray(botConfig?.strategySlots)?botConfig.strategySlots:[]).slice(0,kaosChartLimit);
     return slots.find(x=>x&&x.asset===assetName)||null;
   }
   function kaosBuiltinSignal(rows,cfg){

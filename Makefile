@@ -6,7 +6,7 @@ down:
 	docker compose down
 test: test-api test-collectors test-core
 test-api:
-	cd apps/api && MONGO_URL=$${MONGO_URL:-mongodb://localhost:27017} DB_NAME=$${DB_NAME:-kaos_test} python -m pytest -q
+	cd apps/api && PYTHONPATH=../../packages/kaos-core MONGO_URL=$${MONGO_URL:-mongodb://localhost:27017} DB_NAME=$${DB_NAME:-kaos_test} python -m pytest -q
 test-collectors:
 	cd services/collectors && python -m pytest -q
 test-core:

@@ -83,6 +83,8 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup():
     await ensure_indexes()
+    import services_affiliate_ledger
+    await services_affiliate_ledger.ensure_indexes()
     await seed.seed_admin()
     await seed.seed_demo()
     await seed.write_credentials()

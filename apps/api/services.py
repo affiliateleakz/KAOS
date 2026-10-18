@@ -13,8 +13,25 @@ async def set_setting(key: str, value):
     await db.settings.update_one({"key": key}, {"$set": {"key": key, "value": value}}, upsert=True)
 
 
-async def compute_license(user: dict, device: dict = None) -> dict:
-    """Server-authoritative license decision for a user (+ optional device)."""
+POCKET_OPTION_REFERRAL_REQUIREMENT = (
+    "Trading on Pocket Option through KAOS requires a Pocket Option account opened with the KAOS referral link. "
+    "You submit your Pocket Option ID and KAOS staff review it manually. This applies to every plan and only to Pocket Option."
+)
+LICENSE_REASON_MESSAGES = {
+    "affiliate_not_verified": "Pocket Option referral account not verified yet. " + POCKET_OPTION_REFERRAL_REQUIREMENT
+    + " Your KAOS account, portal, paper trading and other brokers are not affected.",
+    "account_suspended": "Your KAOS account is suspended.",
+    "account_banned": "Your KAOS account is banned.",
+    "access_revoked": "Extension access was revoked for this account.",
+    "device_revoked": "This device was revoked. Manage devices in your KAOS dashboard.",
+}
+
+
+async def compute_license(user: dict, device: dict = None, broker: str = "pocket_option") -> dict:
+    """Server-authoritative license decision for a user (+ optional device) on a broker.
+
+    The Pocket Option referral requirement only applies when the broker is Pocket Option.
+    """
     reasons = []
     authorized = True
     status = user.get("account_status", "active")
@@ -27,10 +44,10 @@ async def compute_license(user: dict, device: dict = None) -> dict:
     if user.get("extension_access_revoked"):
         authorized = False
         reasons.append("access_revoked")
-    if membership not in ACTIVE_MEMBERSHIP:
-        authorized = False
-        reasons.append(f"membership_{membership.lower()}")
-    if affiliate != "VERIFIED":
+    # Free tier: no paid membership needed for the bot; AI and paid features are gated by entitlements.
+    tier = "paid" if membership in ACTIVE_MEMBERSHIP else "free"
+    po_eligible = affiliate == "VERIFIED"
+    if broker == "pocket_option" and not po_eligible:
         authorized = False
         reasons.append("affiliate_not_verified")
     if device is not None and device.get("revoked"):
@@ -44,6 +61,7 @@ async def compute_license(user: dict, device: dict = None) -> dict:
     return {
         "authorized": authorized,
         "membershipStatus": membership,
+        "tier": tier,
         "affiliateStatus": affiliate,
         "userId": user.get("id"),
         "licenseId": user.get("license_id"),
@@ -51,6 +69,15 @@ async def compute_license(user: dict, device: dict = None) -> dict:
         "expiresAt": user.get("membership_expires_at"),
         "features": features,
         "reasons": reasons,
+        "reasonMessages": [LICENSE_REASON_MESSAGES.get(r, r) for r in reasons],
+        "broker": broker,
+        "brokerEligibility": {
+            "pocket_option": {
+                "eligible": po_eligible,
+                "status": affiliate,
+                "requirement": POCKET_OPTION_REFERRAL_REQUIREMENT,
+            },
+        },
     }
 
 

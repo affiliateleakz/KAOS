@@ -249,6 +249,7 @@
       }
       return { step:'LOGIN', status:'SESSION_EXPIRED', serverOnline:true };
     }
+    await sset({ kaosEntitlements: info.entitlements || null });
     var cl = classifyLicense(info.license);
     if (!cl.ok) return { step: 'BLOCKED', status: cl.status, license: info.license, user: info.user, entitlements: info.entitlements };
 

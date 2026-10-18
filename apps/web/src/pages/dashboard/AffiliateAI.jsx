@@ -10,12 +10,46 @@ import { Copy, Brain, Share2, TrendingUp, Trophy } from "lucide-react";
 const H = ({ children }) => <h1 className="mb-6 font-heading text-2xl font-bold tracking-wide">{children}</h1>;
 const Stat = ({ l, v }) => (<div className="card-surface p-4"><div className="label-mono">{l}</div><div className="mt-1 font-mono text-2xl font-bold text-[#D4AF37]">{v}</div></div>);
 
+function LedgerCard({ ledger }) {
+  const b = ledger.balance;
+  return (
+    <div className="card-surface mt-6 p-0 overflow-x-auto" data-testid="affiliate-ledger">
+      <div className="flex flex-wrap items-center gap-2 border-b border-[#2E2E2E] p-4">
+        <TrendingUp className="h-5 w-5 text-[#D4AF37]" /><h3 className="font-heading font-semibold">3-Level Commission Ledger</h3>
+        <span className="rounded bg-[#D4AF37]/15 px-2 py-0.5 font-mono text-[10px] uppercase text-[#D4AF37]" data-testid="ledger-tier">{ledger.tier} tier</span>
+        <span className="font-mono text-xs text-slate-500" data-testid="ledger-note">{ledger.note}</span>
+      </div>
+      <div className="grid grid-cols-2 gap-3 p-4 md:grid-cols-4">
+        <Stat l="In 30-day hold" v={`$${b.pending}`} /><Stat l="Available (preview)" v={`$${b.available}`} />
+        <Stat l="Reversed" v={`$${b.reversed}`} /><Stat l="Paid out" v={`$${b.paid}`} />
+      </div>
+      <Table><TableHeader><TableRow className="border-[#2E2E2E]"><TableHead>Date</TableHead><TableHead>Level</TableHead><TableHead>Your tier</TableHead><TableHead>Rate</TableHead><TableHead>Payment</TableHead><TableHead>Amount</TableHead><TableHead>Type</TableHead></TableRow></TableHeader>
+        <TableBody>
+          {ledger.entries.length === 0 && <TableRow><TableCell colSpan={7} className="py-6 text-center text-slate-500">No ledger entries yet</TableCell></TableRow>}
+          {ledger.entries.map((e) => (
+            <TableRow key={e.entry_id} className="border-[#2E2E2E]">
+              <TableCell className="font-mono text-xs text-slate-400">{e.created_at.slice(0, 10)}</TableCell>
+              <TableCell className="font-mono">L{e.level}</TableCell><TableCell className="capitalize">{e.recipient_tier}</TableCell>
+              <TableCell className="font-mono">{e.rate_pct}%</TableCell><TableCell className="font-mono text-slate-400">${e.base_amount}</TableCell>
+              <TableCell className={`font-mono ${e.amount.startsWith("-") ? "text-red-400" : "text-[#22C55E]"}`}>${e.amount}</TableCell>
+              <TableCell className="capitalize">{e.kind}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody></Table>
+    </div>
+  );
+}
+
 // ---------- Member Affiliate ----------
 export function AffiliatePage() {
   const [d, setD] = useState(null);
   const [assets, setAssets] = useState([]);
   const [lb, setLb] = useState([]);
-  const load = () => api.get("/api/affiliate/overview").then((r) => setD(r.data)).catch(() => {});
+  const [ledger, setLedger] = useState(null);
+  const load = () => {
+    api.get("/api/affiliate/overview").then((r) => setD(r.data)).catch(() => {});
+    api.get("/api/affiliate/ledger").then((r) => setLedger(r.data)).catch(() => {});
+  };
   useEffect(() => {
     load();
     api.get("/api/affiliate/marketing").then((r) => setAssets(r.data)).catch(() => {});
@@ -46,6 +80,7 @@ export function AffiliatePage() {
         <Stat l="Clicks" v={d.clicks} /><Stat l="Signups" v={d.signups} /><Stat l="Paying" v={d.payingReferrals} />
         <Stat l="Conv %" v={d.conversionRate} /><Stat l="Pending" v={`$${d.pending}`} /><Stat l="Payable" v={`$${d.payable}`} /><Stat l="Lifetime" v={`$${d.lifetime}`} />
       </div>
+      {ledger && <LedgerCard ledger={ledger} />}
       {d.shareFunnel && (
         <div className="card-surface mt-6 p-5" data-testid="share-funnel">
           <div className="flex items-center gap-2"><Share2 className="h-5 w-5 text-[#D4AF37]" /><h3 className="font-heading font-semibold">Signal Share Funnel</h3>
