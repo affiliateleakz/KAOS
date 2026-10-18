@@ -37,3 +37,12 @@ def test_member_access_checks_entitlement(monkeypatch):
     with pytest.raises(HTTPException) as exc:
         asyncio.run(scanner.require_scanner(user={"id":"member"}))
     assert exc.value.status_code==403
+
+def test_house_disclosures_require_commercial_review(monkeypatch):
+    monkeypatch.delenv("KAOS_HOUSE_DISCLOSURE_RIGHTS",raising=False)
+    with pytest.raises(ValueError,match="commercial-use"):
+        scanner.validate_disclosure(item(source="house",source_url="https://disclosures-clerk.house.gov/FinancialDisclosure"))
+
+def test_reject_source_mismatch():
+    with pytest.raises(ValueError,match="category"):
+        scanner.validate_disclosure(item(source="senate",source_url="https://www.sec.gov/Archives/edgar/data/1"))
