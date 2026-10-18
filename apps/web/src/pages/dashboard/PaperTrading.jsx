@@ -61,7 +61,7 @@ export default function PaperTrading() {
         <div className="space-y-4 lg:col-span-2">
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             {[["Starting balance", book.starting_balance, "starting"], ["Cash", book.cash, "cash"], ["Open cost", book.open_cost, "open"], ["Realized P&L", book.realized_pnl, "pnl"]].map(([l, v, id]) => (
-              <div key={l} className="card-surface p-4"><div className="label-mono">{l}</div><div className={`mt-1 font-mono text-2xl font-bold ${id === "pnl" ? pnlColor : "text-[#D4AF37]"}`} data-testid={`paper-${id}`}>${v}</div></div>
+              <div key={l} className="card-surface p-4"><div className="label-mono">{l}</div><div className={`mt-1 font-mono text-2xl font-bold ${id === "pnl" ? pnlColor : "text-[#D4AF37]"}`} data-testid={`paper-${id}`}>{usd(v)}</div></div>
             ))}
           </div>
           <Positions positions={book.positions} disabled={data.kill_switch} onDone={load} />
@@ -73,6 +73,8 @@ export default function PaperTrading() {
   );
 }
 
+const usd = (v) => `${Number(v) < 0 ? "-" : ""}$${Math.abs(Number(v)).toFixed(2)}`;
+
 function Positions({ positions, disabled, onDone }) {
   const [marks, setMarks] = useState({});
   const [busy, setBusy] = useState(null);
@@ -80,7 +82,7 @@ function Positions({ positions, disabled, onDone }) {
     setBusy(symbol);
     try {
       const r = await api.post(`/api/v1/paper/positions/${encodeURIComponent(symbol)}/close`, { quote_price: marks[symbol] });
-      toast.success(`Closed ${symbol} · realized $${r.data.realized_pnl}`);
+      toast.success(`Closed ${symbol} · realized ${usd(r.data.realized_pnl)}`);
     } catch (err) {
       toast.error(errMsg(err));
     } finally {
@@ -127,9 +129,9 @@ function OrdersTable({ title, rows, testid, reason }) {
             <TableRow key={`${o.client_order_id}-${i}`} className="border-[#2E2E2E]">
               <TableCell className="font-mono text-xs text-slate-400">{o.created_at?.slice(0, 19).replace("T", " ")}</TableCell>
               <TableCell className="font-mono">{o.symbol}</TableCell><TableCell>{o.side}</TableCell>
-              <TableCell className="font-mono">${o.quantity}</TableCell><TableCell className="font-mono text-slate-400">{o.quote_price}</TableCell>
+              <TableCell className="font-mono">${Number(o.quantity).toFixed(2)}</TableCell><TableCell className="font-mono text-slate-400">{o.quote_price}</TableCell>
               <TableCell>{reason ? <span className="text-xs text-red-300">{o.reason}</span> : <StatusBadge value={o.fill_type === "SIMULATED" ? "SIM FILLED" : o.state} />}</TableCell>
-              {!reason && <TableCell className={`font-mono text-xs ${Number(o.realized_pnl) < 0 ? "text-red-400" : "text-slate-300"}`}>{o.realized_pnl != null ? `$${o.realized_pnl}` : "—"}</TableCell>}
+              {!reason && <TableCell className={`font-mono text-xs ${Number(o.realized_pnl) < 0 ? "text-red-400" : "text-slate-300"}`}>{o.realized_pnl != null ? usd(o.realized_pnl) : "—"}</TableCell>}
             </TableRow>
           ))}
         </TableBody></Table>
