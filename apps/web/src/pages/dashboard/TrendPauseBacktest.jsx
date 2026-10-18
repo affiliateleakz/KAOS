@@ -1,3 +1,4 @@
+import ReplayTradeChart from "./ReplayTradeChart";
 import React,{useState} from "react";
 import {api,errMsg} from "../../lib/api";
 
@@ -64,6 +65,7 @@ export default function TrendPauseBacktest(){
    {error&&<p role="alert" className="text-sm text-red-400">{error}</p>}
    {result&&<div aria-live="polite" className="rounded border border-[#333] p-3 text-sm">
     <p className="font-semibold">Research only · no executable trading signal</p>
+    <ReplayTradeChart candles={readCandles(seconds,"15-second")} trades={result.trades||[]} />
     <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
      {[
       ["Trades",result.summary?.trades],["Wins",result.summary?.wins],["Losses",result.summary?.losses],
