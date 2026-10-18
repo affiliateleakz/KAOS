@@ -84,7 +84,7 @@ async def account(user: dict = Depends(get_current_user)):
     positions = await oanda_get(f"/v3/accounts/{account_id}/openPositions", token)
     orders = await oanda_get(f"/v3/accounts/{account_id}/pendingOrders", token)
     info = summary.get("account") if isinstance(summary, dict) else None
-    if not isinstance(info, dict) or not isinstance(positions.get("positions"), list) or not isinstance(orders.get("orders"), list):
+    if (not isinstance(info, dict) or not isinstance(positions, dict) or not isinstance(orders, dict)\n            or not isinstance(positions.get("positions"), list) or not isinstance(orders.get("orders"), list)):
         raise HTTPException(502, "Unexpected OANDA response format")
     return {"broker": "oanda", "environment": "practice", "source": "oanda_v20_practice_api",
             "fetched_at": datetime.now(timezone.utc).isoformat(),
