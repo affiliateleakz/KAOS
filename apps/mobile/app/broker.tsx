@@ -1,5 +1,5 @@
 import React,{useCallback,useEffect,useState} from 'react';
-import {RefreshControl,ScrollView,StyleSheet,Text,View} from 'react-native';
+import {RefreshControl,ScrollView,StyleSheet,Text,View,TextInput,Pressable} from 'react-native';
 import {broker,brokerManagement,CoinbaseAccount,BrokerCatalogEntry,BrokerConnection,ReadOnlyBrokerData,chartSettings,ChartSettings} from '../src/api';
 
 // Same Coinbase account data as the website and extension. Read-only: no orders are placed from the app.
@@ -70,13 +70,41 @@ function BrokerDirectory(){
 
 function SavedCharts(){
  const [charts,setCharts]=useState<ChartSettings[]>([]);
- const [error,setError]=useState('');
+ const [error,setError]=useState('');const [notice,setNotice]=useState('');const [saving,setSaving]=useState<number|null>(null);
  const load=useCallback(async()=>{try{const r=await chartSettings.load();setCharts(r.charts);setError('')}catch(e:any){setError(e?.message||'Unable to load chart settings')}},[]);
  useEffect(()=>{load()},[load]);
+ const edit=(slot:number,patch:Partial<ChartSettings>)=>setCharts(old=>old.map(c=>c.slot===slot?{...c,...patch}:c));
+ const save=async(c:ChartSettings)=>{
+  setSaving(c.slot);setError('');setNotice('');
+  try{const saved=await chartSettings.save(c.slot,{broker:c.broker,symbol:c.symbol.toUpperCase(),seconds:c.seconds});
+   edit(c.slot,saved);setNotice('Chart '+(c.slot+1)+' saved to your KAOS account.');
+  }catch(e:any){setError(e?.message||'Chart configuration could not be saved')}
+  finally{setSaving(null)}
+ };
  return <View style={{marginBottom:18}}>
   <Text style={s.h}>Saved KAOS Charts</Text>
-  <Text style={s.muted}>Synchronized settings from your KAOS account. Chart feeds and live execution may not be supported by the selected broker.</Text>
+  <Text style={s.muted}>Configure independent chart slots. Available timeframes currently use Coinbase public candles (1m / 5m / 15m). Other broker chart feeds are pending. No live orders.</Text>
   {error?<Text style={s.err}>{error}</Text>:null}
-  {charts.map(c=><Text key={c.slot} style={s.txt}>Chart {c.slot+1} · {c.broker} · {c.symbol} · {c.seconds}s</Text>)}
+  {notice?<Text style={s.txt}>{notice}</Text>:null}
+  {charts.map(c=><View key={c.slot} style={{borderTopWidth:1,borderTopColor:'#1c2430',paddingVertical:10}}>
+    <Text style={s.sec}>Chart {c.slot+1}</Text>
+    <Text style={s.muted}>Market</Text>
+    <TextInput accessibilityLabel={'Chart '+(c.slot+1)+' market'} autoCapitalize="characters" value={c.symbol}
+      onChangeText={v=>edit(c.slot,{symbol:v.toUpperCase()})} style={{borderWidth:1,borderColor:'#64748b',borderRadius:5,color:'#fff',padding:8}} />
+    <Text style={s.muted}>Broker / data source</Text>
+    <View style={{flexDirection:'row',flexWrap:'wrap'}}>
+     {(['kaos_paper','coinbase','alpaca','oanda'] as const).map(b=><Pressable key={b} onPress={()=>edit(c.slot,{broker:b})}
+      style={{padding:7,margin:3,borderWidth:1,borderColor:c.broker===b?'#7DB8FF':'#475569',borderRadius:5}}>
+      <Text style={s.txt}>{b}</Text></Pressable>)}
+    </View>
+    <Text style={s.muted}>Timeframe</Text>
+    <View style={{flexDirection:'row'}}>{([60,300,900] as const).map(sec=><Pressable key={sec} onPress={()=>edit(c.slot,{seconds:sec})}
+      style={{padding:8,margin:3,borderWidth:1,borderColor:c.seconds===sec?'#7DB8FF':'#475569',borderRadius:5}}>
+      <Text style={s.txt}>{sec/60}m</Text></Pressable>)}</View>
+    <Pressable disabled={saving!==null} onPress={()=>save(c)}
+      style={{alignSelf:'flex-start',backgroundColor:'#2F8CFF',borderRadius:5,padding:9,opacity:saving!==null?.5:1}}>
+      <Text style={{color:'#080808',fontWeight:'700'}}>{saving===c.slot?'Saving…':'Save chart settings'}</Text>
+    </Pressable>
+  </View>)}
  </View>;
 }
