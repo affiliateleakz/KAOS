@@ -77,12 +77,20 @@ class EventsBatch(BaseModel):
 async def ingest_events(batch: EventsBatch, user: dict = Depends(get_current_user)):
     """Idempotent event ingestion. A lost ACK causes a safe retry; duplicates are deduped by eventId.
     This is a CLOUD-SYNC channel only and never triggers a broker order."""
+    from routes_trading import chart_limit_error
     acked, duplicates, rejected = [], [], []
+    ent = None
     for e in batch.events:
         # Reject unknown/malformed event types up front (keeps stats & sync-status clean).
         if e.type not in ALLOWED_EVENT_TYPES:
             rejected.append({"eventId": e.eventId, "type": e.type, "reason": "unknown_event_type"})
             continue
+        slot = (e.payload or {}).get("chartSlot")
+        if slot is not None:
+            ent = ent or await get_entitlements(user)
+            if chart_limit_error(ent, slot):
+                rejected.append({"eventId": e.eventId, "type": e.type, "reason": "chart_limit"})
+                continue
         if await db.trade_events.find_one({"eventId": e.eventId}):
             duplicates.append(e.eventId)
             continue

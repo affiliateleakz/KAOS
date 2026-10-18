@@ -6,7 +6,7 @@ import pytest
 from services import compute_license
 from services_trading import get_entitlements
 from fastapi import HTTPException
-from routes_trading import _check_mode  # imported at collection, before mock tests stub `db`
+from routes_trading import _check_mode, chart_limit_error  # imported at collection, before mock tests stub `db`
 
 
 def run(coro):
@@ -98,3 +98,19 @@ def test_verified_pocket_option_free_member_gets_strategy_license():
     from services import compute_license
     lic = run(compute_license({"id": "u2", "membership_status": None, "affiliate_status": "VERIFIED"}))
     assert lic["authorized"] is True and lic["tier"] == "free"
+
+
+def test_chart_slots_limited_per_plan_free1_pro4_ultimate4():
+    free, pro, ult = {"chartLimit": 1}, {"chartLimit": 4}, {"chartLimit": 4}
+    assert chart_limit_error(free, None) is None  # legacy single-chart clients
+    assert chart_limit_error(free, 0) is None
+    assert chart_limit_error(free, 1)["error"] == "chart_limit"
+    assert chart_limit_error(pro, 3) is None and chart_limit_error(pro, 4)["chartLimit"] == 4
+    assert chart_limit_error(ult, 3) is None and chart_limit_error(ult, 4) is not None
+    assert chart_limit_error(ult, -1) is not None and chart_limit_error(ult, True) is not None
+    assert chart_limit_error({}, 1) is not None  # unknown limit fails closed to 1
+
+
+def test_free_entitlements_chart_limit_reaches_route_check():
+    ent = run(get_entitlements({"id": "u3", "membership_status": None}))
+    assert chart_limit_error(ent, 0) is None and chart_limit_error(ent, 1) is not None

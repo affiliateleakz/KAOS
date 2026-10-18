@@ -1689,9 +1689,20 @@ let terminalActiveSlot=0;
 let terminalSlotProfiles=['legacy7b','legacy7b','legacy7b','legacy7b'];
 let terminalSelectedCharts=[true,false,false,false];
 let kaosChartCount=1;
+// Server plan limit (Free 1, Pro 4, Ultimate 4). Unknown entitlements fail closed to 1 chart.
+let kaosChartLimit=1;
+function kaosApplyChartLimit(ent){
+ const n=Number(ent&&ent.chartLimit);
+ kaosChartLimit=Number.isInteger(n)&&n>0?Math.min(4,n):1;
+ document.querySelectorAll('#kaos-chart-count option').forEach(o=>{
+   const over=Number(o.value)>kaosChartLimit;o.disabled=over;
+   o.textContent=o.value+(o.value==='1'?' Chart':' Charts')+(over?' (not in your plan)':'');
+ });
+ if(kaosChartCount>kaosChartLimit)kaosApplyChartCount(kaosChartLimit,true);
+}
 
 function kaosApplyChartCount(count,persist=true){
- count=Math.max(1,Math.min(4,Number(count)||1));
+ count=Math.max(1,Math.min(4,kaosChartLimit,Number(count)||1));
  kaosChartCount=count;
  // The selected/traded slots are exactly the visible slots by default.
  terminalSelectedCharts=[0,1,2,3].map(i=>i<count);
@@ -1706,7 +1717,8 @@ function kaosApplyChartCount(count,persist=true){
  if(typeof terminalRenderChartSelection==='function')terminalRenderChartSelection();
 }
 function kaosInitChartCount(){
- chrome.storage.local.get(['kaosChartCount'],d=>kaosApplyChartCount(d.kaosChartCount||1,false));
+ chrome.storage.local.get(['kaosChartCount','kaosEntitlements'],d=>{kaosApplyChartLimit(d.kaosEntitlements);kaosApplyChartCount(d.kaosChartCount||1,false);});
+ chrome.storage.onChanged.addListener((c,area)=>{if(area==='local'&&c.kaosEntitlements)kaosApplyChartLimit(c.kaosEntitlements.newValue);});
  const sel=document.getElementById('kaos-chart-count');
  if(sel)sel.addEventListener('change',e=>kaosApplyChartCount(e.target.value,true));
  document.getElementById('kaos-open-selected-charts')?.addEventListener('click',()=>{
