@@ -29,6 +29,13 @@ class Coll:
             self.rows.append(r)
         r.update(u["$set"])
 
+    def find(self, q, proj=None):
+        rows = [dict(r) for r in self.rows if all(r.get(k) == v for k, v in q.items())]
+        class C:
+            async def to_list(self, n):
+                return rows
+        return C()
+
     async def delete_many(self, q):
         self.rows = [r for r in self.rows if not all(r.get(k) == v for k, v in q.items())]
 
@@ -53,6 +60,10 @@ class FakeClient:
 
     def get_fills(self, limit=None):
         return {"fills": [{"trade_id": "t1", "order_id": "o0", "price": "80000", "size": "0.001", "commission": "0.48"}]}
+
+    def get_products(self, product_type=None, limit=None):
+        return {"products": [{"product_id": "BTC-USD", "price": "80000", "quote_currency_id": "USD"},
+                             {"product_id": "BTC-EUR", "price": "70000", "quote_currency_id": "EUR"}]}
 
     def get_transaction_summary(self):
         return {"total_fees": 1.2, "fee_tier": {"pricing_tier": "Intro 1", "maker_fee_rate": "0.006", "taker_fee_rate": "0.012"}}
@@ -85,7 +96,15 @@ def test_connect_encrypts_and_never_returns_secrets(env):
     assert PEM not in json.dumps(stored) and KEY not in json.dumps(stored)
     assert "BEGIN" not in blob and KEY not in blob and out["key_hint"] == "…abcd"
     assert out["live_orders_enabled"] is False and out["permissions"]["can_transfer"] is False
-    assert run(rb.status(user))["connected"] is True
+    assert run(rb.status(user))["connection"]["saved"] is True and out["account_count"] == 2
+    lst = run(rb.list_connections(user))["connections"]
+    assert lst[0]["saved"] and "key_name_enc" not in lst[0] and "private_key_enc" not in lst[0]
+    assert [p["product_id"] for p in run(rb.products(user))["products"]] == ["BTC-USD"]
+
+
+def test_credentials_json_accepted(env):
+    blob = json.dumps({"name": KEY, "privateKey": PEM})
+    assert run(rb.connect(rb.ConnectReq(key_name="", private_key=blob), env[2]))["connected"]
 
 
 def test_transfer_capable_key_refused(env):

@@ -6,6 +6,7 @@ Keys with transfer permission are refused. Nothing here places or cancels orders
 live order submission lives in routes_coinbase and stays disabled by default.
 """
 import asyncio
+import json
 import os
 import re
 import time
@@ -20,8 +21,10 @@ from auth import get_current_user
 from db import db
 from services import audit_log
 
-router = APIRouter(prefix="/api/v1/brokers/coinbase", tags=["brokers"])
+router = APIRouter(prefix="/api/v1/broker-connections", tags=["brokers"])
 KEY_NAME = re.compile(r"^organizations/[A-Za-z0-9-]{1,64}/apiKeys/[A-Za-z0-9-]{1,64}$")
+UUID_KEY = re.compile(r"^[0-9a-fA-F-]{36}$")
+ED25519 = re.compile(r"^[A-Za-z0-9+/]{80,90}={0,2}$")
 CACHE_SECONDS = 5
 _cache: dict = {}
 
@@ -84,15 +87,23 @@ def _public(row: dict) -> dict:
             "live_orders_enabled": os.getenv("KAOS_COINBASE_LIVE_ORDERS", "disabled") == "enabled"}
 
 
-@router.post("/connect")
+@router.put("/coinbase")
 async def connect(req: ConnectReq, user: dict = Depends(get_current_user)):
-    key_name, private_key = req.key_name.strip(), req.private_key.strip().replace("\\n", "\n")
-    if not KEY_NAME.fullmatch(key_name):
+    key_name, private_key = req.key_name.strip(), req.private_key.strip()
+    if private_key.startswith("{"):  # downloaded cdp_api_key.json
+        try:
+            blob = json.loads(private_key)
+            key_name, private_key = blob.get("name") or key_name, blob["privateKey"].strip()
+        except (ValueError, KeyError, AttributeError):
+            raise HTTPException(422, "Credentials JSON must contain name and privateKey")
+    private_key = private_key.replace("\\n", "\n")
+    if not (KEY_NAME.fullmatch(key_name) or UUID_KEY.fullmatch(key_name)):
         raise HTTPException(422, "Key name must look like organizations/<org>/apiKeys/<key>")
-    if "PRIVATE KEY-----" not in private_key:
-        raise HTTPException(422, "Private key must be the ECDSA PEM key shown when the API key was created")
+    if "PRIVATE KEY-----" not in private_key and not ED25519.fullmatch(private_key):
+        raise HTTPException(422, "Private key must be the ECDSA PEM or Ed25519 key shown when the API key was created")
     vault = _vault()
-    perms = await _call(client_factory(key_name, private_key).get_api_key_permissions)
+    probe = client_factory(key_name, private_key)
+    perms = await _call(probe.get_api_key_permissions)
     if not perms.get("can_view"):
         raise HTTPException(422, "Key lacks View permission")
     if perms.get("can_transfer"):
@@ -107,18 +118,28 @@ async def connect(req: ConnectReq, user: dict = Depends(get_current_user)):
            "connected_at": now}
     await db.broker_connections.update_one({"user_id": user["id"], "broker": "coinbase"}, {"$set": row}, upsert=True)
     _cache.pop(user["id"], None)
+    accounts = await _call(probe.get_accounts, limit=250)
     await audit_log(user, "broker.coinbase.connect", "broker_connection", user["id"],
                     {"key_hint": row["key_hint"], "can_trade": row["permissions"]["can_trade"]})
-    return _public(row)
+    return {**_public(row), "account_count": len(accounts.get("accounts", []))}
 
 
-@router.get("/status")
+@router.get("/coinbase/status")
 async def status(user: dict = Depends(get_current_user)):
     row = await db.broker_connections.find_one({"user_id": user["id"], "broker": "coinbase", "verified": True}, {"_id": 0})
-    return _public(row) if row else {"connected": False, "broker": "coinbase"}
+    pub = _public(row) if row else {"connected": False, "broker": "coinbase"}
+    return {**pub, "connection": {"saved": bool(row), "verified": bool(row), "key_hint": (row or {}).get("key_hint")}}
 
 
-@router.delete("/connect")
+@router.get("")
+async def list_connections(user: dict = Depends(get_current_user)):
+    rows = await db.broker_connections.find({"user_id": user["id"]}, {"_id": 0, "broker": 1, "verified": 1, "key_hint": 1,
+                                                                      "permissions": 1, "connected_at": 1}).to_list(20)
+    fields = ("broker", "verified", "key_hint", "permissions", "connected_at")
+    return {"connections": [{**{k: r.get(k) for k in fields}, "saved": True} for r in rows]}
+
+
+@router.delete("/coinbase")
 async def disconnect(user: dict = Depends(get_current_user)):
     await db.broker_connections.delete_many({"user_id": user["id"], "broker": "coinbase"})
     _cache.pop(user["id"], None)
@@ -130,7 +151,7 @@ def _num(v):
     return (v or {}).get("value", "0") if isinstance(v, dict) else (v or "0")
 
 
-@router.get("/account")
+@router.get("/coinbase/accounts")
 async def account(user: dict = Depends(get_current_user)):
     """Balances, open orders, recent fills and fee tier straight from Coinbase (cached 5 s per member)."""
     hit = _cache.get(user["id"])
@@ -159,3 +180,14 @@ async def account(user: dict = Depends(get_current_user)):
                     "total_volume": fees.get("total_volume")}}
     _cache[user["id"]] = (time.monotonic(), out)
     return out
+
+
+@router.get("/coinbase/products")
+async def products(user: dict = Depends(get_current_user)):
+    """USD spot markets visible to the connected account, with Coinbase's own price and 24h change."""
+    c = _client_for(await _row(user["id"]))
+    data = await _call(c.get_products, product_type="SPOT", limit=500)
+    keep = ("product_id", "price", "price_percentage_change_24h", "volume_24h", "quote_increment", "base_min_size",
+            "trading_disabled", "status")
+    return {"source": "coinbase_advanced_api", "products": [{k: p.get(k) for k in keep} for p in data.get("products", [])
+                                                           if p.get("quote_currency_id") == "USD"]}
