@@ -14,8 +14,10 @@
     const a=await call('/broker-connections/coinbase/accounts');
     if(!a||!a.ok){el.innerHTML=`<span style="color:#f5b041">Coinbase unavailable: ${esc((a&&a.data&&a.data.detail)||(a&&a.error)||'error')}</span>`;return;}
     const d=a.data;
-    el.innerHTML=`<b style="color:#7DB8FF">COINBASE ADVANCED · READ-ONLY · key ${esc(d.key_hint)}</b>
+    el.innerHTML=`<b style="color:#7DB8FF">COINBASE ADVANCED · READ-ONLY · key ${esc(d.key_hint)}</b> <b style="color:#f5b041">UNVERIFIED: not yet tested against a real Coinbase account</b>
       <div style="color:#8b96a5;margin:4px 0">Live from Coinbase Advanced API · fetched ${esc(String(d.fetched_at).slice(11,19))} UTC · same data as the website and mobile app. KAOS does not place orders on this account.</div>
+      <div style="margin-top:6px">Buying power: $${esc(d.buying_power_usd??'–')}</div>
+      ${table('Positions',['Market','Qty','Value $','Unreal. P&L'],rows(d.positions,['product_id','quantity','market_value','unrealized_pnl'],'No crypto holdings'))}
       ${table('Balances',['Asset','Available','On hold'],rows(d.balances,['currency','available','hold'],'No non-zero balances'))}
       ${table('Open orders',['Market','Side','Type','Status','Filled'],rows(d.open_orders,['product_id','side','order_type','status','filled_size'],'No open orders'))}
       ${table('Recent fills',['Market','Side','Size','Price','Fee'],rows(d.fills,['product_id','side','size','price','commission'],'No fills yet'))}

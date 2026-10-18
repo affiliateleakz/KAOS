@@ -74,6 +74,7 @@ export default function BrokerConnections() {
       <p className="mt-4 text-xs text-slate-400">View permission is required; Trade is optional (KAOS live order submission is disabled until the owner authorizes it). Keys with Transfer permission are refused.</p>
     </div>
     {saved.coinbase?.verified && <CoinbaseAccount acct={acct} err={acctErr} onRefresh={loadAccount} />}
+      {saved.coinbase?.verified && <CoinbaseOrders />}
     <p className="text-xs text-slate-400">Broker names marked “Adapter pending” are not available for automated trading yet. Selecting a broker does not imply that live trading is supported.</p>
   </section>;
 }
@@ -92,13 +93,66 @@ function CoinbaseAccount({ acct, err, onRefresh }) {
       <h2 className="text-xl font-semibold">Coinbase account (read-only)</h2>
       <button type="button" onClick={onRefresh} className="rounded border border-slate-600 px-3 py-1 text-sm">Refresh</button>
     </div>
-    <p className="mb-4 text-xs text-slate-400">{acct ? `Live from Coinbase Advanced API · key ${acct.key_hint} · fetched ${new Date(acct.fetched_at).toLocaleTimeString()} · refreshes every 15 s` : "Loading from Coinbase…"} · KAOS does not place orders on this account.</p>
+    <p className="mb-4 text-xs text-slate-400"><span className="mr-1 rounded bg-amber-500/20 px-1.5 py-0.5 font-semibold text-amber-300">UNVERIFIED: not yet tested against a real Coinbase account</span>{acct ? `Live from Coinbase Advanced API · key ${acct.key_hint} · fetched ${new Date(acct.fetched_at).toLocaleTimeString()} · refreshes every 15 s` : "Loading from Coinbase…"} · KAOS does not place orders on this account.</p>
     {err && <p role="alert" className="mb-3 rounded border border-amber-600 p-2 text-sm text-amber-300">Coinbase unavailable: {err}{acct ? " (showing last loaded data)" : ""}</p>}
     {acct && <div className="space-y-5">
+      <p className="text-sm">Buying power (USD + USDC available): <b data-testid="cb-buying-power">${acct.buying_power_usd ?? "–"}</b></p>
+      <div><h3 className="mb-1 font-semibold">Positions</h3><Table testid="cb-positions" cols={[["product_id", "Market"], ["quantity", "Quantity"], ["bid", "Bid"], ["market_value", "Value (USD)"], ["avg_cost", "Avg cost"], ["unrealized_pnl", "Unrealized P&L"], ["realized_pnl_recent", "Realized P&L (recent fills)"], ["fees_recent", "Fees (recent fills)"]]} rows={acct.positions || []} empty="No crypto holdings" />
+        <p className="mt-1 text-xs text-slate-500">Cost basis comes from your last 50 Coinbase fills. If they don't cover the whole holding, average cost and unrealized P&L are left blank instead of guessed.</p></div>
       <div><h3 className="mb-1 font-semibold">Balances</h3><Table testid="cb-balances" cols={[["currency", "Asset"], ["available", "Available"], ["hold", "On hold"]]} rows={acct.balances} empty="No non-zero balances" /></div>
       <div><h3 className="mb-1 font-semibold">Open orders</h3><Table testid="cb-open-orders" cols={[["product_id", "Market"], ["side", "Side"], ["order_type", "Type"], ["status", "Status"], ["filled_size", "Filled"], ["created_time", "Created"]]} rows={acct.open_orders} empty="No open orders" /></div>
       <div><h3 className="mb-1 font-semibold">Recent fills</h3><Table testid="cb-fills" cols={[["product_id", "Market"], ["side", "Side"], ["size", "Size"], ["price", "Price"], ["commission", "Fee"], ["trade_time", "Time"]]} rows={acct.fills} empty="No fills yet" /></div>
       <p className="text-sm text-slate-300">Fee tier: <b>{acct.fees.tier || "–"}</b> · maker {acct.fees.maker_rate ?? "–"} · taker {acct.fees.taker_rate ?? "–"} · 30-day fees {acct.fees.total_fees ?? "–"}</p>
     </div>}
+  </div>;
+}
+
+function CoinbaseOrders() {
+  const [form, setForm] = useState({ product_id: "BTC-USD", side: "BUY", size: "10" });
+  const [preview, setPreview] = useState(null);
+  const [orders, setOrders] = useState([]);
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+  const loadOrders = useCallback(async () => {
+    try { const r = await api.get("/api/v1/coinbase-live/orders"); setOrders(r.data.orders); } catch (e) { setMsg(errMsg(e)); }
+  }, []);
+  useEffect(() => { loadOrders(); const t = setInterval(loadOrders, 15000); return () => clearInterval(t); }, [loadOrders]);
+  const runPreview = async (e) => {
+    e.preventDefault(); setBusy(true); setMsg(""); setPreview(null);
+    const body = { product_id: form.product_id, side: form.side, [form.side === "BUY" ? "quote_size" : "base_size"]: form.size };
+    try { const r = await api.post("/api/v1/coinbase-live/preview", body); setPreview(r.data); }
+    catch (e2) { setMsg(errMsg(e2)); } finally { setBusy(false); }
+  };
+  const cancel = async (id) => {
+    setMsg("");
+    try { const r = await api.post("/api/v1/coinbase-live/cancel", { client_order_id: id }); setMsg(r.data.cancel_success ? "Cancel accepted by Coinbase" : `Cancel refused: ${r.data.failure_reason}`); loadOrders(); }
+    catch (e) { setMsg(errMsg(e)); }
+  };
+  const live = preview?.live_orders_enabled;
+  return <div className="rounded-lg border border-slate-700 bg-[#0b0f17] p-5" data-testid="coinbase-orders">
+    <h2 className="mb-1 text-xl font-semibold">Coinbase orders</h2>
+    <p className="mb-4 text-xs text-slate-400">Preview asks Coinbase what a market order would cost without placing it (needs a key with Trade permission). Real order submission is <b className="text-amber-300">disabled</b> on this server until the owner authorizes a controlled test.</p>
+    <form onSubmit={runPreview} className="mb-4 flex flex-wrap items-end gap-3 text-sm">
+      <label>Market<input className="ml-2 w-28 rounded bg-slate-900 px-2 py-1" value={form.product_id} onChange={e => setForm({ ...form, product_id: e.target.value.toUpperCase() })} /></label>
+      <label>Side<select className="ml-2 rounded bg-slate-900 px-2 py-1" value={form.side} onChange={e => setForm({ ...form, side: e.target.value })}><option>BUY</option><option>SELL</option></select></label>
+      <label>{form.side === "BUY" ? "Amount (USD)" : "Size (base)"}<input className="ml-2 w-24 rounded bg-slate-900 px-2 py-1" value={form.size} onChange={e => setForm({ ...form, size: e.target.value })} /></label>
+      <button disabled={busy} className="rounded bg-[#2F8CFF] px-3 py-1 font-semibold text-black disabled:opacity-50">{busy ? "Previewing…" : "Preview order"}</button>
+      <button type="button" disabled title="Real order submission is disabled until the owner authorizes controlled testing" className="cursor-not-allowed rounded border border-slate-600 px-3 py-1 text-slate-500">Submit order (disabled)</button>
+    </form>
+    {msg && <p role="alert" className="mb-3 rounded border border-amber-600 p-2 text-sm text-amber-300">{msg}</p>}
+    {preview && <div className="mb-4 rounded border border-slate-700 p-3 text-sm" data-testid="cb-preview">
+      <p className="mb-1 font-semibold">Preview only, nothing was placed{live ? "" : " · live submission disabled"}</p>
+      <Table cols={[["order_total", "Order total"], ["commission_total", "Fees"], ["best_bid", "Best bid"], ["best_ask", "Best ask"], ["slippage", "Slippage"]]} rows={[preview.preview]} empty="" />
+      {preview.preview.errs?.length ? <p className="mt-2 text-amber-300">Coinbase warnings: {preview.preview.errs.join(", ")}</p> : null}
+    </div>}
+    <h3 className="mb-1 font-semibold">Orders sent by KAOS</h3>
+    <div className="overflow-x-auto"><table data-testid="cb-kaos-orders" className="w-full text-left text-sm">
+      <thead className="text-xs uppercase text-slate-400"><tr>{["Market", "Side", "Size", "State", "Filled", "Fees", "Created", ""].map(h => <th key={h} className="py-1 pr-3">{h}</th>)}</tr></thead>
+      <tbody>{orders.length ? orders.map(o => <tr key={o.client_order_id} className="border-t border-slate-800 font-mono">
+        <td className="py-1 pr-3">{o.product_id}</td><td className="pr-3">{o.side}</td><td className="pr-3">{o.quote_size ? `$${o.quote_size}` : o.base_size}</td>
+        <td className="pr-3">{o.state}</td><td className="pr-3">{o.filled_size ?? "–"}</td><td className="pr-3">{o.fill_fees ?? "–"}</td><td className="pr-3">{o.created_at?.slice(0, 19).replace("T", " ")}</td>
+        <td>{["ACCEPTED", "OPEN", "PARTIAL_FILL_REVIEW"].includes(o.state) && <button onClick={() => cancel(o.client_order_id)} className="rounded border border-red-500 px-2 text-red-300">Cancel</button>}</td>
+      </tr>) : <tr><td colSpan={8} className="py-2 text-slate-500">No orders sent by KAOS (live submission has never been enabled)</td></tr>}</tbody>
+    </table></div>
   </div>;
 }

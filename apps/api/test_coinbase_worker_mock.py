@@ -13,12 +13,19 @@ class WorkerTests(unittest.TestCase):
         service=types.ModuleType('services_trading');service.get_entitlements=AsyncMock(return_value={'botAccess':True});sys.modules['services_trading']=service
         cls.routes=importlib.import_module('routes_coinbase')
         cls.worker=importlib.import_module('coinbase_recovery_worker')
-    def test_missing_order_id_requires_manual_review(self):
+    def test_missing_order_id_waits_for_exchange_lookup(self):
+        from datetime import datetime, timezone
         d=self.worker.db
         d.broker_connections=types.SimpleNamespace(find_one=AsyncMock(return_value={'verified':True}))
         d.coinbase_order_intents=types.SimpleNamespace(update_one=AsyncMock())
-        result=asyncio.run(self.worker.resolve_one({'_id':'i1','user_id':'u','client_order_id':'c'}))
-        self.assertEqual(result,'MANUAL_REVIEW_CLIENT_ID')
+        client=types.SimpleNamespace(list_orders=lambda **k: {'orders': [], 'has_next': False})
+        intent={'_id':'i1','user_id':'u','client_order_id':'c','product_id':'BTC-USD','side':'BUY',
+                'created_at':datetime.now(timezone.utc).isoformat()}
+        with patch.object(self.worker,'make_client',return_value=client):
+            result=asyncio.run(self.worker.resolve_one(intent))
+        self.assertEqual(result,'WAITING_FOR_EXCHANGE')
+        upd=d.coinbase_order_intents.update_one.call_args.args[1]['$set']
+        self.assertEqual(upd['recovery_status'],'WAITING_FOR_EXCHANGE'); self.assertNotIn('state',upd)
     def test_worker_calls_fill_reconciliation(self):
         d=self.worker.db
         d.broker_connections=types.SimpleNamespace(find_one=AsyncMock(return_value={'verified':True}))

@@ -21,7 +21,7 @@ Nothing in this file is deployed. "Works locally" never means "live in productio
 | 3 | Auth: MFA, device authorization | Partial | Device seats enforced via `deviceLimit` | TOTP MFA | — |
 | 4 | Trading bot (extension, Pocket Option) | Code present | `apps/extension` v1.7.11 | Store resubmission. No AI-mode selector exists (hard-coded `STRATEGY`); autonomous AI fails closed and AI is advisory-only without server grant | Chrome Web Store; Pocket Option affiliate API |
 | 4 | Chrome extension privacy compliance | Partial | PR #3: privacy policy, Collective Learning opt-in | Founder whitelists `/privacy.html` and resubmits | Host bot protection |
-| 5 | Multi-broker support | Partial | Coinbase Advanced **read-only connection built** (`routes_broker_coinbase.py`: encrypted key vault, permission check, transfer-capable keys refused; balances, open orders, fills, fee tier, products) and shown on website, extension and Android. Not yet demonstrated against a real account. Coinbase order gateway (`routes_coinbase.py`) exists, disabled by `KAOS_COINBASE_LIVE_ORDERS`. Alpaca, IBKR, OANDA, Kraken, Tradier, tastytrade: not built. Pocket Option: extension DOM integration only, no API. | Demo read-only with a founder View-only key; then a shared adapter interface and the order lifecycle (preview/submit/cancel/reconcile) behind the disabled flag | Coinbase CDP View key (founder); other broker API accounts |
+| 5 | Multi-broker support | Partial | Shared adapter registry `broker_adapters.py` (`GET /api/v1/brokers`). Coinbase Advanced: read-only account (balances, buying power, positions + P&L from fills, open orders, fills, fees) built and shown on website, extension and Android; **UNVERIFIED** against a real account. Order preview, cancel, order list, stop-loss/take-profit settings and account-wide limits built; real submission disabled (`KAOS_COINBASE_LIVE_ORDERS`). Alpaca, IBKR, OANDA, Kraken, Tradier, tastytrade: registered, not built (501). Pocket Option: extension only, no API. | Founder connects own View key via `docs/COINBASE_CONNECT_GUIDE.md`; then the next adapter | Coinbase CDP key (founder enters it in KAOS); other broker API accounts |
 | 6 | Crypto / Stock / Options / Forex engines | Missing (paper only) | Paper book supports `CRYPTO_SPOT` long-only | Per-asset validation rules, then paper | Market data licenses |
 | 6 | Pocket Option engine | Code present | Extension | Repair and validate on demo first | Pocket Option |
 | 7 | KAOS Strategy, indicators, scoring | Code present, **audit FAIL** | `research/strategy_v2*`; v2.1 net negative on OTC data | Re-validate on licensed data; never market as profitable | Historical data |
@@ -54,3 +54,24 @@ Nothing in this file is deployed. "Works locally" never means "live in productio
 ## Open founder decisions
 1. Privacy policy retention periods and support email.
 2. Which live backend and which extension build to resubmit.
+
+## Broker milestones (one per broker)
+
+States, advanced only on evidence: planned → adapter_development → authentication_implemented → read_only_verified → order_management_tested → trading_approved (or temporarily_unavailable). Source of truth: `apps/api/broker_adapters.py` (`GET /api/v1/brokers`).
+
+| Broker | Markets | State | Next milestone | Access needed |
+|---|---|---|---|---|
+| Coinbase Advanced | Crypto | authentication_implemented | read_only_verified: owner connects own View key (`docs/COINBASE_CONNECT_GUIDE.md`) | Owner's CDP View key, entered in KAOS |
+| Pocket Option | Short-duration contracts | adapter_development | Repair extension integration (no public API) | Written permission for any API/automated access |
+| Alpaca | Stocks, ETFs, crypto, options | planned | Adapter + paper-account auth | Alpaca account + API key (paper account is free) |
+| OANDA | Forex | planned | Adapter + practice-account auth | OANDA practice account + v20 token |
+| Interactive Brokers | Stocks, options, forex, futures | planned | Client Portal gateway adapter | IBKR account + running gateway |
+| Kraken | Crypto | planned | Adapter (no-withdraw key) | Kraken key without withdraw permission |
+| Tradier | Stocks, options | planned | OAuth adapter (sandbox) | Tradier developer/sandbox account |
+| tastytrade | Stocks, options, futures | planned | Open API adapter (sandbox) | tastytrade API access approval |
+| MetaTrader 5 brokers | Forex, CFDs | planned | Bridge design per broker | MT5 broker permitting API/EA access |
+
+## Live-execution safety (Priority 1, PR #11)
+- Cancel, reconcile and exits of a verified position keep working with live disabled, consent expired or an emergency stop active; new BUYs are blocked by all of these. Tests: `test_coinbase_safety.py`.
+- SELL exit lock (`EXIT_SUBMITTING`) is released when the intent cannot be saved, when Coinbase closes the SELL unfilled, or when a crash left a lock without an intent (worker, after 2 min; no exchange call is possible then). If the SELL's outcome is uncertain, the lock is kept: the worker looks the order up by client order id (all pages) and reconciles it if found; if it is absent from the listing, the order stays `UNKNOWN_RECONCILIATION_REQUIRED` with `NOT_IN_LISTING_MANUAL_REVIEW` after 10 min and is never auto-released. A broker timeout keeps the lock and marks the SELL `UNKNOWN_RECONCILIATION_REQUIRED`, so no duplicate exit is possible.
+- Real-money execution remains disabled pending founder review.

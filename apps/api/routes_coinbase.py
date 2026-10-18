@@ -10,13 +10,14 @@ import re
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Literal, Optional
-from cryptography.fernet import Fernet
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from pymongo.errors import DuplicateKeyError
 from auth import get_current_user
 from db import db, now_iso
 from services_trading import get_entitlements
+from services import get_setting
+import broker_vault
 
 router = APIRouter(prefix="/api/v1/coinbase-live", tags=["coinbase-live"])
 PRODUCT = re.compile(r"^[A-Z0-9]{2,20}-USD$")
@@ -33,6 +34,12 @@ class OrderRequest(BaseModel):
 class ReconcileRequest(BaseModel):
     client_order_id: str
 
+class PreviewRequest(BaseModel):
+    product_id: str
+    side: Literal["BUY", "SELL"]
+    quote_size: Optional[str] = None
+    base_size: Optional[str] = None
+
 
 def positive(value, maximum=None):
     try:
@@ -43,10 +50,20 @@ def positive(value, maximum=None):
     except (ValueError, InvalidOperation, TypeError):
         raise HTTPException(422, "Invalid size or risk limit")
 
-async def authorized(request, user):
+def account_gate(request, user):
+    """Identity checks for risk-reducing actions (cancel, reconcile). These must keep working when live
+    trading is disabled, consent has expired, membership lapsed or an emergency stop is active."""
     if not request.headers.get("authorization", "").startswith("Bearer "):
         raise HTTPException(403, "Bearer authorization required")
-    if user.get("account_status", "active") != "active" or user.get("extension_access_revoked"):
+    if user.get("account_status", "active") != "active":
+        raise HTTPException(403, "Account disabled")
+
+
+async def authorized(request, user, risk_increasing=True):
+    """Gates for sending an order. Exits of a verified position (risk_increasing=False) still need the live
+    flag and consent, but are allowed during an emergency stop so positions can be closed."""
+    account_gate(request, user)
+    if user.get("extension_access_revoked"):
         raise HTTPException(403, "Account disabled")
     if user.get("membership_status") not in ("ACTIVE", "TRIAL"):
         raise HTTPException(403, "Active KAOS membership required")
@@ -63,8 +80,12 @@ async def authorized(request, user):
     if expiry and expiry.tzinfo is None: expiry = expiry.replace(tzinfo=timezone.utc)
     if not expiry or expiry <= datetime.now(timezone.utc):
         raise HTTPException(403, "Unexpired explicit live-trading consent required")
+    if not risk_increasing:
+        return consent
     if await db.coinbase_emergency_stops.find_one({"user_id": user["id"], "stopped": True}):
         raise HTTPException(403, "Emergency stop active")
+    if await get_setting("paper_kill_switch", False):  # platform-wide emergency stop (admin) also halts live orders
+        raise HTTPException(403, "Platform emergency stop active")
     return consent
 
 async def connection(user_id):
@@ -76,7 +97,7 @@ async def connection(user_id):
 
 def make_client(row):
     from coinbase.rest import RESTClient
-    vault = Fernet(os.environ["KAOS_BROKER_VAULT_KEY"].encode())
+    vault = broker_vault.vault()
     key = vault.decrypt(row["key_name_enc"].encode()).decode()
     secret = vault.decrypt(row["private_key_enc"].encode()).decode()
     return RESTClient(api_key=key, api_secret=secret, timeout=12)
@@ -94,10 +115,12 @@ async def status(request: Request, user: dict = Depends(get_current_user)):
 
 @router.post("/orders")
 async def order(req: OrderRequest, request: Request, user: dict = Depends(get_current_user)):
-    consent = await authorized(request, user)
+    consent = await authorized(request, user, risk_increasing=req.side == "BUY")
     if not PRODUCT.fullmatch(req.product_id) or not CID.fullmatch(req.client_order_id):
         raise HTTPException(422, "Invalid product or client order id")
     uid = user["id"]
+    if req.side == "BUY":
+        await account_risk_check(uid)
     key = {"user_id": uid, "broker": "coinbase", "client_order_id": req.client_order_id}
     # Stable order ID is reserved before any exchange call.
     if await db.coinbase_order_intents.find_one(key):
@@ -129,7 +152,7 @@ async def order(req: OrderRequest, request: Request, user: dict = Depends(get_cu
     if source:
         locked = await db.coinbase_order_intents.update_one({"_id": source["_id"], "state": "FILLED",
             "exit_client_order_id": {"$exists": False}}, {"$set": {"state": "EXIT_SUBMITTING",
-            "exit_client_order_id": req.client_order_id}})
+            "exit_client_order_id": req.client_order_id, "exit_locked_at": now_iso()}})
         if locked.modified_count != 1: raise HTTPException(409, "Exit already reserved")
     if slot:
         try:
@@ -148,10 +171,18 @@ async def order(req: OrderRequest, request: Request, user: dict = Depends(get_cu
     except DuplicateKeyError:
         if slot:
             await db.coinbase_active_slots.delete_one({"_id": slot["_id"], "client_order_id": req.client_order_id})
+        if source:
+            await release_exit_lock(uid, source["client_order_id"], req.client_order_id)
         raise HTTPException(409, "Order ID already reserved")
     except Exception:
         if slot:
             await db.coinbase_active_slots.delete_one({"_id": slot["_id"], "client_order_id": req.client_order_id})
+        if source:
+            # No exchange call was made, so the position is still held; best effort here, worker retries.
+            try:
+                await release_exit_lock(uid, source["client_order_id"], req.client_order_id)
+            except Exception:
+                pass
         raise HTTPException(503, "Unable to persist order; no exchange call made")
     try:
         def submit():
@@ -181,9 +212,18 @@ async def order(req: OrderRequest, request: Request, user: dict = Depends(get_cu
             "state": "UNKNOWN_RECONCILIATION_REQUIRED", "updated_at": now_iso()}})
         raise HTTPException(502, "Unknown exchange outcome; do not retry this order")
 
+async def release_exit_lock(uid, buy_client_order_id, exit_client_order_id):
+    """Return a position to FILLED when its exit definitely never executed (no exchange call, or the
+    exchange closed the SELL unfilled). Conditional on the same exit id, so it cannot undo a newer exit."""
+    await db.coinbase_order_intents.update_one({"user_id": uid, "broker": "coinbase",
+        "client_order_id": buy_client_order_id, "state": "EXIT_SUBMITTING",
+        "exit_client_order_id": exit_client_order_id},
+        {"$set": {"state": "FILLED", "updated_at": now_iso()}, "$unset": {"exit_client_order_id": "", "exit_locked_at": ""}})
+
+
 @router.post("/reconcile")
 async def reconcile(req: ReconcileRequest, request: Request, user: dict = Depends(get_current_user)):
-    await authorized(request, user)
+    account_gate(request, user)
     return await reconcile_order(user["id"], req.client_order_id)
 
 async def reconcile_order(uid: str, client_order_id: str):
@@ -272,6 +312,8 @@ async def reconcile_order(uid: str, client_order_id: str):
         await db.coinbase_order_intents.update_one(key, {"$set": {"state": state,
             "filled_size": str(size), "fill_notional": str(notional), "fill_fees": str(fees),
             "exchange_status": status, "updated_at": now_iso()}})
+        if intent["side"] == "SELL" and state == "CLOSED_UNFILLED":
+            await release_exit_lock(uid, intent["source_buy_client_order_id"], intent["client_order_id"])
         if intent["side"] == "BUY" and state == "CLOSED_UNFILLED":
             await db.coinbase_active_slots.delete_one({"_id": f'{uid}:coinbase:{intent["product_id"]}',
                 "client_order_id": intent["client_order_id"]})
@@ -294,3 +336,154 @@ async def reconcile_order(uid: str, client_order_id: str):
         raise
     except Exception:
         raise HTTPException(502, "Could not safely reconcile Coinbase order; manual review required")
+
+
+INTENT_FIELDS = ("client_order_id", "order_id", "product_id", "side", "quote_size", "base_size", "state",
+                 "exchange_status", "filled_size", "fill_notional", "fill_fees", "created_at", "updated_at")
+
+
+@router.post("/preview")
+async def preview(req: PreviewRequest, user: dict = Depends(get_current_user)):
+    """Ask Coinbase to preview (not place) a market order: expected fill, fees, slippage and errors.
+
+    Works while live submission is disabled; needs a verified connection whose key has Trade permission.
+    """
+    if not PRODUCT.fullmatch(req.product_id):
+        raise HTTPException(422, "Invalid product")
+    if req.side == "BUY" and (not req.quote_size or req.base_size):
+        raise HTTPException(422, "BUY preview requires quote_size only")
+    if req.side == "SELL" and (not req.base_size or req.quote_size):
+        raise HTTPException(422, "SELL preview requires base_size only")
+    size = positive(req.quote_size or req.base_size)
+    conn = await connection(user["id"])
+    def call():
+        client = make_client(conn)
+        if req.side == "BUY":
+            return asdict(client.preview_market_order_buy(product_id=req.product_id, quote_size=size))
+        return asdict(client.preview_market_order_sell(product_id=req.product_id, base_size=size))
+    try:
+        data = await asyncio.to_thread(call)
+    except Exception as exc:
+        raise HTTPException(502, f"Coinbase preview failed ({type(exc).__name__})")
+    keep = ("order_total", "commission_total", "quote_size", "base_size", "best_bid", "best_ask", "slippage",
+            "average_filled_price", "errs", "warning", "est_average_filled_price")
+    return {"preview": {k: data.get(k) for k in keep if k in data}, "placed": False,
+            "live_orders_enabled": os.getenv("KAOS_COINBASE_LIVE_ORDERS", "disabled") == "enabled"}
+
+
+@router.get("/orders")
+async def list_intents(user: dict = Depends(get_current_user)):
+    """KAOS-originated Coinbase orders with their reconciliation state (same list on every device)."""
+    rows = await db.coinbase_order_intents.find({"user_id": user["id"], "broker": "coinbase"}).sort(
+        "created_at", -1).to_list(200)
+    return {"orders": [{k: r.get(k) for k in INTENT_FIELDS} for r in rows]}
+
+
+@router.post("/cancel")
+async def cancel(req: ReconcileRequest, request: Request, user: dict = Depends(get_current_user)):
+    """Cancel an open KAOS order on Coinbase, then reconcile it. Risk-reducing: allowed while live trading is
+    disabled, consent expired or an emergency stop is active."""
+    account_gate(request, user)
+    key = {"user_id": user["id"], "broker": "coinbase", "client_order_id": req.client_order_id}
+    intent = await db.coinbase_order_intents.find_one(key)
+    if not intent or not intent.get("order_id"):
+        raise HTTPException(404, "No exchange order for this client order id")
+    if intent.get("state") not in ("ACCEPTED", "OPEN", "PARTIAL_FILL_REVIEW"):
+        raise HTTPException(409, f"Order is {intent.get('state')}; nothing to cancel")
+    conn = await connection(user["id"])
+    def call():
+        return asdict(make_client(conn).cancel_orders(order_ids=[intent["order_id"]]))
+    try:
+        data = await asyncio.to_thread(call)
+    except Exception as exc:
+        raise HTTPException(502, f"Coinbase cancel failed ({type(exc).__name__}); reconcile before retrying")
+    result = (data.get("results") or [{}])[0]
+    await db.coinbase_order_intents.update_one(key, {"$set": {"cancel_requested_at": now_iso(),
+        "cancel_result": {"success": bool(result.get("success")), "failure_reason": result.get("failure_reason")}}})
+    try:
+        state = await reconcile_order(user["id"], req.client_order_id)
+    except HTTPException:
+        state = None
+    return {"client_order_id": req.client_order_id, "cancel_success": bool(result.get("success")),
+            "failure_reason": result.get("failure_reason"), "reconciled": state}
+
+
+class PositionRisk(BaseModel):
+    stop_loss_pct: str
+    take_profit_pct: str
+    estimated_exit_fee_pct: str = "0.6"
+    enabled: bool = True
+
+
+class AccountRisk(BaseModel):
+    max_open_positions: int = Field(default=1, ge=1, le=10)
+    max_daily_loss_usd: str = "25"
+
+
+DEFAULT_ACCOUNT_RISK = {"max_open_positions": 1, "max_daily_loss_usd": "25"}
+
+
+async def daily_realized_pnl(uid):
+    """Net realized P&L today (UTC) from reconciled KAOS exits: SELL proceeds - fees - source BUY cost - fees."""
+    today = datetime.now(timezone.utc).date().isoformat()
+    total = Decimal(0)
+    sells = await db.coinbase_order_intents.find({"user_id": uid, "broker": "coinbase", "side": "SELL",
+        "state": "FILLED", "updated_at": {"$gte": today}}).to_list(500)
+    for sell in sells:
+        buy = await db.coinbase_order_intents.find_one({"user_id": uid, "broker": "coinbase",
+            "client_order_id": sell.get("source_buy_client_order_id")})
+        if not buy:
+            continue
+        total += (Decimal(str(sell.get("fill_notional", "0"))) - Decimal(str(sell.get("fill_fees", "0")))
+                  - Decimal(str(buy.get("fill_notional", "0"))) - Decimal(str(buy.get("fill_fees", "0"))))
+    return total
+
+
+async def account_risk_check(uid):
+    """Account-wide limits checked before any new BUY: open positions and today's realized loss."""
+    cfg = {**DEFAULT_ACCOUNT_RISK, **(await db.coinbase_account_risk.find_one({"user_id": uid}) or {})}
+    if await db.coinbase_active_slots.count_documents({"user_id": uid}) >= int(cfg["max_open_positions"]):
+        raise HTTPException(409, "Account risk: maximum open positions reached")
+    if await daily_realized_pnl(uid) <= -Decimal(str(cfg["max_daily_loss_usd"])):
+        raise HTTPException(409, "Account risk: daily loss limit reached; new entries blocked until tomorrow (UTC)")
+
+
+@router.get("/risk")
+async def get_risk(user: dict = Depends(get_current_user)):
+    acct = await db.coinbase_account_risk.find_one({"user_id": user["id"]}) or {}
+    per = await db.coinbase_position_risk.find({"user_id": user["id"]}).to_list(100)
+    proposals = await db.coinbase_position_proposals.find({"user_id": user["id"]}).to_list(100)
+    return {"account": {k: acct.get(k, v) for k, v in DEFAULT_ACCOUNT_RISK.items()},
+            "daily_realized_pnl_usd": str(await daily_realized_pnl(user["id"])),
+            "positions": [{k: r.get(k) for k in ("product_id", "stop_loss_pct", "take_profit_pct",
+                           "estimated_exit_fee_pct", "enabled")} for r in per],
+            "exit_proposals": [{k: (str(r[k]) if k == "observed_at" else r.get(k)) for k in ("product_id", "decision",
+                               "reason", "mark_price", "estimated_net_pnl_usd", "observed_at", "execution_enabled") if k in r}
+                               for r in proposals]}
+
+
+@router.put("/risk/account")
+async def put_account_risk(req: AccountRisk, user: dict = Depends(get_current_user)):
+    positive(req.max_daily_loss_usd, Decimal("100000"))
+    await db.coinbase_account_risk.update_one({"user_id": user["id"]}, {"$set": {
+        "user_id": user["id"], **req.model_dump(), "updated_at": now_iso()}}, upsert=True)
+    return {"ok": True}
+
+
+@router.put("/risk/{product_id}")
+async def put_position_risk(product_id: str, req: PositionRisk, user: dict = Depends(get_current_user)):
+    """Stop-loss / take-profit for a product. The monitor only proposes exits; it never sells by itself."""
+    from coinbase_position_policy import dec
+    if not PRODUCT.fullmatch(product_id):
+        raise HTTPException(422, "Invalid product")
+    try:
+        sl, tp, fee = (dec(v, n) for v, n in ((req.stop_loss_pct, "stop_loss_pct"),
+                       (req.take_profit_pct, "take_profit_pct"), (req.estimated_exit_fee_pct, "estimated_exit_fee_pct")))
+    except ValueError as exc:
+        raise HTTPException(422, str(exc))
+    if not (0 < sl < 100 and 0 < tp < 1000 and fee < 100):
+        raise HTTPException(422, "Stop must be 0-100%, target above 0%, fee below 100%")
+    await db.coinbase_position_risk.update_one({"user_id": user["id"], "product_id": product_id}, {"$set": {
+        "user_id": user["id"], "product_id": product_id, "stop_loss_pct": str(sl), "take_profit_pct": str(tp),
+        "estimated_exit_fee_pct": str(fee), "enabled": req.enabled, "updated_at": now_iso()}}, upsert=True)
+    return {"ok": True}

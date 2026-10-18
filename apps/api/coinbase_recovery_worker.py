@@ -13,7 +13,7 @@ from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 from pymongo import ReturnDocument
 from db import db
-from routes_coinbase import make_client, asdict, reconcile_order
+from routes_coinbase import make_client, asdict, reconcile_order, release_exit_lock
 
 log = logging.getLogger('kaos.coinbase.recovery')
 OWNER = f'{socket.gethostname()}:{os.getpid()}:{uuid4().hex}'
@@ -41,6 +41,52 @@ async def acquire_lease(seconds=90):
         return False
 
 
+MANUAL_REVIEW_AFTER = timedelta(minutes=10)
+STALE_EXIT_LOCK = timedelta(minutes=2)
+
+
+def _older_than(ts, age):
+    if not ts:
+        return True
+    t = datetime.fromisoformat(str(ts).replace('Z', '+00:00'))
+    return utcnow() - (t if t.tzinfo else t.replace(tzinfo=timezone.utc)) > age
+
+
+def find_by_client_id(client, intent):
+    """Page Coinbase orders for the product since the intent was created; return the order_id with our client ID."""
+    cursor, pages = None, 0
+    while pages < 20:
+        args = {'product_ids': [intent['product_id']], 'limit': 250}
+        if intent.get('created_at'):
+            args['start_date'] = str(intent['created_at'])[:19] + 'Z'
+        if cursor:
+            args['cursor'] = cursor
+        page = asdict(client.list_orders(**args))
+        for o in page.get('orders') or []:
+            o = asdict(o)
+            if o.get('client_order_id') == intent['client_order_id']:
+                return str(o['order_id'])
+        cursor, pages = page.get('cursor'), pages + 1
+        if not page.get('has_next') or not cursor:
+            return None
+    raise ValueError('Too many order pages; manual review')
+
+
+async def release_stale_exit_locks():
+    """A crash between locking a position for exit and saving the SELL intent leaves EXIT_SUBMITTING with no
+    intent. No exchange call can have happened (the intent is saved first), so the lock is released."""
+    released = 0
+    async for src in db.coinbase_order_intents.find({'broker': 'coinbase', 'state': 'EXIT_SUBMITTING'}).limit(100):
+        if not _older_than(src.get('exit_locked_at'), STALE_EXIT_LOCK):
+            continue
+        if await db.coinbase_order_intents.find_one({'user_id': src['user_id'], 'broker': 'coinbase',
+                                                     'client_order_id': src.get('exit_client_order_id')}):
+            continue
+        await release_exit_lock(src['user_id'], src['client_order_id'], src.get('exit_client_order_id'))
+        released += 1
+    return released
+
+
 async def resolve_one(intent):
     """Only read Coinbase order state. Never infer UNKNOWN as rejected."""
     uid = intent['user_id']
@@ -48,11 +94,21 @@ async def resolve_one(intent):
     if not conn:
         raise ValueError('No verified connection')
     if not intent.get('order_id'):
-        # An ambiguous submit may have succeeded; require lookup by client ID
-        # through a separately verified API implementation before any retry.
-        await db.coinbase_order_intents.update_one({'_id': intent['_id']},
-            {'$set': {'recovery_status': 'MANUAL_REVIEW_CLIENT_ID', 'recovery_checked_at': utcnow()}})
-        return 'MANUAL_REVIEW_CLIENT_ID'
+        # An ambiguous submit may have succeeded: look the order up by our client ID at Coinbase.
+        found = await asyncio.to_thread(find_by_client_id, make_client(conn), intent)
+        if found:
+            await db.coinbase_order_intents.update_one({'_id': intent['_id']}, {'$set': {
+                'order_id': found, 'recovery_status': 'ORDER_ID_RECOVERED', 'recovery_checked_at': utcnow()}})
+            intent = {**intent, 'order_id': found}
+        else:
+            # Absence from a listing is not proof the broker never accepted the order (listings can be
+            # incomplete or eventually consistent, and a late fill is possible). Keep the state and the
+            # risk lock; an operator resolves it after checking the broker directly.
+            status = ('NOT_IN_LISTING_MANUAL_REVIEW' if _older_than(intent.get('created_at'), MANUAL_REVIEW_AFTER)
+                      else 'WAITING_FOR_EXCHANGE')
+            await db.coinbase_order_intents.update_one({'_id': intent['_id']}, {'$set': {
+                'recovery_status': status, 'recovery_checked_at': utcnow()}})
+            return status
     def read():
         client = make_client(conn)
         obj = asdict(client.get_order(intent['order_id']))
@@ -79,6 +135,7 @@ async def cycle():
     states = ['SUBMITTING', 'ACCEPTED', 'UNKNOWN_RECONCILIATION_REQUIRED',
               'OPEN', 'PARTIAL_FILL_REVIEW', 'FILL_MISMATCH_REVIEW']
     cursor = db.coinbase_order_intents.find({'broker': 'coinbase', 'state': {'$in': states}}).limit(100)
+    await release_stale_exit_locks()
     count = 0
     async for intent in cursor:
         # Renew before each operation. A second worker may have acquired lease.
