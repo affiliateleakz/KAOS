@@ -5,13 +5,14 @@ import { api } from "../../lib/api";
 import { Brand, RiskBar } from "../../components/Brand";
 import {
   LayoutGrid, Boxes, Users, Activity, FileCode, LineChart, Bookmark, UserPlus,
-  CreditCard, MonitorSmartphone, Download, Settings, LifeBuoy, Bell, LogOut, Shield, Bot, Menu, X, FlaskConical,
+  CreditCard, MonitorSmartphone, Download, Settings, LifeBuoy, Bell, LogOut, Shield, Bot, Menu, X, FlaskConical, Radar,
 } from "lucide-react";
 
 const NAV = [
   ["", "Dashboard", LayoutGrid],
   ["trading", "Trading", Bot],
   ["paper", "Paper Trading", FlaskConical],
+  ["intelligence", "Market Intelligence", Radar],
   ["opportunities", "Opportunity Radar", Activity],
   ["brokers", "Broker Connections", MonitorSmartphone],
   ["kaos-ai", "KAOS AI", Activity],

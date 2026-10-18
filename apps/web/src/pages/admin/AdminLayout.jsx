@@ -13,6 +13,7 @@ const NAV = [
   ["kaos-ai", "KAOS AI", Activity],
   ["affiliates", "Affiliates", BadgeCheck],
   ["connectors", "Connectors", Plug],
+  ["sources", "Data Sources", Plug],
   ["users", "Users", Users],
   ["subscriptions", "Subscriptions", CreditCard],
   ["devices", "Devices", MonitorSmartphone],

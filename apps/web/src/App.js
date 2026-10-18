@@ -18,12 +18,14 @@ import Trading from "./pages/dashboard/Trading";
 import OpportunityRadar from "./pages/dashboard/OpportunityRadar";
 import BrokerConnections from "./pages/dashboard/BrokerConnections";
 import PaperTrading from "./pages/dashboard/PaperTrading";
+import MarketIntelligence from "./pages/dashboard/MarketIntelligence";
 import { AffiliatePage, AIPage } from "./pages/dashboard/AffiliateAI";
 import AdminLayout from "./pages/admin/AdminLayout";
 import * as AP from "./pages/admin/pages";
 import { TradingOps, Connectors } from "./pages/admin/TradingOps";
 import { AICenter, Affiliates } from "./pages/admin/AICenter";
 import ExtensionSimulator from "./pages/admin/ExtensionSimulator";
+import DataSources from "./pages/admin/DataSources";
 
 function Protected({ children, role }) {
   const { user, loading } = useAuth();
@@ -61,6 +63,7 @@ function AppRouter() {
         <Route index element={<DP.Overview />} />
         <Route path="trading" element={<Trading />} />
         <Route path="opportunities" element={<OpportunityRadar />} />
+        <Route path="intelligence" element={<MarketIntelligence />} />
         <Route path="brokers" element={<BrokerConnections />} />
         <Route path="paper" element={<PaperTrading />} />
         <Route path="kaos-ai" element={<AIPage />} />
@@ -85,6 +88,7 @@ function AppRouter() {
         <Route path="kaos-ai" element={<AICenter />} />
         <Route path="affiliates" element={<Affiliates />} />
         <Route path="connectors" element={<Connectors />} />
+        <Route path="sources" element={<DataSources />} />
         <Route path="users" element={<AP.Users />} />
         <Route path="subscriptions" element={<AP.Subscriptions />} />
         <Route path="devices" element={<AP.AdminDevices />} />
