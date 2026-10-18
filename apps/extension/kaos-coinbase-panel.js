@@ -29,15 +29,42 @@
     const res=await call('/trading/charts');
     const section=document.createElement('section');
     section.style.marginTop='14px';
-    const title=document.createElement('b');title.textContent='KAOS SAVED CHART SETTINGS · READ-ONLY';
+    const title=document.createElement('b');title.textContent='KAOS SAVED CHART SETTINGS';
     section.appendChild(title);
-    const line=document.createElement('p');
     if(!res?.ok || !Array.isArray(res.data?.charts)){
-      line.textContent='Chart settings unavailable. Open the KAOS website to manage your charts.';
+      const p=document.createElement('p');p.textContent='Chart settings unavailable. Manage them on the KAOS website.';section.appendChild(p);
     }else{
-      line.textContent=res.data.charts.map(c=>'Chart '+(c.slot+1)+': '+c.broker+' / '+c.symbol+' / '+c.seconds+'s').join(' · ');
+      for(const c of res.data.charts){
+        const form=document.createElement('form');
+        form.style.margin='8px 0';form.style.display='flex';form.style.flexWrap='wrap';form.style.gap='5px';
+        const label=document.createElement('span');label.textContent='Chart '+(c.slot+1);
+        const broker=document.createElement('select');
+        for(const id of ['kaos_paper','coinbase','alpaca','oanda']){
+          const o=document.createElement('option');o.value=id;o.textContent=id;broker.appendChild(o);
+        }
+        broker.value=c.broker;
+        const symbol=document.createElement('input');symbol.value=c.symbol;symbol.maxLength=32;symbol.style.width='100px';
+        const timeframe=document.createElement('select');
+        for(const sec of [60,300,900]){
+          const o=document.createElement('option');o.value=String(sec);o.textContent=sec/60+'m';timeframe.appendChild(o);
+        }
+        timeframe.value=String(c.seconds);
+        const save=document.createElement('button');save.type='submit';save.textContent='Save';save.style.padding='2px 8px';
+        const feedback=document.createElement('span');feedback.setAttribute('role','status');
+        form.append(label,broker,symbol,timeframe,save,feedback);
+        form.addEventListener('submit',async e=>{
+          e.preventDefault();save.disabled=true;feedback.textContent='';
+          const config={broker:broker.value,symbol:symbol.value.toUpperCase(),seconds:Number(timeframe.value)};
+          const response=await new Promise(resolve=>chrome.runtime.sendMessage({
+            type:'KAOS_BROKER_VAULT',method:'PUT',path:'/trading/charts/'+c.slot,payload:config
+          },r=>{void chrome.runtime.lastError;resolve(r||{ok:false});}));
+          feedback.textContent=response.ok?'Saved to KAOS account':'Save failed. Check your membership and settings.';
+          save.disabled=false;
+        });
+        section.appendChild(form);
+      }
     }
-    section.appendChild(line);el.appendChild(section);
+    el.appendChild(section);
   }
   // Other linked brokers are read-only practice/paper views. No credentials or order actions in extension.
   async function loadOtherBrokers(el) {
