@@ -58,7 +58,7 @@ async def dex_get(path):
 @router.get("/pairs")
 async def find_crypto_pairs(q:str=Query(min_length=2,max_length=55),chain:str|None=None,
                             user=Depends(require_scanner)):
-    if not SYMBOL.fullmatch(q):raise HTTPException(422,"Invalid token search")
+    if not SYMBOL.fullmatch(q) or "://" in q:raise HTTPException(422,"Invalid token search")
     if chain and chain not in ALLOWED_CHAINS:raise HTTPException(422,"Unsupported chain")
     raw=await dex_get("/latest/dex/search?q="+quote(q,safe=""))
     results=[pair_card(p) for p in (raw.get("pairs") or []) if isinstance(p,dict)]
