@@ -1,0 +1,31 @@
+import React,{useCallback,useEffect,useState} from 'react';
+import {RefreshControl,ScrollView,StyleSheet,Text,View} from 'react-native';
+import {broker,CoinbaseAccount} from '../src/api';
+
+// Same Coinbase account data as the website and extension. Read-only: no orders are placed from the app.
+function Rows({items,cols,empty}:{items:Record<string,any>[];cols:string[];empty:string}){
+ if(!items.length) return <Text style={s.muted}>{empty}</Text>;
+ return <View>{items.map((r,i)=><View key={i} style={s.row}>{cols.map(c=><Text key={c} style={s.cell}>{String(r[c]??'–')}</Text>)}</View>)}</View>;
+}
+
+export default function Broker(){
+ const [connected,setConnected]=useState<boolean|null>(null);const [acct,setAcct]=useState<CoinbaseAccount|null>(null);const [err,setErr]=useState('');
+ const load=useCallback(async()=>{try{const st=await broker.status();setConnected(st.connected);
+  if(st.connected){setAcct(await broker.coinbase());}setErr('')}catch(e:any){setErr(e.message)}},[]);
+ useEffect(()=>{load();const t=setInterval(load,15000);return()=>clearInterval(t)},[load]);
+ return <ScrollView style={s.page} refreshControl={<RefreshControl refreshing={false} onRefresh={load} tintColor="#2F8CFF"/>}>
+  <Text style={s.h}>Coinbase Advanced · read-only</Text>
+  {err?<Text style={s.err}>Coinbase unavailable: {err}{acct?' (showing last loaded data)':''}</Text>:null}
+  {connected===false&&<Text style={s.muted}>No Coinbase account connected. Connect it on tradingwithkaos.com → Broker Connections.</Text>}
+  {acct&&<>
+   <Text style={s.muted}>Live from Coinbase Advanced API · key {acct.key_hint} · fetched {acct.fetched_at.slice(11,19)} UTC · KAOS does not place orders on this account.</Text>
+   <Text style={s.sec}>Balances</Text><Rows items={acct.balances} cols={['currency','available','hold']} empty="No non-zero balances"/>
+   <Text style={s.sec}>Open orders</Text><Rows items={acct.open_orders} cols={['product_id','side','status','filled_size']} empty="No open orders"/>
+   <Text style={s.sec}>Recent fills</Text><Rows items={acct.fills} cols={['product_id','side','size','price','commission']} empty="No fills yet"/>
+   <Text style={s.sec}>Fees</Text><Text style={s.txt}>Tier {acct.fees.tier||'–'} · maker {acct.fees.maker_rate??'–'} · taker {acct.fees.taker_rate??'–'}</Text>
+  </>}
+ </ScrollView>;
+}
+const s=StyleSheet.create({page:{flex:1,backgroundColor:'#0a0e15',padding:14},h:{color:'#7DB8FF',fontSize:18,fontWeight:'700',marginBottom:6},
+ sec:{color:'#e9c879',fontWeight:'700',marginTop:14,marginBottom:4},muted:{color:'#8b96a5',fontSize:12,marginVertical:4},txt:{color:'#d6dde6'},
+ err:{color:'#f5b041',marginVertical:6},row:{flexDirection:'row',borderTopWidth:1,borderTopColor:'#1c2430',paddingVertical:4},cell:{flex:1,color:'#d6dde6',fontSize:12,fontFamily:'monospace'}});

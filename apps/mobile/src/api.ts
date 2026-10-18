@@ -66,3 +66,13 @@ export const paper={
  execute:(id:string)=>send<PaperOrder>(`/api/v1/paper/signals/${id}/execute`,'POST'),
  close:(symbol:string)=>send<PaperOrder>(`/api/v1/paper/positions/${encodeURIComponent(symbol)}/close`,'POST',{client_order_id:`mob-close-${symbol}-${Date.now()}`}),
 };
+
+export type CoinbaseAccount={source:string;fetched_at:string;key_hint:string;balances:{currency:string;available:string;hold:string}[];
+ open_orders:{order_id:string;product_id:string;side:string;order_type:string;status:string;filled_size:string}[];
+ fills:{trade_id:string;product_id:string;side:string;size:string;price:string;commission:string;trade_time:string}[];
+ fees:{tier:string|null;maker_rate:string|null;taker_rate:string|null;total_fees:number|null}};
+// Read-only view of the member's Coinbase Advanced account through KAOS (keys stay on the server).
+export const broker={
+ status:()=>request<{connected:boolean;key_hint?:string;live_orders_enabled?:boolean}>('/api/v1/broker-connections/coinbase/status'),
+ coinbase:()=>request<CoinbaseAccount>('/api/v1/broker-connections/coinbase/accounts'),
+};

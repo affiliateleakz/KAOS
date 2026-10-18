@@ -2100,7 +2100,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
   function setTerminalPage(name){
     qa('#screen-chart .terminal-page').forEach(el=>el.classList.remove('active'));
-    const map={charts:'terminal-live',backtester:'terminal-backtester',ai:'terminal-ai',performance:'terminal-analytics',paper:'terminal-paper'};
+    const map={charts:'terminal-live',backtester:'terminal-backtester',ai:'terminal-ai',performance:'terminal-analytics',paper:'terminal-paper',coinbase:'terminal-coinbase'};
     const el=document.getElementById(map[name]||'terminal-live');
     if(el) el.classList.add('active');
     // 1.6.34 invariant: LIVE charts exist only on Charts; AI/Performance never inherit them.
@@ -2109,12 +2109,12 @@ document.addEventListener('DOMContentLoaded',()=>{
     qa('#screen-chart .kaos-nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.kaosView===name));
     const ws=q('#screen-chart .kaos-terminal-workspace');
     if(ws){
-      const titles={charts:'KAOS MULTI-CHART · TRADE MULTIPLE MARKETS',backtester:'KAOS STRATEGY BACKTESTER · HISTORICAL TESTING',ai:'KAOS AI · LEARN · ANALYZE · IMPROVE',performance:'PERFORMANCE · TRACK YOUR RESULTS',paper:'KAOS PAPER SESSION · SHARED WITH WEBSITE AND MOBILE'};
+      const titles={charts:'KAOS MULTI-CHART · TRADE MULTIPLE MARKETS',backtester:'KAOS STRATEGY BACKTESTER · HISTORICAL TESTING',ai:'KAOS AI · LEARN · ANALYZE · IMPROVE',performance:'PERFORMANCE · TRACK YOUR RESULTS',paper:'KAOS PAPER SESSION · SHARED WITH WEBSITE AND MOBILE',coinbase:'COINBASE ADVANCED · READ-ONLY ACCOUNT'};
       ws.dataset.pageTitle=titles[name]||titles.charts;
     }
   }
   const MAIN_VIEWS={dashboard:1,settings:1,strategy:1,history:1,risk:1};
-  const TERMINAL_VIEWS={charts:1,backtester:1,ai:1,performance:1,paper:1};
+  const TERMINAL_VIEWS={charts:1,backtester:1,ai:1,performance:1,paper:1,coinbase:1};
   function setMainView(view){
     // legacy alias: strategy builder now lives in the Advanced page
     const v = view;
