@@ -53,3 +53,18 @@ async def save_chart(slot: int, config: ChartConfig, user: dict = Depends(get_cu
         {"$set": {"user_id": user["id"], "slot": slot, "config": normalized}},
         upsert=True)
     return {"slot": slot, **normalized, "chartLimit": limit, "order_submission_enabled": False}
+
+# Authenticated read-only crypto candles for the KAOS chart UI.
+# Never substitutes another provider's prices or triggers orders.
+from market_data import get_candles, QuoteUnavailable
+
+candles_router = APIRouter(prefix="/api/v1/paper", tags=["market-candles"])
+
+@candles_router.get("/candles/{symbol}")
+async def chart_candles(symbol: str, granularity: int = 60, user: dict = Depends(get_current_user)):
+    if granularity not in (60, 300, 900):
+        raise HTTPException(status_code=422, detail="Unsupported chart timeframe")
+    try:
+        return await get_candles(symbol, "CRYPTO_SPOT", granularity)
+    except QuoteUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
