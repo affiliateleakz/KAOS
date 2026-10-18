@@ -35,3 +35,20 @@ All three clients read and write the same server-side paper account (`/api/v1/pa
 | Mobile (Expo, Android/iPhone) | ★ Paper → `app/paper.tsx` | Built and type-checks (`tsc --noEmit`): live candle chart, quote, book, signal + risk, execute, journal. Not run on a device or simulator yet. |
 
 The extension's Pocket Option strategy bot is **not** connected to this paper session: Pocket Option has no authorized market-data API, so its trades cannot be priced from a server-side feed.
+
+## Cross-client API check (`scripts/e2e_paper_session.py`)
+
+Repeatable script against a running local stack. It logs in as the same member three ways: website cookie, extension bearer, mobile bearer. It optionally restarts the API mid-run (`--restart-cmd "docker compose restart api"`) and writes a JSON report. Last local run: **23/23 checks passed**. The checks cover:
+- same user id in all three clients; a session set from the extension is identical in the other two
+- quote with timestamp, age, source and `polling` delivery
+- confirmed-candle signal with reasons and a preview risk decision; signal journal shared
+- 3 concurrent duplicate submits from the 3 clients give exactly one fill, at the fresh ask plus the configured slippage, with quote provenance
+- fee recorded at the session rate; cash/positions/P&L/fees identical in all clients
+- another member can't see or execute the account's signals or orders
+- unsupported asset and unrealistic fee are rejected; the emergency stop blocks a mobile order and a member can't lift it
+- after an API restart and fresh logins, the book, orders and session are the same, and retrying the same order doesn't double-fill
+- founder milestone: a website BUY shows as the same position on extension and mobile; a mobile close sent 3x makes exactly one SELL at the bid, and the position is flat in every client
+
+This checks the API contract each client uses. It is not a UI test. UI evidence is tracked separately per client.
+
+Unique indexes: `paper_orders(user_id, client_order_id)`, `paper_signals(signal_id)`, `paper_sessions(user_id)`. If a database already holds duplicates, the API logs an error and starts without that index. It never deletes trading records itself.
