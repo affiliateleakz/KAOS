@@ -9,7 +9,14 @@ function brokerScreen(){return $('kaos-broker-overlay');}
 function show(){if(authenticated)brokerScreen()?.classList.add('visible');}
 function hide(){brokerScreen()?.classList.remove('visible');}
 function message(text,link){const el=$('kaos-broker-status');el.replaceChildren();el.hidden=false;const p=document.createElement('p');p.textContent=text;el.append(p);if(link){const a=document.createElement('a');a.href=link;a.target='_blank';a.rel='noopener noreferrer';a.textContent='Open broker website';el.append(a);}}
-async function choose(id){if(!authenticated)return;if(!brokerURLs[id])return;
+async function choose(id){if(!authenticated)return;
+ if(id==='kaos_paper'){
+  // Shared server-side paper session (same account as website/mobile). Opens no broker site and needs no broker credentials.
+  selected=id;await chrome.storage.local.set({kaosSelectedBroker:id});hide();$('kaos-broker-switch').hidden=false;$('kaos-broker-switch').textContent='Broker: KAOS Paper · Change';
+  if(typeof terminalShow==='function')await terminalShow();
+  document.querySelector('.terminal-tab[data-page="paper"]')?.click();return;
+ }
+ if(!brokerURLs[id])return;
  if(id==='coinbase'){
   const r=await send({type:'KAOS_BROKER_VAULT',method:'GET',path:'/broker-connections/coinbase/status'});
   if(!r.ok||!r.data?.connection?.saved){document.dispatchEvent(new CustomEvent('kaos-coinbase-setup'));return;}
