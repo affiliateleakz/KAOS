@@ -41,8 +41,8 @@ const STRAT_DESCS = {
   'Band Rider':       'NEW: Bollinger Band touch + Momentum cross — mean reversion (Reddit/TradingPedia)',
   'Alligator Awakens':'NEW: Alligator (13/8/5) + fast Momentum — catches new trend at start (YouTube top picks)',
   'MACD Sniper':      'NEW: Fast MACD (3,10,16) crossover with candle confirm — professional forums',
-  'StochRSI Cross':   '#2 RANKED: StochRSI %K/%D cross in oversold/overbought zone — 65-78% win rate (QuantifiedStrategies)',
-  'Keltner Divergence':'#1 RANKED: Keltner Channel + RSI Divergence — 68-77% win rate on ranging OTC pairs',
+  'StochRSI Cross':   'StochRSI %K/%D cross in oversold/overbought zone',
+  'Keltner Divergence':'Keltner Channel + RSI Divergence on ranging OTC pairs',
   'Alpha One Secret':  'ALPHA ONE SECRET — A secret formula strategy Alpha One has used for many years.',
 };
 
