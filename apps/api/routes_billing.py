@@ -26,7 +26,7 @@ DEFAULT_PLANS = [
      "features": ["Everything in Pro", "KAOS AI mode", "Strategy + AI mode", "Premium Tools", "5 Devices"],
      "entitlements": {"botAccess": True, "modes": ["STRATEGY", "AI", "STRATEGY_AI"], "connectors": ["pocket_option"],
                       "scanners": True, "aiInsights": True, "cloudStrategies": True, "community": True,
-                      "premiumTools": True, "deviceLimit": 5, "chartLimit": 8}},
+                      "premiumTools": True, "deviceLimit": 5, "chartLimit": 4}},
 ]
 # Members who subscribed under the retired plan ids keep working.
 LEGACY_PLAN_IDS = {"monthly": "pro", "yearly": "ultimate"}

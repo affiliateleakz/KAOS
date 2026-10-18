@@ -35,7 +35,7 @@ def test_ai_modes_locked_by_default_for_every_tier(monkeypatch):
     ult = run(get_entitlements({"membership_status": "ACTIVE", "membership_plan": "yearly"}))
     assert pro["tier"] == "pro" and "AI" not in pro["modes"] and pro["scanners"]
     assert ult["tier"] == "ultimate" and ult["modes"] == ["STRATEGY"] and ult["aiExecutionLocked"] is True
-    assert (pro["chartLimit"], ult["chartLimit"]) == (4, 8)
+    assert (pro["chartLimit"], ult["chartLimit"]) == (4, 4)
 
 
 def test_ultimate_ai_modes_only_after_admin_validation(monkeypatch):
