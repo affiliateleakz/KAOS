@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from auth import require_role
 from db import db
 from broker_vault import vault
+from services import audit_log
 
 router=APIRouter(prefix="/api/admin/data-apis",tags=["admin-data-apis"])
 admin_dep=require_role("admin")
@@ -42,6 +43,7 @@ async def save_key(provider:str,body:KeyInput,admin:dict=Depends(admin_dep)):
     encrypted=vault().encrypt(body.api_key.encode()).decode()
     await db.admin_free_api_credentials.update_one({"provider":provider},
         {"$set":{"provider":provider,"key_enc":encrypted}},upsert=True)
+    await audit_log(admin,"free_api_key_saved","data_api",provider)
     return {"provider":provider,"key_saved":True,"connected":False,"commercial_approval":False}
 
 @router.delete("/{provider}")
@@ -50,4 +52,5 @@ async def delete_key(provider:str,admin:dict=Depends(admin_dep)):
     if not source or not source["key_required"]:
         raise HTTPException(404,"Unknown keyed provider")
     await db.admin_free_api_credentials.delete_one({"provider":provider})
+    await audit_log(admin,"free_api_key_revoked","data_api",provider)
     return {"provider":provider,"key_saved":False}
