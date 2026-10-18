@@ -23,6 +23,5 @@
 - **Unsubstantiated performance claims on the homepage:** the hero mockup shows "78.6% win rate", "+$542.30", and "25,287 trained samples". Nothing in the handoff backs these up, and the v2.1 audit is net negative. Remove them or label them as illustrative before going public (compliance).
 
 - Paper trading (simulated): BUY/SELL fill immediately at the member-entered quote price; long-only average-cost book with realized P&L, cash and position close-out. No authorized quote feed, so these are not market fills; unrealized P&L is only shown at a price the member types in. Closing a position is blocked while the emergency stop is active (risk engine behaviour).
-||||||| 9d5c339
 
 - AI-controlled trading (spec §10): AI and Strategy+AI modes are locked for every tier, Ultimate included, until an admin records independent validation (`POST /api/admin/ai-execution {validated, note}`, audit-logged; setting `ai_execution_validated`, default off). The extension may still show AI options; the server refuses them. Chart limits: Free 1, Pro 4, Ultimate 8 (8 is an assumption, spec doesn't specify) — exposed as `chartLimit` entitlement, not yet enforced in the extension UI.
