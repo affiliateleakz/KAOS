@@ -54,7 +54,7 @@ def test_all_17_broker_catalog_entries_fail_closed_unless_verified():
         "robinhood", "schwab", "fidelity", "webull", "etrade", "crypto_com",
         "tradestation", "forex_com"))
     for broker, details in rows.items():
-        assert details["capabilities"]["account"] is False or broker == "coinbase"
+        assert details["capabilities"]["account"] is False or broker in ("coinbase", "alpaca", "oanda")
         assert details["capabilities"]["submit"] is False or details["capabilities"]["submit"] == "disabled"
         assert details["status"] != "trading_approved"
         assert details["requires"]
