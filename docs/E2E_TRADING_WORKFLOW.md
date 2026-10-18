@@ -31,8 +31,8 @@ All three clients read and write the same server-side paper account (`/api/v1/pa
 | Client | Where | Status |
 |---|---|---|
 | Website / member portal | Dashboard → Paper Trading (`PaperSession.jsx`) | Works: broker picker, live chart, strategy signal, risk decision, execute, fees, journal. |
-| Chrome extension | Bot terminal → PAPER SESSION tab (`kaos-paper-panel.js`, proxied by `background.js` `KAOS_PAPER` with a path allowlist) | Built: quote, book, fees, signal + risk, execute, journal. The bearer-token API path is verified with curl against the local stack; the panel has not been clicked through in a loaded extension yet. |
-| Mobile (Expo, Android/iPhone) | ★ Paper → `app/paper.tsx` | Built and type-checks (`tsc --noEmit`): live candle chart, quote, book, signal + risk, execute, journal. Not run on a device or simulator yet. |
+| Chrome extension | Broker overlay → **KAOS Paper** → sidebar **Paper Session** (`kaos-paper-panel.js`, proxied by `background.js` `KAOS_PAPER` with a path allowlist) | **UI-tested locally (unpacked, Chrome):** same position/book/journal as the website, CLOSE AT BID, offline error shown. Known gap: the header still says "Pocket Option: connected" on the paper screen. |
+| Mobile (Expo) | Email/password sign-in → ★ Paper → `app/paper.tsx` | **Android UI-tested locally (emulator, Expo Go):** same account and book, double-tap Close at bid → exactly one SELL. Not tested on Android: outage/recovery. **iPhone deferred by the founder.** |
 
 The extension's Pocket Option strategy bot is **not** connected to this paper session: Pocket Option has no authorized market-data API, so its trades cannot be priced from a server-side feed.
 
@@ -52,3 +52,13 @@ Repeatable script against a running local stack. It logs in as the same member t
 This checks the API contract each client uses. It is not a UI test. UI evidence is tracked separately per client.
 
 Unique indexes: `paper_orders(user_id, client_order_id)`, `paper_signals(signal_id)`, `paper_sessions(user_id)`. If a database already holds duplicates, the API logs an error and starts without that index. It never deletes trading records itself.
+
+## Real-UI evidence (local stack, member bob)
+
+1. Website market-data BUY, double-clicked: one order (3 → 4 fills).
+2. Extension and Android showed the same position, cash, fees and journal.
+3. Android Close at bid, double-tapped: exactly one SELL (4 → 5 fills).
+4. All three clients then matched: cash $99.80, fees $0.18, realized P&L −$0.20.
+5. Refresh/reopen kept that state. With the API stopped, the website and extension showed errors; after restart the book was unchanged.
+6. The website then polled the shared book every 5 s. An extension close showed on the open website in about 5 s, with no reload.
+7. Not exercised in the UI: executing an approved strategy signal. Live data gave a rejected SELL, and no signal was fabricated; the approved path is covered by recorded-candle tests.
