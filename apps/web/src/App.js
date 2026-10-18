@@ -18,6 +18,7 @@ import Trading from "./pages/dashboard/Trading";
 import OpportunityRadar from "./pages/dashboard/OpportunityRadar";
 import PublicTradesScanner from "./pages/dashboard/PublicTradesScanner";
 import CryptoScanner from "./pages/dashboard/CryptoScanner";
+import StockHeatmap from "./pages/dashboard/StockHeatmap";
 import BrokerConnections from "./pages/dashboard/BrokerConnections";
 import PaperTrading from "./pages/dashboard/PaperTrading";
 import { AffiliatePage, AIPage } from "./pages/dashboard/AffiliateAI";
@@ -65,6 +66,7 @@ function AppRouter() {
         <Route path="opportunities" element={<OpportunityRadar />} />
         <Route path="public-trades" element={<PublicTradesScanner />} />
         <Route path="crypto-scanner" element={<CryptoScanner />} />
+        <Route path="stock-heatmap" element={<StockHeatmap />} />
         <Route path="brokers" element={<BrokerConnections />} />
         <Route path="paper" element={<PaperTrading />} />
         <Route path="kaos-ai" element={<AIPage />} />
