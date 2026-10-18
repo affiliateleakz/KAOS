@@ -19,6 +19,7 @@ function candleDiagnostics(text,label,period){
  try{
   if(!text.trim())return null;
   const candles=readCandles(text,label);
+  if(candles.length===0)return {error:"No candle rows found"};
   let gaps=0;
   for(let i=1;i<candles.length;i++)if(candles[i].ts-candles[i-1].ts!==period)gaps++;
   const alignment=candles.filter(c=>c.ts%period!==0).length;
