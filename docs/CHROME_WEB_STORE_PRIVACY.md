@@ -15,18 +15,18 @@ So a reviewer following the link gets either a bot challenge or the homepage —
 
 ## Fixes in this repo
 
-- `apps/web/public/privacy/index.html`: standalone static policy (no JavaScript needed), rewritten to match what the Extension actually does (derived from `apps/extension` source: `kaos-cloud.js`, `kaos-sync-client.js`, `kaos-learning-client.js`, `content.js`, `background.js`, `manifest.json`).
-- `apps/web/public/.htaccess`: serve real files/directories before the SPA fallback so `/privacy/` returns the static page on Apache/cPanel.
+- `apps/web/public/privacy.html`: standalone static policy (no JavaScript needed), rewritten to match what the Extension actually does (derived from `apps/extension` source: `kaos-cloud.js`, `kaos-sync-client.js`, `kaos-learning-client.js`, `content.js`, `background.js`, `manifest.json`).
+- `apps/web/public/.htaccess`: serve real files/directories before the SPA fallback so static files such as `/privacy.html` are served before the SPA on Apache/cPanel.
 - `apps/web/src/pages/Privacy.jsx`: in-app `/privacy` route hard-redirects to the static page (single source of truth).
 - `apps/extension/background.js`: Collective Learning samples are sent only after explicit opt-in (`collectiveLearning === true`); previously sent unless turned off. The server already requires `collective_learning_consent` (`routes_ai.py`).
 - `scripts/check_privacy_url.sh [URL]`: fails if the URL serves a bot challenge, SPA shell or lacks the Limited Use section.
 
 ## Resubmission checklist (founder actions — not done by Devin)
 
-1. Deploy the web build so `build/privacy/index.html` and `build/.htaccess` are on the host.
-2. Exempt `/privacy/` (ideally the whole site and `api.`) from the host's "Human verification" bot challenge (cPanel / Imunify360 / hosting firewall). The API being challenged would also break the Extension for users whose IP is flagged.
+1. Deploy the web build so `build/privacy.html` and `build/.htaccess` are on the host.
+2. Exempt `/privacy.html` (ideally the whole site and `api.`) from the host's "Human verification" bot challenge (cPanel / Imunify360 / hosting firewall). The API being challenged would also break the Extension for users whose IP is flagged.
 3. Run `scripts/check_privacy_url.sh https://tradingwithkaos.com/privacy.html` from outside the host; it must print `OK`.
-4. In the Developer Dashboard → Privacy practices: set Privacy policy URL to `https://tradingwithkaos.com/privacy/` and declare data types consistent with the policy:
+4. In the Developer Dashboard → Privacy practices: set Privacy policy URL to `https://tradingwithkaos.com/privacy.html` and declare data types consistent with the policy:
    - Personally identifiable information (email, name), Authentication information (password at login, tokens);
    - Financial and payment information (account balance read on page, trade amounts/P&L; Stripe subscription status);
    - Website content (prices/candles/trade results on Pocket Option pages); User activity (trade events).
