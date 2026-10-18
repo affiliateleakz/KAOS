@@ -14,12 +14,12 @@ Nothing in this file is deployed. "Works locally" never means "live in productio
 | § | Requirement | Status | Where / evidence | Next step | External dependency |
 |---|---|---|---|---|---|
 | 2 | One account across site, extension and mobile | Partial | Cookie auth in `apps/api/auth.py`; the extension uses `/api/v1` device sessions | Mobile login against the same API | — |
-| 3 | Public website | Partial | `apps/web` Landing (Free/Pro/Ultimate pricing), static `privacy.html` | Branding decision; replace the unverified win-rate numbers | Hosting access, bot-protection allow-list |
+| 3 | Public website | Partial | `apps/web` Landing (Free/Pro/Ultimate pricing), static `privacy.html` | Rebrand to black/silver/electric blue (decided); unverified figures removed in the claims PR | Hosting access, bot-protection allow-list |
 | 3 | Member dashboard | Partial | `/dashboard/*`: subscription, affiliate ledger, paper trading, devices | Broker balances, positions and notifications cards | Broker APIs |
 | 3 | Auth: email/password | Works locally | Login and `/me` tested in the browser | — | — |
 | 3 | Auth: Google, verification, password reset | Code present | Uses the Emergent proxy | Replace with our own OAuth client and email provider | Google OAuth client; email provider (SES/Postmark) |
 | 3 | Auth: MFA, device authorization | Partial | Device seats enforced via `deviceLimit` | TOTP MFA | — |
-| 4 | Trading bot (extension, Pocket Option) | Code present | `apps/extension` v1.7.11 | Store resubmission; hide AI modes the server refuses | Chrome Web Store; Pocket Option affiliate API |
+| 4 | Trading bot (extension, Pocket Option) | Code present | `apps/extension` v1.7.11 | Store resubmission. No AI-mode selector exists (hard-coded `STRATEGY`); autonomous AI fails closed and AI is advisory-only without server grant | Chrome Web Store; Pocket Option affiliate API |
 | 4 | Chrome extension privacy compliance | Partial | PR #3: privacy policy, Collective Learning opt-in | Founder whitelists `/privacy.html` and resubmits | Host bot protection |
 | 5 | Multi-broker support | Partial | `kaos_broker_core` validation, `PaperAdapter`; Coinbase adapter off by flag | Read-only balance connectors first | Broker API keys and terms (Coinbase, Alpaca, OANDA…) |
 | 6 | Crypto / Stock / Options / Forex engines | Missing (paper only) | Paper book supports `CRYPTO_SPOT` long-only | Per-asset validation rules, then paper | Market data licenses |
@@ -33,7 +33,7 @@ Nothing in this file is deployed. "Works locally" never means "live in productio
 | 18 | Portfolio management | Missing | — | Read-only broker balances | Broker APIs |
 | 19 | Trade journal and analytics | Partial | Paper orders, realized P&L, rejections at `/dashboard/paper` | Journal notes, per-strategy stats | — |
 | 20 | Android / iPhone apps | Code present | Expo starter 0.2.0, not run | Run against the local API | Apple/Google developer accounts |
-| 21 | Memberships: Free $0, Pro $49, Ultimate $149, monthly only | Works locally | `DEFAULT_PLANS`, `FREE_ENTITLEMENTS`, `chartLimit` 1/4/8, `deviceLimit` 1/3/5; tests in `test_membership_tiers.py` | Create Stripe prices `membership_pro_monthly`/`membership_ultimate_monthly`; financial validation of the prices | Stripe (founder) |
+| 21 | Memberships: Free $0, Pro $49, Ultimate $149, monthly only | Works locally | `DEFAULT_PLANS`, `FREE_ENTITLEMENTS`, `chartLimit` 1/4/4 (not yet enforced: no multi-chart UI exists in web/extension/mobile), `deviceLimit` 1/3/5; tests in `test_membership_tiers.py` | Create Stripe prices `membership_pro_monthly`/`membership_ultimate_monthly`; financial validation of the prices | Stripe (founder) |
 | 22 | 3-level receiver-based commissions | Works locally (preview) | `kaos.affiliate_ledger` + `services_affiliate_ledger.py`: renewals, refunds, chargebacks, idempotent | Downgrade adjustments; partial-refund mirror | — |
 | 22 | Payouts, approval workflow | **Gated** | `PayoutsDisabled`; admin can't mark PAID | MLM/consumer-law review, KYC, tax | Legal counsel, payout provider |
 | 22 | Affiliate dashboard (genealogy, ranks, resources) | Partial | Ledger card on the Affiliate page | Genealogy tree, L2/L3 lists | — |
@@ -45,10 +45,12 @@ Nothing in this file is deployed. "Works locally" never means "live in productio
 | 31 | Phase 1: safe paper trading | Works locally | Simulated fills, positions, P&L, close-out, kill switch (PR #5) | Authorized quote feed | Market data license |
 | 32 | Live trading | **Gated** | Coinbase live flag off; paper/shadow by default | Explicit founder authorization plus validation | Broker accounts |
 
+## Founder decisions (2026-10-18, PR #6 comments)
+- Charts: Free 1, Pro 4, Ultimate 4 concurrent trading charts (the earlier Ultimate 8 is withdrawn). Ultimate differentiates with premium signals, scanners and validated AI. Multi-chart operation is not built or performance-tested yet.
+- Pocket Option referral requirement: same policy for every tier, Pocket Option only, never imposed on other brokers. The API now applies it per broker and returns plain-language reasons; verification is a manual staff review of the submitted Pocket Option ID, not technical attribution. Still needed: broker-terms/legal confirmation and a fair path for existing Pocket Option accounts.
+- Brand: dark/black + silver + electric-blue primary; gold/red only as restrained accents or semantic trading colours; keep KAOS logo assets; consistent across web, extension, Android, iOS.
+- Marketing figures: remove all unverified win-rate/profit/return claims; only publish documented results with dates, live/paper/backtest provenance, costs and risk disclosures. No fabricated testimonials or screenshots.
+
 ## Open founder decisions
-1. Ultimate chart limit (8 is assumed).
-2. Should Free bot access skip the Pocket Option affiliate verification?
-3. Branding: black/silver/electric blue vs. the current gold/red.
-4. The unverified homepage performance numbers: remove or label them.
-5. Privacy policy retention periods and support email.
-6. Which live backend and which extension build to resubmit.
+1. Privacy policy retention periods and support email.
+2. Which live backend and which extension build to resubmit.
