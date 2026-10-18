@@ -10,7 +10,7 @@
     const el=root(); if(!el)return;
     const st=await call('/broker-connections/coinbase/status');
     if(!st||!st.ok){el.textContent='Sign in to KAOS to load your Coinbase account.';return;}
-    if(!st.data.connected){el.innerHTML='No Coinbase account connected. Connect it on tradingwithkaos.com → Broker Connections, or choose Coinbase in the broker selector.';return;}
+    if(!st.data.connected){el.textContent='Coinbase is not connected. Connect on the KAOS website.';await loadOtherBrokers(el);return;}
     const a=await call('/broker-connections/coinbase/accounts');
     if(!a||!a.ok){el.innerHTML=`<span style="color:#f5b041">Coinbase unavailable: ${esc((a&&a.data&&a.data.detail)||(a&&a.error)||'error')}</span>`;return;}
     const d=a.data;
