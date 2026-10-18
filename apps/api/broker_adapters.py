@@ -40,6 +40,12 @@ class AlpacaAdapter(BrokerAdapter):
         return await routes_broker_alpaca.account(user=user)
 
 
+class OandaAdapter(BrokerAdapter):
+    async def account(self, user):
+        import routes_broker_oanda
+        return await routes_broker_oanda.account(user=user)
+
+
 class PreviewOrder(BaseModel):
     product_id: str
     side: str
@@ -63,7 +69,7 @@ REGISTRY = {a.id: a for a in [
                     {"account": True, "preview": True, "submit": "disabled", "cancel": True}),
     AlpacaAdapter("alpaca", "Alpaca", ("stocks", "options", "crypto"), "authentication_implemented", "Paper Trading API: authenticated read-only account, positions, orders", "Member paper API key/secret; real account and live orders unsupported", {"account": True, "preview": False, "submit": False, "cancel": False}),
     BrokerAdapter("ibkr", "Interactive Brokers", ("stocks", "options", "futures", "forex"), "planned", "Client Portal / TWS gateway", "IBKR account and a running gateway"),
-    BrokerAdapter("oanda", "OANDA", ("forex",), "planned", "v20 REST API", "OANDA account + API token"),
+    OandaAdapter("oanda", "OANDA", ("forex",), "authentication_implemented", "v20 Practice API read-only", "Practice account ID and API token; real trading unsupported", {"account": True, "preview": False, "submit": False, "cancel": False}),
     BrokerAdapter("kraken", "Kraken", ("crypto",), "planned", "Spot REST API", "Kraken account + API key (no withdraw permission)"),
     BrokerAdapter("tradier", "Tradier", ("stocks", "options"), "planned", "Brokerage API (OAuth)", "Tradier account + OAuth app"),
     BrokerAdapter("tastytrade", "tastytrade", ("stocks", "options", "futures"), "planned", "Open API", "tastytrade account + API access approval"),
