@@ -864,7 +864,7 @@ chrome.action.onClicked.addListener(()=>{kaosOpenSingleAppWindow().catch(()=>{})
 importScripts('kaos-agent-live-bridge.js');
 
 // KAOS paper session: same server-side paper account, signals and journal as the website Paper Trading tab.
-const KAOS_PAPER_PATH=/^\/paper\/(session|brokers|orders|signals|quote\/[A-Z0-9-]{3,20}|candles\/[A-Z0-9-]{3,20}\?granularity=\d+|signals\/[A-Z0-9-]{3,20}\?granularity=\d+|signals\/sig-[0-9a-f]{16}\/execute)$/;
+const KAOS_PAPER_PATH=/^\/paper\/(session|brokers|orders|signals|quote\/[A-Z0-9-]{3,20}|candles\/[A-Z0-9-]{3,20}\?granularity=\d+|signals\/[A-Z0-9-]{3,20}\?granularity=\d+|signals\/sig-[0-9a-f]{16}\/execute|positions\/[A-Z0-9-]{3,20}\/close)$/;
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg || msg.type !== 'KAOS_PAPER') return;
   (async () => {

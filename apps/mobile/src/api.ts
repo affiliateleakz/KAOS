@@ -31,11 +31,12 @@ export async function send<T>(path:string,method:'POST'|'PUT',body:unknown={}):P
  return data as T;
 }
 export type Candle={time:number;open:number;high:number;low:number;close:number;volume:number};
-export type PaperSession={broker:string;symbol:string;granularity:number;notional:string};
-export type Quote={bid:string;ask:string;quote_time:string;source:string};
-export type Signal={signal_id:string;symbol:string;action:string;setup:string;status:string;reasons:string[];risk:{approved:boolean;reason:string};created_at:string};
+export type PaperSession={broker:string;symbol:string;granularity:number;notional:string;fee_rate?:string;slippage_bps?:number};
+export type Quote={bid:string;ask:string;quote_time:string;source:string;delivery?:string;age_seconds?:number};
+export type Signal={signal_id:string;symbol:string;action:string;setup:string;status:string;reasons:string[];risk:{approved:boolean;reason:string};risk_at_execution?:{approved:boolean;reason:string};created_at:string};
 export type PaperOrder={client_order_id:string;symbol:string;side:string;quantity:string;fill_price:string;fee?:string;execution_kind?:string;created_at:string};
-export type PaperBook={cash:string;open_cost:string;realized_pnl:string;fees_paid?:string};
+export type PaperPosition={symbol:string;asset_class:string;units:string;cost:string;avg_price:string};
+export type PaperBook={cash:string;open_cost:string;realized_pnl:string;fees_paid?:string;positions?:PaperPosition[]};
 export const paper={
  session:()=>request<PaperSession>('/api/v1/paper/session'),
  quote:(s:string)=>request<Quote>(`/api/v1/paper/quote/${encodeURIComponent(s)}`),
@@ -44,4 +45,5 @@ export const paper={
  signals:()=>request<{signals:Signal[]}>('/api/v1/paper/signals'),
  runStrategy:(s:PaperSession)=>send<Signal>(`/api/v1/paper/signals/${encodeURIComponent(s.symbol)}?granularity=${s.granularity}`,'POST',{notional:s.notional}),
  execute:(id:string)=>send<PaperOrder>(`/api/v1/paper/signals/${id}/execute`,'POST'),
+ close:(symbol:string)=>send<PaperOrder>(`/api/v1/paper/positions/${encodeURIComponent(symbol)}/close`,'POST',{client_order_id:`mob-close-${symbol}-${Date.now()}`}),
 };

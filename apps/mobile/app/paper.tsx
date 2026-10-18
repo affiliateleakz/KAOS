@@ -26,10 +26,10 @@ export default function Paper(){
  const last=signals[0];
  return <ScrollView style={s.page} refreshControl={<RefreshControl refreshing={false} onRefresh={load} tintColor="#2F8CFF"/>}>
   <Text style={s.title}>Paper Session</Text>
-  <Text style={s.muted}>Same account, signals and journal as the KAOS website and Chrome extension. Simulated fills at live Coinbase quotes. No real orders.</Text>
+  <Text style={s.muted}>Same account, signals and journal as the KAOS website and Chrome extension. Simulated fills at polled (not streamed) Coinbase public quotes; fee and slippage are illustrative research settings. No real orders.</Text>
   {!!err&&<Text style={s.err}>{err}</Text>}
   {ses&&<Text style={s.label}>{ses.symbol} · {ses.granularity/60}m · {ses.broker}</Text>}
-  <Text style={s.mono}>{q?`bid ${q.bid} · ask ${q.ask} · ${q.quote_time.slice(11,19)} UTC`:'no quote'}</Text>
+  <Text style={s.mono}>{q?`bid ${q.bid} · ask ${q.ask} · ${q.quote_time.slice(11,19)} UTC · age ${q.age_seconds}s · ${q.delivery} · ${q.source}`:'no quote (orders refused without a fresh quote)'}</Text>
   <Chart candles={candles}/>
   {book&&<View style={s.row}><Text style={s.stat}>Cash ${Number(book.cash).toFixed(2)}</Text><Text style={s.stat}>Fees ${Number(book.fees_paid||0).toFixed(2)}</Text><Text style={s.stat}>P&L ${Number(book.realized_pnl).toFixed(2)}</Text></View>}
   <Pressable disabled={busy||!ses} style={s.btn} onPress={()=>ses&&act(()=>paper.runStrategy(ses))}><Text style={s.btnText}>Run KAOS Strategy</Text></Pressable>
@@ -37,7 +37,12 @@ export default function Paper(){
   {last&&<View style={s.card}><Text style={s.label}>{last.action} {last.symbol} · {last.setup} · {last.status}</Text>
    {last.reasons.map(r=><Text key={r} style={s.body}>• {r}</Text>)}
    <Text style={{color:last.risk.approved?'#7DB8FF':'#f5c26b',marginTop:6}}>Risk manager {last.risk.approved?'approved':'rejected'}: {last.risk.reason}</Text>
+   {last.risk_at_execution&&<Text style={{color:last.risk_at_execution.approved?'#7DB8FF':'#ffb3b3',marginTop:4}}>Risk re-check at execution: {last.risk_at_execution.reason}</Text>}
    {last.status==='PENDING'&&<Pressable disabled={busy} style={[s.btn,{backgroundColor:'#22C55E'}]} onPress={()=>act(()=>paper.execute(last.signal_id))}><Text style={s.btnText}>Execute paper trade at market</Text></Pressable>}</View>}
+  <Text style={s.heading}>Open positions</Text>
+  {(book?.positions||[]).length===0&&<Text style={s.muted}>No open positions.</Text>}
+  {(book?.positions||[]).map(p=><View key={p.symbol} style={s.card}><Text style={s.label}>{p.symbol} · {p.units} units · avg {p.avg_price}</Text><Text style={s.body}>Cost ${Number(p.cost).toFixed(2)}</Text>
+   {p.asset_class==='CRYPTO_SPOT'&&<Pressable disabled={busy} style={[s.btn,{backgroundColor:'#C0C7D1'}]} onPress={()=>act(()=>paper.close(p.symbol))}><Text style={s.btnText}>Close at bid</Text></Pressable>}</View>)}
   <Text style={s.heading}>Journal</Text>
   {orders.slice(0,15).map(o=><Text key={o.client_order_id} style={s.mono}>{o.created_at.slice(5,19).replace('T',' ')} {o.side} {o.symbol} ${o.quantity} @ {o.fill_price} fee ${Number(o.fee||0).toFixed(2)} {o.execution_kind==='market_data_paper'?'market':'demo'}</Text>)}
   <View style={{height:40}}/></ScrollView>;

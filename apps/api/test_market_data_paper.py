@@ -7,6 +7,8 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
+from types import SimpleNamespace
+
 import pytest
 from fastapi import HTTPException
 
@@ -53,6 +55,7 @@ class FakeCollection:
             hit.update(upd.get("$set", {}))
         elif upsert:
             self.docs.append({**q, **upd.get("$setOnInsert", {}), **upd.get("$set", {})})
+        return SimpleNamespace(modified_count=1 if hit is not None else 0)
 
 
 class FakeDB:
@@ -67,8 +70,10 @@ def env(monkeypatch):
 
     async def fetch(symbol):
         state["calls"] += 1
+        if state.get("down"):
+            raise QuoteUnavailable("provider unreachable")
         now = datetime.now(timezone.utc)
-        return Quote(symbol, Decimal("100"), Decimal("101"), Decimal("100.5"),
+        return Quote(symbol, Decimal(state.get("bid", "100")), Decimal(state.get("ask", "101")), Decimal("100.5"),
                      now - timedelta(seconds=state["quote_age"]), now, market_data.COINBASE_PUBLIC_SOURCE)
 
     async def setting(key, default=None):
@@ -77,6 +82,8 @@ def env(monkeypatch):
     monkeypatch.setattr(routes_paper, "db", fdb)
     monkeypatch.setattr(routes_paper, "get_setting", setting)
     async def candles(symbol, granularity):
+        if state.get("rows") is not None:
+            return state["rows"]
         t = int(datetime.now(timezone.utc).timestamp()) // 60 * 60  # newest bar still forming
         return [[t - 60 * i, 99.0, 101.0, 100.0, 100.5, 1.0] for i in range(120)]
 
@@ -210,3 +217,106 @@ def test_session_persists_and_unavailable_broker_refused(env):
     with pytest.raises(HTTPException) as e:
         run(routes_paper.put_session(routes_paper.SessionReq(broker="pocket_option"), user))
     assert "market-data" in e.value.detail
+
+
+import json
+import pathlib
+
+FIXTURES = pathlib.Path(__file__).parent / "fixtures"
+
+
+def _recorded_rows(name):
+    """Recorded Coinbase public candles -> Coinbase API row order ([t, low, high, open, close, vol], newest first)."""
+    rec = json.loads((FIXTURES / name).read_text())
+    return rec, [[c["time"], c["low"], c["high"], c["open"], c["close"], c["volume"]] for c in reversed(rec["candles"])]
+
+
+@pytest.mark.parametrize("name,setup", [("coinbase_btc_usd_5m_breakout_long.json", "breakout_long"),
+                                        ("coinbase_eth_usd_15m_pullback_long.json", "pullback_long")])
+def test_recorded_market_candles_produce_real_strategy_signal(name, setup):
+    rec, _ = _recorded_rows(name)
+    r = routes_paper.kaos_structure_v2.evaluate(rec["candles"])
+    assert r["action"] == "BUY" and r["setup"] == setup and r["reasons"][0].lower().startswith(setup.split("_")[0])
+
+
+def _recorded_signal(env, user=None, notional="10"):
+    fdb, state, u = env
+    rec, rows = _recorded_rows("coinbase_btc_usd_5m_breakout_long.json")
+    state["rows"] = rows
+    return run(routes_paper.generate_signal("BTC-USD", routes_paper.ExecuteSignalReq(notional=notional), 300, user or u))
+
+
+def test_recorded_signal_to_fill_and_execution_risk_recorded(env):
+    fdb, state, user = env
+    sig = _recorded_signal(env)
+    assert sig["action"] == "BUY" and sig["setup"] == "breakout_long" and sig["risk"]["approved"]
+    o = run(routes_paper.execute_signal(sig["signal_id"], user))
+    assert o["fill_price"] == "101" and o["quote"]["source"] == market_data.COINBASE_PUBLIC_SOURCE
+    stored = fdb.paper_signals.docs[0]
+    assert stored["status"] == "EXECUTED" and stored["risk_at_execution"]["approved"] is True
+
+
+def test_concurrent_executes_fill_once(env):
+    fdb, state, user = env
+    sig = _recorded_signal(env)
+
+    async def both():
+        return await asyncio.gather(routes_paper.execute_signal(sig["signal_id"], user),
+                                    routes_paper.execute_signal(sig["signal_id"], user), return_exceptions=True)
+    res = asyncio.new_event_loop().run_until_complete(both())
+    assert len(fdb.paper_orders.docs) == 1
+    assert any(isinstance(r, dict) for r in res)
+
+
+def test_kill_switch_after_signal_rejects_at_execution(env):
+    fdb, state, user = env
+    sig = _recorded_signal(env)
+    state["kill"] = True
+    with pytest.raises(HTTPException) as e:
+        run(routes_paper.execute_signal(sig["signal_id"], user))
+    assert e.value.status_code == 422 and not fdb.paper_orders.docs
+    s = fdb.paper_signals.docs[0]
+    assert s["status"] == "REJECTED" and s["risk_at_execution"]["approved"] is False
+
+
+@pytest.mark.parametrize("fault", ["down", "stale", "wide"])
+def test_execution_never_fills_on_bad_quote(env, fault):
+    fdb, state, user = env
+    sig = _recorded_signal(env)
+    if fault == "down":
+        state["down"] = True
+    elif fault == "stale":
+        state["quote_age"] = 30
+    else:
+        state["bid"], state["ask"] = "100", "103"
+    with pytest.raises(HTTPException) as e:
+        run(routes_paper.execute_signal(sig["signal_id"], user))
+    assert e.value.status_code in (422, 503) and not fdb.paper_orders.docs
+    assert fdb.paper_signals.docs[0]["status"] == "REJECTED"
+    with pytest.raises(HTTPException):  # a rejected signal cannot be retried into a fill at an old price
+        run(routes_paper.execute_signal(sig["signal_id"], user))
+    assert not fdb.paper_orders.docs
+
+
+def test_other_user_cannot_see_or_execute_signal(env):
+    fdb, state, user = env
+    sig = _recorded_signal(env)
+    eve = {"id": "user_eve", "email": "eve@example.com"}
+    with pytest.raises(HTTPException) as e:
+        run(routes_paper.execute_signal(sig["signal_id"], eve))
+    assert e.value.status_code == 404
+    assert run(routes_paper.list_signals(eve))["signals"] == []
+    assert not fdb.paper_orders.docs
+
+
+def test_session_fee_and_slippage_applied_and_bounded(env):
+    fdb, state, user = env
+    run(routes_paper.put_session(routes_paper.SessionReq(fee_rate="0.001", slippage_bps=10), user))
+    o = order(user)
+    assert o["fill_price"] == "101.101" and o["fee_rate"] == "0.001" and o["slippage_bps"] == 10
+    assert o["fee"] == "0.01000000" and "not a Coinbase" in o["fee_model"]
+    for bad in [routes_paper.SessionReq(fee_rate="0.05"), routes_paper.SessionReq(fee_rate="-0.001"),
+                routes_paper.SessionReq(slippage_bps=500)]:
+        with pytest.raises(HTTPException) as e:
+            run(routes_paper.put_session(bad, user))
+        assert e.value.status_code == 422

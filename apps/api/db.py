@@ -1,3 +1,5 @@
+import logging
+from pymongo.errors import DuplicateKeyError
 import os
 from datetime import datetime, timezone
 from uuid import uuid4
@@ -43,6 +45,13 @@ async def ensure_indexes():
     await db.strategies.create_index("visibility")
     await db.strategies.create_index("published")
     await db.devices.create_index("id", unique=True)
+    for coll, keys in ((db.paper_orders, [("user_id", 1), ("client_order_id", 1)]),
+                       (db.paper_signals, [("signal_id", 1)]), (db.paper_sessions, [("user_id", 1)])):
+        try:
+            await coll.create_index(keys, unique=True)
+        except DuplicateKeyError as exc:
+            # Never delete trading records automatically; the app still runs, but an operator must dedupe.
+            logging.getLogger("kaos.db").error("Unique index on %s not created; duplicate records exist: %s", coll.name, exc)
     await db.devices.create_index("userId")
     await db.webhook_events.create_index("event_id", unique=True)
     await db.notifications.create_index("userId")

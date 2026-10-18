@@ -70,7 +70,7 @@ export default function PaperSession({ orders, killSwitch, onTraded }) {
   const save = async (patch) => {
     const next = { ...session, ...patch };
     setSession(next);
-    try { setSession((await api.put("/api/v1/paper/session", { broker: next.broker, symbol: next.symbol, granularity: Number(next.granularity), notional: next.notional })).data); }
+    try { setSession((await api.put("/api/v1/paper/session", { broker: next.broker, symbol: next.symbol, granularity: Number(next.granularity), notional: next.notional, fee_rate: String(next.fee_rate ?? "0.006"), slippage_bps: Number(next.slippage_bps || 0) })).data); }
     catch (e) { toast.error(errMsg(e)); }
   };
 
@@ -112,14 +112,21 @@ export default function PaperSession({ orders, killSwitch, onTraded }) {
         <label className="block"><span className="label-mono">Trade size (USD)</span>
           <input className={field} type="number" min="1" step="1" defaultValue={session.notional} onBlur={(e) => e.target.value !== session.notional && save({ notional: e.target.value })} /></label>
       </div>
+      <div className="mb-3 grid gap-3 md:grid-cols-4">
+        <label className="block"><span className="label-mono">Sim. fee % per side</span>
+          <input data-testid="paper-fee" className={field} type="number" min="0" max="2" step="0.01" defaultValue={(Number(session.fee_rate ?? 0.006) * 100).toFixed(2)} onBlur={(e) => save({ fee_rate: String(Number(e.target.value) / 100) })} /></label>
+        <label className="block"><span className="label-mono">Sim. slippage (bps)</span>
+          <input data-testid="paper-slippage" className={field} type="number" min="0" max="100" step="1" defaultValue={session.slippage_bps || 0} onBlur={(e) => save({ slippage_bps: Number(e.target.value) })} /></label>
+        <p className="text-[11px] text-slate-500 md:col-span-2 md:self-end">Fee and slippage are illustrative research assumptions you set, not Coinbase or broker quotes. The spread comes from the live bid/ask; slippage is applied on top of it. Limits: fee 0–2%, slippage 0–100 bps.</p>
+      </div>
       <p className="mb-2 text-xs text-slate-500">{brokers.find((b) => b.id === session.broker)?.note} Unavailable: {brokers.filter((b) => !b.available).map((b) => `${b.name}: ${b.note}`).join(" ")}</p>
       <div className="rounded border border-[#2E2E2E] bg-[#050505] p-2">
         <div className="flex items-center justify-between px-2 pb-1 font-mono text-xs text-slate-400">
           <span><Activity className="mr-1 inline h-3 w-3 text-[#2F8CFF]" />{sym} · {gran / 60}m · <span className="text-[#2F8CFF]">EMA20</span> / <span className="text-slate-300">EMA50</span></span>
-          <span data-testid="paper-session-quote">{quote ? `bid ${quote.bid} · ask ${quote.ask} · ${quote.quote_time?.slice(11, 19)} UTC` : "no quote"}</span>
+          <span data-testid="paper-session-quote">{quote ? <>bid {quote.bid} · ask {quote.ask} · quote {quote.quote_time?.slice(11, 19)} UTC · <span className={quote.age_seconds > quote.max_age_seconds ? "text-amber-300" : ""}>age {quote.age_seconds}s</span> · {quote.delivery} · {quote.source}</> : "no quote (orders are refused without a fresh quote)"}</span>
         </div>
         {candles.error ? <div className="p-6 text-sm text-red-300">{candles.error}</div> : <CandleChart candles={candles.candles} quote={quote} fills={fills} />}
-        <div className="px-2 font-mono text-[10px] text-slate-500">Source: {candles.source || "—"} · closed candles only · refreshed every 15 s</div>
+        <div className="px-2 font-mono text-[10px] text-slate-500">Source: {candles.source || "—"} · closed candles only · polled every 15 s (not streaming)</div>
       </div>
       <div className="mt-4 grid gap-4 md:grid-cols-3">
         <div className="space-y-2">
@@ -134,7 +141,7 @@ export default function PaperSession({ orders, killSwitch, onTraded }) {
               <ul className="mt-1 list-disc pl-5 text-xs text-slate-300">{latest.reasons.map((r) => <li key={r}>{r}</li>)}</ul>
               <div className={`mt-2 flex items-start gap-1 text-xs ${latest.risk.approved ? "text-[#7DB8FF]" : "text-amber-300"}`}>{latest.risk.approved ? <ShieldCheck className="h-4 w-4 shrink-0" /> : <ShieldX className="h-4 w-4 shrink-0" />}Risk manager {latest.risk.approved ? "approved" : "rejected"}: {latest.risk.reason}</div>
               {latest.status === "PENDING" && <Button data-testid="paper-execute-signal" size="sm" disabled={busy || killSwitch} onClick={() => execute(latest.signal_id)} className="mt-2 bg-[#22C55E] text-black">Execute paper trade at market</Button>}
-              {latest.reject_reason && <div className="mt-1 text-xs text-red-300">{latest.reject_reason}</div>}
+              {latest.risk_at_execution && <div className={`mt-1 text-xs ${latest.risk_at_execution.approved ? "text-[#7DB8FF]" : "text-red-300"}`}>Risk re-check at execution: {latest.risk_at_execution.approved ? "approved" : "rejected"}: {latest.risk_at_execution.reason}</div>}
             </>
           )}
         </div>

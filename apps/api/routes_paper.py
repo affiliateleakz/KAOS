@@ -27,6 +27,7 @@ from kaos_paper_book import base_units, build_book, book_view, money
 from kaos_risk_engine import check_order
 import kaos_structure_v2
 import market_data
+from pymongo.errors import DuplicateKeyError
 
 router = APIRouter(prefix="/api/v1/paper", tags=["paper-trading"])
 admin_dep = require_role("admin")
@@ -35,6 +36,11 @@ PAPER_ACCOUNT = "paper-default"
 PAPER_STARTING_BALANCE = Decimal("100")
 # Simulated taker fee applied to every paper fill. An assumption, not a broker-quoted rate.
 PAPER_FEE_RATE = Decimal(os.environ.get("KAOS_PAPER_FEE_RATE", "0.006"))
+FEE_RATE_MAX = Decimal("0.02")
+SLIPPAGE_BPS_MAX = 100
+MAX_SPREAD_FRACTION = Decimal("0.01")  # refuse quotes whose bid/ask spread exceeds 1% of mid
+FEE_MODEL = "Illustrative research assumption set per session; not a Coinbase or broker fee quote."
+QUOTE_DELIVERY = "polling"  # REST request per order and every 5 s in clients; no streaming feed yet
 SIGNAL_TTL_SECONDS = 120
 PAPER_BROKERS = [
     {"id": "kaos_paper_coinbase", "name": "KAOS Paper (Coinbase market data)", "available": True,
@@ -115,6 +121,7 @@ async def _submit(user, symbol, asset_class, side, quantity, quote_price, client
     book = await _user_book(user, now)
     pos = book["positions"].get(symbol)
     quote, quote_ts = None, None
+    fee_rate, slip_bps = await _session_costs(user)
     if quote_price is None:
         if existing:
             if existing.get("execution_kind") != "market_data_paper" or existing["symbol"] != symbol or existing["side"] != side \
@@ -125,7 +132,13 @@ async def _submit(user, symbol, asset_class, side, quantity, quote_price, client
             quote = await market_data.get_quote(symbol, pos["asset_class"] if (side == "SELL" and pos) else asset_class)
         except market_data.QuoteUnavailable as exc:
             raise HTTPException(status_code=503, detail=f"Market data unavailable: {exc}")
-        quote_price, quote_ts = str(quote.ask if side == "BUY" else quote.bid), quote.quote_time
+        mid = (quote.bid + quote.ask) / 2
+        if (quote.ask - quote.bid) / mid > MAX_SPREAD_FRACTION:
+            await _reject(user, now, client_order_id, symbol, side, quantity, str(quote.ask),
+                          f"Quote spread {quote.bid}/{quote.ask} exceeds {MAX_SPREAD_FRACTION:%} of mid; refusing unrealistic quote")
+        adj = Decimal(slip_bps) / Decimal(10000)
+        px = quote.ask * (1 + adj) if side == "BUY" else quote.bid * (1 - adj)
+        quote_price, quote_ts = format(px.quantize(Decimal("0.00000001")).normalize(), "f"), quote.quote_time
     price = _positive(quote_price, "quote price")
     metadata, closing = {}, False
     if side == "SELL" and not existing:
@@ -163,21 +176,28 @@ async def _submit(user, symbol, asset_class, side, quantity, quote_price, client
            "side": side, "quantity": quantity, "quote_price": quote_price, "fill_price": quote_price,
            "base_qty": format(units, "f"), "fill_type": "SIMULATED",
            "execution_kind": "market_data_paper" if quote else "manual_demo",
-           "signal_id": signal_id, "fee_rate": str(PAPER_FEE_RATE),
-           "fee": format((Decimal(quantity) * PAPER_FEE_RATE).quantize(Decimal("0.00000001")), "f"),
+           "signal_id": signal_id, "fee_rate": str(fee_rate), "fee_model": FEE_MODEL,
+           "slippage_bps": slip_bps if quote else 0,
+           "fee": format((Decimal(quantity) * fee_rate).quantize(Decimal("0.00000001")), "f"),
            "quote": quote.provenance() if quote else None,
            "state": report.state.value, "broker": report.broker, "paper": True, "created_at": now.isoformat()}
     if side == "SELL":
         avg = pos["cost"] / pos["units"]
         doc["realized_pnl"] = money(Decimal(quantity) - Decimal(doc["fee"]) - avg * units)
-    await db.paper_orders.update_one(key, {"$setOnInsert": doc}, upsert=True)
+    try:
+        await db.paper_orders.update_one(key, {"$setOnInsert": doc}, upsert=True)
+    except DuplicateKeyError:
+        pass  # a concurrent request with the same client_order_id won; return its order
     return await db.paper_orders.find_one(key, {"_id": 0})
 
 
 @router.get("/quote/{symbol}")
 async def paper_quote(symbol: str, asset_class: str = "CRYPTO_SPOT", user: dict = Depends(get_current_user)):
     try:
-        return (await market_data.get_quote(symbol, asset_class)).provenance()
+        q = await market_data.get_quote(symbol, asset_class)
+        age = (datetime.now(timezone.utc) - q.quote_time).total_seconds()
+        return {**q.provenance(), "delivery": QUOTE_DELIVERY, "age_seconds": round(age, 1),
+                "max_age_seconds": _pipeline.limits.max_price_age_seconds}
     except market_data.QuoteUnavailable as exc:
         raise HTTPException(status_code=503, detail=f"Market data unavailable: {exc}")
 
@@ -215,6 +235,13 @@ class SessionReq(BaseModel):
     symbol: str = Field(default="BTC-USD", min_length=1, max_length=30)
     granularity: int = 60
     notional: str = "10"
+    fee_rate: str = str(PAPER_FEE_RATE)
+    slippage_bps: int = 0
+
+
+async def _session_costs(user):
+    doc = await db.paper_sessions.find_one({"user_id": user["id"]}, {"_id": 0}) or {}
+    return Decimal(str(doc.get("fee_rate", PAPER_FEE_RATE))), int(doc.get("slippage_bps", 0))
 
 
 class ExecuteSignalReq(BaseModel):
@@ -240,7 +267,15 @@ async def put_session(req: SessionReq, user: dict = Depends(get_current_user)):
     if req.granularity not in market_data.GRANULARITIES:
         raise HTTPException(status_code=422, detail="Unsupported candle size")
     _positive(req.notional, "notional")
-    doc = {**req.model_dump(), "symbol": req.symbol.upper(), "user_id": user["id"],
+    try:
+        fee = Decimal(req.fee_rate)
+    except Exception:
+        raise HTTPException(status_code=422, detail="Invalid fee rate")
+    if not fee.is_finite() or fee < 0 or fee > FEE_RATE_MAX:
+        raise HTTPException(status_code=422, detail=f"Fee rate must be between 0 and {FEE_RATE_MAX} (2%) per side")
+    if not 0 <= req.slippage_bps <= SLIPPAGE_BPS_MAX:
+        raise HTTPException(status_code=422, detail=f"Slippage must be between 0 and {SLIPPAGE_BPS_MAX} bps")
+    doc = {**req.model_dump(), "fee_rate": str(fee), "fee_model": FEE_MODEL, "symbol": req.symbol.upper(), "user_id": user["id"],
            "updated_at": datetime.now(timezone.utc).isoformat()}
     await db.paper_sessions.update_one({"user_id": user["id"]}, {"$set": doc}, upsert=True)
     return doc
@@ -314,17 +349,30 @@ async def execute_signal(signal_id: str, user: dict = Depends(get_current_user))
         raise HTTPException(status_code=409, detail=f"Signal not tradable: {sig['risk']['reason']}")
     age = (datetime.now(timezone.utc) - datetime.fromisoformat(sig["created_at"])).total_seconds()
     if age > SIGNAL_TTL_SECONDS:
-        await db.paper_signals.update_one({"signal_id": signal_id}, {"$set": {"status": "EXPIRED"}})
+        await db.paper_signals.update_one({"signal_id": signal_id, "status": "PENDING"}, {"$set": {"status": "EXPIRED"}})
         raise HTTPException(status_code=409, detail="Signal expired; generate a new one")
+    # Atomic claim: concurrent clicks / clients cannot both reach the order path for one signal.
+    claim = await db.paper_signals.update_one({"signal_id": signal_id, "user_id": user["id"], "status": "PENDING"},
+                                              {"$set": {"status": "EXECUTING"}})
+    if not claim.modified_count:
+        cur = await db.paper_signals.find_one({"signal_id": signal_id}, {"_id": 0})
+        if cur and cur.get("status") == "EXECUTED":
+            return await db.paper_orders.find_one({"user_id": user["id"], "client_order_id": cid}, {"_id": 0})
+        raise HTTPException(status_code=409, detail=f"Signal is {(cur or {}).get('status', 'unavailable')}")
     try:
         if sig["action"] == "BUY":
             order = await _submit(user, sig["symbol"], "CRYPTO_SPOT", "BUY", sig["notional"], None, cid, signal_id=signal_id)
         else:
             order = await _submit(user, sig["symbol"], "CRYPTO_SPOT", "SELL", "0", None, cid, close_all=True, signal_id=signal_id)
     except HTTPException as exc:
-        await db.paper_signals.update_one({"signal_id": signal_id}, {"$set": {"status": "REJECTED", "reject_reason": str(exc.detail)}})
+        await db.paper_signals.update_one({"signal_id": signal_id}, {"$set": {
+            "status": "REJECTED", "reject_reason": str(exc.detail),
+            "risk_at_execution": {"approved": False, "reason": str(exc.detail), "http_status": exc.status_code}}})
         raise
-    await db.paper_signals.update_one({"signal_id": signal_id}, {"$set": {"status": "EXECUTED", "client_order_id": cid}})
+    await db.paper_signals.update_one({"signal_id": signal_id}, {"$set": {
+        "status": "EXECUTED", "client_order_id": cid,
+        "risk_at_execution": {"approved": True, "reason": "Re-checked by the risk engine against the fresh execution quote.",
+                              "quote": order.get("quote")}}})
     return order
 
 
