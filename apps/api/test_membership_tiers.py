@@ -5,6 +5,8 @@ import asyncio
 import pytest
 from services import compute_license
 from services_trading import get_entitlements
+from fastapi import HTTPException
+from routes_trading import _check_mode  # imported at collection, before mock tests stub `db`
 
 
 def run(coro):
@@ -64,3 +66,18 @@ def test_license_allows_free_but_keeps_affiliate_and_suspension_checks():
     assert run(compute_license({"membership_status": "EXPIRED", "affiliate_status": "PENDING"}))["authorized"] is False
     banned = run(compute_license({"account_status": "banned", "membership_status": "ACTIVE", "affiliate_status": "VERIFIED"}))
     assert banned["authorized"] is False
+
+
+@pytest.mark.parametrize("mode", ["AI", "STRATEGY_AI"])
+def test_free_member_cannot_select_ai_trading(mode):
+    free = {"membership_status": "EXPIRED"}
+    assert run(_check_mode(free, "STRATEGY"))["tier"] == "free"
+    with pytest.raises(HTTPException) as e:
+        run(_check_mode(free, mode))
+    assert e.value.status_code == 403
+
+
+def test_free_member_has_no_premium_capabilities():
+    ent = run(get_entitlements({"membership_status": None}))
+    assert ent["chartLimit"] == 1 and not ent["cloudStrategies"]
+    assert not any(ent.get(k) for k in ("scanners", "aiInsights", "premiumTools"))

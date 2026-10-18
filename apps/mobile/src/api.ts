@@ -11,7 +11,7 @@ export async function request<T>(path:string):Promise<T>{
  const token=await getToken(); if(!token) throw new Error('Sign in required');
  const response=await fetch(BASE+path,{headers:{Authorization:`Bearer ${token}`,Accept:'application/json'}});
  if(response.status===401) throw new Error('Session expired. Sign in again.');
- if(response.status===403) throw new Error('Active KAOS membership required.');
+ if(response.status===403) throw new Error('This feature needs a KAOS Pro or Ultimate membership.');
  if(!response.ok) throw new Error(`KAOS API error ${response.status}`);
  return response.json() as Promise<T>;
 }
