@@ -14,6 +14,7 @@ const NAV = [
   ["paper", "Paper Trading", FlaskConical],
   ["opportunities", "Opportunity Radar", Activity],
   ["public-trades", "Political & Wall Street Trades", LineChart],
+  ["crypto-scanner", "Crypto Scanner & Heat Map", Activity],
   ["brokers", "Broker Connections", MonitorSmartphone],
   ["kaos-ai", "KAOS AI", Activity],
   ["strategies", "My Strategies", Boxes],
