@@ -9,8 +9,8 @@ Legend: **Works locally** = verified in this repo. **Code present** = source exi
 | Portal | Email verification / password reset | Code present | Needs an email provider. Currently the Emergent proxy |
 | Portal | Google login | Code present | Uses Emergent OAuth |
 | Billing | Stripe checkout + webhook | Code present | Plans are monthly $29 / yearly $279, **not** Free/Pro/Ultimate $0/$49/$149 |
-| Membership | Free/Pro/Ultimate feature gating | Missing in API | Prototype exists in `packages/kaos-core` |
-| Affiliate | Receiver-based 3-level commissions | Missing in API | `routes_affiliate` is single-level and flat-rate. Prototype calculator exists in kaos-core. No ledger, refunds, or renewals |
+| Membership | Free/Pro/Ultimate feature gating | Library only (`kaos.affiliate_ledger.has_permission`) | Not wired into the API yet. The `ai_execution` permission does **not** grant order authority |
+| Affiliate | Receiver-based 3-level commissions | Library + tests (`packages/kaos-core/kaos/affiliate_ledger.py`) | Covers idempotency, renewals, rate snapshot per payment, full/partial refunds and chargebacks, a hold period, cycle rejection, and disabled payouts. Not wired into the API: `routes_affiliate` is still single-level and flat-rate |
 | Affiliate | Payouts | Missing (intentionally) | Blocked until compliance review |
 | Trading | Durable paper pipeline, broker registry | Code present, unit-tested | Not demonstrated end-to-end |
 | Trading | Coinbase live orders | Code present, disabled by flag | Must stay off |

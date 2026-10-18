@@ -16,3 +16,4 @@
 - No membership gating or receiver-based affiliate ledger in the API.
 - Paper-order flow is not demonstrated end-to-end. The extension and mobile app are not run.
 - Lint: 17 eslint warnings (unused vars, hook deps) in the web app.
+- **Unsubstantiated performance claims on the homepage:** the hero mockup shows "78.6% win rate", "+$542.30", and "25,287 trained samples". Nothing in the handoff backs these up, and the v2.1 audit is net negative. Remove them or label them as illustrative before going public (compliance).
