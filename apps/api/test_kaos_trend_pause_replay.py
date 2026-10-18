@@ -28,3 +28,19 @@ def test_no_future_bar_no_marked_trade(monkeypatch):
     assert all(t["exit_ts"] in {c["ts"] for c in fast} for t in result["trades"])
     assert all(t["research_only"] for t in result["trades"])
     assert all(t["exit_ts"]-t["entry_ts"]==60000 for t in result["trades"])
+
+def test_rejects_seconds_instead_of_millisecond_timestamps():
+    minute=[candle(1760000000+i*60,100) for i in range(55)]
+    fast=[candle(1760000000+i*15,100) for i in range(30)]
+    with pytest.raises(ValueError, match="aligned millisecond"):
+        replay(minute,fast)
+
+def test_no_signals_when_required_candle_history_has_gaps(monkeypatch):
+    import kaos_trend_pause_replay as engine
+    monkeypatch.setattr(engine,"signal",lambda a,b: {"direction":"CALL","pause_candles":1})
+    minute=[candle(i*60000,100) for i in range(20)]
+    minute += [candle((i+4)*60000,100) for i in range(20,60)]
+    fast=[candle(i*15000,100) for i in range(260)]
+    # Every possible entry has too few gap-free completed 1m candles
+    # before the available 15s data ends.
+    assert replay(minute,fast)["trades"] == []
