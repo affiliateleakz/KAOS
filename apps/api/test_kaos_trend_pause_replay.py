@@ -38,9 +38,9 @@ def test_rejects_seconds_instead_of_millisecond_timestamps():
 def test_no_signals_when_required_candle_history_has_gaps(monkeypatch):
     import kaos_trend_pause_replay as engine
     monkeypatch.setattr(engine,"signal",lambda a,b: {"direction":"CALL","pause_candles":1})
-    minute=[candle(i*60000,100) for i in range(53)]
-    minute += [candle((i+4)*60000,100) for i in range(53,100)]
-    fast=[candle(i*15000,100) for i in range(400)]
+    minute=[candle(i*60000,100) for i in range(20)]
+    minute += [candle((i+4)*60000,100) for i in range(20,60)]
+    fast=[candle(i*15000,100) for i in range(260)]
     # Every possible entry has too few gap-free completed 1m candles
     # before the available 15s data ends.
     assert replay(minute,fast)["trades"] == []
