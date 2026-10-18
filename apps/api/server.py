@@ -20,6 +20,7 @@ import routes_coinbase
 import routes_finbert
 import routes_opportunity
 import routes_paper
+import routes_research_replay
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -69,6 +70,7 @@ app.include_router(routes_coinbase.router)
 app.include_router(routes_finbert.router)
 app.include_router(routes_opportunity.router)
 app.include_router(routes_paper.router)
+app.include_router(routes_research_replay.router)
 
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
 app.add_middleware(
