@@ -15,6 +15,7 @@ const BROKERS = [
 ];
 export default function BrokerConnections() {
   const [saved, setSaved] = useState({});
+  const [catalog, setCatalog] = useState([]);
   const [form, setForm] = useState({key_name:"", private_key:""});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -23,6 +24,8 @@ export default function BrokerConnections() {
     try {
       const r = await api.get("/api/v1/broker-connections");
       setSaved(Object.fromEntries((r.data.connections || []).map(x => [x.broker, x])));
+      const registry = await api.get("/api/v1/brokers");
+      setCatalog(registry.data.brokers || []);
     } catch(e) { setError(`Connection status unavailable: ${errMsg(e)}`); }
   }, []);
   const [acct, setAcct] = useState(null);
@@ -59,9 +62,9 @@ export default function BrokerConnections() {
     <div><h1 className="text-2xl font-bold">KAOS Broker Connections</h1><p className="mt-2 text-sm text-slate-400">Manage broker access for your KAOS membership. Saved credentials remain encrypted on the website backend and are not returned to your extension.</p></div>
     {error && <p role="alert" className="rounded border border-red-600 p-3 text-red-300">{error}</p>}
     {notice && <p role="status" className="rounded border border-green-700 p-3 text-green-300">{notice}</p>}
-    <div className="grid gap-3 md:grid-cols-2">{BROKERS.map(([id,name,url,status]) => <div key={id} className="rounded-lg border border-slate-700 bg-[#111] p-4">
+    <div className="grid gap-3 md:grid-cols-2">{(catalog.length ? catalog.map(b => [b.id,b.name,null,b.status]) : BROKERS).map(([id,name,url,status]) => <div key={id} className="rounded-lg border border-slate-700 bg-[#111] p-4">
       <div className="flex items-center justify-between gap-2"><h2 className="font-semibold">{name}</h2><span className="text-xs text-slate-400">{saved[id]?.verified ? "Verified & saved" : saved[id]?.saved ? "Saved" : status}</span></div>
-      <a href={url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-sm text-[#2F8CFF]">Open broker website ↗</a>
+      {url && <a href={url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-sm text-[#2F8CFF]">Open broker website ↗</a>}
     </div>)}</div>
     <div className="rounded-lg border border-slate-700 bg-[#111] p-5"><h2 className="mb-2 text-xl font-semibold">Coinbase Advanced API</h2>
       <p className="mb-4 text-sm text-slate-400">{saved.coinbase?.saved ? `Saved key ending ${saved.coinbase.key_hint || "••••"}. Update it below or disconnect.` : "Enter your Coinbase Consumer / Advanced Trade CDP credentials once."}</p>
@@ -73,6 +76,8 @@ export default function BrokerConnections() {
       </form>
       <p className="mt-4 text-xs text-slate-400">View permission is required; Trade is optional (KAOS live order submission is disabled until the owner authorizes it). Keys with Transfer permission are refused.</p>
     </div>
+    <ReadOnlyBroker brokerId="alpaca" title="Alpaca Paper Trading" fields={[["api_key","Paper API key"],["api_secret","Paper API secret"]]} saved={saved.alpaca} onChange={load} />
+    <ReadOnlyBroker brokerId="oanda" title="OANDA Practice" fields={[["account_id","Practice account ID"],["api_token","Practice API token"]]} saved={saved.oanda} onChange={load} />
     {saved.coinbase?.verified && <CoinbaseAccount acct={acct} err={acctErr} onRefresh={loadAccount} />}
       {saved.coinbase?.verified && <CoinbaseOrders />}
     <p className="text-xs text-slate-400">Broker names marked “Adapter pending” are not available for automated trading yet. Selecting a broker does not imply that live trading is supported.</p>
@@ -154,5 +159,59 @@ function CoinbaseOrders() {
         <td>{["ACCEPTED", "OPEN", "PARTIAL_FILL_REVIEW"].includes(o.state) && <button onClick={() => cancel(o.client_order_id)} className="rounded border border-red-500 px-2 text-red-300">Cancel</button>}</td>
       </tr>) : <tr><td colSpan={8} className="py-2 text-slate-500">No orders sent by KAOS (live submission has never been enabled)</td></tr>}</tbody>
     </table></div>
+  </div>;
+}
+
+function ReadOnlyBroker({brokerId,title,fields,saved,onChange}) {
+  const [values,setValues] = useState({});
+  const [data,setData] = useState(null);
+  const [error,setError] = useState("");
+  const [notice,setNotice] = useState("");
+  const [busy,setBusy] = useState(false);
+  const endpoint = "/api/v1/broker-connections/" + brokerId;
+  const refresh = useCallback(async () => {
+    if (!saved?.verified) { setData(null); return; }
+    try { const r = await api.get(endpoint + "/account"); setData(r.data); setError(""); }
+    catch (e) { setError(errMsg(e)); }
+  },[endpoint,saved?.verified]);
+  useEffect(()=>{refresh()},[refresh]);
+  async function connect(e) {
+    e.preventDefault(); setBusy(true); setError(""); setNotice("");
+    try {
+      await api.put(endpoint,values);
+      setValues({});
+      setNotice(title + " credentials saved. Practice/paper API only.");
+      await onChange();
+    } catch(e2) {setError(errMsg(e2));}
+    finally {setBusy(false);}
+  }
+  async function disconnect() {
+    if(!window.confirm("Disconnect " + title + "?")) return;
+    setBusy(true);
+    try {await api.delete(endpoint);setData(null);setValues({});setNotice(title + " disconnected.");await onChange();}
+    catch(e) {setError(errMsg(e));}
+    finally {setBusy(false);}
+  }
+  return <div className="rounded-lg border border-slate-700 bg-[#111] p-5" data-testid={brokerId + "-connection"}>
+    <h2 className="mb-2 text-xl font-semibold">{title}</h2>
+    <p className="mb-3 text-xs text-amber-300">PAPER/PRACTICE ACCOUNT ONLY · Backend implemented; not yet verified with a broker account. Real trading unavailable.</p>
+    {saved?.verified && <p className="mb-2 text-sm text-slate-300">Stored connection {saved.key_hint || ""}. <button type="button" onClick={refresh} className="underline text-[#2F8CFF]">Refresh account</button></p>}
+    <form onSubmit={connect} className="space-y-3">
+      {fields.map(([field,label]) => <label className="block text-sm" key={field}>{label}
+        <input required autoComplete="off" type={field.includes("secret") || field.includes("token") ? "password" : "text"}
+          value={values[field] || ""} onChange={e=>setValues(v=>({...v,[field]:e.target.value}))}
+          className="mt-1 w-full rounded border border-slate-600 bg-[#080808] p-2" />
+      </label>)}
+      <button disabled={busy} className="rounded bg-[#2F8CFF] px-4 py-2 font-semibold text-black disabled:opacity-50">{busy ? "Verifying…" : "Verify & save"}</button>
+      {saved?.verified && <button type="button" disabled={busy} onClick={disconnect} className="ml-3 rounded border border-red-700 px-4 py-2 text-red-300">Disconnect</button>}
+    </form>
+    {error && <p role="alert" className="mt-2 text-red-300">{error}</p>}
+    {notice && <p role="status" className="mt-2 text-green-300">{notice}</p>}
+    {data && <div className="mt-4 space-y-3 text-sm">
+      <p className="text-xs text-slate-400">Source: {data.source} · fetched {data.fetched_at}</p>
+      <div>Account: {Object.entries(data.account || {}).map(([k,v])=><span key={k} className="mr-3">{k}: {String(v)}</span>)}</div>
+      <h3 className="font-semibold">Positions</h3><Table cols={brokerId==="alpaca" ? [["symbol","Symbol"],["qty","Quantity"],["unrealized_pl","Unrealized P&L"]] : [["instrument","Instrument"],["unrealizedPL","Unrealized P&L"]]} rows={data.positions || []} empty="No open positions" />
+      <h3 className="font-semibold">Orders</h3><Table cols={brokerId==="alpaca" ? [["symbol","Symbol"],["side","Side"],["status","Status"]] : [["instrument","Instrument"],["type","Type"],["state","State"]]} rows={data.orders || []} empty="No orders" />
+    </div>}
   </div>;
 }
