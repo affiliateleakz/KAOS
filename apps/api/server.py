@@ -23,6 +23,7 @@ import routes_opportunity
 import routes_paper
 import routes_broker_coinbase
 import routes_broker_alpaca
+import routes_broker_oanda
 import broker_adapters
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -79,6 +80,7 @@ for mod in (routes_auth, routes_strategies, routes_community, routes_billing,
 app.include_router(routes_coinbase.router)
 app.include_router(routes_broker_coinbase.router)
 app.include_router(routes_broker_alpaca.router)
+app.include_router(routes_broker_oanda.router)
 app.include_router(broker_adapters.router)
 app.include_router(routes_finbert.router)
 app.include_router(routes_opportunity.router)
