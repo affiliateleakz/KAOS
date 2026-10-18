@@ -93,3 +93,41 @@ async def list_disclosures(source: KIND | None=None, ticker: str | None=Query(de
     records = await db.kaos_public_disclosures.find(query, {"_id":0}).sort("disclosed_at", -1).limit(limit).to_list(length=limit)
     return {"records": records, "count": len(records), "research_only": True,
             "not_real_time": True, "message": "Reported transactions may be disclosed weeks later; 13F reports show holdings, not executions."}
+
+@router.post("/refresh-sec/{cik}")
+async def refresh_sec_form4(cik: int, x_kaos_collector_key: str | None=Header(default=None)):
+    """On-demand SEC Form 4 sync. No unattended scheduler or broker actions."""
+    from sec_form4_collector import collect_issuer_form4
+    key = os.environ.get("KAOS_COLLECTOR_KEY", "")
+    if not key or not x_kaos_collector_key or not compare_digest(key, x_kaos_collector_key):
+        raise HTTPException(403, "Collector authentication required")
+    try:
+        docs = await collect_issuer_form4(cik, max_filings=10)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except Exception as exc:
+        # Never fabricate records if SEC is unavailable.
+        raise HTTPException(503, "SEC Form 4 retrieval unavailable") from exc
+    accepted=0
+    for doc in docs:
+        for row in doc["transactions"]:
+            # A transaction is only a classified market purchase/sale if the
+            # actual Form 4 XML transaction code supports that interpretation.
+            record=Disclosure(
+                source="sec_insider", filing_id=doc["filing_id"], filer=row["filer"],
+                ticker=row["ticker"], asset=row["asset"], action=row["action"],
+                transaction_date=date.fromisoformat(row["transaction_date"]),
+                filing_date=date.fromisoformat(doc["filing_date"]),
+                disclosed_at=datetime.now(timezone.utc), source_url=doc["source_url"],
+                note=("Form " + doc["form"] + "; shares=" + (row["shares"] or "unreported")
+                      + "; reported price/share=" + (row["price_per_share"] or "unreported"))
+            )
+            validate_disclosure(record)
+            data=record.model_dump(mode="json")
+            await db.kaos_public_disclosures.update_one(
+                {"source":"sec_insider","filing_id":data["filing_id"],"filer":data["filer"],
+                 "asset":data["asset"],"action":data["action"],"transaction_date":data["transaction_date"]},
+                {"$set":data},upsert=True)
+            accepted+=1
+    return {"filings_examined":len(docs),"transactions_imported":accepted,
+            "research_only":True,"automatic_schedule_enabled":False}
