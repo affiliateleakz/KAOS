@@ -81,3 +81,20 @@ def test_free_member_has_no_premium_capabilities():
     ent = run(get_entitlements({"membership_status": None}))
     assert ent["chartLimit"] == 1 and not ent["cloudStrategies"]
     assert not any(ent.get(k) for k in ("scanners", "aiInsights", "premiumTools"))
+
+
+def test_pocket_option_referral_requirement_applies_only_to_pocket_option():
+    from services import compute_license
+    free = {"id": "u1", "membership_status": None, "affiliate_status": "PENDING"}
+    po = run(compute_license(free))
+    assert po["authorized"] is False and po["reasons"] == ["affiliate_not_verified"]
+    assert "Pocket Option" in po["reasonMessages"][0]
+    assert po["brokerEligibility"]["pocket_option"]["eligible"] is False
+    other = run(compute_license(free, broker="coinbase"))
+    assert other["authorized"] is True and other["reasons"] == []
+
+
+def test_verified_pocket_option_free_member_gets_strategy_license():
+    from services import compute_license
+    lic = run(compute_license({"id": "u2", "membership_status": None, "affiliate_status": "VERIFIED"}))
+    assert lic["authorized"] is True and lic["tier"] == "free"
