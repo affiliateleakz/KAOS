@@ -208,7 +208,7 @@
     await sset(kv(CONSENT, !!consent));
     return r.ok ? r.json() : { collectiveLearningConsent: !!consent };
   }
-  async function getConsent() { var d = await sget([CONSENT]); return d[CONSENT] !== false; }
+  async function getConsent() { var d = await sget([CONSENT]); return d[CONSENT] === true; }
   async function predict(featureVector, ctx) {
     try {
       var r = await authFetch('/ai/predict', { method: 'POST', body: JSON.stringify(Object.assign({ featureVector: featureVector }, ctx || {})) });
@@ -270,6 +270,7 @@
     // endpoints must never downgrade a valid session to OFFLINE.
     var cfg = null, rel = null;
     try { cfg = await botConfig(); } catch (e) { cfg = { optionalError: String(e && e.message || e) }; }
+    if (cfg && typeof cfg.collectiveLearningConsent === 'boolean') await sset(kv(CONSENT, cfg.collectiveLearningConsent));
     try { rel = await release(); } catch (e) { rel = { optionalError: String(e && e.message || e) }; }
     await sset(kv(STATE, 'CONNECTED'));
     var base = { status: 'CONNECTED', user: info.user, license: info.license, entitlements: info.entitlements,

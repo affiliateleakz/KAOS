@@ -21,7 +21,7 @@ function Shell({ title, subtitle, children }) {
             {subtitle && <p className="mt-1 text-sm text-slate-400">{subtitle}</p>}
             <div className="mt-6">{children}</div>
           </div>
-          <p className="mt-4 text-center text-xs text-slate-400"><a href="/privacy/" className="text-[#D4AF37] hover:underline">Privacy Policy</a> · <a href="mailto:support@tradewithkaos.com" className="hover:underline">Support</a></p>
+          <p className="mt-4 text-center text-xs text-slate-400"><a href="/privacy.html" className="text-[#D4AF37] hover:underline">Privacy Policy</a> · <a href="mailto:support@tradewithkaos.com" className="hover:underline">Support</a></p>
         </div>
       </div>
     </div>

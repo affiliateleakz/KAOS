@@ -613,7 +613,7 @@ export default function Landing() {
               <Link to="/register" style={{ display: "block", color: "#b3aa92", textDecoration: "none", fontSize: 13, marginBottom: 8 }}>Get KAOS</Link>
               <Link to="/dashboard" style={{ display: "block", color: "#b3aa92", textDecoration: "none", fontSize: 13, marginBottom: 8 }}>Dashboard</Link>
               <Link to="/dashboard/affiliate" style={{ display: "block", color: "#b3aa92", textDecoration: "none", fontSize: 13, marginBottom: 8 }}>Affiliates</Link>
-              <a href="/privacy/" style={{ display: "block", color: "#e9c879", textDecoration: "none", fontSize: 13, marginBottom: 8 }}>Privacy Policy</a>
+              <a href="/privacy.html" style={{ display: "block", color: "#e9c879", textDecoration: "none", fontSize: 13, marginBottom: 8 }}>Privacy Policy</a>
             </div>
           </nav>
         </div>

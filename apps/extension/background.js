@@ -714,7 +714,7 @@ async function kaosLearn() {
   _kaosLearn = self.KaosLearningClient.createKaosLearningClient({
     apiBase: await kaosApiBase(),
     getAuth: kaosAuth,
-    hasConsent: async () => (await chrome.storage.local.get('collectiveLearning')).collectiveLearning !== false,
+    hasConsent: async () => (await chrome.storage.local.get('collectiveLearning')).collectiveLearning === true,
     botVersion: (chrome.runtime.getManifest && chrome.runtime.getManifest().version) || '1.0'
   });
   return _kaosLearn;
