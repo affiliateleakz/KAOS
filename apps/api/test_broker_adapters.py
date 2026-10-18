@@ -22,7 +22,7 @@ def test_registry_is_honest():
 def test_unbuilt_adapter_answers_501_with_requirements():
     with pytest.raises(HTTPException) as e:
         asyncio.run(ba.broker_account("ibkr", user={"id": "u"}))
-    assert e.value.status_code == 501 and "IBKR" in e.value.detail
+    assert e.value.status_code == 501 and "gateway" in e.value.detail
 
 
 def test_unknown_broker_404():
