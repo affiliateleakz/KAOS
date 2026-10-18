@@ -234,6 +234,15 @@ console.info('[KAOS BUILD] V24.1.287-B21 · BB WINNER PRO (15s BB20/2) + ACTIVE 
   // ── Bot state ────────────────────────────────────────────────
   let isRunning      = false;
   let botConfig      = null;
+  // AI-controlled (autonomous) execution needs the server to say so: fail closed when unknown.
+  let kaosAiExecutionAllowed = false;
+  function kaosApplyEntitlements(ent){
+    kaosAiExecutionAllowed = !!(ent && ent.aiExecutionLocked === false && Array.isArray(ent.modes) && ent.modes.includes('AI'));
+  }
+  try {
+    chrome.storage.local.get('kaosEntitlements', r => kaosApplyEntitlements(r && r.kaosEntitlements));
+    chrome.storage.onChanged.addListener((c, area) => { if (area === 'local' && c.kaosEntitlements) kaosApplyEntitlements(c.kaosEntitlements.newValue); });
+  } catch (_) {}
   let multiAssetMode = false;  // single (default) or multi-asset scanning
   let tradePending   = false;  // global: still used for single mode + staleness
   let currentAmount  = 5;
@@ -3234,7 +3243,7 @@ console.info('[KAOS BUILD] V24.1.287-B21 · BB WINNER PRO (15s BB20/2) + ACTIVE 
     const validated = aiState.trained >= AI_CTRL.minSamples && aiState.valTotal >= AI_CTRL.minValidation &&
       (aiState.valCorrect / Math.max(1, aiState.valTotal)) >= 0.50 + AI_CTRL.minEdge;
     const autonomousRequested = botConfig?.aiAutonomous === true || botConfig?.aiMode === 'autonomous';
-    const autonomous = autonomousRequested && validated;
+    const autonomous = autonomousRequested && validated && kaosAiExecutionAllowed;
 
     let action='WAIT', reason='AI abstain';
     if (regime.chop > AI_CTRL.maxChop && type.type === 'SKIP') reason='AI CHOP';
