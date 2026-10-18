@@ -828,6 +828,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         case 'KAOS_PREDICT': sendResponse({ ok: true, prediction: await self.KaosCloud.predict(msg.featureVector, msg.context) }); break;
         case 'KAOS_TRADE_EVENT': await kaosOnTradeEvent(msg.eventType, msg.trade); sendResponse({ ok: true }); break;
         case 'KAOS_SYNC_FLUSH': sendResponse({ ok: true, result: await (await kaosSync()).flush() }); break;
+        case 'KAOS_PAPER': break; // answered by the dedicated KAOS_PAPER listener below
         default: sendResponse({ ok: false, error: 'unknown KAOS message' });
       }
     } catch (e) { sendResponse({ ok: false, error: String((e && e.message) || e), kind: (e && e.kind) || null }); }
