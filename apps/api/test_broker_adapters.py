@@ -10,7 +10,9 @@ def test_registry_is_honest():
     rows = {b["id"]: b for b in asyncio.run(ba.list_brokers())["brokers"]}
     assert set(rows) >= {"coinbase", "alpaca", "ibkr", "oanda", "kraken", "tradier", "tastytrade", "pocketoption"}
     assert rows["coinbase"]["capabilities"]["submit"] == "disabled"
-    assert all(rows[b]["status"] == "planned" for b in ("alpaca", "ibkr", "oanda", "kraken", "tradier", "tastytrade", "mt5"))
+    assert all(rows[b]["status"] == "planned" for b in ("ibkr", "oanda", "kraken", "tradier", "tastytrade", "mt5"))
+    assert rows["alpaca"]["status"] == "authentication_implemented"
+    assert rows["alpaca"]["capabilities"]["submit"] is False
     assert rows["pocketoption"]["status"] == "adapter_development"
     assert rows["coinbase"]["status"] == "authentication_implemented"  # not read_only_verified until a real account is tested
     from broker_adapters import STATES
@@ -54,3 +56,12 @@ def test_all_17_broker_catalog_entries_fail_closed_unless_verified():
         assert details["capabilities"]["submit"] is False or details["capabilities"]["submit"] == "disabled"
         assert details["status"] != "trading_approved"
         assert details["requires"]
+
+def test_alpaca_account_delegates_to_readonly_routes(monkeypatch):
+    import routes_broker_alpaca
+    async def acct(user):
+        return {"broker": "alpaca", "environment": "paper", "user": user["id"]}
+    monkeypatch.setattr(routes_broker_alpaca, "account", acct)
+    data = asyncio.run(ba.broker_account("alpaca", user={"id": "member"}))
+    assert data["environment"] == "paper"
+    assert data["user"] == "member"
