@@ -22,3 +22,4 @@ __pycache__/
 *.log
 .venv/
 venv/
+e2e_paper_report.json
