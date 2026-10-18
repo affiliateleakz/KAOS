@@ -77,3 +77,18 @@ export const broker={
  status:()=>request<{connected:boolean;key_hint?:string;live_orders_enabled?:boolean}>('/api/v1/broker-connections/coinbase/status'),
  coinbase:()=>request<CoinbaseAccount>('/api/v1/broker-connections/coinbase/accounts'),
 };
+
+export type BrokerCatalogEntry={id:string;name:string;asset_classes:string[];status:string;integration:string;requires:string;capabilities:Record<string,boolean|string>};
+export type BrokerConnection={broker:string;verified:boolean;saved:boolean;key_hint?:string;permissions?:Record<string,boolean>};
+export type ReadOnlyBrokerData={broker:string;environment:string;source:string;fetched_at:string;account:Record<string,unknown>;positions:Record<string,unknown>[];orders:Record<string,unknown>[]};
+export const brokerManagement={
+ catalog:()=>request<{brokers:BrokerCatalogEntry[]}>('/api/v1/brokers'),
+ connections:()=>request<{connections:BrokerConnection[]}>('/api/v1/broker-connections'),
+ account:(id:'alpaca'|'oanda')=>request<ReadOnlyBrokerData>('/api/v1/broker-connections/'+id+'/account'),
+};
+
+export type ChartSettings={slot:number;broker:'kaos_paper'|'coinbase'|'alpaca'|'oanda';symbol:string;seconds:60|300|900};
+export const chartSettings={
+ load:()=>request<{chartLimit:number;charts:ChartSettings[];order_submission_enabled:boolean}>('/api/v1/trading/charts'),
+ save:(slot:number,config:Omit<ChartSettings,'slot'>)=>send<ChartSettings>('/api/v1/trading/charts/'+slot,'PUT',config),
+};
