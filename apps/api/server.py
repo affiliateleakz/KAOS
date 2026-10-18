@@ -35,6 +35,16 @@ async def api_root():
 
 
 # Secure headers
+@app.get("/api/health")
+async def health():
+    try:
+        await db.command("ping")
+        db_ok = True
+    except Exception:
+        db_ok = False
+    return {"status": "ok" if db_ok else "degraded", "db": db_ok}
+
+
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
     response = await call_next(request)

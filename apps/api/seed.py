@@ -6,12 +6,14 @@ from auth import hash_password
 from services import set_setting
 from routes_billing import DEFAULT_PLANS
 
-DEMO_PASSWORD = "Demo!2026"
+DEMO_PASSWORD = os.environ.get("KAOS_DEMO_PASSWORD", "")
 
 
 async def seed_admin():
     email = os.environ.get("ADMIN_EMAIL", "admin@example.com").lower()
-    password = os.environ.get("ADMIN_PASSWORD", "admin123")
+    password = os.environ.get("ADMIN_PASSWORD", "")
+    if not password:
+        raise RuntimeError("ADMIN_PASSWORD must be set")
     existing = await db.users.find_one({"$or": [{"email": email}, {"username": "owner"}]})
     if existing is None:
         await db.users.insert_one({
@@ -46,7 +48,13 @@ async def _make_user(email, name, username, **over):
     return doc
 
 
+def is_dev():
+    return os.environ.get("KAOS_ENV", "production").lower() in ("development", "dev", "test")
+
+
 async def seed_demo():
+    if not is_dev() or not DEMO_PASSWORD:
+        return  # demo users only exist in local/dev environments
     if await db.users.find_one({"is_demo": True}):
         return  # already seeded
     await set_setting("plans", DEFAULT_PLANS)
@@ -212,7 +220,9 @@ async def seed_demo():
 
 
 async def write_credentials():
-    path = "/home/itsabout/api.tradingwithkaos.com/kaos_backend/memory/test_credentials.md"
+    path = os.environ.get("KAOS_TEST_CREDENTIALS_PATH")
+    if not is_dev() or not path:
+        return  # never write plaintext credentials outside an explicit local dev opt-in
     content = f"""# Test Credentials
 
 ## Admin / Owner (super_admin)
