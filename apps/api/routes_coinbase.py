@@ -10,7 +10,6 @@ import re
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Literal, Optional
-from cryptography.fernet import Fernet
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from pymongo.errors import DuplicateKeyError
@@ -18,6 +17,7 @@ from auth import get_current_user
 from db import db, now_iso
 from services_trading import get_entitlements
 from services import get_setting
+import broker_vault
 
 router = APIRouter(prefix="/api/v1/coinbase-live", tags=["coinbase-live"])
 PRODUCT = re.compile(r"^[A-Z0-9]{2,20}-USD$")
@@ -85,7 +85,7 @@ async def connection(user_id):
 
 def make_client(row):
     from coinbase.rest import RESTClient
-    vault = Fernet(os.environ["KAOS_BROKER_VAULT_KEY"].encode())
+    vault = broker_vault.vault()
     key = vault.decrypt(row["key_name_enc"].encode()).decode()
     secret = vault.decrypt(row["private_key_enc"].encode()).decode()
     return RESTClient(api_key=key, api_secret=secret, timeout=12)

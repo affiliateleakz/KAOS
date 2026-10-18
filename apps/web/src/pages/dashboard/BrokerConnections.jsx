@@ -92,7 +92,7 @@ function CoinbaseAccount({ acct, err, onRefresh }) {
       <h2 className="text-xl font-semibold">Coinbase account (read-only)</h2>
       <button type="button" onClick={onRefresh} className="rounded border border-slate-600 px-3 py-1 text-sm">Refresh</button>
     </div>
-    <p className="mb-4 text-xs text-slate-400">{acct ? `Live from Coinbase Advanced API · key ${acct.key_hint} · fetched ${new Date(acct.fetched_at).toLocaleTimeString()} · refreshes every 15 s` : "Loading from Coinbase…"} · KAOS does not place orders on this account.</p>
+    <p className="mb-4 text-xs text-slate-400"><span className="mr-1 rounded bg-amber-500/20 px-1.5 py-0.5 font-semibold text-amber-300">UNVERIFIED: not yet tested against a real Coinbase account</span>{acct ? `Live from Coinbase Advanced API · key ${acct.key_hint} · fetched ${new Date(acct.fetched_at).toLocaleTimeString()} · refreshes every 15 s` : "Loading from Coinbase…"} · KAOS does not place orders on this account.</p>
     {err && <p role="alert" className="mb-3 rounded border border-amber-600 p-2 text-sm text-amber-300">Coinbase unavailable: {err}{acct ? " (showing last loaded data)" : ""}</p>}
     {acct && <div className="space-y-5">
       <div><h3 className="mb-1 font-semibold">Balances</h3><Table testid="cb-balances" cols={[["currency", "Asset"], ["available", "Available"], ["hold", "On hold"]]} rows={acct.balances} empty="No non-zero balances" /></div>

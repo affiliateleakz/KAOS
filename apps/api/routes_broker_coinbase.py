@@ -13,13 +13,14 @@ import time
 from datetime import datetime, timezone
 from typing import Callable
 
-from cryptography.fernet import Fernet, InvalidToken
+from cryptography.fernet import InvalidToken
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from auth import get_current_user
 from db import db
 from services import audit_log
+import broker_vault
 
 router = APIRouter(prefix="/api/v1/broker-connections", tags=["brokers"])
 KEY_NAME = re.compile(r"^organizations/[A-Za-z0-9-]{1,64}/apiKeys/[A-Za-z0-9-]{1,64}$")
@@ -42,11 +43,8 @@ def _make_rest_client(key_name: str, private_key: str):
 client_factory: Callable = _make_rest_client
 
 
-def _vault() -> Fernet:
-    key = os.environ.get("KAOS_BROKER_VAULT_KEY")
-    if not key:
-        raise HTTPException(503, "Broker vault not configured on this server")
-    return Fernet(key.encode())
+def _vault():
+    return broker_vault.vault()
 
 
 def _d(value):

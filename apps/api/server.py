@@ -7,6 +7,7 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -29,6 +30,13 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["600/minute"])
 app = FastAPI(title="KAOS Trading API")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error(request: Request, exc: RequestValidationError):
+    # FastAPI echoes submitted values in "input"; never reflect request bodies (e.g. broker private keys).
+    return JSONResponse(status_code=422, content={"detail": [
+        {"loc": e.get("loc"), "msg": e.get("msg"), "type": e.get("type")} for e in exc.errors()]})
 
 
 @app.get("/api")

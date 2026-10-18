@@ -14,7 +14,7 @@ export default function Broker(){
   if(st.connected){setAcct(await broker.coinbase());}setErr('')}catch(e:any){setErr(e.message)}},[]);
  useEffect(()=>{load();const t=setInterval(load,15000);return()=>clearInterval(t)},[load]);
  return <ScrollView style={s.page} refreshControl={<RefreshControl refreshing={false} onRefresh={load} tintColor="#2F8CFF"/>}>
-  <Text style={s.h}>Coinbase Advanced · read-only</Text>
+  <Text style={s.h}>Coinbase Advanced · read-only</Text><Text style={s.err}>UNVERIFIED: not yet tested against a real Coinbase account</Text>
   {err?<Text style={s.err}>Coinbase unavailable: {err}{acct?' (showing last loaded data)':''}</Text>:null}
   {connected===false&&<Text style={s.muted}>No Coinbase account connected. Connect it on tradingwithkaos.com → Broker Connections.</Text>}
   {acct&&<>
