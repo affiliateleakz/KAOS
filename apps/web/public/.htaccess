@@ -1,0 +1,8 @@
+# Serve real files and directories (e.g. /privacy/index.html) directly; send everything else to the SPA.
+DirectoryIndex index.html
+RewriteEngine On
+RewriteBase /
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+RewriteRule ^ index.html [L]
