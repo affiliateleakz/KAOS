@@ -1,3 +1,4 @@
+import FourChartTerminal from "./FourChartTerminal";
 import React, { useEffect, useState } from "react";
 import { api, errMsg } from "../../lib/api";
 import { StatusBadge } from "../../components/Brand";
@@ -379,6 +380,8 @@ export default function Trading() {
       </div>
 
       <SyncHealth sync={sync} expired={syncExpired} onRefresh={loadSync} />
+
+      <FourChartTerminal entitlements={ent} />
 
       <StrategyReplay />
 
