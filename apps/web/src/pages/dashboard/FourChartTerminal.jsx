@@ -18,7 +18,7 @@ function CandleChart({candles}){
   {bars.map((c,i)=>{const color=c.c>=c.o?"#22C55E":"#EF4444",x=i*bw+bw/2;return <g key={i}><line x1={x} x2={x} y1={y(c.h)} y2={y(c.l)} stroke={color} strokeWidth="1.3"/><rect x={i*bw+1} y={Math.min(y(c.o),y(c.c))} width={Math.max(1,bw-2)} height={Math.max(1,Math.abs(y(c.o)-y(c.c)))} fill={color}/></g>})}
  </svg>;
 }
-function Tile({index,config,onChange}){
+function Tile({index,config,onChange,onSave}){
  const [response,setResponse]=useState(null),[error,setError]=useState(""),[loading,setLoading]=useState(false);
  const load=useCallback(async()=>{
   if(config.broker!=="kaos_paper"){setResponse(null);setError("Broker chart integration not verified; no substitute prices shown.");return;}
@@ -38,6 +38,7 @@ function Tile({index,config,onChange}){
    <input aria-label={`Chart ${index+1} symbol`} value={config.symbol} onChange={e=>onChange({...config,symbol:e.target.value.toUpperCase().slice(0,32)})} className="w-28 rounded bg-[#222] p-1 text-xs"/>
    <select aria-label={`Chart ${index+1} timeframe`} value={config.seconds} onChange={e=>onChange({...config,seconds:Number(e.target.value)})} className="rounded bg-[#222] p-1 text-xs"><option value={60}>1m</option><option value={300}>5m</option><option value={900}>15m</option></select>
    <button type="button" onClick={load} className="ml-auto rounded border border-slate-600 px-2 py-1 text-xs">Refresh</button>
+   <button type="button" onClick={()=>onSave(index,config)} className="rounded border border-[#2F8CFF] px-2 py-1 text-xs">Save chart</button>
   </div>
   {error?<p role="status" className="text-xs text-amber-300">{error}</p>:<CandleChart candles={response?.candles}/>}
   <p className="mt-2 text-xs text-slate-400">{loading?"Refreshing · ":""}Source: {response?.source||"Not available"} · read-only · no order submission</p>
@@ -56,15 +57,15 @@ export default function FourChartTerminal({entitlements}){
    }).catch(()=>{if(active)setMessage("Chart settings unavailable; selections may not be saved.")});
    return ()=>{active=false};
  },[]);
- const change=(i,v)=>{
-   setConfigs(old=>old.map((c,j)=>j===i?v:c));
-   api.put("/api/v1/trading/charts/"+i,v).then(()=>setMessage("Chart "+(i+1)+" settings saved.")).catch(()=>setMessage("Chart changes not saved; check membership and connection."));
+ const change=(i,v)=>setConfigs(old=>old.map((c,j)=>j===i?v:c));
+ const save=(i,v)=>{
+   api.put("/api/v1/trading/charts/"+i,v).then(()=>setMessage("Chart "+(i+1)+" settings saved.")).catch(()=>setMessage("Chart settings not saved; verify symbol, timeframe and membership."));
  };
  return <section className="mb-6 space-y-3" data-testid="kaos-four-chart-terminal">
-  <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-semibold">KAOS Multi-Chart Terminal</h2><p className="text-xs text-slate-400">Independent chart settings · current source supports 1m, 5m and 15m Coinbase public candles only. Other feeds are unavailable. No real orders.</p></div>
+  <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-semibold">KAOS Multi-Chart Terminal</h2><p className="text-xs text-slate-400">Independent chart settings (press Save chart to sync) · current source supports 1m, 5m and 15m Coinbase public candles only. Other feeds are unavailable. No real orders.</p></div>
    <label className="text-sm">Charts <select value={Math.min(count,maxCharts)} onChange={e=>setCount(Number(e.target.value))} className="ml-2 rounded bg-[#222] p-2">{Array.from({length:maxCharts},(_,i)=><option key={i} value={i+1}>{i+1}</option>)}</select></label>
   </div>
   {message && <p role="status" className="text-xs text-slate-400">{message}</p>}
-  <div className="grid gap-3 lg:grid-cols-2">{configs.slice(0,Math.min(count,maxCharts)).map((cfg,i)=><Tile key={i} index={i} config={cfg} onChange={v=>change(i,v)}/>)}</div>
+  <div className="grid gap-3 lg:grid-cols-2">{configs.slice(0,Math.min(count,maxCharts)).map((cfg,i)=><Tile key={i} index={i} config={cfg} onChange={v=>change(i,v)} onSave={save}/>)}</div>
  </section>;
 }
