@@ -33,7 +33,7 @@ Nothing in this file is deployed. "Works locally" never means "live in productio
 | 18 | Portfolio management | Missing | — | Read-only broker balances | Broker APIs |
 | 19 | Trade journal and analytics | Partial | Paper orders, realized P&L, rejections at `/dashboard/paper` | Journal notes, per-strategy stats | — |
 | 20 | Android / iPhone apps | Code present | Expo starter 0.2.0, not run | Run against the local API | Apple/Google developer accounts |
-| 21 | Memberships: Free $0, Pro $49, Ultimate $149, monthly only | Works locally | `DEFAULT_PLANS`, `FREE_ENTITLEMENTS`, `chartLimit` 1/4/4 (not yet enforced: no multi-chart UI exists in web/extension/mobile), `deviceLimit` 1/3/5; tests in `test_membership_tiers.py` | Create Stripe prices `membership_pro_monthly`/`membership_ultimate_monthly`; financial validation of the prices | Stripe (founder) |
+| 21 | Memberships: Free $0, Pro $49, Ultimate $149, monthly only | Works locally | `DEFAULT_PLANS`, `FREE_ENTITLEMENTS`, `chartLimit` 1/4/4 enforced in the extension chart selector + strategy slots and server `chartSlot` checks (web/mobile have no multi-chart trading view; 4 charts not performance-tested), `deviceLimit` 1/3/5; tests in `test_membership_tiers.py` | Create Stripe prices `membership_pro_monthly`/`membership_ultimate_monthly`; financial validation of the prices | Stripe (founder) |
 | 22 | 3-level receiver-based commissions | Works locally (preview) | `kaos.affiliate_ledger` + `services_affiliate_ledger.py`: renewals, refunds, chargebacks, idempotent | Downgrade adjustments; partial-refund mirror | — |
 | 22 | Payouts, approval workflow | **Gated** | `PayoutsDisabled`; admin can't mark PAID | MLM/consumer-law review, KYC, tax | Legal counsel, payout provider |
 | 22 | Affiliate dashboard (genealogy, ranks, resources) | Partial | Ledger card on the Affiliate page | Genealogy tree, L2/L3 lists | — |
@@ -46,7 +46,7 @@ Nothing in this file is deployed. "Works locally" never means "live in productio
 | 32 | Live trading | **Gated** | Coinbase live flag off; paper/shadow by default | Explicit founder authorization plus validation | Broker accounts |
 
 ## Founder decisions (2026-10-18, PR #6 comments)
-- Charts: Free 1, Pro 4, Ultimate 4 concurrent trading charts (the earlier Ultimate 8 is withdrawn). Ultimate differentiates with premium signals, scanners and validated AI. Multi-chart operation is not built or performance-tested yet.
+- Charts: Free 1, Pro 4, Ultimate 4 concurrent trading charts (the earlier Ultimate 8 is withdrawn). Ultimate differentiates with premium signals, scanners and validated AI. The extension's 1–4 chart selector and the server now enforce the limit; four concurrent charts are not performance-tested yet.
 - Pocket Option referral requirement: same policy for every tier, Pocket Option only, never imposed on other brokers. The API now applies it per broker and returns plain-language reasons; verification is a manual staff review of the submitted Pocket Option ID, not technical attribution. Still needed: broker-terms/legal confirmation and a fair path for existing Pocket Option accounts.
 - Brand: dark/black + silver + electric-blue primary; gold/red only as restrained accents or semantic trading colours; keep KAOS logo assets; consistent across web, extension, Android, iOS.
 - Marketing figures: remove all unverified win-rate/profit/return claims; only publish documented results with dates, live/paper/backtest provenance, costs and risk disclosures. No fabricated testimonials or screenshots.
