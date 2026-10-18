@@ -11,6 +11,7 @@ make dev        # copies .env.example -> .env, starts mongo + api (:8001) + web 
 - API health: http://localhost:8001/api/health
 - Demo login (dev only): `alice@demotrader.com`, using the password in `KAOS_DEMO_PASSWORD` from `.env`
 - Owner login: `ADMIN_EMAIL` / `ADMIN_PASSWORD` from `.env`
+- Paper orders (dev, logged in): `POST /api/v1/paper/orders` `{"symbol":"BTC-USD","quantity":"10","quote_price":"67000"}`; admin kill switch `POST /api/v1/paper/kill-switch`
 
 ## Layout
 | Path | What |
