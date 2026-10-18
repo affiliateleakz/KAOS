@@ -27,6 +27,7 @@ class IntelReq(BaseModel):
     asset: str
     platform: str = "pocket_option"
     mode: str = "STRATEGY"
+    chartSlot: Optional[int] = None
     bucket: Optional[str] = None
     context: dict = {}
 
@@ -36,6 +37,7 @@ class SignalRecordReq(BaseModel):
     asset: str
     platform: str = "pocket_option"
     mode: str = "STRATEGY"
+    chartSlot: Optional[int] = None
     direction: str
     engine: Optional[str] = None
     requestedAmount: float = 1.0
@@ -49,6 +51,7 @@ class ExecAttemptReq(BaseModel):
     signalId: str
     executionAttemptId: str  # client-generated; unique -> idempotent
     platform: str = "pocket_option"
+    chartSlot: Optional[int] = None
     asset: str
     direction: str
     requestedAmount: float
@@ -99,6 +102,23 @@ async def _check_mode(user, mode):
     return ent
 
 
+def chart_limit_error(ent: dict, slot) -> Optional[dict]:
+    """0-based chart slot must be below the plan's chartLimit (Free 1, Pro 4, Ultimate 4)."""
+    if slot is None:
+        return None
+    limit = int(ent.get("chartLimit") or 1)
+    if isinstance(slot, bool) or not isinstance(slot, int) or slot < 0 or slot >= limit:
+        return {"error": "chart_limit", "chartLimit": limit,
+                "message": f"Your plan allows {limit} active trading chart{'s' if limit != 1 else ''}."}
+    return None
+
+
+async def _check_chart(user, slot):
+    err = chart_limit_error(await get_entitlements(user), slot)
+    if err:
+        raise HTTPException(status_code=403, detail=err)
+
+
 # ----- config the extension pulls -----
 @v1t.get("/config")
 async def trading_config(user: dict = Depends(get_current_user)):
@@ -117,6 +137,7 @@ async def trading_config(user: dict = Depends(get_current_user)):
 async def intelligence(req: IntelReq, request: Request, user: dict = Depends(get_current_user)):
     await _require_authorized(request, user, req.platform)
     await _check_mode(user, req.mode)
+    await _check_chart(user, req.chartSlot)
     ctx = {"bucket": req.bucket or "", **(req.context or {})}
     strat = await kaos_strategy_predict(req.asset, req.platform, ctx) if req.mode in ("STRATEGY", "STRATEGY_AI") else None
     ai = await kaos_ai_predict(req.asset, req.platform, ctx) if req.mode in ("AI", "STRATEGY_AI") else None
@@ -139,6 +160,7 @@ async def intelligence(req: IntelReq, request: Request, user: dict = Depends(get
 async def record_signal(req: SignalRecordReq, request: Request, user: dict = Depends(get_current_user)):
     await _require_authorized(request, user, req.platform)
     await _check_mode(user, req.mode)
+    await _check_chart(user, req.chartSlot)
     if req.clientSignalId:
         existing = await db.signals.find_one({"clientSignalId": req.clientSignalId, "userId": user["id"]})
         if existing:
@@ -159,6 +181,7 @@ async def record_signal(req: SignalRecordReq, request: Request, user: dict = Dep
 @v1t.post("/execution")
 async def order_attempt(req: ExecAttemptReq, request: Request, user: dict = Depends(get_current_user)):
     lic, device = await _require_authorized(request, user, req.platform)
+    await _check_chart(user, req.chartSlot)
     existing = await db.trades.find_one({"executionAttemptId": req.executionAttemptId, "userId": user["id"]})
     if existing:
         return {"tradeId": existing["id"], "state": existing["state"], "idempotent": True}
