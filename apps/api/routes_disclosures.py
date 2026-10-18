@@ -131,3 +131,39 @@ async def refresh_sec_form4(cik: int, x_kaos_collector_key: str | None=Header(de
             accepted+=1
     return {"filings_examined":len(docs),"transactions_imported":accepted,
             "research_only":True,"automatic_schedule_enabled":False}
+
+@router.post("/refresh-13f/{cik}")
+async def refresh_sec_13f(cik: int, x_kaos_collector_key: str | None=Header(default=None)):
+    """Refresh publicly filed institutional holdings; never label them as trades."""
+    from sec_13f_collector import fetch_13f_holdings
+    key=os.environ.get("KAOS_COLLECTOR_KEY","")
+    if not key or not x_kaos_collector_key or not compare_digest(key,x_kaos_collector_key):
+        raise HTTPException(403,"Collector authentication required")
+    try:
+        documents=await fetch_13f_holdings(cik,max_filings=5)
+    except ValueError as exc:
+        raise HTTPException(422,str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(503,"SEC 13F retrieval unavailable") from exc
+    accepted=0
+    for document in documents:
+        for holding in document["holdings"]:
+            item=Disclosure(source="institutional_13f",filing_id=document["filing_id"],
+                filer=f"SEC institutional filer CIK {cik}",
+                asset=holding["issuer"]+" (CUSIP "+holding["cusip"]+")",
+                ticker=None,action="holding",transaction_date=None,
+                filing_date=date.fromisoformat(document["filing_date"]),
+                disclosed_at=datetime.now(timezone.utc),source_url=document["source_url"],
+                note=("Form "+document["form"]+"; reported value (USD thousands): "
+                      +holding["reported_value_thousands_usd"]+
+                      "; shares/principal: "+str(holding["reported_shares_or_principal"] or "not specified")))
+            validate_disclosure(item)
+            record=item.model_dump(mode="json")
+            await db.kaos_public_disclosures.update_one(
+              {"source":record["source"],"filing_id":record["filing_id"],"filer":record["filer"],
+               "asset":record["asset"],"action":"holding","transaction_date":None},
+              {"$set":record},upsert=True)
+            accepted+=1
+    return {"filings_examined":len(documents),"holdings_imported":accepted,
+            "research_only":True,"automatic_schedule_enabled":False,
+            "warning":"13F shows quarterly holdings, not the date of buying or selling."}
