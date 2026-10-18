@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Navigate } from "react-router-dom";
 import { api, errMsg } from "../../lib/api";
 import { StatusBadge } from "../../components/Brand";
 import { Button } from "../../components/ui/button";
@@ -21,7 +22,10 @@ const Card = ({ children, className = "" }) => <div className={`card-surface p-5
 
 export function AdminDashboard() {
   const [d, setD] = useState(null);
-  useEffect(() => { api.get("/api/admin/dashboard").then((r) => setD(r.data)).catch(() => {}); }, []);
+  const [err, setErr] = useState(null);
+  useEffect(() => { api.get("/api/admin/dashboard").then((r) => setD(r.data)).catch(setErr); }, []);
+  if (err?.response?.status === 403) return <Navigate to="/admin/moderation" replace />;
+  if (err) return <p className="text-red-400">{errMsg(err)}</p>;
   if (!d) return <p className="text-slate-500">Loading…</p>;
   const stats = [
     ["Total Users", d.totalUsers, UsersIcon], ["Active Members", d.activeMembers, BadgeCheck],
