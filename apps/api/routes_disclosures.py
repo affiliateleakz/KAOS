@@ -34,9 +34,15 @@ class Disclosure(BaseModel):
     note: str = Field(default="", max_length=500)
 
 def validate_disclosure(item: Disclosure):
+    if item.source == "house" and os.environ.get("KAOS_HOUSE_DISCLOSURE_RIGHTS") != "approved":
+        raise ValueError("House disclosure commercial-use review is required before ingestion")
     parsed = urlparse(item.source_url)
     if parsed.scheme != "https" or parsed.hostname not in OFFICIAL_HOSTS:
         raise ValueError("Official House, Senate or SEC filing link required")
+    allowed_hosts = {"house": {"disclosures-clerk.house.gov"}, "senate": {"efdsearch.senate.gov"},
+                     "sec_insider": {"www.sec.gov", "sec.gov"}, "institutional_13f": {"www.sec.gov", "sec.gov"}}
+    if parsed.hostname not in allowed_hosts[item.source]:
+        raise ValueError("Source category must match its official filing host")
     if item.source in ("house", "senate") and item.transaction_date is None:
         raise ValueError("Congressional transaction date is required")
     if item.source == "institutional_13f" and item.action != "holding":
