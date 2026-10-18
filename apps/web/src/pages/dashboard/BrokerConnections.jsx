@@ -6,7 +6,7 @@ const BROKERS = [
   ["pocketoption", "Pocket Option", "https://pocketoption.com/", "Extension integration"],
   ["kraken", "Kraken", "https://www.kraken.com/", "Adapter pending"],
   ["ibkr", "Interactive Brokers", "https://www.interactivebrokers.com/", "Gateway adapter pending"],
-  ["alpaca", "Alpaca", "https://alpaca.markets/", "Adapter pending"],
+  ["alpaca", "Alpaca", "https://alpaca.markets/", "API integration (read-only)"],
   ["oanda", "OANDA", "https://www.oanda.com/", "Adapter pending"],
   ["tradier", "Tradier", "https://tradier.com/", "Adapter pending"],
   ["tastytrade", "tastytrade", "https://tastytrade.com/", "Adapter pending"],
@@ -75,6 +75,7 @@ export default function BrokerConnections() {
     </div>
     {saved.coinbase?.verified && <CoinbaseAccount acct={acct} err={acctErr} onRefresh={loadAccount} />}
       {saved.coinbase?.verified && <CoinbaseOrders />}
+    <AlpacaPanel onChange={load} />
     <p className="text-xs text-slate-400">Broker names marked “Adapter pending” are not available for automated trading yet. Selecting a broker does not imply that live trading is supported.</p>
   </section>;
 }
@@ -154,5 +155,51 @@ function CoinbaseOrders() {
         <td>{["ACCEPTED", "OPEN", "PARTIAL_FILL_REVIEW"].includes(o.state) && <button onClick={() => cancel(o.client_order_id)} className="rounded border border-red-500 px-2 text-red-300">Cancel</button>}</td>
       </tr>) : <tr><td colSpan={8} className="py-2 text-slate-500">No orders sent by KAOS (live submission has never been enabled)</td></tr>}</tbody>
     </table></div>
+  </div>;
+}
+
+function AlpacaPanel({ onChange }) {
+  const [st, setSt] = useState(null);
+  const [form, setForm] = useState({ key_id: "", secret_key: "", environment: "paper" });
+  const [acct, setAcct] = useState(null);
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+  const refresh = useCallback(async () => {
+    try {
+      const s = (await api.get("/api/v1/broker-connections/alpaca/status")).data; setSt(s);
+      if (s.connected) setAcct((await api.get("/api/v1/broker-connections/alpaca/accounts")).data);
+      setMsg("");
+    } catch (e) { setMsg(errMsg(e)); }
+  }, []);
+  useEffect(() => { refresh(); }, [refresh]);
+  async function save(e) {
+    e.preventDefault(); setBusy(true);
+    try { await api.put("/api/v1/broker-connections/alpaca", form); setForm({ key_id: "", secret_key: "", environment: form.environment }); await refresh(); onChange?.(); }
+    catch (err) { setMsg(errMsg(err)); } finally { setBusy(false); }
+  }
+  async function disconnect() {
+    setBusy(true);
+    try { await api.delete("/api/v1/broker-connections/alpaca"); setAcct(null); await refresh(); onChange?.(); }
+    catch (err) { setMsg(errMsg(err)); } finally { setBusy(false); }
+  }
+  const a = acct?.account;
+  return <div className="rounded-lg border border-slate-700 bg-[#111] p-5" data-testid="alpaca-panel">
+    <h2 className="mb-1 text-xl font-semibold">Alpaca (stocks &amp; ETFs) · read-only</h2>
+    <p className="mb-3 text-xs"><span className="rounded bg-amber-500/20 px-1.5 py-0.5 font-semibold text-amber-300">UNVERIFIED: not yet tested against a real Alpaca account</span> <span className="text-slate-400">Alpaca keys can't be limited to read-only, so KAOS never calls Alpaca's order endpoints. Paper account recommended.</span></p>
+    {msg && <p role="alert" className="mb-3 rounded border border-amber-600 p-2 text-sm text-amber-300">{msg}</p>}
+    {st?.connected ? <p className="mb-3 text-sm text-slate-300">Connected ({st.environment}) · key {st.key_hint} <button disabled={busy} onClick={disconnect} className="ml-2 rounded border border-red-700 px-2 text-red-300">Disconnect</button></p>
+      : <form onSubmit={save} className="mb-3 grid gap-2 md:grid-cols-4">
+        <input autoComplete="off" required placeholder="API key ID" value={form.key_id} onChange={e => setForm({ ...form, key_id: e.target.value.trim() })} className="rounded border border-slate-600 bg-[#080808] p-2" />
+        <input autoComplete="off" type="password" required placeholder="Secret key" value={form.secret_key} onChange={e => setForm({ ...form, secret_key: e.target.value.trim() })} className="rounded border border-slate-600 bg-[#080808] p-2" />
+        <select value={form.environment} onChange={e => setForm({ ...form, environment: e.target.value })} className="rounded border border-slate-600 bg-[#080808] p-2"><option value="paper">Paper account</option><option value="live">Live account (view only)</option></select>
+        <button disabled={busy} className="rounded bg-[#2F8CFF] px-3 py-2 font-semibold text-black disabled:opacity-50">{busy ? "Verifying…" : "Verify & save Alpaca"}</button>
+      </form>}
+    {a && <div className="space-y-4">
+      <p className="text-sm">Status {a.status} · cash <b>${a.cash}</b> · buying power <b data-testid="alpaca-buying-power">${a.buying_power}</b> · equity <b>${a.equity}</b></p>
+      <div><h3 className="mb-1 font-semibold">Positions</h3><Table testid="alpaca-positions" cols={[["symbol", "Symbol"], ["qty", "Qty"], ["avg_entry_price", "Avg entry"], ["current_price", "Price"], ["market_value", "Value"], ["unrealized_pl", "Unrealized P&L"]]} rows={acct.positions} empty="No positions" /></div>
+      <div><h3 className="mb-1 font-semibold">Open orders</h3><Table testid="alpaca-open-orders" cols={[["symbol", "Symbol"], ["side", "Side"], ["type", "Type"], ["qty", "Qty"], ["status", "Status"], ["submitted_at", "Submitted"]]} rows={acct.open_orders} empty="No open orders" /></div>
+      <div><h3 className="mb-1 font-semibold">Recent fills</h3><Table testid="alpaca-fills" cols={[["symbol", "Symbol"], ["side", "Side"], ["qty", "Qty"], ["price", "Price"], ["transaction_time", "Time"]]} rows={acct.fills} empty="No fills yet" /></div>
+      <p className="text-xs text-slate-500">{acct.fees_note}</p>
+    </div>}
   </div>;
 }

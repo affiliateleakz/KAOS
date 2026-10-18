@@ -10,8 +10,9 @@ def test_registry_is_honest():
     rows = {b["id"]: b for b in asyncio.run(ba.list_brokers())["brokers"]}
     assert set(rows) >= {"coinbase", "alpaca", "ibkr", "oanda", "kraken", "tradier", "tastytrade", "pocketoption"}
     assert rows["coinbase"]["capabilities"]["submit"] == "disabled"
-    assert all(rows[b]["status"] == "planned" for b in ("alpaca", "ibkr", "oanda", "kraken", "tradier", "tastytrade", "mt5"))
+    assert all(rows[b]["status"] == "planned" for b in ("ibkr", "oanda", "kraken", "tradier", "tastytrade", "mt5"))
     assert rows["pocketoption"]["status"] == "adapter_development"
+    assert rows["alpaca"]["status"] == "authentication_implemented"
     assert rows["coinbase"]["status"] == "authentication_implemented"  # not read_only_verified until a real account is tested
     from broker_adapters import STATES
     assert all(r["status"] in STATES for r in rows.values())

@@ -51,11 +51,18 @@ class CoinbaseAdapter(BrokerAdapter):
         return await routes_coinbase.preview(routes_coinbase.PreviewRequest(**order.model_dump()), user=user)
 
 
+class AlpacaAdapter(BrokerAdapter):
+    async def account(self, user):
+        import routes_broker_alpaca
+        return await routes_broker_alpaca.account(user=user)
+
+
 REGISTRY = {a.id: a for a in [
     CoinbaseAdapter("coinbase", "Coinbase Advanced", ("crypto",), "authentication_implemented", "Advanced Trade REST API",
                     "Member's CDP key (View for account data; Trade for preview/orders)",
                     {"account": True, "preview": True, "submit": "disabled", "cancel": True}),
-    BrokerAdapter("alpaca", "Alpaca", ("stocks", "options", "crypto"), "planned", "Trading API (OAuth or key)", "Alpaca account + API key; market-data subscription"),
+    AlpacaAdapter("alpaca", "Alpaca", ("stocks", "options", "crypto"), "authentication_implemented", "Trading API v2 (key; paper default)",
+                  "Alpaca API key (paper account is free); KAOS uses it read-only", {"account": True, "preview": False, "submit": False, "cancel": False}),
     BrokerAdapter("ibkr", "Interactive Brokers", ("stocks", "options", "futures", "forex"), "planned", "Client Portal / TWS gateway", "IBKR account and a running gateway"),
     BrokerAdapter("oanda", "OANDA", ("forex",), "planned", "v20 REST API", "OANDA account + API token"),
     BrokerAdapter("kraken", "Kraken", ("crypto",), "planned", "Spot REST API", "Kraken account + API key (no withdraw permission)"),
