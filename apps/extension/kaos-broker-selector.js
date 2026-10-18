@@ -13,8 +13,9 @@ async function choose(id){if(!authenticated)return;
  if(id==='kaos_paper'){
   // Shared server-side paper session (same account as website/mobile). Opens no broker site and needs no broker credentials.
   selected=id;await chrome.storage.local.set({kaosSelectedBroker:id});hide();$('kaos-broker-switch').hidden=false;$('kaos-broker-switch').textContent='Broker: KAOS Paper · Change';
-  if(typeof terminalShow==='function')await terminalShow();
-  document.querySelector('.terminal-tab[data-page="paper"]')?.click();return;
+  const nav=document.querySelector('#screen-chart [data-kaos-view="paper"]');
+  if(nav)nav.click();else{if(typeof terminalShow==='function')await terminalShow();document.querySelector('.terminal-tab[data-page="paper"]')?.click();}
+  return;
  }
  if(!brokerURLs[id])return;
  if(id==='coinbase'){

@@ -30,6 +30,6 @@
     if(ex)ex.onclick=async()=>{busy=true;const r=await call(`/paper/signals/${ex.dataset.id}/execute`,'POST');busy=false;if(!r.ok)alert((r.data&&r.data.detail)||r.error);load();};
   }
   function visible(){const p=document.getElementById('terminal-paper');return p&&p.classList.contains('active');}
-  document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('.terminal-tab[data-page="paper"]');if(t)setTimeout(load,50);});
+  document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('.terminal-tab[data-page="paper"],[data-kaos-view="paper"]');if(t)setTimeout(load,50);});
   setInterval(()=>{if(visible()&&!busy)load();},10000);
 })();
