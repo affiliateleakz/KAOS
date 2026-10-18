@@ -19,6 +19,7 @@ import seed
 import routes_coinbase
 import routes_finbert
 import routes_opportunity
+import routes_disclosures
 import routes_paper
 import routes_broker_selection
 import routes_research_replay
@@ -72,6 +73,7 @@ for mod in (routes_auth, routes_strategies, routes_community, routes_billing,
 app.include_router(routes_coinbase.router)
 app.include_router(routes_finbert.router)
 app.include_router(routes_opportunity.router)
+app.include_router(routes_disclosures.router)
 app.include_router(routes_paper.router)
 app.include_router(routes_broker_selection.router)
 app.include_router(routes_research_replay.router)
