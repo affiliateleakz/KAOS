@@ -24,7 +24,8 @@ class WorkerTests(unittest.TestCase):
         with patch.object(self.worker,'make_client',return_value=client):
             result=asyncio.run(self.worker.resolve_one(intent))
         self.assertEqual(result,'WAITING_FOR_EXCHANGE')
-        d.coinbase_order_intents.update_one.assert_not_called()
+        upd=d.coinbase_order_intents.update_one.call_args.args[1]['$set']
+        self.assertEqual(upd['recovery_status'],'WAITING_FOR_EXCHANGE'); self.assertNotIn('state',upd)
     def test_worker_calls_fill_reconciliation(self):
         d=self.worker.db
         d.broker_connections=types.SimpleNamespace(find_one=AsyncMock(return_value={'verified':True}))

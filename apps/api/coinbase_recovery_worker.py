@@ -41,7 +41,7 @@ async def acquire_lease(seconds=90):
         return False
 
 
-NOT_FOUND_AFTER = timedelta(minutes=10)
+MANUAL_REVIEW_AFTER = timedelta(minutes=10)
 STALE_EXIT_LOCK = timedelta(minutes=2)
 
 
@@ -101,18 +101,14 @@ async def resolve_one(intent):
                 'order_id': found, 'recovery_status': 'ORDER_ID_RECOVERED', 'recovery_checked_at': utcnow()}})
             intent = {**intent, 'order_id': found}
         else:
-            if not _older_than(intent.get('created_at'), NOT_FOUND_AFTER):
-                return 'WAITING_FOR_EXCHANGE'
-            # Coinbase lists every order (including cancelled/failed); none with our client ID after the
-            # grace period means the submit never reached the exchange.
+            # Absence from a listing is not proof the broker never accepted the order (listings can be
+            # incomplete or eventually consistent, and a late fill is possible). Keep the state and the
+            # risk lock; an operator resolves it after checking the broker directly.
+            status = ('NOT_IN_LISTING_MANUAL_REVIEW' if _older_than(intent.get('created_at'), MANUAL_REVIEW_AFTER)
+                      else 'WAITING_FOR_EXCHANGE')
             await db.coinbase_order_intents.update_one({'_id': intent['_id']}, {'$set': {
-                'state': 'NOT_FOUND_AT_EXCHANGE', 'recovery_status': 'RELEASED', 'recovery_checked_at': utcnow()}})
-            if intent['side'] == 'SELL':
-                await release_exit_lock(uid, intent['source_buy_client_order_id'], intent['client_order_id'])
-            else:
-                await db.coinbase_active_slots.delete_one({'_id': f"{uid}:coinbase:{intent['product_id']}",
-                                                           'client_order_id': intent['client_order_id']})
-            return 'NOT_FOUND_AT_EXCHANGE'
+                'recovery_status': status, 'recovery_checked_at': utcnow()}})
+            return status
     def read():
         client = make_client(conn)
         obj = asdict(client.get_order(intent['order_id']))

@@ -177,17 +177,68 @@ def test_worker_recovers_order_id_by_client_id(fake, monkeypatch):
     assert run(fake.coinbase_order_intents.find_one({"_id": "s"}))["order_id"] == "ex-7"
 
 
-def test_worker_releases_exit_when_order_never_reached_exchange(fake, monkeypatch):
+def _uncertain_sell(fake):
     src = fake.coinbase_order_intents.docs[0]; src.update(state="EXIT_SUBMITTING", exit_client_order_id="sell-000000000001")
     intent = {"_id": "s", "user_id": "u", "broker": "coinbase", "client_order_id": "sell-000000000001", "side": "SELL",
               "product_id": "BTC-USD", "state": "UNKNOWN_RECONCILIATION_REQUIRED", "created_at": _old(1),
               "source_buy_client_order_id": BUY["client_order_id"]}
     fake.coinbase_order_intents.docs.append(intent)
+    return src, intent
+
+
+def test_absent_from_listing_never_releases_lock(fake, monkeypatch):
+    src, intent = _uncertain_sell(fake)
     monkeypatch.setattr(worker, "make_client", lambda c: Client(orders=[]))
-    assert run(worker.resolve_one(intent)) == "WAITING_FOR_EXCHANGE" and src["state"] == "EXIT_SUBMITTING"
-    intent["created_at"] = _old(11)
-    assert run(worker.resolve_one(intent)) == "NOT_FOUND_AT_EXCHANGE"
-    assert src["state"] == "FILLED" and "exit_client_order_id" not in src
+    assert run(worker.resolve_one(intent)) == "WAITING_FOR_EXCHANGE"
+    intent["created_at"] = _old(600)
+    assert run(worker.resolve_one(intent)) == "NOT_IN_LISTING_MANUAL_REVIEW"
+    assert src["state"] == "EXIT_SUBMITTING" and intent["state"] == "UNKNOWN_RECONCILIATION_REQUIRED"
+    with pytest.raises(HTTPException):  # still no second exit
+        run(rc.order(sell_req("sell-000000000002"), Req(), USER))
+
+
+def test_delayed_appearance_then_reconciled(fake, monkeypatch):
+    src, intent = _uncertain_sell(fake)
+    client = Client(orders=[])
+    client.get_order = lambda oid: {"order": {"order_id": oid, "status": "FILLED"}}
+    monkeypatch.setattr(worker, "make_client", lambda c: client)
+    monkeypatch.setattr(worker, "reconcile_order", AsyncMock(return_value={"state": "FILLED"}))
+    assert run(worker.resolve_one(intent)) == "WAITING_FOR_EXCHANGE"
+    client.orders = [{"client_order_id": "sell-000000000001", "order_id": "ex-late"}]
+    assert run(worker.resolve_one(dict(intent))) == "FILLED"
+    assert run(fake.coinbase_order_intents.find_one({"_id": "s"}))["order_id"] == "ex-late"
+
+
+def test_lookup_follows_pagination(fake):
+    pages = [{"orders": [{"client_order_id": "x", "order_id": "1"}], "has_next": True, "cursor": "c2"},
+             {"orders": [{"client_order_id": "sell-000000000001", "order_id": "ex-p2"}], "has_next": False}]
+    seen = []
+    client = type("C", (), {"list_orders": lambda self, **k: (seen.append(k.get("cursor")), pages[len(seen) - 1])[1]})()
+    assert worker.find_by_client_id(client, {"client_order_id": "sell-000000000001", "product_id": "BTC-USD"}) == "ex-p2"
+    assert seen == [None, "c2"]
+
+
+def test_lookup_network_error_keeps_lock(fake, monkeypatch):
+    src, intent = _uncertain_sell(fake)
+    def boom(**k): raise ConnectionError()
+    client = Client(); client.list_orders = boom
+    monkeypatch.setattr(worker, "make_client", lambda c: client)
+    with pytest.raises(ConnectionError):  # cycle() records MANUAL_REVIEW_ERROR
+        run(worker.resolve_one(intent))
+    assert src["state"] == "EXIT_SUBMITTING"
+
+
+def test_restart_race_reconcile_is_idempotent(fake, monkeypatch):
+    src, intent = _uncertain_sell(fake)
+    client = Client(orders=[{"client_order_id": "sell-000000000001", "order_id": "ex-7"}])
+    client.get_order = lambda oid: {"order": {"order_id": oid, "status": "OPEN"}}
+    monkeypatch.setattr(worker, "make_client", lambda c: client)
+    rec = AsyncMock(return_value={"state": "OPEN"})
+    monkeypatch.setattr(worker, "reconcile_order", rec)
+    async def two_workers():
+        return await asyncio.gather(worker.resolve_one(dict(intent)), worker.resolve_one(dict(intent)))
+    assert run(two_workers()) == ["OPEN", "OPEN"]
+    assert src["state"] == "EXIT_SUBMITTING" and client.sells == []
 
 
 def test_worker_releases_stale_lock_after_crash_before_intent_saved(fake):
