@@ -61,3 +61,17 @@ def test_path_rejects_other_account_or_nested_path():
         with pytest.raises(HTTPException) as exc:
             run(oanda.oanda_get(path, "token"))
         assert exc.value.status_code == 400
+
+def test_malformed_collections_fail_with_safe_502(monkeypatch):
+    monkeypatch.setattr(oanda, "_credentials", AsyncMock(return_value=("123", "token")))
+    async def fake_get(path, token):
+        if path.endswith("/summary"):
+            return {"account": {"id": "123", "balance": "1000"}}
+        if path.endswith("/openPositions"):
+            return ["unexpected", "list"]
+        return {"orders": []}
+    monkeypatch.setattr(oanda, "oanda_get", fake_get)
+    with pytest.raises(HTTPException) as exc:
+        run(oanda.account(user={"id": "member"}))
+    assert exc.value.status_code == 502
+    assert "Unexpected OANDA response format" in exc.value.detail
