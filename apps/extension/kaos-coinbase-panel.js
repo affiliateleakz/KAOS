@@ -10,7 +10,7 @@
     const el=root(); if(!el)return;
     const st=await call('/broker-connections/coinbase/status');
     if(!st||!st.ok){el.textContent='Sign in to KAOS to load your Coinbase account.';return;}
-    if(!st.data.connected){el.textContent='Coinbase is not connected. Connect on the KAOS website.';await loadOtherBrokers(el);return;}
+    if(!st.data.connected){el.textContent='Coinbase is not connected. Connect on the KAOS website.';await loadOtherBrokers(el);await loadSavedCharts(el);return;}
     const a=await call('/broker-connections/coinbase/accounts');
     if(!a||!a.ok){el.innerHTML=`<span style="color:#f5b041">Coinbase unavailable: ${esc((a&&a.data&&a.data.detail)||(a&&a.error)||'error')}</span>`;return;}
     const d=a.data;
@@ -23,6 +23,21 @@
       ${table('Recent fills',['Market','Side','Size','Price','Fee'],rows(d.fills,['product_id','side','size','price','commission'],'No fills yet'))}
       <div style="margin-top:8px">Fee tier: ${esc(d.fees.tier||'–')} · maker ${esc(d.fees.maker_rate??'–')} · taker ${esc(d.fees.taker_rate??'–')}</div>`;
     await loadOtherBrokers(el);
+    await loadSavedCharts(el);
+  }
+  async function loadSavedCharts(el){
+    const res=await call('/trading/charts');
+    const section=document.createElement('section');
+    section.style.marginTop='14px';
+    const title=document.createElement('b');title.textContent='KAOS SAVED CHART SETTINGS · READ-ONLY';
+    section.appendChild(title);
+    const line=document.createElement('p');
+    if(!res?.ok || !Array.isArray(res.data?.charts)){
+      line.textContent='Chart settings unavailable. Open the KAOS website to manage your charts.';
+    }else{
+      line.textContent=res.data.charts.map(c=>'Chart '+(c.slot+1)+': '+c.broker+' / '+c.symbol+' / '+c.seconds+'s').join(' · ');
+    }
+    section.appendChild(line);el.appendChild(section);
   }
   // Other linked brokers are read-only practice/paper views. No credentials or order actions in extension.
   async function loadOtherBrokers(el) {
