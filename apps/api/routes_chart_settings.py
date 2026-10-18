@@ -37,7 +37,8 @@ async def _guard(user, slot):
 async def list_charts(user: dict = Depends(get_current_user)):
     limit = await _limit(user)
     rows = await db.member_chart_settings.find({"user_id": user["id"]}, {"_id": 0}).to_list(4)
-    saved = {r["slot"]: r for r in rows if isinstance(r.get("slot"), int) and 0 <= r["slot"] < limit}
+    saved = {r["slot"]: r for r in rows if isinstance(r.get("slot"), int) and not isinstance(r["slot"], bool)
+             and 0 <= r["slot"] < limit and isinstance(r.get("config"), dict)}
     return {"chartLimit": limit, "charts": [
         {"slot": i, **(saved[i]["config"] if i in saved else DEFAULTS[i])}
         for i in range(limit)], "order_submission_enabled": False}
