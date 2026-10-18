@@ -37,8 +37,8 @@ export default function PaperTrading() {
   return (
     <div>
       <h1 className="mb-2 font-heading text-2xl font-bold tracking-wide">Paper Trading</h1>
-      <div className="mb-6 flex items-start gap-2 rounded border border-[#D4AF37]/40 bg-[#D4AF37]/5 p-3 text-sm text-slate-300" data-testid="paper-disclaimer">
-        <FlaskConical className="mt-0.5 h-4 w-4 shrink-0 text-[#D4AF37]" />
+      <div className="mb-6 flex items-start gap-2 rounded border border-[#2F8CFF]/40 bg-[#2F8CFF]/5 p-3 text-sm text-slate-300" data-testid="paper-disclaimer">
+        <FlaskConical className="mt-0.5 h-4 w-4 shrink-0 text-[#2F8CFF]" />
         <span>Simulation only. Orders never reach a broker and no money moves. Until an authorized market-data feed is connected, you enter the quote price yourself, so results are not market fills or real performance.</span>
       </div>
       {data.kill_switch && (
@@ -61,7 +61,7 @@ export default function PaperTrading() {
         <div className="space-y-4 lg:col-span-2">
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             {[["Starting balance", book.starting_balance, "starting"], ["Cash", book.cash, "cash"], ["Open cost", book.open_cost, "open"], ["Realized P&L", book.realized_pnl, "pnl"]].map(([l, v, id]) => (
-              <div key={l} className="card-surface p-4"><div className="label-mono">{l}</div><div className={`mt-1 font-mono text-2xl font-bold ${id === "pnl" ? pnlColor : "text-[#D4AF37]"}`} data-testid={`paper-${id}`}>{usd(v)}</div></div>
+              <div key={l} className="card-surface p-4"><div className="label-mono">{l}</div><div className={`mt-1 font-mono text-2xl font-bold ${id === "pnl" ? pnlColor : "text-[#2F8CFF]"}`} data-testid={`paper-${id}`}>{usd(v)}</div></div>
             ))}
           </div>
           <Positions positions={book.positions} disabled={data.kill_switch} onDone={load} />

@@ -55,7 +55,7 @@ export default function SharePage() {
               <img src={imgUrl} alt={`KAOS ${d.engine} ${d.direction}`} data-testid="share-image"
                 className="w-full rounded-md border border-[#2E2E2E]" />
               <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2">
-                <span className="font-heading text-2xl font-bold text-[#D4AF37]">{d.engine}</span>
+                <span className="font-heading text-2xl font-bold text-[#2F8CFF]">{d.engine}</span>
                 <span className={`font-mono text-lg font-bold ${d.direction === "BUY" ? "text-[#22C55E]" : "text-[#C62828]"}`}>{d.direction}</span>
                 <span className="font-mono text-sm text-slate-400">expiry {d.expiration} · confidence {d.confidence}</span>
               </div>

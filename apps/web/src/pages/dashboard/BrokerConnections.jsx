@@ -49,14 +49,14 @@ export default function BrokerConnections() {
     {notice && <p role="status" className="rounded border border-green-700 p-3 text-green-300">{notice}</p>}
     <div className="grid gap-3 md:grid-cols-2">{BROKERS.map(([id,name,url,status]) => <div key={id} className="rounded-lg border border-slate-700 bg-[#111] p-4">
       <div className="flex items-center justify-between gap-2"><h2 className="font-semibold">{name}</h2><span className="text-xs text-slate-400">{saved[id]?.verified ? "Verified & saved" : saved[id]?.saved ? "Saved" : status}</span></div>
-      <a href={url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-sm text-[#D4AF37]">Open broker website ↗</a>
+      <a href={url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-sm text-[#2F8CFF]">Open broker website ↗</a>
     </div>)}</div>
     <div className="rounded-lg border border-slate-700 bg-[#111] p-5"><h2 className="mb-2 text-xl font-semibold">Coinbase Advanced API</h2>
       <p className="mb-4 text-sm text-slate-400">{saved.coinbase?.saved ? `Saved key ending ${saved.coinbase.key_hint || "••••"}. Update it below or disconnect.` : "Enter your Coinbase Consumer / Advanced Trade CDP credentials once."}</p>
       <form onSubmit={save} className="space-y-3">
         <label className="block text-sm">API key name<input autoComplete="off" required value={form.key_name} onChange={e=>setForm({...form,key_name:e.target.value})} placeholder="organizations/.../apiKeys/..." className="mt-1 w-full rounded border border-slate-600 bg-[#080808] p-3 text-white" /></label>
         <label className="block text-sm">Private key<textarea autoComplete="off" required value={form.private_key} onChange={e=>setForm({...form,private_key:e.target.value})} rows={4} placeholder="Paste the original Coinbase key" className="mt-1 w-full rounded border border-slate-600 bg-[#080808] p-3 text-white" /></label>
-        <button disabled={busy} className="rounded bg-[#D4AF37] px-4 py-2 font-semibold text-black disabled:opacity-50">{busy ? "Verifying…" : "Verify & save Coinbase"}</button>
+        <button disabled={busy} className="rounded bg-[#2F8CFF] px-4 py-2 font-semibold text-black disabled:opacity-50">{busy ? "Verifying…" : "Verify & save Coinbase"}</button>
         {saved.coinbase?.saved && <button type="button" disabled={busy} onClick={disconnect} className="ml-3 rounded border border-red-700 px-4 py-2 text-red-300 disabled:opacity-50">Disconnect</button>}
       </form>
       <p className="mt-4 text-xs text-slate-400">Use View + Trade permissions; disable transfers. Never include keys in diagnostic exports.</p>

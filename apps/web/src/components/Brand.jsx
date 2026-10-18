@@ -12,9 +12,9 @@ export function Brand({ size = "md", className = "" }) {
 }
 
 const MAP = {
-  ACTIVE: "text-[#D4AF37] bg-[#D4AF37]/10 border-[#D4AF37]/30",
-  TRIAL: "text-[#D4AF37] bg-[#D4AF37]/10 border-[#D4AF37]/30",
-  VERIFIED: "text-[#D4AF37] bg-[#D4AF37]/10 border-[#D4AF37]/30",
+  ACTIVE: "text-[#2F8CFF] bg-[#2F8CFF]/10 border-[#2F8CFF]/30",
+  TRIAL: "text-[#2F8CFF] bg-[#2F8CFF]/10 border-[#2F8CFF]/30",
+  VERIFIED: "text-[#2F8CFF] bg-[#2F8CFF]/10 border-[#2F8CFF]/30",
   PENDING: "text-amber-300 bg-amber-400/10 border-amber-400/30",
   MANUAL_REVIEW: "text-amber-300 bg-amber-400/10 border-amber-400/30",
   PAST_DUE: "text-amber-300 bg-amber-400/10 border-amber-400/30",

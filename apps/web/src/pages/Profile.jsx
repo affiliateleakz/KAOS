@@ -33,12 +33,12 @@ export default function Profile() {
       </div>
       <div className="mx-auto max-w-4xl px-4 py-8">
         <div className="card-surface flex flex-col items-start gap-4 p-6 sm:flex-row sm:items-center">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#1A1A1A] font-heading text-2xl font-bold text-[#D4AF37]">
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#1A1A1A] font-heading text-2xl font-bold text-[#2F8CFF]">
             {(p.displayName || p.username || "?")[0].toUpperCase()}
           </div>
           <div className="flex-1">
             <h1 className="font-heading text-2xl font-bold">{p.displayName}</h1>
-            <p className="font-mono text-sm text-[#D4AF37]">@{p.username}</p>
+            <p className="font-mono text-sm text-[#2F8CFF]">@{p.username}</p>
             <p className="mt-1 text-sm text-slate-400">{p.bio || "No bio yet."}</p>
           </div>
           {user && user.username !== username && (
@@ -50,7 +50,7 @@ export default function Profile() {
         <div className="mt-4 grid grid-cols-3 gap-4">
           {[["Public Strategies", p.publicStrategies], ["Followers", p.followers], ["Following", p.following]].map(([l, v]) => (
             <div key={l} className="card-surface p-4 text-center">
-              <div className="font-mono text-2xl font-bold text-[#D4AF37]">{v}</div>
+              <div className="font-mono text-2xl font-bold text-[#2F8CFF]">{v}</div>
               <div className="label-mono mt-1">{l}</div>
             </div>
           ))}

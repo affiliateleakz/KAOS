@@ -56,7 +56,7 @@ export default function CommunityDetail() {
                 <h1 className="font-heading text-3xl font-bold">{s.name}</h1>
                 {s.type === "BUILT_IN" && <span className="inline-flex items-center gap-1 rounded bg-[#FFB800]/10 border border-[#FFB800]/30 px-2 py-0.5 font-mono text-xs text-[#FFB800]"><Lock className="h-3 w-3" />BUILT-IN</span>}
               </div>
-              <Link to={`/u/${s.owner?.username}`} className="mt-1 block font-mono text-sm text-[#D4AF37] hover:underline">@{s.owner?.username}</Link>
+              <Link to={`/u/${s.owner?.username}`} className="mt-1 block font-mono text-sm text-[#2F8CFF] hover:underline">@{s.owner?.username}</Link>
             </div>
             <button data-testid="strategy-report-button" onClick={report} className="text-slate-500 hover:text-[#C62828]"><Flag className="h-5 w-5" /></button>
           </div>
@@ -68,11 +68,11 @@ export default function CommunityDetail() {
             <div><div className="label-mono">Engine</div><div className="text-white">{s.engineType}</div></div>
           </div>
           <div className="mt-4 flex flex-wrap gap-1.5">
-            {(s.indicators || []).map((i, idx) => <span key={idx} className="rounded bg-[#1A1A1A] px-2 py-0.5 font-mono text-xs text-[#D4AF37]">{i.name || i}</span>)}
+            {(s.indicators || []).map((i, idx) => <span key={idx} className="rounded bg-[#1A1A1A] px-2 py-0.5 font-mono text-xs text-[#2F8CFF]">{i.name || i}</span>)}
           </div>
           <div className="mt-6 flex flex-wrap gap-3">
             <Button data-testid="detail-like-button" onClick={() => act("like")} variant="outline" className={`border-[#3A3A3A] bg-transparent ${s.liked ? "text-[#C62828]" : "text-white"}`}><Heart className="mr-2 h-4 w-4" fill={s.liked ? "currentColor" : "none"} />{s.likesCount}</Button>
-            <Button data-testid="detail-save-button" onClick={() => act("save")} variant="outline" className={`border-[#3A3A3A] bg-transparent ${s.saved ? "text-[#D4AF37]" : "text-white"}`}><Bookmark className="mr-2 h-4 w-4" fill={s.saved ? "currentColor" : "none"} />Add to Library</Button>
+            <Button data-testid="detail-save-button" onClick={() => act("save")} variant="outline" className={`border-[#3A3A3A] bg-transparent ${s.saved ? "text-[#2F8CFF]" : "text-white"}`}><Bookmark className="mr-2 h-4 w-4" fill={s.saved ? "currentColor" : "none"} />Add to Library</Button>
             {s.type !== "BUILT_IN" && <Button data-testid="detail-fork-button" onClick={() => act("fork")} className="bg-[#22C55E] text-black font-semibold"><GitFork className="mr-2 h-4 w-4" />Fork ({s.forksCount})</Button>}
           </div>
           {s.forkedFromStrategyId && <p className="mt-3 text-xs text-slate-500">Forked from another strategy · attribution preserved.</p>}
@@ -84,7 +84,7 @@ export default function CommunityDetail() {
           <div className="mt-3 space-y-2">
             {(s.versions || []).map((v) => (
               <div key={v.id} className="flex items-center justify-between border-b border-[#2E2E2E] pb-2 font-mono text-sm">
-                <span className="text-[#D4AF37]">v{v.version}</span>
+                <span className="text-[#2F8CFF]">v{v.version}</span>
                 <span className="text-slate-400">{v.changelog}</span>
                 <span className="text-slate-600 text-xs">{new Date(v.createdAt).toLocaleDateString()}</span>
               </div>
@@ -102,7 +102,7 @@ export default function CommunityDetail() {
           <div className="mt-4 space-y-3">
             {(s.comments || []).filter((c) => !c.hidden).map((c) => (
               <div key={c.id} className="border-b border-[#2E2E2E] pb-3">
-                <div className="font-mono text-sm text-[#D4AF37]">@{c.author?.username}</div>
+                <div className="font-mono text-sm text-[#2F8CFF]">@{c.author?.username}</div>
                 <p className="mt-1 text-sm text-slate-300">{c.body}</p>
               </div>
             ))}

@@ -43,10 +43,10 @@ export function Overview() {
       <H>Dashboard</H>
       {rank?.ranked && (
         <Link to="/dashboard/affiliate" data-testid="rank-badge"
-          className="mb-6 flex items-center justify-between rounded-lg border border-[#D4AF37]/30 bg-[#D4AF37]/5 p-4 transition hover:bg-[#D4AF37]/10">
+          className="mb-6 flex items-center justify-between rounded-lg border border-[#2F8CFF]/30 bg-[#2F8CFF]/5 p-4 transition hover:bg-[#2F8CFF]/10">
           <div className="flex items-center gap-3">
-            <Trophy className="h-5 w-5 text-[#D4AF37]" />
-            <p className="text-sm text-[#D4AF37]">
+            <Trophy className="h-5 w-5 text-[#2F8CFF]" />
+            <p className="text-sm text-[#2F8CFF]">
               You're <span className="font-bold">#{rank.rank}</span> on the Top Sharers Leaderboard
               <span className="ml-2 font-mono text-xs text-slate-400">{rank.paying} paying · of {rank.totalAffiliates} affiliates</span>
             </p>
@@ -67,7 +67,7 @@ export function Overview() {
       </div>
       <div className="mt-6 grid gap-4 lg:grid-cols-3">
         {[["My Strategies", d.counts.myStrategies], ["Published", d.counts.published], ["Saved", d.counts.saved]].map(([l, v]) => (
-          <div key={l} className="card-surface p-5"><div className="label-mono">{l}</div><div className="mt-2 font-mono text-3xl font-bold text-[#D4AF37]">{v}</div></div>
+          <div key={l} className="card-surface p-5"><div className="label-mono">{l}</div><div className="mt-2 font-mono text-3xl font-bold text-[#2F8CFF]">{v}</div></div>
         ))}
       </div>
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
@@ -136,7 +136,7 @@ export function MyStrategies() {
                 <div className="flex items-center gap-2">
                   <Link to={s.published ? `/community/${s.id}` : "#"} className="font-heading font-semibold text-white">{s.name}</Link>
                   {s.visibility === "PRIVATE" && <Lock className="h-3.5 w-3.5 text-slate-500" />}
-                  {s.visibility === "PUBLIC" && <Globe className="h-3.5 w-3.5 text-[#D4AF37]" />}
+                  {s.visibility === "PUBLIC" && <Globe className="h-3.5 w-3.5 text-[#2F8CFF]" />}
                   {s.visibility === "UNLISTED" && <EyeOff className="h-3.5 w-3.5 text-[#FFB800]" />}
                   {s.forkedFromStrategyId && <span className="rounded bg-[#1A1A1A] px-1.5 py-0.5 font-mono text-[10px] text-slate-400">FORK</span>}
                 </div>
@@ -201,7 +201,7 @@ export function Indicators() {
         {list.map((i) => (
           <div key={i.id} className="card-surface p-5">
             <div className="flex items-center justify-between"><h3 className="font-heading font-semibold">{i.name}</h3>
-              <span className="rounded bg-[#1A1A1A] px-2 py-0.5 font-mono text-[10px] text-[#D4AF37]">{i.type}</span></div>
+              <span className="rounded bg-[#1A1A1A] px-2 py-0.5 font-mono text-[10px] text-[#2F8CFF]">{i.type}</span></div>
             <p className="mt-2 text-sm text-slate-400">{i.description}</p>
             <p className="mt-3 font-mono text-xs text-slate-500">by {i.author} · v{i.version}</p>
           </div>
@@ -239,7 +239,7 @@ export function Scripts() {
         <div className="grid gap-4 md:grid-cols-2">
           {list.map((s) => (
             <div key={s.id} className="card-surface p-5"><div className="flex items-center justify-between"><h3 className="font-heading font-semibold">{s.name}</h3>
-              <span className="rounded bg-[#1A1A1A] px-2 py-0.5 font-mono text-[10px] text-[#D4AF37]">{s.sourceType}</span></div>
+              <span className="rounded bg-[#1A1A1A] px-2 py-0.5 font-mono text-[10px] text-[#2F8CFF]">{s.sourceType}</span></div>
               <p className="mt-2 text-sm text-slate-400">{s.description}</p></div>
           ))}
         </div>
@@ -262,10 +262,10 @@ export function Backtests() {
             <div key={b.id} className="card-surface p-5">
               <div className="flex items-center justify-between"><span className="font-mono text-sm text-white">{b.market}</span>
                 <span className="rounded bg-[#1A1A1A] px-2 py-0.5 font-mono text-[10px] text-slate-400">{b.provenance}</span></div>
-              <div className="mt-3 font-mono text-3xl font-bold text-[#D4AF37]">{b.winRate}%<span className="text-sm text-slate-500"> win</span></div>
+              <div className="mt-3 font-mono text-3xl font-bold text-[#2F8CFF]">{b.winRate}%<span className="text-sm text-slate-500"> win</span></div>
               <div className="mt-3 grid grid-cols-3 gap-2 font-mono text-xs text-slate-400">
                 <div>Trades<div className="text-white">{b.trades}</div></div>
-                <div>Wins<div className="text-[#D4AF37]">{b.wins}</div></div>
+                <div>Wins<div className="text-[#2F8CFF]">{b.wins}</div></div>
                 <div>Losses<div className="text-[#C62828]">{b.losses}</div></div>
               </div>
               <p className="mt-3 font-mono text-xs text-slate-600">{b.timeframe}/{b.expiry}</p>
@@ -315,7 +315,7 @@ export function Subscription() {
         {plans.map((p) => (
           <div key={p.id} className="card-surface p-6">
             <h3 className="font-heading text-xl font-semibold">{p.name}</h3>
-            <div className="mt-2 font-mono text-3xl font-bold text-[#D4AF37]">${(p.amount / 100).toFixed(0)}<span className="text-base text-slate-500">/{p.interval}</span></div>
+            <div className="mt-2 font-mono text-3xl font-bold text-[#2F8CFF]">${(p.amount / 100).toFixed(0)}<span className="text-base text-slate-500">/{p.interval}</span></div>
             <ul className="mt-4 space-y-2 text-sm text-slate-300">{(p.features || []).map((f) => <li key={f}>• {f}</li>)}</ul>
             <Button data-testid={`subscribe-${p.id}`} onClick={() => checkout(p.lookup_key)} className="mt-6 w-full bg-[#22C55E] text-black font-semibold">Choose {p.name}</Button>
           </div>
@@ -337,7 +337,7 @@ export function Devices() {
       {list.length === 0 ? <Empty>No devices registered. Install the extension to register one.</Empty> : (
         <div className="space-y-3">{list.map((d) => (
           <div key={d.id} className="card-surface flex items-center justify-between p-4">
-            <div className="flex items-center gap-3"><Cpu className="h-5 w-5 text-[#D4AF37]" />
+            <div className="flex items-center gap-3"><Cpu className="h-5 w-5 text-[#2F8CFF]" />
               <div><div className="font-medium text-white">{d.deviceName}</div>
                 <div className="font-mono text-xs text-slate-500">v{d.extensionVersion || "?"} · last active {new Date(d.lastActive).toLocaleString()}{d.revoked && " · REVOKED"}</div></div></div>
             {!d.revoked && <Button data-testid={`revoke-device-${d.id}`} onClick={() => revoke(d.id)} variant="outline" size="sm" className="border-[#C62828]/30 bg-transparent text-[#C62828]">Revoke</Button>}
@@ -355,7 +355,7 @@ export function Downloads() {
   return (
     <div><H>Downloads & Extension Setup</H>
       <div className="card-surface p-6">
-        <div className="flex items-center gap-3"><Chrome className="h-8 w-8 text-[#D4AF37]" />
+        <div className="flex items-center gap-3"><Chrome className="h-8 w-8 text-[#2F8CFF]" />
           <div><h3 className="font-heading text-lg font-semibold">Chrome Extension</h3>
             <p className="font-mono text-sm text-slate-500">Latest version {rel?.version || "—"}</p></div></div>
         <p className="mt-4 text-sm text-slate-400">{rel?.releaseNotes}</p>

@@ -8,15 +8,15 @@ import { toast } from "sonner";
 import { Copy, Brain, Share2, TrendingUp, Trophy } from "lucide-react";
 
 const H = ({ children }) => <h1 className="mb-6 font-heading text-2xl font-bold tracking-wide">{children}</h1>;
-const Stat = ({ l, v }) => (<div className="card-surface p-4"><div className="label-mono">{l}</div><div className="mt-1 font-mono text-2xl font-bold text-[#D4AF37]">{v}</div></div>);
+const Stat = ({ l, v }) => (<div className="card-surface p-4"><div className="label-mono">{l}</div><div className="mt-1 font-mono text-2xl font-bold text-[#2F8CFF]">{v}</div></div>);
 
 function LedgerCard({ ledger }) {
   const b = ledger.balance;
   return (
     <div className="card-surface mt-6 p-0 overflow-x-auto" data-testid="affiliate-ledger">
       <div className="flex flex-wrap items-center gap-2 border-b border-[#2E2E2E] p-4">
-        <TrendingUp className="h-5 w-5 text-[#D4AF37]" /><h3 className="font-heading font-semibold">3-Level Commission Ledger</h3>
-        <span className="rounded bg-[#D4AF37]/15 px-2 py-0.5 font-mono text-[10px] uppercase text-[#D4AF37]" data-testid="ledger-tier">{ledger.tier} tier</span>
+        <TrendingUp className="h-5 w-5 text-[#2F8CFF]" /><h3 className="font-heading font-semibold">3-Level Commission Ledger</h3>
+        <span className="rounded bg-[#2F8CFF]/15 px-2 py-0.5 font-mono text-[10px] uppercase text-[#2F8CFF]" data-testid="ledger-tier">{ledger.tier} tier</span>
         <span className="font-mono text-xs text-slate-500" data-testid="ledger-note">{ledger.note}</span>
       </div>
       <div className="grid grid-cols-2 gap-3 p-4 md:grid-cols-4">
@@ -61,7 +61,7 @@ export function AffiliatePage() {
   if (!d.active) return (
     <div><H>Affiliate Program</H>
       <div className="card-surface p-8 text-center">
-        <Share2 className="mx-auto h-10 w-10 text-[#D4AF37]" />
+        <Share2 className="mx-auto h-10 w-10 text-[#2F8CFF]" />
         <p className="mt-4 text-slate-400">Earn commissions promoting KAOS Trading. Activate your affiliate account to get your referral link.</p>
         <Button data-testid="affiliate-activate-button" onClick={activate} className="mt-6 bg-[#22C55E] text-black font-semibold">Become an Affiliate</Button>
       </div>
@@ -72,7 +72,7 @@ export function AffiliatePage() {
       <div className="card-surface mb-6 p-5">
         <div className="label-mono">Your referral link</div>
         <div className="mt-2 flex items-center gap-2">
-          <code className="flex-1 truncate rounded bg-[#080808] border border-[#2E2E2E] px-3 py-2 text-sm text-[#D4AF37]" data-testid="affiliate-link">{d.referralLink}</code>
+          <code className="flex-1 truncate rounded bg-[#080808] border border-[#2E2E2E] px-3 py-2 text-sm text-[#2F8CFF]" data-testid="affiliate-link">{d.referralLink}</code>
           <Button data-testid="copy-affiliate-link" onClick={() => copy(d.referralLink)} className="bg-[#22C55E] text-black"><Copy className="h-4 w-4" /></Button>
         </div>
       </div>
@@ -83,7 +83,7 @@ export function AffiliatePage() {
       {ledger && <LedgerCard ledger={ledger} />}
       {d.shareFunnel && (
         <div className="card-surface mt-6 p-5" data-testid="share-funnel">
-          <div className="flex items-center gap-2"><Share2 className="h-5 w-5 text-[#D4AF37]" /><h3 className="font-heading font-semibold">Signal Share Funnel</h3>
+          <div className="flex items-center gap-2"><Share2 className="h-5 w-5 text-[#2F8CFF]" /><h3 className="font-heading font-semibold">Signal Share Funnel</h3>
             <span className="font-mono text-xs text-slate-500">how your shared KAOS signals turn into paying referrals</span></div>
           <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
             {[
@@ -94,7 +94,7 @@ export function AffiliatePage() {
             ].map((step, i) => (
               <div key={step.l} className="relative rounded-md border border-[#2E2E2E] bg-[#0c0c0c] p-4">
                 <div className="label-mono">{step.l}</div>
-                <div className="mt-1 font-mono text-2xl font-bold text-[#D4AF37]" data-testid={`funnel-${i}`}>{step.v}</div>
+                <div className="mt-1 font-mono text-2xl font-bold text-[#2F8CFF]" data-testid={`funnel-${i}`}>{step.v}</div>
                 {step.sub && <div className="mt-1 font-mono text-[10px] text-[#22C55E]">{step.sub}</div>}
                 {i < 3 && <div className="absolute -right-2.5 top-1/2 hidden -translate-y-1/2 text-slate-600 md:block">→</div>}
               </div>
@@ -106,7 +106,7 @@ export function AffiliatePage() {
         <div className="card-surface p-0 overflow-x-auto"><div className="border-b border-[#2E2E2E] p-4"><h3 className="font-heading font-semibold">Recent Commissions</h3></div>
           <Table><TableHeader><TableRow className="border-[#2E2E2E]"><TableHead>Plan</TableHead><TableHead>Amount</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
             <TableBody>{d.recentCommissions.length === 0 && <TableRow><TableCell colSpan={3} className="py-6 text-center text-slate-500">None yet</TableCell></TableRow>}
-              {d.recentCommissions.map((c) => (<TableRow key={c.id} className="border-[#2E2E2E]"><TableCell>{c.planId}</TableCell><TableCell className="font-mono text-[#D4AF37]">${c.amount}</TableCell><TableCell><StatusBadge value={c.status} /></TableCell></TableRow>))}</TableBody></Table></div>
+              {d.recentCommissions.map((c) => (<TableRow key={c.id} className="border-[#2E2E2E]"><TableCell>{c.planId}</TableCell><TableCell className="font-mono text-[#2F8CFF]">${c.amount}</TableCell><TableCell><StatusBadge value={c.status} /></TableCell></TableRow>))}</TableBody></Table></div>
         <div className="card-surface p-5"><h3 className="font-heading font-semibold">Marketing Center</h3>
           <div className="mt-3 space-y-2">
             {assets.length === 0 && <p className="text-sm text-slate-500">No marketing assets yet.</p>}
@@ -119,18 +119,18 @@ export function AffiliatePage() {
       </div>
       <div className="card-surface mt-6 p-0 overflow-x-auto" data-testid="affiliate-leaderboard">
         <div className="flex items-center gap-2 border-b border-[#2E2E2E] p-4">
-          <Trophy className="h-5 w-5 text-[#D4AF37]" /><h3 className="font-heading font-semibold">Top Sharers Leaderboard</h3>
+          <Trophy className="h-5 w-5 text-[#2F8CFF]" /><h3 className="font-heading font-semibold">Top Sharers Leaderboard</h3>
           <span className="font-mono text-xs text-slate-500">ranked by paying referrals</span>
         </div>
         <Table><TableHeader><TableRow className="border-[#2E2E2E]"><TableHead>#</TableHead><TableHead>Trader</TableHead><TableHead>Signups</TableHead><TableHead>Paying</TableHead><TableHead>Earned</TableHead></TableRow></TableHeader>
           <TableBody>
             {lb.length === 0 && <TableRow><TableCell colSpan={5} className="py-6 text-center text-slate-500">No paying referrals yet — be the first to top the board.</TableCell></TableRow>}
             {lb.map((r) => (
-              <TableRow key={r.rank} className={`border-[#2E2E2E] ${r.isYou ? "bg-[#D4AF37]/5" : ""}`} data-testid={`leaderboard-row-${r.rank}`}>
+              <TableRow key={r.rank} className={`border-[#2E2E2E] ${r.isYou ? "bg-[#2F8CFF]/5" : ""}`} data-testid={`leaderboard-row-${r.rank}`}>
                 <TableCell className="font-mono">{r.rank <= 3 ? ["🥇", "🥈", "🥉"][r.rank - 1] : r.rank}</TableCell>
                 <TableCell className="text-white">{r.name}{r.isYou && <span className="ml-2 rounded bg-[#22C55E]/15 px-2 py-0.5 font-mono text-[10px] text-[#22C55E]">YOU</span>}</TableCell>
                 <TableCell className="font-mono text-slate-400">{r.signups}</TableCell>
-                <TableCell className="font-mono text-[#D4AF37]">{r.paying}</TableCell>
+                <TableCell className="font-mono text-[#2F8CFF]">{r.paying}</TableCell>
                 <TableCell className="font-mono text-[#22C55E]">${r.earned}</TableCell>
               </TableRow>
             ))}
@@ -147,9 +147,9 @@ export function AIPage() {
   if (!d) return <p className="text-slate-500">Loading…</p>;
   return (
     <div><H>KAOS AI</H>
-      <div className="mb-6 rounded-lg border border-[#D4AF37]/20 bg-[#D4AF37]/5 p-3 text-xs text-[#D4AF37]">KAOS AI is not yet production-trained. Predictions shown are SIMULATED until the trained model is deployed. No guaranteed accuracy.</div>
+      <div className="mb-6 rounded-lg border border-[#2F8CFF]/20 bg-[#2F8CFF]/5 p-3 text-xs text-[#2F8CFF]">KAOS AI is not yet production-trained. Predictions shown are SIMULATED until the trained model is deployed. No guaranteed accuracy.</div>
       <div className="grid gap-4 md:grid-cols-4">
-        <div className="card-surface p-5"><Brain className="h-6 w-6 text-[#D4AF37]" /><div className="mt-3 label-mono">Active Model</div><div className="mt-1 font-mono text-sm text-white">{d.activeModel?.version}</div></div>
+        <div className="card-surface p-5"><Brain className="h-6 w-6 text-[#2F8CFF]" /><div className="mt-3 label-mono">Active Model</div><div className="mt-1 font-mono text-sm text-white">{d.activeModel?.version}</div></div>
         <Stat l="Real Samples" v={d.realSamples} /><Stat l="Paper Samples" v={d.paperSamples} />
         <div className="card-surface p-5"><div className="label-mono">Collective Learning</div><div className="mt-2"><StatusBadge value={d.consent ? "ACTIVE" : "NOT_STARTED"} /></div></div>
       </div>

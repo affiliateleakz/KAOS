@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { toast } from "sonner";
 
 const H = ({ children }) => <h1 className="mb-6 font-heading text-2xl font-bold tracking-wide">{children}</h1>;
-const Stat = ({ l, v }) => (<div className="card-surface p-4"><div className="label-mono">{l}</div><div className="mt-1 font-mono text-2xl font-bold text-[#D4AF37]">{v}</div></div>);
+const Stat = ({ l, v }) => (<div className="card-surface p-4"><div className="label-mono">{l}</div><div className="mt-1 font-mono text-2xl font-bold text-[#2F8CFF]">{v}</div></div>);
 
 // ---------- Admin AI Control Center ----------
 export function AICenter() {
@@ -46,7 +46,7 @@ export function AICenter() {
   };
   return (
     <div><H>KAOS AI Control Center</H>
-      <div className="mb-4 rounded-lg border border-[#D4AF37]/20 bg-[#D4AF37]/5 p-3 text-xs text-[#D4AF37]">Raw samples never auto-deploy. Training builds a CANDIDATE (native XGBoost/LightGBM tree bundle) from consented learning samples; it must pass chronological + out-of-sample validation and an explicit Deploy before it serves live inference. AI is learning/reporting only — it never overrides the deterministic KAOS Strategy.</div>
+      <div className="mb-4 rounded-lg border border-[#2F8CFF]/20 bg-[#2F8CFF]/5 p-3 text-xs text-[#2F8CFF]">Raw samples never auto-deploy. Training builds a CANDIDATE (native XGBoost/LightGBM tree bundle) from consented learning samples; it must pass chronological + out-of-sample validation and an explicit Deploy before it serves live inference. AI is learning/reporting only — it never overrides the deterministic KAOS Strategy.</div>
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <Button data-testid="ai-train-button" onClick={train} disabled={training} className="bg-[#22C55E] text-black">
           {training ? "Training…" : "Train KAOS AI model"}
@@ -66,7 +66,7 @@ export function AICenter() {
             return (<TableRow key={m.id} className="border-[#2E2E2E]" data-testid={`ai-model-${m.id}`}>
             <TableCell className="font-mono text-sm">{m.version}{m.simulated && " ·SIM"}</TableCell>
             <TableCell><span className={m.status === "deployed" ? "text-green-400 font-mono text-xs" : "text-slate-400 font-mono text-xs"}>{m.status}</span></TableCell>
-            <TableCell className="font-mono text-xs text-[#D4AF37]">{acc != null ? (acc * 100).toFixed(1) + "%" : "—"}</TableCell>
+            <TableCell className="font-mono text-xs text-[#2F8CFF]">{acc != null ? (acc * 100).toFixed(1) + "%" : "—"}</TableCell>
             <TableCell>{beats == null ? <span className="text-slate-600 text-xs">—</span> : beats ? <span className="rounded bg-[#22C55E]/10 border border-[#22C55E]/30 px-2 py-0.5 font-mono text-[10px] text-[#22C55E]">BEATS LIVE</span> : <span className="rounded bg-amber-400/10 border border-amber-400/30 px-2 py-0.5 font-mono text-[10px] text-amber-300">BELOW LIVE</span>}</TableCell>
             <TableCell className="text-xs text-slate-400">{m.notes}</TableCell>
             <TableCell className="flex gap-2">
@@ -108,11 +108,11 @@ export function Affiliates() {
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="card-surface p-0 overflow-x-auto"><div className="border-b border-[#2E2E2E] p-4"><h3 className="font-heading font-semibold">Affiliates</h3></div>
           <Table><TableHeader><TableRow className="border-[#2E2E2E]"><TableHead>User</TableHead><TableHead>Code</TableHead><TableHead>Referrals</TableHead></TableRow></TableHeader>
-            <TableBody>{accs.map((a) => (<TableRow key={a.id} className="border-[#2E2E2E]"><TableCell className="font-mono text-sm">{a.user?.username}</TableCell><TableCell className="font-mono text-xs text-[#D4AF37]">{a.code}</TableCell><TableCell>{a.referrals}</TableCell></TableRow>))}</TableBody></Table></div>
+            <TableBody>{accs.map((a) => (<TableRow key={a.id} className="border-[#2E2E2E]"><TableCell className="font-mono text-sm">{a.user?.username}</TableCell><TableCell className="font-mono text-xs text-[#2F8CFF]">{a.code}</TableCell><TableCell>{a.referrals}</TableCell></TableRow>))}</TableBody></Table></div>
         <div className="card-surface p-0 overflow-x-auto"><div className="border-b border-[#2E2E2E] p-4"><h3 className="font-heading font-semibold">Commissions</h3></div>
           <Table><TableHeader><TableRow className="border-[#2E2E2E]"><TableHead>Amount</TableHead><TableHead>Status</TableHead><TableHead>Set</TableHead></TableRow></TableHeader>
             <TableBody>{comms.length === 0 && <TableRow><TableCell colSpan={3} className="py-6 text-center text-slate-500">None</TableCell></TableRow>}
-              {comms.map((c) => (<TableRow key={c.id} className="border-[#2E2E2E]"><TableCell className="font-mono text-[#D4AF37]">${c.amount}</TableCell><TableCell><StatusBadge value={c.status} /></TableCell>
+              {comms.map((c) => (<TableRow key={c.id} className="border-[#2E2E2E]"><TableCell className="font-mono text-[#2F8CFF]">${c.amount}</TableCell><TableCell><StatusBadge value={c.status} /></TableCell>
                 <TableCell><Select onValueChange={(s) => setStatus(c.id, s)}><SelectTrigger data-testid={`commission-status-${c.id}`} className="h-8 w-32 bg-[#080808] border-[#3A3A3A] text-xs"><SelectValue placeholder="Change" /></SelectTrigger><SelectContent className="bg-[#0F0F0F] text-white">{["APPROVED", "PAYABLE", "PAID", "REVERSED"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></TableCell></TableRow>))}</TableBody></Table></div>
       </div>
       <div className="card-surface mt-6 p-5"><h3 className="font-heading font-semibold">Marketing Center</h3>

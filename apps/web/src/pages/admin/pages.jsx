@@ -42,13 +42,13 @@ export function AdminDashboard() {
       <div className="mb-6 flex items-center justify-between">
         <H>Admin Overview</H>
         <a href={`${process.env.REACT_APP_BACKEND_URL}/api/admin/export/source.zip`} target="_blank" rel="noreferrer" data-testid="export-source-button">
-          <Button variant="outline" className="border-[#D4AF37]/40 bg-transparent text-[#D4AF37] hover:bg-[#D4AF37]/10"><Download className="mr-2 h-4 w-4" /> Download Source</Button>
+          <Button variant="outline" className="border-[#2F8CFF]/40 bg-transparent text-[#2F8CFF] hover:bg-[#2F8CFF]/10"><Download className="mr-2 h-4 w-4" /> Download Source</Button>
         </a>
       </div>
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
         {stats.map(([l, v, Icon]) => (
           <Card key={l}><div className="flex items-center justify-between"><span className="label-mono">{l}</span><Icon className="h-4 w-4 text-slate-600" /></div>
-            <div className="mt-2 font-mono text-3xl font-bold text-[#D4AF37]">{v}</div></Card>
+            <div className="mt-2 font-mono text-3xl font-bold text-[#2F8CFF]">{v}</div></Card>
         ))}
       </div>
       <Card className="mt-6">
@@ -59,7 +59,7 @@ export function AdminDashboard() {
             <div key={p.planId} className="flex items-center justify-between border-b border-[#2E2E2E] py-1.5">
               <span className="text-slate-300">{p.name}</span>
               <span className="text-slate-500">{p.count} member{p.count === 1 ? "" : "s"}</span>
-              <span className="text-[#D4AF37]">${p.monthlyRevenue.toFixed(0)}/mo</span>
+              <span className="text-[#2F8CFF]">${p.monthlyRevenue.toFixed(0)}/mo</span>
             </div>
           ))}
         </div>
@@ -98,10 +98,10 @@ export function Users() {
             {list.map((u) => (
               <TableRow key={u.id} className="border-[#2E2E2E]" data-testid={`admin-user-row-${u.username}`}>
                 <TableCell className="font-mono text-sm">{u.email}</TableCell>
-                <TableCell><span className="font-mono text-xs text-[#D4AF37]">{u.role}</span></TableCell>
+                <TableCell><span className="font-mono text-xs text-[#2F8CFF]">{u.role}</span></TableCell>
                 <TableCell><StatusBadge value={u.membership_status} /></TableCell>
                 <TableCell><StatusBadge value={u.affiliate_status} /></TableCell>
-                <TableCell><span className={u.account_status === "active" ? "text-[#D4AF37]" : "text-[#C62828]"}>{u.account_status}</span></TableCell>
+                <TableCell><span className={u.account_status === "active" ? "text-[#2F8CFF]" : "text-[#C62828]"}>{u.account_status}</span></TableCell>
                 <TableCell><Button data-testid={`admin-user-manage-${u.username}`} size="sm" variant="outline" onClick={() => openDetail(u.id)} className="border-[#3A3A3A] bg-transparent text-white">Manage</Button></TableCell>
               </TableRow>
             ))}
@@ -121,7 +121,7 @@ export function Users() {
               <Button data-testid="admin-suspend" size="sm" variant="outline" className="border-[#3A3A3A] bg-transparent text-white" onClick={() => action(sel.id, "suspend")}>Suspend</Button>
               <Button data-testid="admin-unsuspend" size="sm" variant="outline" className="border-[#3A3A3A] bg-transparent text-white" onClick={() => action(sel.id, "unsuspend")}>Unsuspend</Button>
               <Button data-testid="admin-revoke-access" size="sm" variant="outline" className="border-[#C62828]/30 bg-transparent text-[#C62828]" onClick={() => action(sel.id, "revoke-access")}>Revoke Extension Access</Button>
-              <Button data-testid="admin-restore-access" size="sm" variant="outline" className="border-[#D4AF37]/30 bg-transparent text-[#D4AF37]" onClick={() => action(sel.id, "restore-access")}>Restore Access</Button>
+              <Button data-testid="admin-restore-access" size="sm" variant="outline" className="border-[#2F8CFF]/30 bg-transparent text-[#2F8CFF]" onClick={() => action(sel.id, "restore-access")}>Restore Access</Button>
               <Button data-testid="admin-force-logout" size="sm" variant="outline" className="border-[#3A3A3A] bg-transparent text-white" onClick={() => action(sel.id, "force-logout")}>Force Logout</Button>
               <Button data-testid="admin-revoke-all-devices" size="sm" variant="outline" className="border-[#C62828]/30 bg-transparent text-[#C62828]" onClick={() => action(sel.id, "revoke-all-devices")}>Revoke All Devices</Button>
               <Button data-testid="admin-activate-membership" size="sm" className="bg-[#22C55E] text-black" onClick={() => api.post(`/api/admin/users/${sel.id}/set-membership`, { key: "m", value: { status: "ACTIVE", plan: "monthly" } }).then(() => { toast.success("Membership set ACTIVE"); openDetail(sel.id); })}>Set Active</Button>
@@ -154,7 +154,7 @@ export function AdminDevices() {
   const revoke = async (id) => { try { await api.post(`/api/admin/devices/${id}/revoke`); toast.success("Revoked"); load(); } catch (e) { toast.error(errMsg(e)); } };
   return (<div><H>Connected Devices Monitor</H>
     <div className="card-surface p-0 overflow-x-auto"><Table><TableHeader><TableRow className="border-[#2E2E2E]"><TableHead>User</TableHead><TableHead>Device</TableHead><TableHead>Version</TableHead><TableHead>Last Active</TableHead><TableHead>Status</TableHead><TableHead></TableHead></TableRow></TableHeader>
-      <TableBody>{list.map((d) => (<TableRow key={d.id} className="border-[#2E2E2E]" data-testid={`admin-device-row-${d.id}`}><TableCell className="font-mono text-sm">{d.user?.username}</TableCell><TableCell>{d.deviceName}</TableCell><TableCell className="font-mono text-xs">{d.extensionVersion}</TableCell><TableCell className="font-mono text-xs">{new Date(d.lastActive).toLocaleString()}</TableCell><TableCell className={d.revoked ? "text-[#C62828]" : "text-[#D4AF37]"}>{d.revoked ? "REVOKED" : "ACTIVE"}</TableCell><TableCell>{!d.revoked && <Button data-testid={`admin-revoke-device-${d.id}`} size="sm" variant="outline" className="border-[#C62828]/30 bg-transparent text-[#C62828]" onClick={() => revoke(d.id)}>Revoke</Button>}</TableCell></TableRow>))}</TableBody></Table></div>
+      <TableBody>{list.map((d) => (<TableRow key={d.id} className="border-[#2E2E2E]" data-testid={`admin-device-row-${d.id}`}><TableCell className="font-mono text-sm">{d.user?.username}</TableCell><TableCell>{d.deviceName}</TableCell><TableCell className="font-mono text-xs">{d.extensionVersion}</TableCell><TableCell className="font-mono text-xs">{new Date(d.lastActive).toLocaleString()}</TableCell><TableCell className={d.revoked ? "text-[#C62828]" : "text-[#2F8CFF]"}>{d.revoked ? "REVOKED" : "ACTIVE"}</TableCell><TableCell>{!d.revoked && <Button data-testid={`admin-revoke-device-${d.id}`} size="sm" variant="outline" className="border-[#C62828]/30 bg-transparent text-[#C62828]" onClick={() => revoke(d.id)}>Revoke</Button>}</TableCell></TableRow>))}</TableBody></Table></div>
   </div>);
 }
 
@@ -181,7 +181,7 @@ export function AdminStrategies() {
   useEffect(() => { api.get("/api/admin/strategies").then((r) => setList(r.data)).catch(() => {}); }, []);
   return (<div><H>Strategy Repository</H>
     <div className="card-surface p-0 overflow-x-auto"><Table><TableHeader><TableRow className="border-[#2E2E2E]"><TableHead>Name</TableHead><TableHead>Type</TableHead><TableHead>Owner</TableHead><TableHead>Visibility</TableHead><TableHead>Version</TableHead><TableHead>Likes</TableHead></TableRow></TableHeader>
-      <TableBody>{list.map((s) => (<TableRow key={s.id} className="border-[#2E2E2E]"><TableCell>{s.name}</TableCell><TableCell><span className="font-mono text-xs text-[#D4AF37]">{s.type}</span></TableCell><TableCell className="font-mono text-sm">{s.ownerUsername}</TableCell><TableCell className="font-mono text-xs">{s.visibility}</TableCell><TableCell>v{s.version}</TableCell><TableCell>{s.likesCount}</TableCell></TableRow>))}</TableBody></Table></div>
+      <TableBody>{list.map((s) => (<TableRow key={s.id} className="border-[#2E2E2E]"><TableCell>{s.name}</TableCell><TableCell><span className="font-mono text-xs text-[#2F8CFF]">{s.type}</span></TableCell><TableCell className="font-mono text-sm">{s.ownerUsername}</TableCell><TableCell className="font-mono text-xs">{s.visibility}</TableCell><TableCell>v{s.version}</TableCell><TableCell>{s.likesCount}</TableCell></TableRow>))}</TableBody></Table></div>
   </div>);
 }
 
@@ -220,7 +220,7 @@ export function ExtensionReleases() {
       <div className="flex items-center gap-2"><Switch checked={form.mandatory} onCheckedChange={(v) => setForm({ ...form, mandatory: v })} /><Label className="text-sm">Mandatory update</Label></div>
       <Button data-testid="create-release-button" onClick={create} disabled={!form.version} className="bg-[#22C55E] text-black font-semibold">Publish Release</Button>
     </div>
-    <div className="space-y-2">{list.map((r) => (<div key={r.id} className="card-surface flex items-center justify-between p-4"><div><span className="font-mono text-[#D4AF37]">v{r.version}</span> <span className="text-sm text-slate-400">{r.releaseNotes}</span></div>{r.mandatory && <span className="font-mono text-xs text-[#C62828]">MANDATORY</span>}</div>))}</div>
+    <div className="space-y-2">{list.map((r) => (<div key={r.id} className="card-surface flex items-center justify-between p-4"><div><span className="font-mono text-[#2F8CFF]">v{r.version}</span> <span className="text-sm text-slate-400">{r.releaseNotes}</span></div>{r.mandatory && <span className="font-mono text-xs text-[#C62828]">MANDATORY</span>}</div>))}</div>
   </div>);
 }
 
