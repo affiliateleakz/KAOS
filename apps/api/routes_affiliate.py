@@ -5,7 +5,8 @@ from fastapi import APIRouter, HTTPException, Depends, Request
 from db import db, new_id, now, now_iso, clean
 from auth import get_current_user, require_role
 from services import get_setting, set_setting, audit_log
-from datetime import timedelta
+import re
+import services_affiliate_ledger as ledger
 
 aff = APIRouter(prefix="/api/affiliate", tags=["affiliate"])
 aff_admin = APIRouter(prefix="/api/admin", tags=["affiliate-admin"])
@@ -118,37 +119,55 @@ async def track_click(ref: str, request: Request, campaign: Optional[str] = None
     return {"ok": True}
 
 
-# ---- commission engine (called from billing on activation / refund) ----
-async def record_commission(customer_user: dict, plan: dict, event: str = "purchase"):
-    code = customer_user.get("referredByCode")
-    if not code:
-        return
-    acc = await db.affiliate_accounts.find_one({"code": code})
-    if not acc or acc["userId"] == customer_user["id"]:
-        return
+# ---- commission engine (called from billing) ----
+# Amounts come from the receiver-based 3-level ledger (services_affiliate_ledger); the legacy
+# `commissions` collection mirrors ledger entries so existing dashboards keep working.
+async def record_commission(customer_user: dict, plan: dict, event: str = "purchase",
+                            event_id: Optional[str] = None, amount_cents: Optional[int] = None):
     prog = await get_program()
-    if not prog.get("enabled"):
-        return
-    per = (prog.get("perPlan") or {}).get(plan["id"], {})
-    rate = per.get("ratePct", prog["defaultRatePct"])
-    ctype = per.get("type", prog["commissionType"])
-    amount = round(plan["amount"] / 100 * rate / 100, 2) if ctype == "percentage" else float(rate)
-    hold = prog.get("holdDays", 30)
-    await db.commissions.insert_one({
-        "id": new_id("comm"), "affiliateUserId": acc["userId"], "customerUserId": customer_user["id"],
-        "planId": plan["id"], "amount": amount, "rate": rate, "type": ctype, "event": event,
-        "status": "PENDING", "holdReleaseAt": (now() + timedelta(days=hold)).isoformat(),
-        "createdAt": now_iso()})
-    await db.affiliate_customer_referrals.update_one(
-        {"affiliateUserId": acc["userId"], "customerUserId": customer_user["id"]},
-        {"$set": {"id": new_id("cref"), "affiliateUserId": acc["userId"], "customerUserId": customer_user["id"],
-                  "converted": True, "planId": plan["id"], "createdAt": now_iso()}}, upsert=True)
+    if not prog.get("enabled") or not customer_user:
+        return []
+    kind = "renewal" if event == "renewal" else "initial"
+    event_id = event_id or f"{event}:{customer_user['id']}:{plan['id']}:{now_iso()}"
+    amount_cents = plan["amount"] if amount_cents is None else amount_cents
+    entries = await ledger.record_payment(event_id, customer_user["id"], plan, amount_cents, kind)
+    for e in entries:
+        if await db.commissions.find_one({"ledgerEntryId": e.entry_id}):
+            continue
+        await db.commissions.insert_one({
+            "id": new_id("comm"), "ledgerEntryId": e.entry_id, "affiliateUserId": e.affiliate_id,
+            "customerUserId": e.buyer_id, "planId": plan["id"], "level": e.level, "recipientTier": e.recipient_tier,
+            "amount": float(e.amount), "rate": e.rate_pct, "type": "percentage", "event": event,
+            "status": "PENDING", "holdReleaseAt": e.available_at.isoformat(), "createdAt": now_iso()})
+    direct = next((e for e in entries if e.level == 1), None)
+    if direct:
+        await db.affiliate_customer_referrals.update_one(
+            {"affiliateUserId": direct.affiliate_id, "customerUserId": customer_user["id"]},
+            {"$set": {"affiliateUserId": direct.affiliate_id, "customerUserId": customer_user["id"],
+                      "converted": True, "planId": plan["id"]},
+             "$setOnInsert": {"id": new_id("cref"), "createdAt": now_iso()}}, upsert=True)
+    return entries
 
 
-async def reverse_commission(customer_user_id: str, reason: str = "refund"):
-    await db.commissions.update_many(
-        {"customerUserId": customer_user_id, "status": {"$in": ["PENDING", "APPROVED", "PAYABLE"]}},
-        {"$set": {"status": "REVERSED", "reversalReason": reason, "updatedAt": now_iso()}})
+async def reverse_commission(customer_user_id: str, reason: str = "refund", event_id: Optional[str] = None,
+                             amount_cents: Optional[int] = None, reversal_id: Optional[str] = None):
+    kind = "chargeback" if reason == "chargeback" else "refund"
+    if event_id:
+        entries = await ledger.record_reversal(reversal_id or f"rev:{event_id}", event_id, amount_cents, kind)
+    else:
+        entries = await ledger.reverse_all_for_buyer(customer_user_id, kind, prefix=f"rev:{reason}")
+    if amount_cents is None:
+        q = {"customerUserId": customer_user_id, "status": {"$in": ["PENDING", "APPROVED", "PAYABLE"]}}
+        if event_id:
+            q["ledgerEntryId"] = {"$regex": f"^{re.escape(event_id)}:L"}
+        await db.commissions.update_many(q, {"$set": {"status": "REVERSED", "reversalReason": reason,
+                                                     "updatedAt": now_iso()}})
+    return entries
+
+
+@aff.get("/ledger")
+async def my_ledger(user: dict = Depends(get_current_user)):
+    return {**await ledger.statement(user["id"]), "tier": await ledger.member_tier(user)}
 
 
 # ---- admin ----
@@ -173,11 +192,18 @@ class CommActionReq(BaseModel):
 
 @aff_admin.post("/commissions/{cid}/status")
 async def set_commission_status(cid: str, req: CommActionReq, admin: dict = Depends(admin_dep)):
-    if req.status not in ("PENDING", "APPROVED", "PAYABLE", "PAID", "REVERSED"):
+    if req.status == "PAID":
+        raise HTTPException(status_code=403, detail="Affiliate payouts are disabled")
+    if req.status not in ("PENDING", "APPROVED", "PAYABLE", "REVERSED"):
         raise HTTPException(status_code=400, detail="Invalid status")
     await db.commissions.update_one({"id": cid}, {"$set": {"status": req.status, "updatedAt": now_iso()}})
     await audit_log(admin, "commission_status", "commission", cid, {"status": req.status})
     return {"ok": True}
+
+
+@aff_admin.get("/affiliate-ledger/{user_id}")
+async def admin_affiliate_ledger(user_id: str, admin: dict = Depends(admin_dep)):
+    return await ledger.statement(user_id)
 
 
 @aff_admin.get("/affiliate-program")

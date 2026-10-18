@@ -1,3 +1,4 @@
+import logging
 import os
 import stripe
 from fastapi import APIRouter, HTTPException, Depends, Request
@@ -6,22 +7,33 @@ from auth import get_current_user
 from services import get_setting, set_setting, audit_log
 from models import CheckoutReq
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api/billing", tags=["billing"])
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY") or None
 WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 
+# Monthly billing only. Free is the tier of every account without a paid plan (not sold via checkout).
 DEFAULT_PLANS = [
-    {"id": "monthly", "name": "Monthly", "lookup_key": "membership_monthly", "amount": 2900,
-     "currency": "usd", "interval": "month", "deviceLimit": 3,
-     "features": ["KAOS Trading Bot", "KAOS Strategy mode", "Cloud Strategies", "Community", "3 Devices"],
-     "entitlements": {"botAccess": True, "modes": ["STRATEGY"], "connectors": ["pocket_option"],
-                      "cloudStrategies": True, "community": True, "premiumTools": False, "deviceLimit": 3}},
-    {"id": "yearly", "name": "Yearly", "lookup_key": "membership_yearly", "amount": 27900,
-     "currency": "usd", "interval": "year", "deviceLimit": 5,
-     "features": ["Everything in Monthly", "KAOS AI mode", "Strategy + AI mode", "Premium Tools", "5 Devices", "2 Months Free"],
+    {"id": "pro", "name": "Pro", "lookup_key": "membership_pro_monthly", "amount": 4900,
+     "currency": "usd", "interval": "month", "deviceLimit": 3, "tier": "pro",
+     "features": ["KAOS Trading Bot", "KAOS Strategy mode", "Scanners", "AI insights", "Cloud Strategies", "Community", "3 Devices"],
+     "entitlements": {"botAccess": True, "modes": ["STRATEGY"], "connectors": ["pocket_option"], "scanners": True,
+                      "aiInsights": True, "cloudStrategies": True, "community": True, "premiumTools": False, "deviceLimit": 3}},
+    {"id": "ultimate", "name": "Ultimate", "lookup_key": "membership_ultimate_monthly", "amount": 14900,
+     "currency": "usd", "interval": "month", "deviceLimit": 5, "tier": "ultimate",
+     "features": ["Everything in Pro", "KAOS AI mode", "Strategy + AI mode", "Premium Tools", "5 Devices"],
      "entitlements": {"botAccess": True, "modes": ["STRATEGY", "AI", "STRATEGY_AI"], "connectors": ["pocket_option"],
-                      "cloudStrategies": True, "community": True, "premiumTools": True, "deviceLimit": 5}},
+                      "scanners": True, "aiInsights": True, "cloudStrategies": True, "community": True,
+                      "premiumTools": True, "deviceLimit": 5}},
 ]
+# Members who subscribed under the retired plan ids keep working.
+LEGACY_PLAN_IDS = {"monthly": "pro", "yearly": "ultimate"}
+
+
+def find_plan(plans, plan_id):
+    plan_id = LEGACY_PLAN_IDS.get(plan_id, plan_id)
+    return next((p for p in plans if p["id"] == plan_id), None)
 
 
 async def get_plans():
@@ -82,7 +94,7 @@ async def status(session_id: str):
 
 async def _activate(user_id, plan_id, customer, subscription, session_id):
     plans = await get_plans()
-    plan = next((p for p in plans if p["id"] == plan_id), None)
+    plan = find_plan(plans, plan_id)
     from datetime import timedelta
     days = 365 if (plan and plan.get("interval") == "year") else 30
     expires = (now() + timedelta(days=days)).isoformat()
@@ -97,9 +109,9 @@ async def _activate(user_id, plan_id, customer, subscription, session_id):
         try:
             from routes_affiliate import record_commission
             cust_user = await db.users.find_one({"id": user_id})
-            await record_commission(cust_user, plan, "purchase")
+            await record_commission(cust_user, plan, "purchase", event_id=f"checkout:{session_id}")
         except Exception:
-            pass
+            logger.exception("affiliate commission failed for %s", session_id)
 
 
 @router.post("/portal")
@@ -165,4 +177,42 @@ async def stripe_webhook(request: Request):
         u = await db.users.find_one({"stripe_customer_id": cust})
         if u and u.get("membership_status") == "PAST_DUE":
             await db.users.update_one({"id": u["id"]}, {"$set": {"membership_status": "ACTIVE", "updated_at": now_iso()}})
+        if u and obj.get("billing_reason") == "subscription_cycle" and obj.get("amount_paid"):
+            plan = find_plan(await get_plans(), u.get("membership_plan"))
+            if plan:
+                try:
+                    from routes_affiliate import record_commission
+                    await record_commission(u, plan, "renewal", event_id=f"invoice:{obj['id']}",
+                                            amount_cents=obj["amount_paid"])
+                except Exception:
+                    logger.exception("affiliate renewal commission failed for %s", obj["id"])
+    elif t in ("charge.refunded", "charge.dispute.created"):
+        await _reverse_for_charge(obj, "chargeback" if t == "charge.dispute.created" else "refund")
     return {"status": "ok"}
+
+
+async def _reverse_for_charge(obj, reason):
+    """Offset affiliate commissions for a refunded or disputed charge (incremental for partial refunds)."""
+    charge_id = obj.get("charge") if reason == "chargeback" else obj.get("id")
+    u = await db.users.find_one({"stripe_customer_id": obj.get("customer")}) if obj.get("customer") else None
+    pay = await db.affiliate_ledger_payments.find_one({"event_id": f"invoice:{obj.get('invoice')}"}) \
+        if obj.get("invoice") else None
+    if not pay and u:
+        pay = await db.affiliate_ledger_payments.find_one({"buyer_id": u["id"]}, sort=[("at", -1)])
+    if not pay:
+        return
+    from decimal import Decimal
+    remaining = int((Decimal(pay["amount"]) - Decimal(pay["reversed_amount"])) * 100)
+    if reason == "chargeback":
+        cents = min(int(obj.get("amount") or 0), remaining)
+    else:
+        already = int(Decimal(pay["reversed_amount"]) * 100)
+        cents = min(int(obj.get("amount_refunded") or 0) - already, remaining)
+    if cents <= 0:
+        return
+    try:
+        from routes_affiliate import reverse_commission
+        await reverse_commission(pay["buyer_id"], reason, event_id=pay["event_id"], amount_cents=cents,
+                                 reversal_id=f"{reason}:{charge_id}:{cents}")
+    except Exception:
+        logger.exception("affiliate reversal failed for %s", charge_id)
