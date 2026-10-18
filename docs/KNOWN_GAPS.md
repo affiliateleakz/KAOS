@@ -14,7 +14,7 @@
 - `content.js` still hard-codes legacy strategy labels (`7B`/`KAOS_BERSERKER`). REPAIRED's FIXES.md says this was fixed in the other runtime.
 - Emergent platform dependencies: email proxy, Google OAuth, and the (now removed) analytics.
 - Pricing (founder decision 2026-10-18): monthly billing only — Free $0, Pro $49/mo, Ultimate $149/mo. Yearly is retired; legacy `monthly`/`yearly` plan ids map to Pro/Ultimate. Stripe prices are created at checkout from these amounts (no live Stripe change made).
-- Non-paying (Free) accounts still get no bot access via `get_entitlements`; the spec's Free `strategy` permission is not granted yet.
+- Free tier (founder decision 2026-10-18): bot in STRATEGY mode on 1 device, no AI modes/scanners/premium tools. The extension license no longer requires a paid membership, but still requires a verified Pocket Option affiliate account and an unsuspended account. AI endpoints (`routes_ai`, FinBERT) still require an ACTIVE paid membership.
 - Recipient tier is the sponsor's tier when the payment is recorded; members who are not ACTIVE/TRIAL count as Free (10% L1 only).
 - Partial refunds reduce the ledger, but the legacy `commissions` mirror only flips to REVERSED on full reversals.
 - Membership gating uses the existing per-plan `entitlements`; the kaos-core `PERMISSIONS` map (free/pro/ultimate) is not yet the source of truth.

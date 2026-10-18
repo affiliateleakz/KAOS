@@ -71,17 +71,27 @@ async def get_trading_config():
     return await get_setting("trading_config", DEFAULT_TRADING_CONFIG)
 
 
+# Free tier: the bot in KAOS Strategy mode on one device; no AI modes, scanners or premium tools.
+FREE_ENTITLEMENTS = {
+    "botAccess": True, "modes": ["STRATEGY"], "connectors": ["pocket_option"], "scanners": False,
+    "aiInsights": False, "cloudStrategies": False, "community": True, "premiumTools": False, "deviceLimit": 1,
+    "tier": "free",
+}
+
+
 async def get_entitlements(user: dict) -> dict:
     """Feature entitlements derived from the user's active plan. Admin-configurable, never hardcoded per-component."""
     from routes_billing import get_plans, find_plan
-    active = user.get("membership_status") in ("ACTIVE", "TRIAL")
-    if not active:
+    if user.get("account_status", "active") in ("suspended", "banned"):
         return {**DEFAULT_ENTITLEMENTS, "botAccess": False}
-    plans = await get_plans()
-    plan = find_plan(plans, user.get("membership_plan"))
-    ent = (plan or {}).get("entitlements") if plan else None
-    return ent or {**DEFAULT_ENTITLEMENTS, "botAccess": True, "modes": ["STRATEGY"],
-                   "connectors": ["pocket_option"], "cloudStrategies": True}
+    if user.get("membership_status") not in ("ACTIVE", "TRIAL"):
+        return dict(FREE_ENTITLEMENTS)
+    plan = find_plan(await get_plans(), user.get("membership_plan"))
+    ent = (plan or {}).get("entitlements")
+    if not ent:
+        return {**DEFAULT_ENTITLEMENTS, "botAccess": True, "modes": ["STRATEGY"], "connectors": ["pocket_option"],
+                "cloudStrategies": True, "scanners": True, "aiInsights": True, "tier": "pro"}
+    return {"scanners": True, "aiInsights": True, **ent, "tier": plan.get("tier", "pro")}
 
 
 def _pseudo(*parts) -> int:
