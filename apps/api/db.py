@@ -70,6 +70,12 @@ async def ensure_indexes():
     await db.ai_predictions.create_index("userId")
     await db.signal_shares.create_index("id", unique=True)
 
+    # Market Intelligence Centre: member-scoped lists, and bounded scanner lookups.
+    await db.member_watchlists.create_index([("user_id", 1), ("id", 1)], unique=True)
+    await db.member_alerts.create_index([("user_id", 1), ("id", 1)], unique=True)
+    await db.kaos_intelligence.create_index([("source", 1), ("event_id", 1)])
+    await db.kaos_intelligence.create_index("observed_at")
+
     await db.coinbase_order_intents.create_index([("user_id", 1), ("broker", 1), ("client_order_id", 1)], unique=True)
     await db.coinbase_order_intents.create_index([("user_id", 1), ("product_id", 1), ("state", 1)])
     await db.coinbase_trade_fills.create_index([("user_id", 1), ("broker", 1), ("trade_id", 1)], unique=True)

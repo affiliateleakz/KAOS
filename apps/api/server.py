@@ -26,6 +26,8 @@ import routes_broker_alpaca
 import routes_broker_oanda
 import routes_chart_settings
 import routes_research_replay
+import routes_market_intel
+import routes_intel_admin
 import broker_adapters
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -85,6 +87,8 @@ app.include_router(routes_broker_alpaca.router)
 app.include_router(routes_broker_oanda.router)
 app.include_router(routes_chart_settings.router)
 app.include_router(routes_research_replay.router)
+app.include_router(routes_market_intel.router)
+app.include_router(routes_intel_admin.router)
 app.include_router(broker_adapters.router)
 app.include_router(routes_finbert.router)
 app.include_router(routes_opportunity.router)

@@ -28,8 +28,8 @@ Nothing in this file is deployed. "Works locally" never means "live in productio
 | 8 | Strategy builder and backtesting lab | Partial | Research harness (CLI) | Portal UI over the backtester | Data |
 | 9 | AI research engine (shadow) | Code present | FinBERT shadow, `/ai/predict` (research only) | Evaluation reports vs rule-based baseline | Model hosting |
 | 10 | AI rules: Free none, Pro advisory, Ultimate AI/Both | Works locally (**gated**) | Pro: `aiInsights`, no AI modes. Ultimate AI modes locked until `POST /api/admin/ai-execution` records validation (audit-logged) | Independent validation sign-off | Independent reviewer |
-| 11–16 | Market intelligence and scanners (stock/options/crypto/forex/social/news) | Partial | Opportunity radar and collectors (SEC etc.), gated to Pro/Ultimate via `entitlements.scanners` | Shared market-data layer | Data vendor licenses (Polygon, news, social APIs) |
-| 17 | Ultimate signals (breakout, options, SPY 0DTE) | Missing | — | After §11 data and validation | Options data license |
+| 11–16 | Market intelligence and scanners (stock/options/crypto/forex/social/news) | Partial | Market Intelligence Center (`/dashboard/intelligence`, `routes_market_intel.py`, `docs/MARKET_INTELLIGENCE.md`): crypto scanner on live public Coinbase candles, social attention from stored collector observations, options snapshot research, watchlists and on-demand alerts, all gated to Pro/Ultimate via `entitlements.scanners`. Stock scanner is built but returns `provider_not_configured` until an owner-supplied Alpaca market-data key is set. Tests: `test_kaos_market_intel.py`, `test_routes_market_intel.py`, `apps/web/src/lib/intel.test.js` | Configure Alpaca market-data keys; run the social/options collectors; add forex and licensed news | Data vendor licenses (Polygon, news, social APIs) |
+| 17 | Ultimate signals (breakout, options, SPY 0DTE) | Partial (research UI only) | Options Research tab lists stored Tradier snapshot observations and parses OCC root/expiry/type for a same-day SPY view; Greeks and trade side are reported unavailable, never estimated. No signal is validated or execution-connected | Ingest real chains; licensed Greeks/flow data; independent validation | Options data license |
 | 18 | Portfolio management | Missing | — | Read-only broker balances | Broker APIs |
 | 19 | Trade journal and analytics | Partial | Paper orders, realized P&L, rejections at `/dashboard/paper` | Journal notes, per-strategy stats | — |
 | 20 | Android / iPhone apps | Code present | Expo starter 0.2.0, not run | Run against the local API | Apple/Google developer accounts |
@@ -38,7 +38,7 @@ Nothing in this file is deployed. "Works locally" never means "live in productio
 | 22 | Payouts, approval workflow | **Gated** | `PayoutsDisabled`; admin can't mark PAID | MLM/consumer-law review, KYC, tax | Legal counsel, payout provider |
 | 22 | Affiliate dashboard (genealogy, ranks, resources) | Partial | Ledger card on the Affiliate page | Genealogy tree, L2/L3 lists | — |
 | 23 | Rewards, Points & Gems | Missing | — | Phase 5 | — |
-| 24 | Administration platform | Partial | Admin/moderation routes and pages; kill switches; audit log | Commission-rate config UI | — |
+| 24 | Administration platform | Partial | Admin/moderation routes and pages; kill switches; audit log. Admin → Data Sources (`routes_intel_admin.py`) toggles intelligence providers, shows credential presence only (never values) and audits each change | Commission-rate config UI | — |
 | 25–27 | Marketplace, community/academy, GOD MODE | Partial / Missing | Community page exists | Phase 5–6 | — |
 | 28 | Security, risk, compliance | Partial | Paper-only default, risk limits, kill switch, gitleaks, secret removal (`SECURITY_AUDIT.md`) | Rate limiting, MFA, monitoring | — |
 | 29 | Engineering: repo, CI, tests | Works locally | GitHub repo, CI (7 jobs), `make dev` | Backend monitoring | — |

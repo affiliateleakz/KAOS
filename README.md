@@ -12,6 +12,7 @@ make dev        # copies .env.example -> .env, starts mongo + api (:8001) + web 
 - Demo login (dev only): `alice@demotrader.com`, using the password in `KAOS_DEMO_PASSWORD` from `.env`
 - Owner login: `ADMIN_EMAIL` / `ADMIN_PASSWORD` from `.env`
 - Paper orders (dev, logged in): `POST /api/v1/paper/orders` `{"symbol":"BTC-USD","quantity":"10","quote_price":"67000"}`; admin kill switch `POST /api/v1/paper/kill-switch`
+- Market Intelligence Center: `/dashboard/intelligence` (Pro/Ultimate). Crypto scans use the live public Coinbase feed; stock scans need optional `APCA_API_KEY_ID`/`APCA_API_SECRET_KEY`; social/options read collector observations only. See `docs/MARKET_INTELLIGENCE.md`
 
 ## Layout
 | Path | What |
