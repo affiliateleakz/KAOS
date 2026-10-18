@@ -25,7 +25,7 @@ So a reviewer following the link gets either a bot challenge or the homepage —
 
 1. Deploy the web build so `build/privacy/index.html` and `build/.htaccess` are on the host.
 2. Exempt `/privacy/` (ideally the whole site and `api.`) from the host's "Human verification" bot challenge (cPanel / Imunify360 / hosting firewall). The API being challenged would also break the Extension for users whose IP is flagged.
-3. Run `scripts/check_privacy_url.sh https://tradingwithkaos.com/privacy/` from outside the host; it must print `OK`.
+3. Run `scripts/check_privacy_url.sh https://tradingwithkaos.com/privacy.html` from outside the host; it must print `OK`.
 4. In the Developer Dashboard → Privacy practices: set Privacy policy URL to `https://tradingwithkaos.com/privacy/` and declare data types consistent with the policy:
    - Personally identifiable information (email, name), Authentication information (password at login, tokens);
    - Financial and payment information (account balance read on page, trade amounts/P&L; Stripe subscription status);
@@ -35,3 +35,6 @@ So a reviewer following the link gets either a bot challenge or the homepage —
 6. Confirm the business details in the policy: retention (24 months / 90 days logs), contact `support@tradewithkaos.com` (domain differs from tradingwithkaos.com), and that the Collective Learning toggle (member dashboard → KAOS AI) is the only opt-in path; the Extension now syncs that consent from `/bot/config`.
 
 The submitted draft was v1.0; this repo's Extension is v1.7.11 and lacks the manifest `key` that pins the store ID (see `docs/KNOWN_GAPS.md`).
+
+## Update 2026-10-18
+The founder uploaded the policy as `https://tradingwithkaos.com/privacy.html`; the repo now uses that path everywhere (site links, Extension popup link, canonical URL). Verified: with the bot challenge bypassed it serves this exact file (9,271 bytes, "Effective October 18, 2026"). From a normal browser user agent on a datacenter IP it still redirects to the `recaptcha.cloud` challenge, so step 2 above is still required.

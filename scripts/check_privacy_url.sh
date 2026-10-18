@@ -2,7 +2,7 @@
 # Verify a privacy policy URL returns the policy itself in raw HTML (no JS, no bot challenge),
 # which is what Chrome Web Store review requires.
 set -euo pipefail
-URL="${1:-https://tradingwithkaos.com/privacy/}"
+URL="${1:-https://tradingwithkaos.com/privacy.html}"
 body=$(curl -sSL -m 30 -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130 Safari/537.36" -w '\n%{url_effective} %{http_code}' "$URL")
 final=$(tail -n1 <<<"$body")
 echo "final: $final"

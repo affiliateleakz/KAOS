@@ -118,7 +118,7 @@ export default function DashboardLayout() {
           </div>
         </header>
         <main className="flex-1 overflow-y-auto p-4 sm:p-6"><Outlet /></main>
-        <div style={{fontSize:12,padding:"6px 24px",textAlign:"right"}}><a href="/privacy/" style={{color:"#b9a36e"}}>Privacy Policy</a></div>
+        <div style={{fontSize:12,padding:"6px 24px",textAlign:"right"}}><a href="/privacy.html" style={{color:"#b9a36e"}}>Privacy Policy</a></div>
         <RiskBar />
       </div>
     </div>
