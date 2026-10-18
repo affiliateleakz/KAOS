@@ -1,6 +1,6 @@
 import React,{useCallback,useEffect,useState} from 'react';
 import {RefreshControl,ScrollView,StyleSheet,Text,View} from 'react-native';
-import {broker,brokerManagement,CoinbaseAccount,BrokerCatalogEntry,BrokerConnection,ReadOnlyBrokerData} from '../src/api';
+import {broker,brokerManagement,CoinbaseAccount,BrokerCatalogEntry,BrokerConnection,ReadOnlyBrokerData,chartSettings,ChartSettings} from '../src/api';
 
 // Same Coinbase account data as the website and extension. Read-only: no orders are placed from the app.
 function Rows({items,cols,empty}:{items:Record<string,any>[];cols:string[];empty:string}){
@@ -15,6 +15,7 @@ export default function Broker(){
  useEffect(()=>{load();const t=setInterval(load,15000);return()=>clearInterval(t)},[load]);
  return <ScrollView style={s.page} refreshControl={<RefreshControl refreshing={false} onRefresh={load} tintColor="#2F8CFF"/>}>
   <BrokerDirectory />
+  <SavedCharts />
   <Text style={s.h}>Coinbase Advanced · read-only</Text><Text style={s.err}>UNVERIFIED: not yet tested against a real Coinbase account</Text>
   {err?<Text style={s.err}>Coinbase unavailable: {err}{acct?' (showing last loaded data)':''}</Text>:null}
   {connected===false&&<Text style={s.muted}>No Coinbase account connected. Connect it on tradingwithkaos.com → Broker Connections.</Text>}
@@ -64,5 +65,18 @@ function BrokerDirectory(){
     <Text style={s.muted}>Positions: {accounts[b.id].positions.length} · Orders: {accounts[b.id].orders.length}</Text>
    </View>}
   </View>)}
+ </View>;
+}
+
+function SavedCharts(){
+ const [charts,setCharts]=useState<ChartSettings[]>([]);
+ const [error,setError]=useState('');
+ const load=useCallback(async()=>{try{const r=await chartSettings.load();setCharts(r.charts);setError('')}catch(e:any){setError(e?.message||'Unable to load chart settings')}},[]);
+ useEffect(()=>{load()},[load]);
+ return <View style={{marginBottom:18}}>
+  <Text style={s.h}>Saved KAOS Charts</Text>
+  <Text style={s.muted}>Synchronized settings from your KAOS account. Chart feeds and live execution may not be supported by the selected broker.</Text>
+  {error?<Text style={s.err}>{error}</Text>:null}
+  {charts.map(c=><Text key={c.slot} style={s.txt}>Chart {c.slot+1} · {c.broker} · {c.symbol} · {c.seconds}s</Text>)}
  </View>;
 }
