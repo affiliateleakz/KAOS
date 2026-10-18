@@ -78,7 +78,7 @@ export default function Onboarding() {
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <span className="label-mono">Step {step} of 9</span>
-            <span className="font-mono text-sm text-[#D4AF37]">{pct}%</span>
+            <span className="font-mono text-sm text-[#2F8CFF]">{pct}%</span>
           </div>
           <Progress value={pct} className="mt-2 h-2 bg-[#111111]" />
           <p className="mt-3 font-heading text-xl font-semibold">{STEPS[step - 1]}</p>
@@ -96,7 +96,7 @@ export default function Onboarding() {
               <h3 className="font-heading text-lg font-semibold">Create your Pocket Option account</h3>
               <p className="mt-2 text-slate-400">{affCfg?.instructions}</p>
               <a href={affCfg?.affiliateUrl} target="_blank" rel="noreferrer" data-testid="onboarding-create-po-button"
-                className="mt-4 inline-flex items-center gap-2 rounded-md bg-[#D4AF37] px-5 py-2.5 font-semibold text-[#080808] hover:opacity-90">
+                className="mt-4 inline-flex items-center gap-2 rounded-md bg-[#2F8CFF] px-5 py-2.5 font-semibold text-[#080808] hover:opacity-90">
                 Create Pocket Option Account <ExternalLink className="h-4 w-4" />
               </a>
               <p className="mt-3 text-xs text-slate-500">Affiliate disclosure: we may earn a commission for referrals.</p>
@@ -106,7 +106,7 @@ export default function Onboarding() {
           {step === 4 && (
             <div>
               {user?.affiliate_status === "VERIFIED" ? (
-                <div className="text-[#D4AF37]"><Check className="mb-2 h-8 w-8" /> Affiliate verified! Continue to membership.</div>
+                <div className="text-[#2F8CFF]"><Check className="mb-2 h-8 w-8" /> Affiliate verified! Continue to membership.</div>
               ) : user?.affiliate_status === "PENDING" ? (
                 <div>
                   <p className="text-[#FFB800]">Your affiliate submission is pending manual review. You'll be notified once verified.</p>
@@ -132,7 +132,7 @@ export default function Onboarding() {
                 {plans.map((p) => (
                   <div key={p.id} className="card-surface p-5">
                     <div className="font-heading font-semibold">{p.name}</div>
-                    <div className="mt-1 font-mono text-2xl text-[#D4AF37]">${(p.amount / 100).toFixed(0)}<span className="text-sm text-slate-500">/{p.interval}</span></div>
+                    <div className="mt-1 font-mono text-2xl text-[#2F8CFF]">${(p.amount / 100).toFixed(0)}<span className="text-sm text-slate-500">/{p.interval}</span></div>
                     <Button data-testid={`onboarding-select-plan-${p.id}`} onClick={() => checkout(p.lookup_key)} disabled={busy} className="mt-4 w-full bg-[#22C55E] text-black font-semibold">Select</Button>
                   </div>
                 ))}
@@ -142,7 +142,7 @@ export default function Onboarding() {
           )}
           {step >= 7 && (
             <div>
-              <div className="text-[#D4AF37]"><Check className="mb-2 h-8 w-8" /> Membership active!</div>
+              <div className="text-[#2F8CFF]"><Check className="mb-2 h-8 w-8" /> Membership active!</div>
               <p className="mt-2 text-slate-400">Download the extension, install it, and log in with your account to authorize.</p>
               <div className="mt-6 flex gap-3">
                 <Button data-testid="onboarding-goto-dashboard" onClick={() => nav("/dashboard")} className="bg-[#22C55E] text-black font-semibold">Go to Dashboard</Button>

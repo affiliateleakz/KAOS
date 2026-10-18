@@ -54,12 +54,12 @@ export default function ExtensionSimulator() {
     setBusy(false);
   };
 
-  const statusColor = (s) => (s >= 200 && s < 300 ? "text-[#D4AF37]" : s === 401 || s === 403 ? "text-[#FFB800]" : "text-[#C62828]");
+  const statusColor = (s) => (s >= 200 && s < 300 ? "text-[#2F8CFF]" : s === 401 || s === 403 ? "text-[#FFB800]" : "text-[#C62828]");
 
   return (
     <div>
       <div className="mb-6 flex items-center gap-2">
-        <TerminalSquare className="h-6 w-6 text-[#D4AF37]" />
+        <TerminalSquare className="h-6 w-6 text-[#2F8CFF]" />
         <h1 className="font-heading text-2xl font-bold">Extension API Simulator</h1>
       </div>
       <p className="mb-6 max-w-2xl text-sm text-slate-400">Simulate exactly what your Chrome extension will do against the v1 API. Login to capture a token, then run any request and inspect the raw HTTP response, status code and authorization result.</p>
@@ -71,14 +71,14 @@ export default function ExtensionSimulator() {
             <div className="mt-2 space-y-2">
               {Object.entries(PRESETS).map(([k, v]) => (
                 <button key={k} data-testid={`sim-preset-${k}`} onClick={() => { setCreds(v); setTokens({ accessToken: "", refreshToken: "" }); }}
-                  className={`block w-full rounded-md border px-3 py-2 text-left text-sm ${creds.email === v.email ? "border-[#D4AF37] bg-[#D4AF37]/10 text-[#D4AF37]" : "border-[#3A3A3A] text-slate-300 hover:bg-[#111111]"}`}>
+                  className={`block w-full rounded-md border px-3 py-2 text-left text-sm ${creds.email === v.email ? "border-[#2F8CFF] bg-[#2F8CFF]/10 text-[#2F8CFF]" : "border-[#3A3A3A] text-slate-300 hover:bg-[#111111]"}`}>
                   {v.label}
                 </button>
               ))}
             </div>
             <Input className="mt-3 bg-[#080808] border-[#3A3A3A] font-mono text-xs" value={creds.email} onChange={(e) => setCreds({ ...creds, email: e.target.value })} />
             <Input className="mt-2 bg-[#080808] border-[#3A3A3A] font-mono text-xs" value={creds.password} onChange={(e) => setCreds({ ...creds, password: e.target.value })} />
-            <div className="mt-3 font-mono text-xs text-slate-500">Token: {tokens.accessToken ? <span className="text-[#D4AF37]">captured</span> : "none"}</div>
+            <div className="mt-3 font-mono text-xs text-slate-500">Token: {tokens.accessToken ? <span className="text-[#2F8CFF]">captured</span> : "none"}</div>
           </div>
           <div className="card-surface p-5">
             <Label className="label-mono">Actions</Label>
@@ -86,7 +86,7 @@ export default function ExtensionSimulator() {
               {ACTIONS.map((a) => (
                 <Button key={a.id} data-testid={`sim-action-${a.id}`} onClick={() => run(a)} disabled={busy}
                   variant="outline" className="w-full justify-start border-[#3A3A3A] bg-transparent text-left text-white hover:bg-[#111111]">
-                  <Play className="mr-2 h-3.5 w-3.5 text-[#D4AF37]" />
+                  <Play className="mr-2 h-3.5 w-3.5 text-[#2F8CFF]" />
                   <span className="font-mono text-xs">{a.method}</span> <span className="ml-2 text-sm">{a.label}</span>
                 </Button>
               ))}
@@ -109,11 +109,11 @@ export default function ExtensionSimulator() {
                     <span className={statusColor(e.status)}>{e.status} · {e.ms}ms</span>
                   </div>
                   {e.authHeader && <div className="mt-2 text-slate-500">Authorization: {e.authHeader}</div>}
-                  {e.request && <><div className="mt-2 text-slate-500">Request:</div><pre className="mt-1 whitespace-pre-wrap text-[#D4AF37]">{JSON.stringify(e.request, null, 2)}</pre></>}
+                  {e.request && <><div className="mt-2 text-slate-500">Request:</div><pre className="mt-1 whitespace-pre-wrap text-[#2F8CFF]">{JSON.stringify(e.request, null, 2)}</pre></>}
                   <div className="mt-2 text-slate-500">Response:</div>
                   <pre className="mt-1 whitespace-pre-wrap text-slate-300">{JSON.stringify(e.response, null, 2)}</pre>
                   {e.response?.authorized !== undefined && (
-                    <div className={`mt-2 ${e.response.authorized ? "text-[#D4AF37]" : "text-[#C62828]"}`}>
+                    <div className={`mt-2 ${e.response.authorized ? "text-[#2F8CFF]" : "text-[#C62828]"}`}>
                       AUTHORIZATION RESULT: {e.response.authorized ? "AUTHORIZED ✓" : "DENIED ✗"} {e.response.reasons?.length ? `(${e.response.reasons.join(", ")})` : ""}
                     </div>
                   )}

@@ -21,7 +21,7 @@ function Shell({ title, subtitle, children }) {
             {subtitle && <p className="mt-1 text-sm text-slate-400">{subtitle}</p>}
             <div className="mt-6">{children}</div>
           </div>
-          <p className="mt-4 text-center text-xs text-slate-400"><a href="/privacy/" className="text-[#D4AF37] hover:underline">Privacy Policy</a> · <a href="mailto:support@tradewithkaos.com" className="hover:underline">Support</a></p>
+          <p className="mt-4 text-center text-xs text-slate-400"><a href="/privacy/" className="text-[#2F8CFF] hover:underline">Privacy Policy</a> · <a href="mailto:support@tradewithkaos.com" className="hover:underline">Support</a></p>
         </div>
       </div>
     </div>
@@ -92,12 +92,12 @@ export function Login() {
         <div><Label className="label-mono">Password</Label>
           <Input data-testid="login-password-input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="mt-1 bg-[#0F0F0F] border-[#3A3A3A]" /></div>
         {err && <p data-testid="login-error" className="text-sm text-[#C62828]">{err}</p>}
-        <Button data-testid="login-submit-button" disabled={busy} className="w-full bg-[#22C55E] text-black hover:bg-[#B8942E] font-semibold">{busy ? "Signing in…" : "Sign In"}</Button>
+        <Button data-testid="login-submit-button" disabled={busy} className="w-full bg-[#2F8CFF] text-black hover:bg-[#7DB8FF] font-semibold">{busy ? "Signing in…" : "Sign In"}</Button>
       </form>
       <GoogleButton />
       <div className="mt-4 flex justify-between text-sm">
-        <Link to="/forgot-password" data-testid="forgot-password-link" className="text-slate-400 hover:text-[#D4AF37]">Forgot password?</Link>
-        <Link to="/register" data-testid="go-register-link" className="text-[#D4AF37] hover:underline">Join now</Link>
+        <Link to="/forgot-password" data-testid="forgot-password-link" className="text-slate-400 hover:text-[#2F8CFF]">Forgot password?</Link>
+        <Link to="/register" data-testid="go-register-link" className="text-[#2F8CFF] hover:underline">Join now</Link>
       </div>
     </Shell>
   );
@@ -131,10 +131,10 @@ export function Register() {
           <Input data-testid="register-password-input" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required minLength={8} className="mt-1 bg-[#0F0F0F] border-[#3A3A3A]" />
           <p className="mt-1 text-xs text-slate-500">At least 8 characters.</p></div>
         {err && <p data-testid="register-error" className="text-sm text-[#C62828]">{err}</p>}
-        <Button data-testid="register-submit-button" disabled={busy} className="w-full bg-[#22C55E] text-black hover:bg-[#B8942E] font-semibold">{busy ? "Creating…" : "Create Account"}</Button>
+        <Button data-testid="register-submit-button" disabled={busy} className="w-full bg-[#2F8CFF] text-black hover:bg-[#7DB8FF] font-semibold">{busy ? "Creating…" : "Create Account"}</Button>
       </form>
       <GoogleButton />
-      <p className="mt-4 text-center text-sm text-slate-400">Already a member? <Link to="/login" className="text-[#D4AF37] hover:underline">Sign in</Link></p>
+      <p className="mt-4 text-center text-sm text-slate-400">Already a member? <Link to="/login" className="text-[#2F8CFF] hover:underline">Sign in</Link></p>
     </Shell>
   );
 }
@@ -151,14 +151,14 @@ export function ForgotPassword() {
       {sent ? (
         <div data-testid="forgot-confirmation" className="text-sm text-slate-300">
           If that email is registered, a reset link has been sent. Check your inbox.
-          <div className="mt-4"><Link to="/login" className="text-[#D4AF37] hover:underline">Back to sign in</Link></div>
+          <div className="mt-4"><Link to="/login" className="text-[#2F8CFF] hover:underline">Back to sign in</Link></div>
         </div>
       ) : (
         <form onSubmit={submit} className="space-y-4">
           <div><Label className="label-mono">Email</Label>
             <Input data-testid="forgot-email-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="mt-1 bg-[#0F0F0F] border-[#3A3A3A]" /></div>
-          <Button data-testid="forgot-submit-button" disabled={busy} className="w-full bg-[#22C55E] text-black font-semibold">Send reset link</Button>
-          <div><Link to="/login" className="text-sm text-slate-400 hover:text-[#D4AF37]">Back to sign in</Link></div>
+          <Button data-testid="forgot-submit-button" disabled={busy} className="w-full bg-[#2F8CFF] text-black hover:bg-[#7DB8FF] font-semibold">Send reset link</Button>
+          <div><Link to="/login" className="text-sm text-slate-400 hover:text-[#2F8CFF]">Back to sign in</Link></div>
         </form>
       )}
     </Shell>
@@ -183,8 +183,8 @@ export function ResetPassword() {
         <div><Label className="label-mono">New password</Label>
           <Input data-testid="reset-password-input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} className="mt-1 bg-[#0F0F0F] border-[#3A3A3A]" /></div>
         {err && <p data-testid="reset-error" className="text-sm text-[#C62828]">{err}</p>}
-        <Button data-testid="reset-submit-button" disabled={busy} className="w-full bg-[#22C55E] text-black font-semibold">Reset password</Button>
-        <div><Link to="/login" className="text-sm text-slate-400 hover:text-[#D4AF37]">Back to sign in</Link></div>
+        <Button data-testid="reset-submit-button" disabled={busy} className="w-full bg-[#2F8CFF] text-black hover:bg-[#7DB8FF] font-semibold">Reset password</Button>
+        <div><Link to="/login" className="text-sm text-slate-400 hover:text-[#2F8CFF]">Back to sign in</Link></div>
       </form>
     </Shell>
   );

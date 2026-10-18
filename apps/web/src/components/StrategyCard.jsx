@@ -46,7 +46,7 @@ export function StrategyCard({ s, onChange }) {
       <p className="text-sm text-slate-400 line-clamp-2 min-h-[2.5rem]">{s.description}</p>
       <div className="flex flex-wrap gap-1.5">
         {(s.indicators || []).slice(0, 3).map((i, idx) => (
-          <span key={idx} className="rounded bg-[#1A1A1A] px-2 py-0.5 font-mono text-[11px] text-[#D4AF37]">
+          <span key={idx} className="rounded bg-[#1A1A1A] px-2 py-0.5 font-mono text-[11px] text-[#2F8CFF]">
             {i.name || i}
           </span>
         ))}
@@ -62,7 +62,7 @@ export function StrategyCard({ s, onChange }) {
             <Heart className="h-4 w-4" fill={s.liked ? "currentColor" : "none"} />{s.likesCount}
           </button>
           <button data-testid={`strategy-card-save-button-${s.id}`} onClick={(e) => act(e, "save")}
-            className={`flex items-center gap-1 transition-colors ${s.saved ? "text-[#D4AF37]" : "text-slate-400 hover:text-[#D4AF37]"}`}>
+            className={`flex items-center gap-1 transition-colors ${s.saved ? "text-[#2F8CFF]" : "text-slate-400 hover:text-[#2F8CFF]"}`}>
             <Bookmark className="h-4 w-4" fill={s.saved ? "currentColor" : "none"} />{s.savesCount}
           </button>
           <span className="flex items-center gap-1 text-slate-400"><GitFork className="h-4 w-4" />{s.forksCount}</span>
@@ -70,7 +70,7 @@ export function StrategyCard({ s, onChange }) {
         </div>
         {!isBuiltIn && (
           <button data-testid={`strategy-card-fork-button-${s.id}`} onClick={(e) => act(e, "fork")}
-            className="rounded bg-[#1A1A1A] px-2.5 py-1 font-mono text-[11px] text-[#D4AF37] hover:bg-[#262626] transition-colors">
+            className="rounded bg-[#1A1A1A] px-2.5 py-1 font-mono text-[11px] text-[#2F8CFF] hover:bg-[#262626] transition-colors">
             FORK
           </button>
         )}

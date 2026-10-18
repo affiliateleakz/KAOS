@@ -26,7 +26,7 @@ export function TradingOps() {
       <H>Trading Operations</H>
       <div className="mb-4 rounded-lg border border-[#2E2E2E] bg-[#0c0c0c] p-3 text-xs text-slate-500">Aggregate telemetry across all members. Records flagged SIM are simulated demo data.</div>
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-7">
-        {cards.map(([l, v]) => (<div key={l} className="card-surface p-4"><div className="label-mono">{l}</div><div className="mt-1 font-mono text-2xl font-bold text-[#D4AF37]">{v}</div></div>))}
+        {cards.map(([l, v]) => (<div key={l} className="card-surface p-4"><div className="label-mono">{l}</div><div className="mt-1 font-mono text-2xl font-bold text-[#2F8CFF]">{v}</div></div>))}
       </div>
       <div className="mt-6 grid gap-4 md:grid-cols-4">
         {[["By Engine", t.byEngine], ["By Mode", t.byMode], ["By Result", t.byResult], ["By Failure", t.byFailure]].map(([l, obj]) => (
@@ -41,7 +41,7 @@ export function TradingOps() {
           <h3 className="font-heading font-semibold">Official Strategy &amp; Models</h3>
           <p className="mt-1 font-mono text-xs text-slate-400">{strat.officialStrategy.name} v{strat.officialStrategy.version} · {strat.officialStrategy.structureComponent} · authority: {strat.tradingConfig.executionAuthority}</p>
           <div className="mt-3 flex flex-wrap gap-2">
-            {strat.officialStrategy.engines.map((e) => <span key={e.key} className="rounded bg-[#0c0c0c] border border-[#2E2E2E] px-2 py-1 font-mono text-xs text-[#D4AF37]">{e.label} · {e.expiration}</span>)}
+            {strat.officialStrategy.engines.map((e) => <span key={e.key} className="rounded bg-[#0c0c0c] border border-[#2E2E2E] px-2 py-1 font-mono text-xs text-[#2F8CFF]">{e.label} · {e.expiration}</span>)}
           </div>
           <div className="mt-3 font-mono text-xs text-slate-500">AI models: {models.map((m) => `${m.version}(${m.status})`).join(", ") || "none"}</div>
         </div>
@@ -50,7 +50,7 @@ export function TradingOps() {
         <div className="border-b border-[#2E2E2E] p-4"><h3 className="font-heading font-semibold">Recent Trades</h3></div>
         <Table><TableHeader><TableRow className="border-[#2E2E2E]"><TableHead>Asset</TableHead><TableHead>Dir</TableHead><TableHead>Engine</TableHead><TableHead>Mode</TableHead><TableHead>State</TableHead><TableHead>Result</TableHead><TableHead>StratVer</TableHead><TableHead>AIVer</TableHead></TableRow></TableHeader>
           <TableBody>{trades.slice(0, 50).map((tr) => (
-            <TableRow key={tr.id} className="border-[#2E2E2E]"><TableCell className="font-mono text-xs">{tr.asset}</TableCell><TableCell className={tr.direction === "BUY" ? "text-[#D4AF37]" : "text-[#C62828]"}>{tr.direction}</TableCell><TableCell className="font-mono text-xs">{tr.engine || "—"}</TableCell><TableCell className="font-mono text-xs">{tr.tradingMode}</TableCell><TableCell className="font-mono text-xs">{tr.state}{tr.simulated && "·SIM"}</TableCell><TableCell className={tr.result === "WIN" ? "text-[#D4AF37]" : tr.result === "LOSS" ? "text-[#C62828]" : "text-slate-400"}>{tr.result || tr.failureCode || "—"}</TableCell><TableCell className="font-mono text-xs">{tr.strategyVersion || "—"}</TableCell><TableCell className="font-mono text-xs">{tr.aiModelVersion || "—"}</TableCell></TableRow>
+            <TableRow key={tr.id} className="border-[#2E2E2E]"><TableCell className="font-mono text-xs">{tr.asset}</TableCell><TableCell className={tr.direction === "BUY" ? "text-[#2F8CFF]" : "text-[#C62828]"}>{tr.direction}</TableCell><TableCell className="font-mono text-xs">{tr.engine || "—"}</TableCell><TableCell className="font-mono text-xs">{tr.tradingMode}</TableCell><TableCell className="font-mono text-xs">{tr.state}{tr.simulated && "·SIM"}</TableCell><TableCell className={tr.result === "WIN" ? "text-[#2F8CFF]" : tr.result === "LOSS" ? "text-[#C62828]" : "text-slate-400"}>{tr.result || tr.failureCode || "—"}</TableCell><TableCell className="font-mono text-xs">{tr.strategyVersion || "—"}</TableCell><TableCell className="font-mono text-xs">{tr.aiModelVersion || "—"}</TableCell></TableRow>
           ))}</TableBody>
         </Table>
       </div>
@@ -58,7 +58,7 @@ export function TradingOps() {
   );
 }
 
-const STATUS_COLOR = { SUPPORTED: "text-[#D4AF37] border-[#D4AF37]/40 bg-[#D4AF37]/10", COMING_SOON: "text-amber-300 border-amber-400/40 bg-amber-400/10", PLANNED: "text-slate-400 border-slate-500/40 bg-slate-500/10" };
+const STATUS_COLOR = { SUPPORTED: "text-[#2F8CFF] border-[#2F8CFF]/40 bg-[#2F8CFF]/10", COMING_SOON: "text-amber-300 border-amber-400/40 bg-amber-400/10", PLANNED: "text-slate-400 border-slate-500/40 bg-slate-500/10" };
 
 export function Connectors() {
   const [list, setList] = useState([]);

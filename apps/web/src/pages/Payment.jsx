@@ -30,8 +30,8 @@ export function PaymentSuccess() {
       <div className="glass-nav px-6 py-4"><Brand /></div>
       <div className="flex flex-1 items-center justify-center px-4">
         <div className="card-surface max-w-md p-8 text-center" data-testid="payment-success-card">
-          {state === "checking" && <><Loader2 className="mx-auto h-10 w-10 animate-spin text-[#D4AF37]" /><p className="mt-4 text-slate-400">Confirming your payment…</p></>}
-          {state === "done" && <><Check className="mx-auto h-12 w-12 text-[#D4AF37]" /><h1 className="mt-4 font-heading text-2xl font-bold">Membership Active!</h1><p className="mt-2 text-slate-400">Your subscription is confirmed.</p><Button data-testid="payment-continue-button" onClick={() => nav("/dashboard")} className="mt-6 bg-[#22C55E] text-black font-semibold">Go to Dashboard</Button></>}
+          {state === "checking" && <><Loader2 className="mx-auto h-10 w-10 animate-spin text-[#2F8CFF]" /><p className="mt-4 text-slate-400">Confirming your payment…</p></>}
+          {state === "done" && <><Check className="mx-auto h-12 w-12 text-[#2F8CFF]" /><h1 className="mt-4 font-heading text-2xl font-bold">Membership Active!</h1><p className="mt-2 text-slate-400">Your subscription is confirmed.</p><Button data-testid="payment-continue-button" onClick={() => nav("/dashboard")} className="mt-6 bg-[#22C55E] text-black font-semibold">Go to Dashboard</Button></>}
           {state === "pending" && <><Loader2 className="mx-auto h-10 w-10 text-[#FFB800]" /><p className="mt-4 text-slate-400">Payment received — activation is processing. Check your dashboard shortly.</p><Button onClick={() => nav("/dashboard")} className="mt-6">Dashboard</Button></>}
           {state === "error" && <><X className="mx-auto h-12 w-12 text-[#C62828]" /><p className="mt-4 text-slate-400">Missing session.</p></>}
         </div>
