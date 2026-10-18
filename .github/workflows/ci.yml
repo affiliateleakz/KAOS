@@ -16,7 +16,7 @@ jobs:
         with: { python-version: "3.11" }
       - name: Install
         run: |
-          pip install pytest
+          pip install pytest numpy pandas
           if [ "${{ matrix.suite }}" = "apps/api" ]; then pip install -r apps/api/requirements.txt; fi
       - name: Test
         working-directory: ${{ matrix.suite }}
