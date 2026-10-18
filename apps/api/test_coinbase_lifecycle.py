@@ -75,3 +75,45 @@ def test_platform_emergency_stop_blocks_even_when_enabled(env, monkeypatch):
     with pytest.raises(HTTPException) as e:
         run(rc.authorized(Req(), {"id": "u", "membership_status": "ACTIVE"}))
     assert e.value.detail == "Platform emergency stop active"
+
+
+class _Coll:
+    def __init__(self, one=None, many=(), count=0):
+        self.one, self.many, self.count = one, list(many), count
+    async def find_one(self, q): return self.one(q) if callable(self.one) else self.one
+    async def count_documents(self, q): return self.count
+    def find(self, q):
+        many = self.many
+        class C:
+            async def to_list(self, n): return many
+        return C()
+
+
+def _risk_db(monkeypatch, slots=0, sells=(), buy=None, cfg=None):
+    fake = type("DB", (), {})()
+    fake.coinbase_account_risk = _Coll(one=cfg)
+    fake.coinbase_active_slots = _Coll(count=slots)
+    fake.coinbase_order_intents = _Coll(one=buy, many=sells)
+    monkeypatch.setattr(rc, "db", fake)
+
+
+def test_account_risk_blocks_extra_open_position(monkeypatch):
+    _risk_db(monkeypatch, slots=1)
+    with pytest.raises(HTTPException) as e:
+        run(rc.account_risk_check("u"))
+    assert "maximum open positions" in e.value.detail
+
+
+def test_account_risk_daily_loss_limit(monkeypatch):
+    sell = {"source_buy_client_order_id": "b", "fill_notional": "70", "fill_fees": "1"}
+    buy = {"fill_notional": "100", "fill_fees": "1"}
+    _risk_db(monkeypatch, sells=[sell], buy=buy, cfg={"max_open_positions": 3, "max_daily_loss_usd": "25"})
+    assert run(rc.daily_realized_pnl("u")) == -32
+    with pytest.raises(HTTPException) as e:
+        run(rc.account_risk_check("u"))
+    assert "daily loss limit" in e.value.detail
+
+
+def test_account_risk_allows_within_limits(monkeypatch):
+    _risk_db(monkeypatch, cfg={"max_open_positions": 2, "max_daily_loss_usd": "25"}, slots=1)
+    run(rc.account_risk_check("u"))

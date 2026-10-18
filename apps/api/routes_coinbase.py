@@ -107,6 +107,8 @@ async def order(req: OrderRequest, request: Request, user: dict = Depends(get_cu
     if not PRODUCT.fullmatch(req.product_id) or not CID.fullmatch(req.client_order_id):
         raise HTTPException(422, "Invalid product or client order id")
     uid = user["id"]
+    if req.side == "BUY":
+        await account_risk_check(uid)
     key = {"user_id": uid, "broker": "coinbase", "client_order_id": req.client_order_id}
     # Stable order ID is reserved before any exchange call.
     if await db.coinbase_order_intents.find_one(key):
@@ -372,3 +374,84 @@ async def cancel(req: ReconcileRequest, request: Request, user: dict = Depends(g
         state = None
     return {"client_order_id": req.client_order_id, "cancel_success": bool(result.get("success")),
             "failure_reason": result.get("failure_reason"), "reconciled": state}
+
+
+class PositionRisk(BaseModel):
+    stop_loss_pct: str
+    take_profit_pct: str
+    estimated_exit_fee_pct: str = "0.6"
+    enabled: bool = True
+
+
+class AccountRisk(BaseModel):
+    max_open_positions: int = Field(default=1, ge=1, le=10)
+    max_daily_loss_usd: str = "25"
+
+
+DEFAULT_ACCOUNT_RISK = {"max_open_positions": 1, "max_daily_loss_usd": "25"}
+
+
+async def daily_realized_pnl(uid):
+    """Net realized P&L today (UTC) from reconciled KAOS exits: SELL proceeds - fees - source BUY cost - fees."""
+    today = datetime.now(timezone.utc).date().isoformat()
+    total = Decimal(0)
+    sells = await db.coinbase_order_intents.find({"user_id": uid, "broker": "coinbase", "side": "SELL",
+        "state": "FILLED", "updated_at": {"$gte": today}}).to_list(500)
+    for sell in sells:
+        buy = await db.coinbase_order_intents.find_one({"user_id": uid, "broker": "coinbase",
+            "client_order_id": sell.get("source_buy_client_order_id")})
+        if not buy:
+            continue
+        total += (Decimal(str(sell.get("fill_notional", "0"))) - Decimal(str(sell.get("fill_fees", "0")))
+                  - Decimal(str(buy.get("fill_notional", "0"))) - Decimal(str(buy.get("fill_fees", "0"))))
+    return total
+
+
+async def account_risk_check(uid):
+    """Account-wide limits checked before any new BUY: open positions and today's realized loss."""
+    cfg = {**DEFAULT_ACCOUNT_RISK, **(await db.coinbase_account_risk.find_one({"user_id": uid}) or {})}
+    if await db.coinbase_active_slots.count_documents({"user_id": uid}) >= int(cfg["max_open_positions"]):
+        raise HTTPException(409, "Account risk: maximum open positions reached")
+    if await daily_realized_pnl(uid) <= -Decimal(str(cfg["max_daily_loss_usd"])):
+        raise HTTPException(409, "Account risk: daily loss limit reached; new entries blocked until tomorrow (UTC)")
+
+
+@router.get("/risk")
+async def get_risk(user: dict = Depends(get_current_user)):
+    acct = await db.coinbase_account_risk.find_one({"user_id": user["id"]}) or {}
+    per = await db.coinbase_position_risk.find({"user_id": user["id"]}).to_list(100)
+    proposals = await db.coinbase_position_proposals.find({"user_id": user["id"]}).to_list(100)
+    return {"account": {k: acct.get(k, v) for k, v in DEFAULT_ACCOUNT_RISK.items()},
+            "daily_realized_pnl_usd": str(await daily_realized_pnl(user["id"])),
+            "positions": [{k: r.get(k) for k in ("product_id", "stop_loss_pct", "take_profit_pct",
+                           "estimated_exit_fee_pct", "enabled")} for r in per],
+            "exit_proposals": [{k: (str(r[k]) if k == "observed_at" else r.get(k)) for k in ("product_id", "decision",
+                               "reason", "mark_price", "estimated_net_pnl_usd", "observed_at", "execution_enabled") if k in r}
+                               for r in proposals]}
+
+
+@router.put("/risk/account")
+async def put_account_risk(req: AccountRisk, user: dict = Depends(get_current_user)):
+    positive(req.max_daily_loss_usd, Decimal("100000"))
+    await db.coinbase_account_risk.update_one({"user_id": user["id"]}, {"$set": {
+        "user_id": user["id"], **req.model_dump(), "updated_at": now_iso()}}, upsert=True)
+    return {"ok": True}
+
+
+@router.put("/risk/{product_id}")
+async def put_position_risk(product_id: str, req: PositionRisk, user: dict = Depends(get_current_user)):
+    """Stop-loss / take-profit for a product. The monitor only proposes exits; it never sells by itself."""
+    from coinbase_position_policy import dec
+    if not PRODUCT.fullmatch(product_id):
+        raise HTTPException(422, "Invalid product")
+    try:
+        sl, tp, fee = (dec(v, n) for v, n in ((req.stop_loss_pct, "stop_loss_pct"),
+                       (req.take_profit_pct, "take_profit_pct"), (req.estimated_exit_fee_pct, "estimated_exit_fee_pct")))
+    except ValueError as exc:
+        raise HTTPException(422, str(exc))
+    if not (0 < sl < 100 and 0 < tp < 1000 and fee < 100):
+        raise HTTPException(422, "Stop must be 0-100%, target above 0%, fee below 100%")
+    await db.coinbase_position_risk.update_one({"user_id": user["id"], "product_id": product_id}, {"$set": {
+        "user_id": user["id"], "product_id": product_id, "stop_loss_pct": str(sl), "take_profit_pct": str(tp),
+        "estimated_exit_fee_pct": str(fee), "enabled": req.enabled, "updated_at": now_iso()}}, upsert=True)
+    return {"ok": True}
