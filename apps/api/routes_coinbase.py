@@ -17,6 +17,7 @@ from pymongo.errors import DuplicateKeyError
 from auth import get_current_user
 from db import db, now_iso
 from services_trading import get_entitlements
+from services import get_setting
 
 router = APIRouter(prefix="/api/v1/coinbase-live", tags=["coinbase-live"])
 PRODUCT = re.compile(r"^[A-Z0-9]{2,20}-USD$")
@@ -32,6 +33,12 @@ class OrderRequest(BaseModel):
 
 class ReconcileRequest(BaseModel):
     client_order_id: str
+
+class PreviewRequest(BaseModel):
+    product_id: str
+    side: Literal["BUY", "SELL"]
+    quote_size: Optional[str] = None
+    base_size: Optional[str] = None
 
 
 def positive(value, maximum=None):
@@ -65,6 +72,8 @@ async def authorized(request, user):
         raise HTTPException(403, "Unexpired explicit live-trading consent required")
     if await db.coinbase_emergency_stops.find_one({"user_id": user["id"], "stopped": True}):
         raise HTTPException(403, "Emergency stop active")
+    if await get_setting("paper_kill_switch", False):  # platform-wide emergency stop (admin) also halts live orders
+        raise HTTPException(403, "Platform emergency stop active")
     return consent
 
 async def connection(user_id):
@@ -294,3 +303,72 @@ async def reconcile_order(uid: str, client_order_id: str):
         raise
     except Exception:
         raise HTTPException(502, "Could not safely reconcile Coinbase order; manual review required")
+
+
+INTENT_FIELDS = ("client_order_id", "order_id", "product_id", "side", "quote_size", "base_size", "state",
+                 "exchange_status", "filled_size", "fill_notional", "fill_fees", "created_at", "updated_at")
+
+
+@router.post("/preview")
+async def preview(req: PreviewRequest, user: dict = Depends(get_current_user)):
+    """Ask Coinbase to preview (not place) a market order: expected fill, fees, slippage and errors.
+
+    Works while live submission is disabled; needs a verified connection whose key has Trade permission.
+    """
+    if not PRODUCT.fullmatch(req.product_id):
+        raise HTTPException(422, "Invalid product")
+    if req.side == "BUY" and (not req.quote_size or req.base_size):
+        raise HTTPException(422, "BUY preview requires quote_size only")
+    if req.side == "SELL" and (not req.base_size or req.quote_size):
+        raise HTTPException(422, "SELL preview requires base_size only")
+    size = positive(req.quote_size or req.base_size)
+    conn = await connection(user["id"])
+    def call():
+        client = make_client(conn)
+        if req.side == "BUY":
+            return asdict(client.preview_market_order_buy(product_id=req.product_id, quote_size=size))
+        return asdict(client.preview_market_order_sell(product_id=req.product_id, base_size=size))
+    try:
+        data = await asyncio.to_thread(call)
+    except Exception as exc:
+        raise HTTPException(502, f"Coinbase preview failed ({type(exc).__name__})")
+    keep = ("order_total", "commission_total", "quote_size", "base_size", "best_bid", "best_ask", "slippage",
+            "average_filled_price", "errs", "warning", "est_average_filled_price")
+    return {"preview": {k: data.get(k) for k in keep if k in data}, "placed": False,
+            "live_orders_enabled": os.getenv("KAOS_COINBASE_LIVE_ORDERS", "disabled") == "enabled"}
+
+
+@router.get("/orders")
+async def list_intents(user: dict = Depends(get_current_user)):
+    """KAOS-originated Coinbase orders with their reconciliation state (same list on every device)."""
+    rows = await db.coinbase_order_intents.find({"user_id": user["id"], "broker": "coinbase"}).sort(
+        "created_at", -1).to_list(200)
+    return {"orders": [{k: r.get(k) for k in INTENT_FIELDS} for r in rows]}
+
+
+@router.post("/cancel")
+async def cancel(req: ReconcileRequest, request: Request, user: dict = Depends(get_current_user)):
+    """Cancel an open KAOS order on Coinbase, then reconcile it. Same gates as submission."""
+    await authorized(request, user)
+    key = {"user_id": user["id"], "broker": "coinbase", "client_order_id": req.client_order_id}
+    intent = await db.coinbase_order_intents.find_one(key)
+    if not intent or not intent.get("order_id"):
+        raise HTTPException(404, "No exchange order for this client order id")
+    if intent.get("state") not in ("ACCEPTED", "OPEN", "PARTIAL_FILL_REVIEW"):
+        raise HTTPException(409, f"Order is {intent.get('state')}; nothing to cancel")
+    conn = await connection(user["id"])
+    def call():
+        return asdict(make_client(conn).cancel_orders(order_ids=[intent["order_id"]]))
+    try:
+        data = await asyncio.to_thread(call)
+    except Exception as exc:
+        raise HTTPException(502, f"Coinbase cancel failed ({type(exc).__name__}); reconcile before retrying")
+    result = (data.get("results") or [{}])[0]
+    await db.coinbase_order_intents.update_one(key, {"$set": {"cancel_requested_at": now_iso(),
+        "cancel_result": {"success": bool(result.get("success")), "failure_reason": result.get("failure_reason")}}})
+    try:
+        state = await reconcile_order(user["id"], req.client_order_id)
+    except HTTPException:
+        state = None
+    return {"client_order_id": req.client_order_id, "cancel_success": bool(result.get("success")),
+            "failure_reason": result.get("failure_reason"), "reconciled": state}
