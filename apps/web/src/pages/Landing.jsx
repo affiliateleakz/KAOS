@@ -242,7 +242,7 @@ const FEATURES = [
 const PLANS = [
   {
     id: "free", name: "Free", price: "$0", per: "/month", note: "Create an account · no card required",
-    features: ["Member portal & community", "Paper trading", "Affiliate program (10% on direct referrals)"],
+    features: ["KAOS Trading Bot", "KAOS Strategy mode (no AI trading)", "Paper trading", "Community access", "Works on 1 device"],
     cta: "JOIN FREE", best: false,
   },
   {
@@ -273,7 +273,7 @@ const FAQS = [
   { q: "Which platform does KAOS work with?", a: "KAOS works with Pocket Option. The bot trades on your own Pocket Option account — demo or real — exactly as you have it selected in Pocket Option. KAOS never moves your funds anywhere else." },
   { q: "How does KAOS AI learn?", a: "Every settled trade — win or loss — is added to the model, and KAOS AI re-trains continuously on those real outcomes. It also shows out-of-sample holdout accuracy so you can judge performance honestly, and you can export or import your AI data at any time. Your bot, your data." },
   { q: "Do I need trading experience?", a: "No. KAOS ships with the Berserker strategy pre-configured, so you can start with defaults, watch how it behaves and tune timeframe, expiration, indicators and risk limits as you get comfortable." },
-  { q: "What do I get with membership?", a: "Membership unlocks the bot, cloud strategies and the community. All plans are billed monthly. Free gives you the portal, community and paper trading. Pro adds the bot with KAOS Strategy mode, scanners and AI insights on 3 devices. Ultimate adds KAOS AI mode, Strategy + AI mode, Premium Tools and 5 devices." },
+  { q: "What do I get with membership?", a: "Membership unlocks the bot, cloud strategies and the community. All plans are billed monthly. Free gives you the KAOS bot in Strategy mode on 1 device, plus paper trading and the community — AI trading is not included. Pro adds the bot with KAOS Strategy mode, scanners and AI insights on 3 devices. Ultimate adds KAOS AI mode, Strategy + AI mode, Premium Tools and 5 devices." },
   { q: "Can I use KAOS on multiple devices?", a: "Yes. Pro members can run KAOS on up to 3 devices, Ultimate members on up to 5. Your strategies, stats and AI data stay in sync through your account." },
   { q: "Where is my data stored?", a: "Your strategies and AI data belong to your account and can be exported at any time. KAOS is built around one principle: your bot, your data, your KAOS." },
   { q: "Is trading risky?", a: "Yes — and we won't pretend otherwise. Short-expiration trading carries a substantial risk of loss. KAOS is a tool that executes strategy and risk rules consistently; it does not guarantee profit. Never trade money you cannot afford to lose, and consider starting on a demo account." },

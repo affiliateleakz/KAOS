@@ -25,8 +25,8 @@ class Observation(BaseModel):
     summary: str = Field(default='',max_length=1200)
 
 async def member(user=Depends(get_current_user)):
-    if not (await get_entitlements(user)).get('botAccess'):
-        raise HTTPException(403,'Active membership required')
+    if not (await get_entitlements(user)).get('scanners'):
+        raise HTTPException(403,'Scanners require a Pro or Ultimate membership')
     return user
 
 @router.post('/ingest')

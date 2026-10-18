@@ -27,9 +27,8 @@ async def compute_license(user: dict, device: dict = None) -> dict:
     if user.get("extension_access_revoked"):
         authorized = False
         reasons.append("access_revoked")
-    if membership not in ACTIVE_MEMBERSHIP:
-        authorized = False
-        reasons.append(f"membership_{membership.lower()}")
+    # Free tier: no paid membership needed for the bot; AI and paid features are gated by entitlements.
+    tier = "paid" if membership in ACTIVE_MEMBERSHIP else "free"
     if affiliate != "VERIFIED":
         authorized = False
         reasons.append("affiliate_not_verified")
@@ -44,6 +43,7 @@ async def compute_license(user: dict, device: dict = None) -> dict:
     return {
         "authorized": authorized,
         "membershipStatus": membership,
+        "tier": tier,
         "affiliateStatus": affiliate,
         "userId": user.get("id"),
         "licenseId": user.get("license_id"),
