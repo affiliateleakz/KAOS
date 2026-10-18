@@ -885,7 +885,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   (async () => {
     try {
       const method = msg.method || 'GET';
-      if (!['GET','PUT','DELETE'].includes(method) || !['/broker-connections','/broker-connections/coinbase','/broker-connections/coinbase/status','/broker-connections/coinbase/accounts','/broker-connections/coinbase/products'].includes(msg.path)) throw Error('Invalid broker request');
+      if (!['GET','PUT','DELETE'].includes(method) || !['/broker-connections','/broker-connections/coinbase','/broker-connections/coinbase/status','/broker-connections/coinbase/accounts','/broker-connections/coinbase/products','/broker-connections/alpaca/account','/broker-connections/oanda/account'].includes(msg.path)) throw Error('Invalid broker request');
       const response = await self.KaosCloud.authFetch(msg.path, {method, headers:{'Content-Type':'application/json'}, ...(method==='PUT'?{body:JSON.stringify(msg.payload)}:{})});
       const data=await response.json();
       sendResponse({ok:response.ok,data});
