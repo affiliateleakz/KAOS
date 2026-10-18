@@ -86,3 +86,9 @@ export const brokerManagement={
  connections:()=>request<{connections:BrokerConnection[]}>('/api/v1/broker-connections'),
  account:(id:'alpaca'|'oanda')=>request<ReadOnlyBrokerData>('/api/v1/broker-connections/'+id+'/account'),
 };
+
+export type ChartSettings={slot:number;broker:'kaos_paper'|'coinbase'|'alpaca'|'oanda';symbol:string;seconds:60|300|900};
+export const chartSettings={
+ load:()=>request<{chartLimit:number;charts:ChartSettings[];order_submission_enabled:boolean}>('/api/v1/trading/charts'),
+ save:(slot:number,config:Omit<ChartSettings,'slot'>)=>send<ChartSettings>('/api/v1/trading/charts/'+slot,'PUT',config),
+};
