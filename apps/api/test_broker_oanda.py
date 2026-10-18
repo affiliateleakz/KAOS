@@ -41,3 +41,23 @@ def test_bad_upstream_fails_closed(monkeypatch):
     with pytest.raises(HTTPException) as exc:
         run(oanda.account(user={"id": "member"}))
     assert exc.value.status_code == 502
+
+def test_account_isolation(monkeypatch):
+    class Collection:
+        async def find_one(self, query):
+            assert query == {"user_id": "member_b", "broker": "oanda", "verified": True}
+            return None
+    class Database:
+        broker_connections = Collection()
+    monkeypatch.setattr(oanda, "db", Database())
+    with pytest.raises(HTTPException) as exc:
+        run(oanda._credentials("member_b"))
+    assert exc.value.status_code == 404
+
+def test_path_rejects_other_account_or_nested_path():
+    for path in ("/v3/accounts/123/summary/../pendingOrders",
+                 "/v3/accounts/123%2F456/summary",
+                 "/v3/accounts/invalid_account/summary"):
+        with pytest.raises(HTTPException) as exc:
+            run(oanda.oanda_get(path, "token"))
+        assert exc.value.status_code == 400
