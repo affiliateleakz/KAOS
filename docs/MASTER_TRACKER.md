@@ -63,7 +63,7 @@ States, advanced only on evidence: planned → adapter_development → authentic
 |---|---|---|---|---|
 | Coinbase Advanced | Crypto | authentication_implemented | read_only_verified: owner connects own View key (`docs/COINBASE_CONNECT_GUIDE.md`) | Owner's CDP View key, entered in KAOS |
 | Pocket Option | Short-duration contracts | adapter_development | Repair extension integration (no public API) | Written permission for any API/automated access |
-| Alpaca | Stocks, ETFs, crypto, options | planned | Adapter + paper-account auth | Alpaca account + API key (paper account is free) |
+| Alpaca | Stocks, ETFs, crypto, options | authentication_implemented (read-only, simulated Alpaca only) | read_only_verified: owner connects a paper-account key on Broker Connections | Alpaca account + API key (paper account is free) |
 | OANDA | Forex | planned | Adapter + practice-account auth | OANDA practice account + v20 token |
 | Interactive Brokers | Stocks, options, forex, futures | planned | Client Portal gateway adapter | IBKR account + running gateway |
 | Kraken | Crypto | planned | Adapter (no-withdraw key) | Kraken key without withdraw permission |
@@ -75,3 +75,10 @@ States, advanced only on evidence: planned → adapter_development → authentic
 - Cancel, reconcile and exits of a verified position keep working with live disabled, consent expired or an emergency stop active; new BUYs are blocked by all of these. Tests: `test_coinbase_safety.py`.
 - SELL exit lock (`EXIT_SUBMITTING`) is released when the intent cannot be saved, when Coinbase closes the SELL unfilled, or when a crash left a lock without an intent (worker, after 2 min; no exchange call is possible then). If the SELL's outcome is uncertain, the lock is kept: the worker looks the order up by client order id (all pages) and reconciles it if found; if it is absent from the listing, the order stays `UNKNOWN_RECONCILIATION_REQUIRED` with `NOT_IN_LISTING_MANUAL_REVIEW` after 10 min and is never auto-released. A broker timeout keeps the lock and marks the SELL `UNKNOWN_RECONCILIATION_REQUIRED`, so no duplicate exit is possible.
 - Real-money execution remains disabled pending founder review.
+
+## Alpaca adapter notes (PR stacked on #11)
+- Connect: `PUT /api/v1/broker-connections/alpaca` {key_id, secret_key, environment: paper|live}; verified with `GET /v2/account` (must be ACTIVE); encrypted with the broker vault (same fields, so `broker_vault.py rotate` covers it).
+- Read-only: `GET /alpaca/accounts` → account (cash, buying power, equity, PDT flags), positions (Alpaca's own avg entry / unrealized P&L), open orders, last 50 FILL activities. KAOS never calls an Alpaca order endpoint (Alpaca keys cannot be scoped read-only).
+- Fees: no commission on US stocks/ETFs; SEC/FINRA TAF regulatory fees on sells appear as separate account activities (not yet itemised). Crypto has its own fee schedule (not built).
+- Market hours: US equities 9:30–16:00 ET regular session, extended hours only for limit orders flagged extended_hours; to be enforced by the order layer when built.
+- Not built: market data (needs an Alpaca data subscription choice: IEX free vs SIP), order preview/placement/cancel/reconciliation, extension and mobile screens.
