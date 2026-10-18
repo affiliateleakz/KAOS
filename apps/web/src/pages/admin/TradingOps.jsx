@@ -1,3 +1,4 @@
+import FreeDataAPIs from "./FreeDataAPIs";
 import React, { useEffect, useState } from "react";
 import { api, errMsg } from "../../lib/api";
 import { Button } from "../../components/ui/button";
@@ -89,6 +90,7 @@ export function Connectors() {
           </div>
         ))}
       </div>
+      <FreeDataAPIs />
     </div>
   );
 }
