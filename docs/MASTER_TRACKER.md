@@ -54,3 +54,24 @@ Nothing in this file is deployed. "Works locally" never means "live in productio
 ## Open founder decisions
 1. Privacy policy retention periods and support email.
 2. Which live backend and which extension build to resubmit.
+
+## Broker milestones (one per broker)
+
+States, advanced only on evidence: planned → adapter_development → authentication_implemented → read_only_verified → order_management_tested → trading_approved (or temporarily_unavailable). Source of truth: `apps/api/broker_adapters.py` (`GET /api/v1/brokers`).
+
+| Broker | Markets | State | Next milestone | Access needed |
+|---|---|---|---|---|
+| Coinbase Advanced | Crypto | authentication_implemented | read_only_verified: owner connects own View key (`docs/COINBASE_CONNECT_GUIDE.md`) | Owner's CDP View key, entered in KAOS |
+| Pocket Option | Short-duration contracts | adapter_development | Repair extension integration (no public API) | Written permission for any API/automated access |
+| Alpaca | Stocks, ETFs, crypto, options | planned | Adapter + paper-account auth | Alpaca account + API key (paper account is free) |
+| OANDA | Forex | planned | Adapter + practice-account auth | OANDA practice account + v20 token |
+| Interactive Brokers | Stocks, options, forex, futures | planned | Client Portal gateway adapter | IBKR account + running gateway |
+| Kraken | Crypto | planned | Adapter (no-withdraw key) | Kraken key without withdraw permission |
+| Tradier | Stocks, options | planned | OAuth adapter (sandbox) | Tradier developer/sandbox account |
+| tastytrade | Stocks, options, futures | planned | Open API adapter (sandbox) | tastytrade API access approval |
+| MetaTrader 5 brokers | Forex, CFDs | planned | Bridge design per broker | MT5 broker permitting API/EA access |
+
+## Live-execution safety (Priority 1, PR #11)
+- Cancel, reconcile and exits of a verified position keep working with live disabled, consent expired or an emergency stop active; new BUYs are blocked by all of these. Tests: `test_coinbase_safety.py`.
+- SELL exit lock (`EXIT_SUBMITTING`) is released when the intent cannot be saved, when Coinbase closes the SELL unfilled, when a crash left a lock without an intent (worker, after 2 min), or when the SELL is not found at Coinbase by client order id after 10 min. A broker timeout keeps the lock and marks the SELL `UNKNOWN_RECONCILIATION_REQUIRED`, so no duplicate exit is possible.
+- Real-money execution remains disabled pending founder review.

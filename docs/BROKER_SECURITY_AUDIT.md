@@ -33,3 +33,11 @@ Status of the account sync itself: **UNVERIFIED**, never run against a real Coin
 | Withdraw / transfer | — | Never used. Keys with Transfer are refused. |
 
 A key with Trade permission needs separate, explicit founder approval and a controlled live test.
+
+## Permission split for risk-reducing actions
+| Action | Gate | Allowed under emergency stop / live disabled / expired consent |
+|---|---|---|
+| BUY (risk-increasing) | `authorized(risk_increasing=True)`: membership, bot entitlement, live flag, consent, account risk, member + platform stop | No |
+| SELL of a verified KAOS position | `authorized(risk_increasing=False)`: live flag + consent, skips emergency stops | Emergency stop: yes. Live disabled / no consent: no |
+| Cancel | `account_gate`: bearer + active account | Yes |
+| Reconcile | `account_gate` | Yes |
