@@ -77,12 +77,12 @@ def signal(one_minute, fifteen_seconds):
         if bullish:
             counter=all(pause[i]["close"] <= (before if i==0 else pause[i-1])["close"] for i in range(count))
             breakout=confirm["close"]>max(x["high"] for x in pause)
-            support=all(x["close"]>=twenty[-1] for x in pause)
+            support=all(x["low"]>=twenty[-1] for x in pause)
             direction="CALL"
         else:
             counter=all(pause[i]["close"] >= (before if i==0 else pause[i-1])["close"] for i in range(count))
             breakout=confirm["close"]<min(x["low"] for x in pause)
-            support=all(x["close"]<=twenty[-1] for x in pause)
+            support=all(x["high"]<=twenty[-1] for x in pause)
             direction="PUT"
         if counter and breakout and support:
             return {"strategy":"KAOS_TREND_PAUSE_V1","direction":direction,
