@@ -13,7 +13,10 @@
 - REPAIRED's parity tests can't run because `kaos_berserker`/`berserker_fixtures` are missing.
 - `content.js` still hard-codes legacy strategy labels (`7B`/`KAOS_BERSERKER`). REPAIRED's FIXES.md says this was fixed in the other runtime.
 - Emergent platform dependencies: email proxy, Google OAuth, and the (now removed) analytics.
-- No membership gating or receiver-based affiliate ledger in the API.
+- Affiliate ledger is wired into the API, but plan→tier mapping is an assumption: `monthly` ($29) = Pro, `yearly` ($279) = Ultimate, while the spec prices Pro $49 / Ultimate $149. Founder must confirm pricing and tiers.
+- Recipient tier is the sponsor's tier when the payment is recorded; members who are not ACTIVE/TRIAL count as Free (10% L1 only).
+- Partial refunds reduce the ledger, but the legacy `commissions` mirror only flips to REVERSED on full reversals.
+- Membership gating uses the existing per-plan `entitlements`; the kaos-core `PERMISSIONS` map (free/pro/ultimate) is not yet the source of truth.
 - Paper-order flow is not demonstrated end-to-end. The extension and mobile app are not run.
 - Lint: 17 eslint warnings (unused vars, hook deps) in the web app.
 - **Unsubstantiated performance claims on the homepage:** the hero mockup shows "78.6% win rate", "+$542.30", and "25,287 trained samples". Nothing in the handoff backs these up, and the v2.1 audit is net negative. Remove them or label them as illustrative before going public (compliance).

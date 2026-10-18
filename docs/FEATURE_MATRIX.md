@@ -10,8 +10,8 @@ Legend: **Works locally** = verified in this repo. **Code present** = source exi
 | Portal | Google login | Code present | Uses Emergent OAuth |
 | Billing | Stripe checkout + webhook | Code present | Plans are monthly $29 / yearly $279, **not** Free/Pro/Ultimate $0/$49/$149 |
 | Membership | Free/Pro/Ultimate feature gating | Library only (`kaos.affiliate_ledger.has_permission`) | Not wired into the API yet. The `ai_execution` permission does **not** grant order authority |
-| Affiliate | Receiver-based 3-level commissions | Library + tests (`packages/kaos-core/kaos/affiliate_ledger.py`) | Covers idempotency, renewals, rate snapshot per payment, full/partial refunds and chargebacks, a hold period, cycle rejection, and disabled payouts. Not wired into the API: `routes_affiliate` is still single-level and flat-rate |
-| Affiliate | Payouts | Missing (intentionally) | Blocked until compliance review |
+| Affiliate | Receiver-based 3-level commissions | Wired into API (preview only) | `services_affiliate_ledger.py` persists the kaos-core ledger in Mongo. Stripe checkout → initial, `invoice.paid` (subscription_cycle) → renewal, `charge.refunded`/`charge.dispute.created` → reversal. Member view: `GET /api/affiliate/ledger` + dashboard card; admin: `GET /api/admin/affiliate-ledger/{user_id}`. Not exercised against real Stripe events. |
+| Affiliate | Payouts | Missing (intentionally) | Blocked until compliance review. Admin can no longer mark commissions `PAID` (403). |
 | Trading | Paper order API (`/api/v1/paper/orders`, admin `/kill-switch`) | Works locally | Uses DurablePaperPipeline and the risk engine. Covers idempotency, conflict denial, notional/exposure limits, the kill switch, and an audit log. The quote price is supplied by the caller (no market feed yet). No fills or P&L simulation. No portal UI |
 | Trading | Coinbase live orders | Code present, disabled by flag | Must stay off |
 | Research | Opportunity radar, collectors, FinBERT shadow | Code present, unit-tested | Collectors need API keys and authorized data |
