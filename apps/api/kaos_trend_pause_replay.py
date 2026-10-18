@@ -14,6 +14,11 @@ def replay(minute_candles, fifteen_second_candles, *, horizon_seconds=60):
         raise ValueError("Horizon must be a positive multiple of 15 seconds")
     minute = validate(minute_candles)
     fast = validate(fifteen_second_candles)
+    # Candles carry Unix timestamps in milliseconds and must align with their
+    # stated durations. Silently accepting seconds or offset bars corrupts fills.
+    for bars, width, name in ((minute, 60000, "1-minute"), (fast, 15000, "15-second")):
+        if any(bar["ts"] % width for bar in bars):
+            raise ValueError(name + " candles must have aligned millisecond timestamps")
     if not fast:
         return {"trades": [], "summary": {"trades": 0, "wins": 0, "losses": 0, "ties": 0, "win_rate_ex_ties": None}}
     out = []
@@ -26,6 +31,17 @@ def replay(minute_candles, fifteen_second_candles, *, horizon_seconds=60):
         if entry["ts"] != confirmation["ts"] + 15000:
             continue
         relevant_minutes = [c for c in minute if c["ts"] + 60000 <= entry["ts"]]
+        # A missing candle must not be interpreted as a continuous EMA or pause.
+        if len(relevant_minutes) < 53 or any(
+            relevant_minutes[k]["ts"]-relevant_minutes[k-1]["ts"] != 60000
+            for k in range(len(relevant_minutes)-52, len(relevant_minutes))
+        ):
+            continue
+        if i < 24 or any(
+            fast[k]["ts"]-fast[k-1]["ts"] != 15000
+            for k in range(i-23, i)
+        ):
+            continue
         result = signal(relevant_minutes, fast[:i])
         if not result:
             continue
