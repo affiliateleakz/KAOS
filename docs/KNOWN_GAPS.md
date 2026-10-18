@@ -21,3 +21,5 @@
 - Paper-order flow is not demonstrated end-to-end. The extension and mobile app are not run.
 - Lint: 17 eslint warnings (unused vars, hook deps) in the web app.
 - **Unsubstantiated performance claims on the homepage:** the hero mockup shows "78.6% win rate", "+$542.30", and "25,287 trained samples". Nothing in the handoff backs these up, and the v2.1 audit is net negative. Remove them or label them as illustrative before going public (compliance).
+
+- AI-controlled trading (spec §10): AI and Strategy+AI modes are locked for every tier, Ultimate included, until an admin records independent validation (`POST /api/admin/ai-execution {validated, note}`, audit-logged; setting `ai_execution_validated`, default off). The extension may still show AI options; the server refuses them. Chart limits: Free 1, Pro 4, Ultimate 8 (8 is an assumption, spec doesn't specify) — exposed as `chartLimit` entitlement, not yet enforced in the extension UI.

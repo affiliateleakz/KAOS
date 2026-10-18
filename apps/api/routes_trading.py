@@ -10,7 +10,8 @@ from fastapi import APIRouter, HTTPException, Depends, Request
 
 from db import db, new_id, now_iso, clean
 from auth import get_current_user, require_role
-from services import compute_license
+from services import compute_license, get_setting, set_setting, audit_log
+from services_trading import AI_EXECUTION_MODES, AI_EXECUTION_SETTING
 from services_trading import (get_official_strategy, get_trading_config, get_entitlements,
                               kaos_strategy_predict, kaos_ai_predict, telemetry_summary,
                               TRADING_MODES)
@@ -91,6 +92,8 @@ async def _check_mode(user, mode):
         raise HTTPException(status_code=403, detail="Bot access not included in your plan")
     if mode not in TRADING_MODES:
         raise HTTPException(status_code=400, detail="Invalid trading mode")
+    if mode in AI_EXECUTION_MODES and ent.get("aiExecutionLocked"):
+        raise HTTPException(status_code=403, detail="AI-controlled trading is locked until independently validated")
     if mode not in (ent.get("modes") or []):
         raise HTTPException(status_code=403, detail=f"Mode {mode} not entitled by your plan")
     return ent
@@ -604,6 +607,24 @@ async def upsert_connector(req: ConnectorReq, admin: dict = Depends(admin_dep)):
     await set_setting("connectors", conns)
     await audit_log(admin, "upsert_connector", "connector", req.id, {"status": req.status})
     return {"ok": True, "connectors": conns}
+
+
+class AiExecutionReq(BaseModel):
+    validated: bool
+    note: str = Field(default="", max_length=500)
+
+
+@at.get("/ai-execution")
+async def get_ai_execution(admin: dict = Depends(admin_dep)):
+    return {"validated": await get_setting(AI_EXECUTION_SETTING, False) is True}
+
+
+@at.post("/ai-execution")
+async def set_ai_execution(req: AiExecutionReq, admin: dict = Depends(admin_dep)):
+    await set_setting(AI_EXECUTION_SETTING, req.validated)
+    await audit_log(admin, "trading.ai_execution", "settings", AI_EXECUTION_SETTING,
+                    {"validated": req.validated, "note": req.note})
+    return {"validated": req.validated}
 
 
 @at.get("/ai-models")

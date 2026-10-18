@@ -15,19 +15,42 @@ def run(coro):
 def test_free_tier_gets_strategy_bot_without_ai(status):
     ent = run(get_entitlements({"membership_status": status}))
     assert ent["botAccess"] is True and ent["modes"] == ["STRATEGY"] and ent["tier"] == "free"
-    assert ent["deviceLimit"] == 1 and not ent["scanners"] and not ent["aiInsights"] and not ent["premiumTools"]
+    assert ent["deviceLimit"] == 1 and ent["chartLimit"] == 1 and not ent["scanners"] and not ent["aiInsights"] and not ent["premiumTools"]
 
 
-def test_pro_has_no_ai_modes_and_ultimate_does(monkeypatch):
+def test_ai_modes_locked_by_default_for_every_tier(monkeypatch):
     import routes_billing
+    import services
 
     async def plans():
         return routes_billing.DEFAULT_PLANS
+
+    async def unset(key, default=None):
+        return default
     monkeypatch.setattr(routes_billing, "get_plans", plans)
+    monkeypatch.setattr(services, "get_setting", unset)
     pro = run(get_entitlements({"membership_status": "ACTIVE", "membership_plan": "pro"}))
     ult = run(get_entitlements({"membership_status": "ACTIVE", "membership_plan": "yearly"}))
     assert pro["tier"] == "pro" and "AI" not in pro["modes"] and pro["scanners"]
-    assert ult["tier"] == "ultimate" and {"AI", "STRATEGY_AI"} <= set(ult["modes"])
+    assert ult["tier"] == "ultimate" and ult["modes"] == ["STRATEGY"] and ult["aiExecutionLocked"] is True
+    assert (pro["chartLimit"], ult["chartLimit"]) == (4, 8)
+
+
+def test_ultimate_ai_modes_only_after_admin_validation(monkeypatch):
+    import routes_billing
+    import services
+
+    async def plans():
+        return routes_billing.DEFAULT_PLANS
+
+    async def validated(key, default=None):
+        return True if key == "ai_execution_validated" else default
+    monkeypatch.setattr(routes_billing, "get_plans", plans)
+    monkeypatch.setattr(services, "get_setting", validated)
+    ult = run(get_entitlements({"membership_status": "ACTIVE", "membership_plan": "ultimate"}))
+    pro = run(get_entitlements({"membership_status": "ACTIVE", "membership_plan": "pro"}))
+    assert {"AI", "STRATEGY_AI"} <= set(ult["modes"]) and ult["aiExecutionLocked"] is False
+    assert pro["modes"] == ["STRATEGY"]
 
 
 def test_suspended_account_gets_nothing():

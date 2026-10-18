@@ -19,13 +19,14 @@ DEFAULT_PLANS = [
      "currency": "usd", "interval": "month", "deviceLimit": 3, "tier": "pro",
      "features": ["KAOS Trading Bot", "KAOS Strategy mode", "Scanners", "AI insights", "Cloud Strategies", "Community", "3 Devices"],
      "entitlements": {"botAccess": True, "modes": ["STRATEGY"], "connectors": ["pocket_option"], "scanners": True,
-                      "aiInsights": True, "cloudStrategies": True, "community": True, "premiumTools": False, "deviceLimit": 3}},
+                      "aiInsights": True, "cloudStrategies": True, "community": True, "premiumTools": False, "deviceLimit": 3,
+                      "chartLimit": 4}},
     {"id": "ultimate", "name": "Ultimate", "lookup_key": "membership_ultimate_monthly", "amount": 14900,
      "currency": "usd", "interval": "month", "deviceLimit": 5, "tier": "ultimate",
      "features": ["Everything in Pro", "KAOS AI mode", "Strategy + AI mode", "Premium Tools", "5 Devices"],
      "entitlements": {"botAccess": True, "modes": ["STRATEGY", "AI", "STRATEGY_AI"], "connectors": ["pocket_option"],
                       "scanners": True, "aiInsights": True, "cloudStrategies": True, "community": True,
-                      "premiumTools": True, "deviceLimit": 5}},
+                      "premiumTools": True, "deviceLimit": 5, "chartLimit": 8}},
 ]
 # Members who subscribed under the retired plan ids keep working.
 LEGACY_PLAN_IDS = {"monthly": "pro", "yearly": "ultimate"}

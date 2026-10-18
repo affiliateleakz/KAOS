@@ -16,6 +16,17 @@ TRADE_STATES = [
     "BROKER_CONFIRMED", "TRADE_OPEN", "TRADE_RESULT", "ORDER_FAILED",
 ]
 TRADING_MODES = ["STRATEGY", "AI", "STRATEGY_AI"]
+AI_EXECUTION_MODES = {"AI", "STRATEGY_AI"}
+AI_EXECUTION_SETTING = "ai_execution_validated"
+
+
+async def apply_ai_execution_lock(ent: dict) -> dict:
+    """AI-controlled modes stay off until an admin records independent validation (spec §10)."""
+    from services import get_setting
+    if await get_setting(AI_EXECUTION_SETTING, False) is True:
+        return {**ent, "aiExecutionLocked": False}
+    modes = [m for m in (ent.get("modes") or []) if m not in AI_EXECUTION_MODES]
+    return {**ent, "modes": modes, "aiExecutionLocked": True}
 
 # Default KAOS Berserker metadata (owner-configurable via admin). This is DISPLAY METADATA only;
 # the tested execution logic lives in kaos_berserker.py / candidate7b_strategy.js (see STRATEGY_ENGINE.md).
@@ -59,7 +70,7 @@ DEFAULT_CONNECTORS = [
 
 DEFAULT_ENTITLEMENTS = {
     "botAccess": False, "modes": [], "connectors": [],
-    "cloudStrategies": False, "community": True, "premiumTools": False, "deviceLimit": 1,
+    "cloudStrategies": False, "community": True, "premiumTools": False, "deviceLimit": 1, "chartLimit": 1,
 }
 
 
@@ -75,6 +86,7 @@ async def get_trading_config():
 FREE_ENTITLEMENTS = {
     "botAccess": True, "modes": ["STRATEGY"], "connectors": ["pocket_option"], "scanners": False,
     "aiInsights": False, "cloudStrategies": False, "community": True, "premiumTools": False, "deviceLimit": 1,
+    "chartLimit": 1,
     "tier": "free",
 }
 
@@ -91,7 +103,7 @@ async def get_entitlements(user: dict) -> dict:
     if not ent:
         return {**DEFAULT_ENTITLEMENTS, "botAccess": True, "modes": ["STRATEGY"], "connectors": ["pocket_option"],
                 "cloudStrategies": True, "scanners": True, "aiInsights": True, "tier": "pro"}
-    return {"scanners": True, "aiInsights": True, **ent, "tier": plan.get("tier", "pro")}
+    return await apply_ai_execution_lock({"scanners": True, "aiInsights": True, **ent, "tier": plan.get("tier", "pro")})
 
 
 def _pseudo(*parts) -> int:
