@@ -3266,6 +3266,12 @@ console.info('[KAOS BUILD] V24.1.287-B21 · BB WINNER PRO (15s BB20/2) + ACTIVE 
       regime:d.regime?.name, type:d.type?.type, autonomous:!!d.autonomous,
       validated:!!d.validated, modelDirection:d.modelDir, strategyDirection:d.strategyDir
     };
+    // Without server-granted AI execution (Free, Pro, or Ultimate before validation) the AI is
+    // advisory only: it must not place, veto or override the strategy's trade.
+    if (!kaosAiExecutionAllowed) {
+      lastIndicators.aiController.advisoryOnly = true;
+      return { sig:Object.assign({}, strategySig, { aiAdvisory:d }), aiDecision:d, advisoryOnly:true };
+    }
     if (d.action === 'WAIT') return { skip:true, reason:d.reason, aiDecision:d };
     const out = Object.assign({}, strategySig);
     if (d.autonomous) {

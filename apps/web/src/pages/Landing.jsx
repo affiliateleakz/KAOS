@@ -242,17 +242,17 @@ const FEATURES = [
 const PLANS = [
   {
     id: "free", name: "Free", price: "$0", per: "/month", note: "Create an account · no card required",
-    features: ["KAOS Trading Bot", "KAOS Strategy mode (no AI trading)", "Paper trading", "Community access", "Works on 1 device"],
+    features: ["KAOS Trading Bot", "KAOS Strategy mode (no AI trading)", "1 chart", "Paper trading", "Community access", "Works on 1 device"],
     cta: "JOIN FREE", best: false,
   },
   {
     id: "pro", name: "Pro", price: "$49", per: "/month", note: "Billed monthly · cancel any time",
-    features: ["KAOS Trading Bot", "KAOS Strategy mode", "Scanners & AI insights", "Cloud Strategies", "Works on 3 devices"],
+    features: ["KAOS Trading Bot", "KAOS Strategy mode", "Scanners & AI insights", "Up to 4 charts", "Cloud Strategies", "Works on 3 devices"],
     cta: "GET PRO", best: false,
   },
   {
     id: "ultimate", name: "Ultimate", price: "$149", per: "/month", note: "Billed monthly · cancel any time",
-    features: ["Everything in Pro", "KAOS AI mode", "Strategy + AI mode", "Premium Tools", "Works on 5 devices"],
+    features: ["Everything in Pro", "KAOS AI & Strategy + AI modes (after independent validation)", "Premium Tools", "Works on 5 devices"],
     cta: "GET ULTIMATE", best: true,
   },
 ];
