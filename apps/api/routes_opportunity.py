@@ -157,3 +157,50 @@ async def ingest_headline_scores(items: list[HeadlineScore],
                         "sentiment_mean": output["sentiment_mean"]})
     return {"accepted": written, "markets": summary, "mode": "research_only",
             "trade_execution_enabled": False}
+
+
+class UnscoredHeadline(BaseModel):
+    ticker: str = Field(pattern=r"^[A-Za-z0-9._-]{1,20}$")
+    asset_class: Literal["stock", "etf", "crypto", "forex"]
+    headline: str = Field(min_length=5, max_length=500)
+    source_url: str = Field(min_length=12, max_length=2000, pattern=r"^https://")
+    published_at: datetime
+
+
+@router.post("/ingest/classify-headlines")
+async def classify_and_ingest_headlines(
+        items: list[UnscoredHeadline],
+        x_kaos_collector_key: str | None = Header(default=None)):
+    """Run a genuinely provisioned local NLP model, then persist research sentiment.
+
+    This endpoint is collector-only. A missing/unavailable model fails with 503,
+    rather than silently substituting pseudo probabilities or synthetic scores.
+    """
+    from secrets import compare_digest
+    from fastapi.concurrency import run_in_threadpool
+    from kaos_financial_inference import classify_headlines
+    key = os.getenv("KAOS_COLLECTOR_KEY", "")
+    if not key or not x_kaos_collector_key or not compare_digest(key, x_kaos_collector_key):
+        raise HTTPException(403, "Collector authentication required")
+    if not items or len(items) > 100:
+        raise HTTPException(422, "Expected 1–100 headlines")
+    now = datetime.now(timezone.utc)
+    from datetime import timedelta
+    for item in items:
+        if not now - timedelta(hours=24) <= utc(item.published_at) <= now:
+            raise HTTPException(422, "Headline timestamp out of range")
+    try:
+        predictions = await run_in_threadpool(
+            classify_headlines, [item.headline for item in items])
+    except (RuntimeError, ImportError, OSError, ValueError) as exc:
+        raise HTTPException(503, "Financial NLP model unavailable") from exc
+    scored = []
+    for item, prediction in zip(items, predictions):
+        scored.append(HeadlineScore(
+            ticker=item.ticker, asset_class=item.asset_class,
+            headline=item.headline, source_url=item.source_url,
+            published_at=item.published_at,
+            score=prediction["sentiment_score"],
+            model_id="trading_hero", model_version=os.getenv(
+                "KAOS_TRADING_HERO_MODEL_VERSION", "unversioned-local")))
+    return await ingest_headline_scores(scored, x_kaos_collector_key)
