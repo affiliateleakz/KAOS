@@ -177,6 +177,7 @@ async def classify_and_ingest_headlines(
     rather than silently substituting pseudo probabilities or synthetic scores.
     """
     from secrets import compare_digest
+    from math import isfinite
     from fastapi.concurrency import run_in_threadpool
     from kaos_financial_inference import classify_headlines
     key = os.getenv("KAOS_COLLECTOR_KEY", "")
@@ -194,6 +195,18 @@ async def classify_and_ingest_headlines(
             classify_headlines, [item.headline for item in items])
     except (RuntimeError, ImportError, OSError, ValueError) as exc:
         raise HTTPException(503, "Financial NLP model unavailable") from exc
+    # A malformed or incomplete model response must not silently drop
+    # headlines or create incorrectly aligned market intelligence.
+    if not isinstance(predictions, list) or len(predictions) != len(items):
+        raise HTTPException(503, "Financial NLP returned incomplete predictions")
+    for item, prediction in zip(items, predictions):
+        if (not isinstance(prediction, dict)
+                or prediction.get("headline") != item.headline
+                or isinstance(prediction.get("sentiment_score"), bool)
+                or not isinstance(prediction.get("sentiment_score"), (int, float))
+                or not isfinite(prediction["sentiment_score"])
+                or not -1 <= prediction["sentiment_score"] <= 1):
+            raise HTTPException(503, "Financial NLP returned invalid prediction")
     scored = []
     for item, prediction in zip(items, predictions):
         scored.append(HeadlineScore(
