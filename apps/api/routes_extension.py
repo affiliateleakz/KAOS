@@ -74,6 +74,11 @@ async def v1_license(request: Request, user: dict = Depends(get_current_user)):
 @v1.post("/devices/register")
 async def register_device(req: DeviceReq, request: Request, user: dict = Depends(get_current_user)):
     from services_trading import get_entitlements
+    # Apply authorization before both existing-device re-registration and new registration.
+    # Otherwise a suspended or revoked member could refresh an already enrolled device.
+    entitlements = await get_entitlements(user)
+    if not entitlements.get("botAccess") or user.get("extension_access_revoked"):
+        raise HTTPException(status_code=403, detail="Bot access is not authorized")
     existing = await db.devices.find_one({"installId": req.installId, "userId": user["id"]})
     if existing:
         # A revoked device must not be able to restore its own authorization
@@ -85,9 +90,6 @@ async def register_device(req: DeviceReq, request: Request, user: dict = Depends
         return clean(await db.devices.find_one({"id": existing["id"], "userId": user["id"]}))
     # The license and device registration must use the same plan authority.
     # Free members are limited to one device, not the old hardcoded three.
-    entitlements = await get_entitlements(user)
-    if not entitlements.get("botAccess"):
-        raise HTTPException(status_code=403, detail="Bot access is not authorized")
     limit = int(entitlements.get("deviceLimit") or 1)
     if limit < 1:
         raise HTTPException(status_code=403, detail="No devices permitted for this account")
