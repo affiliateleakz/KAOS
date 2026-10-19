@@ -88,7 +88,7 @@ async def record_payment(event_id, buyer_id, plan, amount_cents, kind="initial",
             return persisted
         if existing.get("state") != "completed":
             raise RuntimeError("Affiliate payment requires ledger reconciliation")
-        if existing.get("buyer_id") != buyer_id or existing.get("kind") != kind or existing.get("amount") != str(Decimal(amount_cents) / 100):
+        if existing.get("buyer_id") != buyer_id or existing.get("kind") != kind or Decimal(existing.get("amount", "NaN")) != Decimal(amount_cents) / 100:
             raise RuntimeError("Affiliate payment event reused with mismatched financial details")
         return await _entries_for(event_id)
     ledger = CommissionLedger(await _members(buyer_id))
