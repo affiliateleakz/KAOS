@@ -100,7 +100,7 @@ async def record_payment(event_id, buyer_id, plan, amount_cents, kind="initial",
         "event_id": event_id, "buyer_id": buyer_id, "plan": p.plan, "plan_id": (plan or {}).get("id"),
         "amount": str(p.amount), "kind": kind, "at": at.isoformat(),
         "reversed_amount": "0"
-    }, [_entry_doc(e) for e in entries])
+    }, [_entry_doc(e) for e in entries], database=db)
     return entries
 
 
@@ -138,7 +138,7 @@ async def record_reversal(reversal_id, event_id, amount_cents=None, kind="refund
         "reversal_id": reversal_id, "event_id": event_id, "kind": kind,
         "requested_amount_cents": amount_cents
     }, event_id, pd["reversed_amount"], str(ledger.payments[event_id].reversed_amount),
-       [_entry_doc(e) for e in entries])
+       [_entry_doc(e) for e in entries], database=db)
     return entries
 
 
