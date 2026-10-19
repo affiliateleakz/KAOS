@@ -522,3 +522,16 @@ async def train_ai_model(admin: dict = Depends(admin_dep)):
     await audit_log(admin, "train_ai_model", "ai_model", doc["id"], {"version": version})
     return {"ok": True, "modelId": doc["id"], "version": version, "usableSamples": len(training),
             "skippedSamples": skipped, "report": report}
+
+class ShadowAuditRequest(BaseModel):
+    rows: list[dict]
+
+@v1ai.post("/shadow-audit")
+async def shadow_audit(req: ShadowAuditRequest, user: dict = Depends(get_current_user)):
+    from kaos_ai_signal_audit import assess
+    if len(req.rows)>5000:
+        raise HTTPException(413,"Maximum 5000 records")
+    entitlements=await get_entitlements(user)
+    if not entitlements.get("scanners"):
+        raise HTTPException(403,"Membership required")
+    return assess(req.rows)
