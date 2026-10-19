@@ -11,6 +11,8 @@ const INFO={
 export default function PublicTradesScanner(){
  const [source,setSource]=useState(""),[ticker,setTicker]=useState(""),[data,setData]=useState(null);
  const [error,setError]=useState(""),[loading,setLoading]=useState(false);
+ const [cik,setCik]=useState(""),[changes,setChanges]=useState(null),[comparisonError,setComparisonError]=useState("");
+ const viewChanges=async()=>{setComparisonError("");setChanges(null);try{const r=await api.get("/api/v1/disclosures/institutional-changes?cik="+encodeURIComponent(cik));setChanges(r.data)}catch(e){setComparisonError(errMsg(e)||"Cannot load institutional holdings comparison")}};
  const load=async()=>{
   setLoading(true);setError("");
   try{const params=new URLSearchParams({limit:"100"});if(source)params.set("source",source);if(ticker.trim())params.set("ticker",ticker.trim().toUpperCase());
@@ -31,6 +33,17 @@ export default function PublicTradesScanner(){
    <button type="button" onClick={load} disabled={loading} className="rounded bg-[#2F8CFF] px-4 py-2 font-semibold text-black disabled:opacity-50">{loading?"Loading…":"Search disclosures"}</button>
   </div>
   {source&&<p className="text-xs text-slate-400">{INFO[source]}</p>}
+  <section className="rounded border border-[#333] p-3 space-y-2">
+   <h2 className="font-semibold">Institutional 13F Position Changes</h2>
+   <p className="text-xs text-slate-400">Enter the SEC institutional filer CIK. Compares two recorded public quarterly filings, not intraday trades.</p>
+   <div className="flex flex-wrap items-center gap-2"><input aria-label="Institutional filer CIK" type="number" min="1" value={cik} onChange={e=>setCik(e.target.value)} className="rounded border border-[#444] bg-[#151515] p-2" placeholder="SEC CIK"/><button disabled={!cik} onClick={viewChanges} className="rounded bg-[#2F8CFF] px-3 py-2 text-black">View reported changes</button></div>
+   {comparisonError&&<p role="alert" className="text-red-400">{comparisonError}</p>}
+   {changes&&!changes.comparison_available&&<p className="text-xs text-amber-300">No verified two-quarter comparison stored for this filer yet.</p>}
+   {changes?.data&&<><p className="text-xs text-slate-400">Reported filing dates: {changes.data.previous_filing_date} → {changes.data.latest_filing_date}</p>
+     <div className="max-h-72 overflow-auto"><table className="w-full text-left text-xs"><thead><tr><th>CUSIP / issuer</th><th>Position change</th><th>Net reported shares</th></tr></thead><tbody>{(changes.data.changes||[]).map(r=><tr key={r.cusip} className="border-t border-[#333]"><td className="p-2">{r.issuer} ({r.cusip})</td><td className="p-2">{r.change}</td><td className="p-2">{r.net_reported_change}</td></tr>)}</tbody></table></div>
+     <a href={changes.data.latest_source_url} target="_blank" rel="noopener noreferrer" className="text-xs text-[#2F8CFF] underline">Latest official SEC filing</a>
+   </>}
+  </section>
   {error&&<p role="alert" className="text-sm text-red-400">{error}</p>}
   {data&&<section className="rounded border border-[#333] p-3"><h2 className="mb-3 font-semibold">Disclosed activity · {data.count} records</h2>
     {!data.records?.length?<p className="py-8 text-center text-slate-400">No verified disclosures in the KAOS database for this filter. Data collection must be configured; this does not imply nobody traded.</p>:<div className="overflow-x-auto"><table className="w-full min-w-[900px] text-left text-xs">

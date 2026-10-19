@@ -167,3 +167,38 @@ async def refresh_sec_13f(cik: int, x_kaos_collector_key: str | None=Header(defa
     return {"filings_examined":len(documents),"holdings_imported":accepted,
             "research_only":True,"automatic_schedule_enabled":False,
             "warning":"13F shows quarterly holdings, not the date of buying or selling."}
+
+@router.post("/compare-13f/{cik}")
+async def compare_13f_quarters(cik: int, x_kaos_collector_key: str | None=Header(default=None)):
+    """Compare two official filings; net changes are not verified executions."""
+    from sec_13f_collector import fetch_13f_holdings
+    from sec_13f_comparison import compare_holdings
+    key=os.environ.get("KAOS_COLLECTOR_KEY","")
+    if not key or not x_kaos_collector_key or not compare_digest(key,x_kaos_collector_key):
+        raise HTTPException(403,"Collector authentication required")
+    try:
+        docs=await fetch_13f_holdings(cik,max_filings=5)
+        if len(docs)<2:
+            return {"cik":cik,"comparison_available":False,"changes":[],"reason":"Two verified filings needed"}
+        latest,previous=docs[0],docs[1]
+        changes=compare_holdings(previous["holdings"],latest["holdings"])
+    except ValueError as exc:
+        raise HTTPException(422,str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(503,"SEC holdings comparison unavailable") from exc
+    record={"cik":cik,"previous_filing_id":previous["filing_id"],
+            "latest_filing_id":latest["filing_id"],
+            "previous_filing_date":previous["filing_date"],"latest_filing_date":latest["filing_date"],
+            "previous_source_url":previous["source_url"],"latest_source_url":latest["source_url"],
+            "changes":changes,"calculated_at":datetime.now(timezone.utc).isoformat()}
+    await db.kaos_13f_comparisons.update_one(
+        {"cik":cik,"latest_filing_id":latest["filing_id"],
+         "previous_filing_id":previous["filing_id"]},{"$set":record},upsert=True)
+    return {"comparison_available":True,"research_only":True,"not_executed_trades":True,**record}
+
+@router.get("/institutional-changes")
+async def institutional_changes(cik: int=Query(ge=1,le=9999999999),
+                                user=Depends(require_scanner)):
+    row=await db.kaos_13f_comparisons.find_one({"cik":cik},{"_id":0},sort=[("calculated_at",-1)])
+    return {"comparison_available":bool(row),"research_only":True,
+            "not_executed_trades":True,"data":row}
