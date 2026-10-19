@@ -87,3 +87,24 @@ async def collected_opportunities(asset_class: str | None = None,
             "coverage": "ingested_sources_only", "scanned_observations": len(rows),
             "opportunities": results[:limit],
             "note": "Research rankings from stored collector observations; not verified executable signals or probabilities."}
+
+
+@router.get("/models/status")
+async def financial_models_status(user: dict = Depends(get_current_user)):
+    """Expose actual local model provisioning without loading or downloading weights."""
+    import os
+    from pathlib import Path
+    from kaos_financial_model_registry import catalog
+    if not (await get_entitlements(user)).get("aiInsights"):
+        raise HTTPException(status_code=403, detail="AI insights entitlement required")
+    models = catalog()
+    # Presence of a directory alone is not proof of working inference.
+    path = os.getenv("KAOS_TRADING_HERO_MODEL_DIR", "").strip()
+    staged = bool(path and Path(path).is_dir())
+    for entry in models:
+        if entry["id"] == "trading_hero":
+            entry["status"] = "FILES_PRESENT_UNVERIFIED" if staged else "NOT_CONFIGURED"
+            entry["weights_present"] = staged
+            entry["inference_verified"] = False
+    return {"models": models, "live_ai_trading_enabled": False,
+            "note": "Model availability must be confirmed by a separate smoke test; files alone do not confirm inference."}
