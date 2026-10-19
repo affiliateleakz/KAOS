@@ -1,6 +1,7 @@
 """Cookie mutation CSRF controls: no Origin bypass, bearer remains usable."""
 from types import SimpleNamespace
 import pytest
+import asyncio
 from fastapi import HTTPException
 import auth
 
@@ -27,9 +28,8 @@ def test_matching_referer_fallback(monkeypatch):
     monkeypatch.setenv("FRONTEND_URL","https://tradingwithkaos.com")
     assert auth._cookie_write_origin_allowed(req("DELETE",referer="https://tradingwithkaos.com/account"))
 
-@pytest.mark.asyncio
-async def test_cookie_write_rejected_before_token_lookup(monkeypatch):
+def test_cookie_write_rejected_before_token_lookup(monkeypatch):
     request=SimpleNamespace(method="POST",headers={},cookies={"access_token":"ambient"})
     with pytest.raises(HTTPException) as exc:
-        await auth.get_current_user(request)
+        asyncio.run(auth.get_current_user(request))
     assert exc.value.status_code==403
