@@ -21,3 +21,28 @@ def test_unknown_label_fails_closed():
 def test_incomplete_output_fails_closed():
     with pytest.raises(RuntimeError,match="incomplete"):
         classify_headlines(["Stock earnings headline"],classifier=lambda *a,**k:[])
+
+
+def test_offline_loader_disables_remote_code(monkeypatch, tmp_path):
+    import sys
+    from types import SimpleNamespace
+    import kaos_financial_inference as inference
+    calls = []
+    class Loader:
+        @classmethod
+        def from_pretrained(cls, directory, **kwargs):
+            calls.append(kwargs)
+            return object()
+    fake = SimpleNamespace(AutoTokenizer=Loader,
+        AutoModelForSequenceClassification=Loader,
+        pipeline=lambda task, **kwargs: "loaded")
+    monkeypatch.setitem(sys.modules, "transformers", fake)
+    monkeypatch.setenv("KAOS_TRADING_HERO_MODEL_DIR", str(tmp_path))
+    inference._classifier.cache_clear()
+    try:
+        assert inference._classifier() == "loaded"
+        assert len(calls) == 2
+        assert all(c["local_files_only"] is True and
+                   c["trust_remote_code"] is False for c in calls)
+    finally:
+        inference._classifier.cache_clear()
