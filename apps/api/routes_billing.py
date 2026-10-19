@@ -207,7 +207,8 @@ async def stripe_webhook(request: Request):
                 from routes_affiliate import reverse_commission
                 await reverse_commission(u["id"], "subscription_canceled")
             except Exception:
-                pass
+                logger.exception("affiliate cancellation reversal failed; webhook will retry")
+                raise
     elif t == "invoice.paid":
         cust = obj.get("customer")
         u = await db.users.find_one({"stripe_customer_id": cust})
@@ -221,7 +222,8 @@ async def stripe_webhook(request: Request):
                     await record_commission(u, plan, "renewal", event_id=f"invoice:{obj['id']}",
                                             amount_cents=obj["amount_paid"])
                 except Exception:
-                    logger.exception("affiliate renewal commission failed for %s", obj["id"])
+                    logger.exception("affiliate renewal commission failed for %s; webhook will retry", obj["id"])
+                    raise
     elif t in ("charge.refunded", "charge.dispute.created"):
         await _reverse_for_charge(obj, "chargeback" if t == "charge.dispute.created" else "refund")
     await db.webhook_events.update_one({"event_id": event["id"], "claim": claim},
@@ -254,4 +256,5 @@ async def _reverse_for_charge(obj, reason):
         await reverse_commission(pay["buyer_id"], reason, event_id=pay["event_id"], amount_cents=cents,
                                  reversal_id=f"{reason}:{charge_id}:{cents}")
     except Exception:
-        logger.exception("affiliate reversal failed for %s", charge_id)
+        logger.exception("affiliate reversal failed for %s; webhook will retry", charge_id)
+        raise
