@@ -40,3 +40,30 @@ def test_real_classifier_output_is_persisted_as_research(monkeypatch):
     assert result["accepted"] == 1
     assert result["trade_execution_enabled"] is False
     assert save.await_args.args[1]["$setOnInsert"]["nlp_score"] == 0.7
+
+
+def test_incomplete_model_batch_cannot_be_ingested(monkeypatch):
+    monkeypatch.setenv("KAOS_COLLECTOR_KEY", "secret-for-test")
+    monkeypatch.setattr(kaos_financial_inference, "classify_headlines",
+                        lambda texts: [])
+    save = AsyncMock()
+    monkeypatch.setattr(api, "db", SimpleNamespace(
+        kaos_intelligence=SimpleNamespace(update_one=save)))
+    with pytest.raises(HTTPException) as err:
+        asyncio.run(api.classify_and_ingest_headlines([data()], "secret-for-test"))
+    assert err.value.status_code == 503
+    save.assert_not_awaited()
+
+
+def test_misaligned_model_response_cannot_be_ingested(monkeypatch):
+    monkeypatch.setenv("KAOS_COLLECTOR_KEY", "secret-for-test")
+    monkeypatch.setattr(kaos_financial_inference, "classify_headlines",
+                        lambda texts: [{"headline": "Other company",
+                                        "sentiment_score": 0.9}])
+    save = AsyncMock()
+    monkeypatch.setattr(api, "db", SimpleNamespace(
+        kaos_intelligence=SimpleNamespace(update_one=save)))
+    with pytest.raises(HTTPException) as err:
+        asyncio.run(api.classify_and_ingest_headlines([data()], "secret-for-test"))
+    assert err.value.status_code == 503
+    save.assert_not_awaited()
