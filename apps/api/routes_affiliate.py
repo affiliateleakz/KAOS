@@ -132,13 +132,11 @@ async def record_commission(customer_user: dict, plan: dict, event: str = "purch
     amount_cents = plan["amount"] if amount_cents is None else amount_cents
     entries = await ledger.record_payment(event_id, customer_user["id"], plan, amount_cents, kind)
     for e in entries:
-        if await db.commissions.find_one({"ledgerEntryId": e.entry_id}):
-            continue
-        await db.commissions.insert_one({
+        await db.commissions.update_one({"ledgerEntryId": e.entry_id}, {"$setOnInsert": {
             "id": new_id("comm"), "ledgerEntryId": e.entry_id, "affiliateUserId": e.affiliate_id,
             "customerUserId": e.buyer_id, "planId": plan["id"], "level": e.level, "recipientTier": e.recipient_tier,
             "amount": float(e.amount), "rate": e.rate_pct, "type": "percentage", "event": event,
-            "status": "PENDING", "holdReleaseAt": e.available_at.isoformat(), "createdAt": now_iso()})
+            "status": "PENDING", "holdReleaseAt": e.available_at.isoformat(), "createdAt": now_iso()}}, upsert=True)
     direct = next((e for e in entries if e.level == 1), None)
     if direct:
         await db.affiliate_customer_referrals.update_one(
