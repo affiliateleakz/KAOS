@@ -144,6 +144,8 @@ webhook_router = APIRouter(tags=["billing"])
 
 @webhook_router.post("/api/stripe/webhook")
 async def stripe_webhook(request: Request):
+    if not WEBHOOK_SECRET:
+        raise HTTPException(status_code=503, detail="Stripe webhook not configured")
     payload = await request.body()
     sig = request.headers.get("stripe-signature", "")
     try:
