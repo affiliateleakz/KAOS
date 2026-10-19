@@ -16,6 +16,7 @@ def run(coro):
     return asyncio.run(coro)
 
 def setup(monkeypatch, existing, claim_result=1):
+    monkeypatch.setattr(billing, "WEBHOOK_SECRET", "test_secret")
     event={"id":"evt_123","type":"unknown.test","data":{"object":{}}}
     monkeypatch.setattr(billing.stripe.Webhook,"construct_event",lambda *args:event)
     def duplicate(*args,**kwargs):
