@@ -141,8 +141,10 @@ export function AffiliatePage() {
 }
 export function AIPage() {
   const [d, setD] = useState(null);
+  const [report, setReport] = useState(null);
+  const [reportError, setReportError] = useState("");
   const load = () => api.get("/api/ai/overview").then((r) => setD(r.data)).catch(() => {});
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); api.get("/api/v1/ai/learning-report").then(r=>setReport(r.data)).catch(e=>setReportError(errMsg(e)||"Report unavailable")); }, []);
   const setConsent = async (v) => { try { await api.post("/api/v1/ai/consent", { consent: v }); toast.success(v ? "Contributing to Collective Learning" : "Opted out"); load(); } catch (e) { toast.error(errMsg(e)); } };
   if (!d) return <p className="text-slate-500">Loading…</p>;
   return (
@@ -159,6 +161,21 @@ export function AIPage() {
             <p className="mt-1 max-w-2xl text-sm text-slate-400">Contribute anonymized market & trading learning data to help improve KAOS AI. No name, email, credentials, balances or payment info are ever used. You can opt out anytime.</p></div>
           <Switch data-testid="collective-learning-toggle" checked={d.consent} onCheckedChange={setConsent} />
         </div>
+      </div>
+      <div className="card-surface mt-6 p-5 space-y-3" data-testid="ai-learning-report">
+        <h3 className="font-heading font-semibold">Verified AI Learning Report</h3>
+        <p className="text-xs text-slate-400">Only server-verified, settled forecasts are eligible. This measures historical prediction accuracy, not net trade profitability or future performance.</p>
+        {reportError&&<p role="alert" className="text-amber-300 text-sm">{reportError}</p>}
+        {report&&!report.groups.length&&<p className="text-sm text-slate-400">No verified AI results have been recorded yet. Simulated predictions are excluded.</p>}
+        {report?.groups?.length>0&&<div className="overflow-x-auto"><table className="w-full text-left text-xs">
+          <thead><tr>{["Model","Asset","Wins","Losses","Ties","Accuracy","95% lower bound","Sample status"].map(x=><th key={x} className="p-2">{x}</th>)}</tr></thead>
+          <tbody>{report.groups.map((g,i)=><tr key={i} className="border-t border-[#333]">
+            <td className="p-2">{g.model_version}</td><td className="p-2">{g.asset}</td>
+            <td className="p-2">{g.wins}</td><td className="p-2">{g.losses}</td><td className="p-2">{g.ties}</td>
+            <td className="p-2">{g.win_rate_ex_ties==null?"—":g.win_rate_ex_ties+"%"}</td>
+            <td className="p-2">{g.win_rate_lower_95==null?"—":g.win_rate_lower_95+"%"}</td>
+            <td className="p-2">{g.performance_validated?"100+ evaluated":"Insufficient samples"}</td>
+          </tr>)}</tbody></table></div>}
       </div>
       <div className="card-surface mt-6 p-0 overflow-x-auto"><div className="border-b border-[#2E2E2E] p-4"><h3 className="font-heading font-semibold">Recent Predictions</h3></div>
         <Table><TableHeader><TableRow className="border-[#2E2E2E]"><TableHead>Asset</TableHead><TableHead>Prediction</TableHead><TableHead>Confidence</TableHead><TableHead>Model</TableHead><TableHead>Outcome</TableHead></TableRow></TableHeader>
