@@ -93,3 +93,5 @@ jobs:
           node --check apps/extension/background.js
           node --check apps/extension/content.js
           node --check apps/extension/kaos-cloud-ui.js
+          node --check apps/extension/kaos-cloud.js
+          node --check apps/extension/popup.js
