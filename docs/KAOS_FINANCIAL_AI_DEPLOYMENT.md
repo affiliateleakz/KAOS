@@ -21,8 +21,7 @@ worker (never in the browser extension):
 - `KAOS_TRADING_HERO_MODEL_VERSION=<reviewed-model-revision>`
 - `KAOS_COLLECTOR_KEY=<unique-secret>`
 
-Smoke-test `kaos_financial_inference.classify_headlines` with known financial
-headlines and review its labels before connecting authenticated collectors to
+Run the operator smoke test with the provisioned model available to the backend worker:\n\n```shell\npython apps/api/smoke_financial_inference.py\n```\n\nThis outputs real checkpoint predictions and measured local latency, or exits\nnonzero with `UNAVAILABLE`. It does not verify predictive usefulness or grant\ntrading authority. Manually review polarity and conduct chronological holdout\ntests before connecting authenticated collectors to
 `POST /api/v1/intelligence/ingest/classify-headlines`.
 
 The collector must gather attributed publication URLs, timestamps, and source
