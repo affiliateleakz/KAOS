@@ -13,13 +13,7 @@ async def set_setting(key: str, value):
     await db.settings.update_one({"key": key}, {"$set": {"key": key, "value": value}}, upsert=True)
 
 
-POCKET_OPTION_REFERRAL_REQUIREMENT = (
-    "Trading on Pocket Option through KAOS requires a Pocket Option account opened with the KAOS referral link. "
-    "You submit your Pocket Option ID and KAOS staff review it manually. This applies to every plan and only to Pocket Option."
-)
 LICENSE_REASON_MESSAGES = {
-    "affiliate_not_verified": "Pocket Option referral account not verified yet. " + POCKET_OPTION_REFERRAL_REQUIREMENT
-    + " Your KAOS account, portal, paper trading and other brokers are not affected.",
     "account_suspended": "Your KAOS account is suspended.",
     "account_banned": "Your KAOS account is banned.",
     "access_revoked": "Extension access was revoked for this account.",
@@ -30,7 +24,7 @@ LICENSE_REASON_MESSAGES = {
 async def compute_license(user: dict, device: dict = None, broker: str = "pocket_option") -> dict:
     """Server-authoritative license decision for a user (+ optional device) on a broker.
 
-    The Pocket Option referral requirement only applies when the broker is Pocket Option.
+    Referral enrollment is optional. License access never depends on referral status.
     """
     reasons = []
     authorized = True
@@ -46,10 +40,6 @@ async def compute_license(user: dict, device: dict = None, broker: str = "pocket
         reasons.append("access_revoked")
     # Free tier: no paid membership needed for the bot; AI and paid features are gated by entitlements.
     tier = "paid" if membership in ACTIVE_MEMBERSHIP else "free"
-    po_eligible = affiliate == "VERIFIED"
-    if broker == "pocket_option" and not po_eligible:
-        authorized = False
-        reasons.append("affiliate_not_verified")
     if device is not None and device.get("revoked"):
         authorized = False
         reasons.append("device_revoked")
@@ -73,9 +63,9 @@ async def compute_license(user: dict, device: dict = None, broker: str = "pocket
         "broker": broker,
         "brokerEligibility": {
             "pocket_option": {
-                "eligible": po_eligible,
+                "eligible": True,
                 "status": affiliate,
-                "requirement": POCKET_OPTION_REFERRAL_REQUIREMENT,
+                "referralRequired": False,
             },
         },
     }
