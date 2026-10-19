@@ -32,6 +32,17 @@ def _classifier():
     actual = {str(v).strip().lower() for v in raw_labels.values()}
     if actual != {"neutral", "positive", "negative"}:
         raise RuntimeError("Trading-Hero checkpoint label schema requires review")
+    label_by_index = {}
+    for key, label in raw_labels.items():
+        try:
+            index = int(key)
+        except (ValueError, TypeError) as exc:
+            raise RuntimeError("Checkpoint label indexes are not numeric") from exc
+        if index in label_by_index:
+            raise RuntimeError("Checkpoint contains duplicated label indexes")
+        label_by_index[index] = str(label).strip().lower()
+    if set(label_by_index) != {0, 1, 2}:
+        raise RuntimeError("Checkpoint label indexes require review")
     # Some checkpoints expose LABEL_0/1/2 in pipeline output despite carrying
     # verified id2label metadata. Normalize by the *actual checkpoint mapping*,
     # never by a guessed positional convention.
@@ -44,7 +55,7 @@ def _classifier():
             if raw.upper().startswith("LABEL_"):
                 try:
                     index = int(raw[6:])
-                    item["label"] = raw_labels[index]
+                    item["label"] = label_by_index[index]
                 except (ValueError, KeyError, TypeError):
                     raise RuntimeError("Checkpoint emitted unknown sentiment label")
         return predictions
