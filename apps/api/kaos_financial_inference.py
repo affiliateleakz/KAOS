@@ -32,8 +32,23 @@ def _classifier():
     actual = {str(v).strip().lower() for v in raw_labels.values()}
     if actual != {"neutral", "positive", "negative"}:
         raise RuntimeError("Trading-Hero checkpoint label schema requires review")
-    return pipeline("text-classification", model=model, tokenizer=tokenizer,
-                    device=-1)
+    # Some checkpoints expose LABEL_0/1/2 in pipeline output despite carrying
+    # verified id2label metadata. Normalize by the *actual checkpoint mapping*,
+    # never by a guessed positional convention.
+    classifier = pipeline("text-classification", model=model, tokenizer=tokenizer,
+                          device=-1)
+    def verified_predict(texts, **kwargs):
+        predictions = classifier(texts, **kwargs)
+        for item in predictions:
+            raw = str(item.get("label", "")).strip()
+            if raw.upper().startswith("LABEL_"):
+                try:
+                    index = int(raw[6:])
+                    item["label"] = raw_labels[index]
+                except (ValueError, KeyError, TypeError):
+                    raise RuntimeError("Checkpoint emitted unknown sentiment label")
+        return predictions
+    return verified_predict
 
 
 def classify_headlines(headlines, *, classifier=None):
