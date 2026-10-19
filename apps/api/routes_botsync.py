@@ -35,7 +35,14 @@ async def ext_logout(user: dict = Depends(get_current_user)):
 async def ext_me(request: Request, user: dict = Depends(get_current_user)):
     did = request.headers.get("X-Device-Id")
     device = await db.devices.find_one({"installId": did, "userId": user["id"]}) if did else None
-    lic = await compute_license(user, device)
+    # Broker selection precedes broker-specific eligibility checks.
+    # In particular, a member choosing Coinbase must not be blocked by
+    # Pocket Option's separate affiliate verification requirement.
+    selection = await db.member_broker_selections.find_one(
+        {"user_id": user["id"]}, {"_id": 0, "broker": 1})
+    selected_broker = (selection or {}).get("broker")
+    broker_for_license = "pocket_option" if selected_broker in ("pocketoption", "pocket_option") else (selected_broker or "unselected")
+    lic = await compute_license(user, device, broker=broker_for_license)
     ent = await get_entitlements(user)
     return {"user": {"id": user["id"], "username": user.get("username"), "email": user["email"], "role": user.get("role")},
             "license": lic, "entitlements": ent}
