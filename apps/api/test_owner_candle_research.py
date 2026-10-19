@@ -21,7 +21,7 @@ def test_closed_only_and_valid_ohlcv():
     now=datetime.fromtimestamp(1800000300,tz=timezone.utc)
     raw=[[1800000000,99,103,100,102,100],
          [1800000300,100,103,101,102,80],
-         [1799999940,100,102,100,101,50]]
+         [1799999940,100,99,100,101,50]]
     result=normalize(raw,"BTC-USD",300,now)
     assert len(result)==1
     assert result[0]["ts"]==1800000000*1000
