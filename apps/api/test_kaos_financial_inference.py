@@ -32,7 +32,8 @@ def test_offline_loader_disables_remote_code(monkeypatch, tmp_path):
         @classmethod
         def from_pretrained(cls, directory, **kwargs):
             calls.append(kwargs)
-            return object()
+            return SimpleNamespace(config=SimpleNamespace(
+                id2label={0: "neutral", 1: "positive", 2: "negative"}))
     fake = SimpleNamespace(AutoTokenizer=Loader,
         AutoModelForSequenceClassification=Loader,
         pipeline=lambda task, **kwargs: "loaded")
@@ -44,5 +45,27 @@ def test_offline_loader_disables_remote_code(monkeypatch, tmp_path):
         assert len(calls) == 2
         assert all(c["local_files_only"] is True and
                    c["trust_remote_code"] is False for c in calls)
+    finally:
+        inference._classifier.cache_clear()
+
+
+def test_model_loader_rejects_unknown_label_order(monkeypatch, tmp_path):
+    import sys
+    from types import SimpleNamespace
+    import kaos_financial_inference as inference
+    class Loader:
+        @classmethod
+        def from_pretrained(cls, directory, **kwargs):
+            return SimpleNamespace(config=SimpleNamespace(
+                id2label={0: "SELL", 1: "BUY", 2: "HOLD"}))
+    fake = SimpleNamespace(AutoTokenizer=Loader,
+        AutoModelForSequenceClassification=Loader,
+        pipeline=lambda *a, **k: "loaded")
+    monkeypatch.setitem(sys.modules, "transformers", fake)
+    monkeypatch.setenv("KAOS_TRADING_HERO_MODEL_DIR", str(tmp_path))
+    inference._classifier.cache_clear()
+    try:
+        with pytest.raises(RuntimeError, match="label schema"):
+            inference._classifier()
     finally:
         inference._classifier.cache_clear()
