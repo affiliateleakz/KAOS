@@ -5,7 +5,6 @@ from unittest.mock import AsyncMock
 import pytest
 from fastapi import HTTPException
 import routes_extension as ext
-import services_trading
 
 def run(coro):
     return asyncio.run(coro)
@@ -21,7 +20,7 @@ def test_free_member_cannot_register_second_device(monkeypatch):
         find_one=AsyncMock(return_value=None), count_documents=AsyncMock(return_value=1),
         insert_one=AsyncMock()))
     monkeypatch.setattr(ext,"db",fake)
-    monkeypatch.setattr(services_trading,"get_entitlements",
+    monkeypatch.setattr(ext,"get_entitlements",
                         AsyncMock(return_value={"botAccess":True,"deviceLimit":1}))
     with pytest.raises(HTTPException) as raised:
         run(ext.register_device(device_req(),request(),{"id":"u1","membership_status":"EXPIRED"}))
@@ -33,7 +32,7 @@ def test_revoked_entitlement_blocks_new_device(monkeypatch):
         find_one=AsyncMock(return_value=None),count_documents=AsyncMock(return_value=0),
         insert_one=AsyncMock()))
     monkeypatch.setattr(ext,"db",fake)
-    monkeypatch.setattr(services_trading,"get_entitlements",
+    monkeypatch.setattr(ext,"get_entitlements",
                         AsyncMock(return_value={"botAccess":False,"deviceLimit":1}))
     with pytest.raises(HTTPException) as raised:
         run(ext.register_device(device_req(),request(),{"id":"u1"}))
@@ -46,7 +45,7 @@ def test_existing_device_cannot_bypass_revoked_account(monkeypatch):
         find_one=AsyncMock(return_value=existing), update_one=AsyncMock(),
         count_documents=AsyncMock()))
     monkeypatch.setattr(ext,"db",fake)
-    monkeypatch.setattr(services_trading,"get_entitlements",
+    monkeypatch.setattr(ext,"get_entitlements",
                         AsyncMock(return_value={"botAccess":True,"deviceLimit":3}))
     with pytest.raises(HTTPException) as raised:
         run(ext.register_device(device_req(),request(),{
@@ -59,7 +58,7 @@ def test_existing_device_cannot_bypass_disabled_bot_entitlement(monkeypatch):
     fake=SimpleNamespace(devices=SimpleNamespace(
         find_one=AsyncMock(return_value=existing),update_one=AsyncMock()))
     monkeypatch.setattr(ext,"db",fake)
-    monkeypatch.setattr(services_trading,"get_entitlements",
+    monkeypatch.setattr(ext,"get_entitlements",
                         AsyncMock(return_value={"botAccess":False,"deviceLimit":1}))
     with pytest.raises(HTTPException) as raised:
         run(ext.register_device(device_req(),request(),{"id":"u1"}))
