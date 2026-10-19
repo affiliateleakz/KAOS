@@ -66,3 +66,23 @@ def test_reversal_requires_stable_charge_identifier(monkeypatch,reason,payload):
     with pytest.raises(RuntimeError,match="missing charge identity"):
         asyncio.run(billing._reverse_for_charge(payload,reason))
     db.affiliate_ledger_payments.find_one.assert_not_awaited()
+
+@pytest.mark.parametrize("customer", [None, "", "   "])
+def test_refund_rejects_missing_customer_identity(monkeypatch, customer):
+    users=SimpleNamespace(find_one=AsyncMock())
+    payments=SimpleNamespace(find_one=AsyncMock())
+    monkeypatch.setattr(billing,"db",SimpleNamespace(users=users,affiliate_ledger_payments=payments))
+    with pytest.raises(RuntimeError, match="missing customer identity"):
+        asyncio.run(billing._reverse_for_charge(
+            {"id":"ch1","invoice":"inv1","customer":customer,"amount_refunded":500}, "refund"))
+    users.find_one.assert_not_awaited()
+    payments.find_one.assert_not_awaited()
+
+def test_refund_rejects_unknown_customer_identity(monkeypatch):
+    users=SimpleNamespace(find_one=AsyncMock(return_value=None))
+    payments=SimpleNamespace(find_one=AsyncMock())
+    monkeypatch.setattr(billing,"db",SimpleNamespace(users=users,affiliate_ledger_payments=payments))
+    with pytest.raises(RuntimeError, match="customer not found"):
+        asyncio.run(billing._reverse_for_charge(
+            {"id":"ch1","invoice":"inv1","customer":"cus_unrecognized","amount_refunded":500}, "refund"))
+    payments.find_one.assert_not_awaited()
