@@ -535,3 +535,22 @@ async def shadow_audit(req: ShadowAuditRequest, user: dict = Depends(get_current
     if not entitlements.get("scanners"):
         raise HTTPException(403,"Membership required")
     return assess(req.rows)
+
+@v1ai.get("/learning-report")
+async def learning_report(user: dict = Depends(get_current_user)):
+    """Only server-recorded, verified settled predictions; never user-provided win claims."""
+    from kaos_ai_signal_audit import assess
+    entitlements=await get_entitlements(user)
+    if not entitlements.get("scanners"):
+        raise HTTPException(403,"AI Learning Lab requires scanner membership")
+    docs=await db.ai_predictions.find(
+        {"userId":user["id"],"outcomeVerified":True},
+        {"_id":0}).sort("timestamp",-1).limit(2000).to_list(length=2000)
+    rows=[{"prediction_id":d.get("id"),"issued_at":d.get("timestamp"),
+           "outcome_at":d.get("outcomeAt"),"simulated":d.get("simulated"),
+           "production_trained":d.get("productionTrained"),
+           "outcome_verified":d.get("outcomeVerified"),"direction":d.get("prediction"),
+           "outcome":d.get("outcome"),"asset":d.get("asset"),
+           "model_version":d.get("model_version")} for d in docs]
+    return {**assess(rows),"source":"server_verified_prediction_records",
+            "sample_limit":2000,"warning":"Empty until server-verified outcomes have been stored; no simulated accuracy."}
