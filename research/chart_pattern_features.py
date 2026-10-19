@@ -2,13 +2,13 @@
 from math import isfinite
 from multi_horizon_dataset import instant
 
-def features_at(candles, decision_at, *, periods=(5, 15, 30, 60, 300, 900), lookback=24):
+def features_at(candles, decision_at, *, symbol, source, periods=(5, 15, 30, 60, 300, 900), lookback=24):
     """Analyze bars whose close timestamps precede a trading decision.
 
     Candle schema: symbol, source, seconds, ts (opening epoch milliseconds),
     OHLC. A timeframe with too few valid closed bars is omitted, not invented.
     """
-    cutoff = instant(decision_at)
+    if not symbol or not source:\n        raise ValueError('Symbol and source required')\n    cutoff = instant(decision_at)
     if not 3 <= lookback <= 500:
         raise ValueError("Invalid lookback")
     result = {}
@@ -17,7 +17,7 @@ def features_at(candles, decision_at, *, periods=(5, 15, 30, 60, 300, 900), look
             raise ValueError("Invalid timeframe")
         valid = []
         for bar in candles:
-            if bar.get("seconds") != seconds or bar.get("simulated"):
+            if (bar.get("seconds") != seconds or bar.get("simulated")\n                    or bar.get("symbol") != symbol or bar.get("source") != source):
                 continue
             try:
                 stamp = bar["ts"] / 1000 + seconds
