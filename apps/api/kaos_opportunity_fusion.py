@@ -43,7 +43,10 @@ def evaluate_opportunity(asset, broker, evidence, *, now=None):
     market = [v for v in accepted if v["source"] in ("chart", "indicators", "strategy", "orderflow")]
     strategy = [v for v in accepted if v["source"] == "strategy"]
     candidate = None
-    if strategy and market:
+    # Require an independent market observation. The strategy signal alone
+    # cannot count as its own confirmation of current price/market structure.
+    independent_market = [v for v in market if v["source"] != "strategy"]
+    if strategy and independent_market:
         directions = {v["direction"] for v in market}
         if len(directions) == 1:
             candidate = strategy[0]["direction"]
