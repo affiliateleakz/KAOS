@@ -18,9 +18,15 @@ def _classifier():
     directory = os.getenv("KAOS_TRADING_HERO_MODEL_DIR", "").strip()
     if not directory or not os.path.isdir(directory):
         raise RuntimeError("Trading-Hero model not provisioned locally")
-    from transformers import pipeline
-    return pipeline("text-classification", model=directory, tokenizer=directory,
-                    local_files_only=True, device=-1)
+    from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
+    # Load locally and explicitly: passing local_files_only to pipeline()
+    # is version-dependent and may not reach both model and tokenizer.
+    tokenizer = AutoTokenizer.from_pretrained(directory, local_files_only=True,
+                                              trust_remote_code=False)
+    model = AutoModelForSequenceClassification.from_pretrained(
+        directory, local_files_only=True, trust_remote_code=False)
+    return pipeline("text-classification", model=model, tokenizer=tokenizer,
+                    device=-1)
 
 
 def classify_headlines(headlines, *, classifier=None):
