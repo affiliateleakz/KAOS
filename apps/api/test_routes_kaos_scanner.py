@@ -52,3 +52,22 @@ def test_collected_scan_uses_only_server_stored_evidence(monkeypatch):
     assert result["mode"] == "COLLECTOR_RESEARCH"
     assert result["executable"] is False
     assert result["opportunities"][0]["asset"] == "SPY"
+
+
+def test_model_status_never_claims_running_from_directory_alone(monkeypatch, tmp_path):
+    monkeypatch.setenv("KAOS_TRADING_HERO_MODEL_DIR", str(tmp_path))
+    monkeypatch.setattr(scanner, "get_entitlements",
+                        AsyncMock(return_value={"aiInsights": True}))
+    result = asyncio.run(scanner.financial_models_status(user={"id": "u1"}))
+    hero = next(x for x in result["models"] if x["id"] == "trading_hero")
+    assert hero["weights_present"] is True
+    assert hero["inference_verified"] is False
+    assert result["live_ai_trading_enabled"] is False
+
+
+def test_model_status_requires_ai_insights(monkeypatch):
+    monkeypatch.setattr(scanner, "get_entitlements",
+                        AsyncMock(return_value={"aiInsights": False}))
+    with pytest.raises(HTTPException) as error:
+        asyncio.run(scanner.financial_models_status(user={"id": "u1"}))
+    assert error.value.status_code == 403
