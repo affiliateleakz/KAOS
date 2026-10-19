@@ -74,7 +74,9 @@ def classify_headlines(headlines, *, classifier=None):
         raise RuntimeError("Financial classifier returned incomplete result")
     scored = []
     for headline, result in zip(headlines, results):
-        label = str(result.get("label", "")).lower()
+        if not isinstance(result, dict):
+            raise RuntimeError("Financial classifier returned malformed prediction")
+        label = str(result.get("label", "")).strip().lower()
         confidence = result.get("score")
         if label not in LABEL_SCORE or isinstance(confidence, bool) or not isinstance(
                 confidence, (float, int)) or not isfinite(confidence) or not 0 <= confidence <= 1:
