@@ -2,6 +2,7 @@ import os
 import logging
 import hashlib
 import secrets
+from urllib.parse import urlsplit
 from datetime import datetime, timezone, timedelta
 
 import jwt
@@ -101,6 +102,30 @@ async def _session_user(token: str):
     return user
 
 
+def _cookie_write_origin_allowed(request: Request) -> bool:
+    """Require a trusted Origin (or Referer) for cookie-authenticated writes."""
+    if request.method.upper() in ("GET", "HEAD", "OPTIONS", "TRACE"):
+        return True
+    raw = request.headers.get("origin") or request.headers.get("referer")
+    if not raw or raw == "null":
+        return False
+    try:
+        parsed = urlsplit(raw)
+        candidate = f"{parsed.scheme}://{parsed.netloc}"
+        if parsed.scheme not in ("https", "http") or not parsed.hostname:
+            return False
+        frontend = os.environ.get("FRONTEND_URL", "http://localhost:3000").rstrip("/")
+        api_origin = os.environ.get("API_PUBLIC_ORIGIN", "").rstrip("/")
+        allowed = {frontend}
+        if api_origin:
+            allowed.add(api_origin)
+        if os.environ.get("KAOS_ENV", "").lower() != "production":
+            allowed.add("http://localhost:3000")
+        return candidate in allowed
+    except (ValueError, AttributeError):
+        return False
+
+
 async def get_current_user(request: Request) -> dict:
     token = request.cookies.get("access_token")
     session_token = request.cookies.get("session_token")
@@ -109,19 +134,27 @@ async def get_current_user(request: Request) -> dict:
     if auth_header.startswith("Bearer "):
         bearer = auth_header[7:]
 
-    # 1. JWT access (cookie or bearer)
-    for t in [token, bearer]:
+    # Explicit bearer credentials are not browser-ambient and do not need CSRF checks.
+    if bearer:
+        try:
+            return await _user_from_token(bearer)
+        except HTTPException:
+            u = await _session_user(bearer)
+            if u:
+                return u
+    # Cookies are ambient browser credentials; fail closed for unsafe writes.
+    if (token or session_token) and not _cookie_write_origin_allowed(request):
+        raise HTTPException(status_code=403, detail="Untrusted cookie request origin")
+    for t in [token]:
         if t:
             try:
                 return await _user_from_token(t)
             except HTTPException:
                 pass
-    # 2. Emergent Google session (cookie or bearer)
-    for t in [session_token, bearer]:
-        if t:
-            u = await _session_user(t)
-            if u:
-                return u
+    if session_token:
+        u = await _session_user(session_token)
+        if u:
+            return u
     raise HTTPException(status_code=401, detail="Not authenticated")
 
 
