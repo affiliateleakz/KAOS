@@ -28,3 +28,14 @@ def test_stale_unverified_and_conflicting_market_sources_fail_closed():
     out=evaluate_opportunity("SPY","alpaca",rows,now=NOW)
     assert out["candidate_direction"] is None
     assert len(out["excluded_evidence"]) == 2
+
+def test_strategy_cannot_self_confirm_without_market_data():
+    out=evaluate_opportunity("SPY","alpaca",[entry("strategy"),entry("news")],now=NOW)
+    assert out["status"] == "NO_TRADE"
+    assert out["candidate_direction"] is None
+    assert out["executable"] is False
+
+def test_unverified_chart_does_not_confirm_strategy():
+    out=evaluate_opportunity("SPY","alpaca",[
+        entry("strategy"),entry("chart",verified=False)],now=NOW)
+    assert out["candidate_direction"] is None
