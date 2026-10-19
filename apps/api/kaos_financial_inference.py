@@ -25,6 +25,14 @@ def _classifier():
                                               trust_remote_code=False)
     model = AutoModelForSequenceClassification.from_pretrained(
         directory, local_files_only=True, trust_remote_code=False)
+    # Never assume a generic LABEL_0/1/2 mapping means neutral/positive/negative.
+    # Confirm the checkpoint's actual label configuration before scoring markets.
+    raw_labels = getattr(getattr(model, "config", None), "id2label", None)
+    if not isinstance(raw_labels, dict) or len(raw_labels) != 3:
+        raise RuntimeError("Trading-Hero checkpoint label schema is missing")
+    actual = {str(v).strip().lower() for v in raw_labels.values()}
+    if actual != {"neutral", "positive", "negative"}:
+        raise RuntimeError("Trading-Hero checkpoint label schema requires review")
     return pipeline("text-classification", model=model, tokenizer=tokenizer,
                     device=-1)
 
