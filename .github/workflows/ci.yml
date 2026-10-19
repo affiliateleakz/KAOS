@@ -1,6 +1,8 @@
 name: CI
+# Full CI is manual on review branches to conserve private-repo Actions minutes.
+# Main-branch pushes continue to be tested automatically.
 on:
-  pull_request:
+  workflow_dispatch:
   push:
     branches: [main]
 jobs:
