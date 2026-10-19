@@ -62,3 +62,34 @@ jobs:
           else
             echo "Research learning suite not present in this branch; enabled when PR #52 is merged"
           fi
+
+  extension-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - name: Validate Chrome manifest and required extension scripts
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path("apps/extension")
+          m = json.loads((root / "manifest.json").read_text())
+          assert m["manifest_version"] == 3
+          assert m["name"] == "KAOS Trading Bot"
+          assert m["version"]
+          scripts = [m["background"]["service_worker"]]
+          for block in m.get("content_scripts", []):
+              scripts.extend(block.get("js", []))
+              scripts.extend(block.get("css", []))
+          for file in scripts:
+              if not (root / file).is_file():
+                  raise AssertionError(f"Missing extension runtime asset: {file}")
+          print(f"Checked {len(scripts)} extension runtime assets")
+          PY
+      - name: Syntax-check extension JavaScript
+        run: |
+          node --check apps/extension/background.js
+          node --check apps/extension/content.js
+          node --check apps/extension/kaos-cloud-ui.js
