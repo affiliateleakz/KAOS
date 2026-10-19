@@ -23,6 +23,7 @@ import routes_disclosures
 import routes_crypto_scanner
 import routes_stock_heatmap
 import routes_ai_outcomes
+import routes_owner_candles
 import routes_paper
 import routes_broker_selection
 import routes_research_replay
@@ -80,6 +81,7 @@ app.include_router(routes_disclosures.router)
 app.include_router(routes_crypto_scanner.router)
 app.include_router(routes_stock_heatmap.router)
 app.include_router(routes_ai_outcomes.router)
+app.include_router(routes_owner_candles.router)
 app.include_router(routes_paper.router)
 app.include_router(routes_broker_selection.router)
 app.include_router(routes_research_replay.router)
