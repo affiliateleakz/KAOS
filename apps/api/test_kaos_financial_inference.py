@@ -36,12 +36,14 @@ def test_offline_loader_disables_remote_code(monkeypatch, tmp_path):
                 id2label={0: "neutral", 1: "positive", 2: "negative"}))
     fake = SimpleNamespace(AutoTokenizer=Loader,
         AutoModelForSequenceClassification=Loader,
-        pipeline=lambda task, **kwargs: "loaded")
+        pipeline=lambda task, **kwargs: lambda texts, **kw: [
+            {"label": "positive", "score": 0.9} for _ in texts])
     monkeypatch.setitem(sys.modules, "transformers", fake)
     monkeypatch.setenv("KAOS_TRADING_HERO_MODEL_DIR", str(tmp_path))
     inference._classifier.cache_clear()
     try:
-        assert inference._classifier() == "loaded"
+        assert callable(inference._classifier())
+        assert inference.classify_headlines(["Market profits rise"])[0]["label"] == "positive"
         assert len(calls) == 2
         assert all(c["local_files_only"] is True and
                    c["trust_remote_code"] is False for c in calls)
