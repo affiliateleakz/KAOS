@@ -36,13 +36,15 @@ def aggregate_headlines(ticker, observations, *, now=None, max_age_hours=24):
         if isinstance(raw, bool) or not isinstance(raw, (float, int)) or not isfinite(raw) or not -1 <= raw <= 1:
             discarded.append("invalid_sentiment")
             continue
-        key = (headline.casefold().strip(), url)
+        key = (headline.casefold().strip(), url, item.get("model_id"), item.get("model_version"))
         if key in seen:
             discarded.append("duplicate")
             continue
         seen.add(key)
         accepted.append({"headline": headline.strip(), "source_url": url,
-                         "published_at": published.isoformat(), "score": float(raw)})
+                         "published_at": published.isoformat(), "score": float(raw),
+                         "model_id": item.get("model_id"),
+                         "model_version": item.get("model_version")})
     n = len(accepted)
     avg = sum(item["score"] for item in accepted) / n if n else None
     return {"ticker": ticker, "sample_count": n, "sentiment_mean": round(avg, 5) if avg is not None else None,
