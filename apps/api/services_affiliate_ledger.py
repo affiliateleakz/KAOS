@@ -74,7 +74,10 @@ async def _entries_for(event_id):
 
 async def record_payment(event_id, buyer_id, plan, amount_cents, kind="initial", at=None):
     """Record a settled initial/renewal payment. Idempotent on event_id."""
-    if await db.affiliate_ledger_payments.find_one({"event_id": event_id}):
+    existing = await db.affiliate_ledger_payments.find_one({"event_id": event_id})
+    if existing:
+        if existing.get("state") != "completed":
+            raise RuntimeError("Affiliate payment requires ledger reconciliation")
         return await _entries_for(event_id)
     ledger = CommissionLedger(await _members(buyer_id))
     at = at or datetime.now(timezone.utc)
@@ -82,9 +85,12 @@ async def record_payment(event_id, buyer_id, plan, amount_cents, kind="initial",
     p = ledger.payments[event_id]
     await db.affiliate_ledger_payments.insert_one({
         "event_id": event_id, "buyer_id": buyer_id, "plan": p.plan, "plan_id": (plan or {}).get("id"),
-        "amount": str(p.amount), "kind": kind, "at": at.isoformat(), "reversed_amount": "0"})
+        "amount": str(p.amount), "kind": kind, "at": at.isoformat(), "reversed_amount": "0",
+        "state": "pending_entries"})
     if entries:
         await db.affiliate_ledger_entries.insert_many([_entry_doc(e) for e in entries])
+    await db.affiliate_ledger_payments.update_one({"event_id": event_id, "state": "pending_entries"},
+        {"$set": {"state": "completed"}})
     return entries
 
 
