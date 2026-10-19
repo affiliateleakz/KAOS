@@ -3,7 +3,7 @@ from kaos_financial_inference import classify_headlines
 
 def test_sentiment_predictions_from_real_classifier_interface():
     classifier=lambda texts, **kwargs: [
-        {"label":"LABEL_1","score":0.9},{"label":"LABEL_2","score":0.8}]
+        {"label":"positive","score":0.9},{"label":"negative","score":0.8}]
     rows=classify_headlines(["Strong earnings outlook","Unexpected earnings miss"],classifier=classifier)
     assert [x["sentiment_score"] for x in rows] == [0.9,-0.8]
     assert all(x["execution_authority"] is False for x in rows)
@@ -69,3 +69,9 @@ def test_model_loader_rejects_unknown_label_order(monkeypatch, tmp_path):
             inference._classifier()
     finally:
         inference._classifier.cache_clear()
+
+
+def test_generic_positional_labels_are_not_treated_as_sentiment():
+    with pytest.raises(RuntimeError, match="invalid prediction"):
+        classify_headlines(["Unexpected earnings miss"],
+                           classifier=lambda *a, **k: [{"label": "LABEL_2", "score": 0.99}])
