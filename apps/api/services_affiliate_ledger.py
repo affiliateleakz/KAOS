@@ -123,8 +123,11 @@ async def record_reversal(reversal_id, event_id, amount_cents=None, kind="refund
     amount = None if amount_cents is None else Decimal(amount_cents) / 100
     entries = ledger.record_reversal(reversal_id, event_id, amount, kind, at)
     await db.affiliate_ledger_reversals.insert_one({"reversal_id": reversal_id, "event_id": event_id, "kind": kind, "state": "pending_entries"})
-    await db.affiliate_ledger_payments.update_one(
-        {"event_id": event_id}, {"$set": {"reversed_amount": str(ledger.payments[event_id].reversed_amount)}})
+    result = await db.affiliate_ledger_payments.update_one(
+        {"event_id": event_id, "reversed_amount": pd["reversed_amount"]},
+        {"$set": {"reversed_amount": str(ledger.payments[event_id].reversed_amount)}})
+    if result.modified_count != 1:
+        raise RuntimeError("Concurrent affiliate reversal requires ledger reconciliation")
     if entries:
         await db.affiliate_ledger_entries.insert_many([_entry_doc(e) for e in entries])
     await db.affiliate_ledger_reversals.update_one(
