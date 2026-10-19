@@ -52,6 +52,7 @@ async def ensure_indexes():
     await db.trades.create_index("state")
     await db.signals.create_index("userId")
     await db.signals.create_index([("clientSignalId", 1), ("userId", 1)])
+    await db.commissions.create_index("ledgerEntryId", unique=True, sparse=True)
     await db.affiliate_accounts.create_index("code", unique=True)
     await db.affiliate_accounts.create_index("userId", unique=True)
     await db.commissions.create_index("affiliateUserId")
