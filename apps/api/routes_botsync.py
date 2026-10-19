@@ -1,7 +1,7 @@
 """Extension auth aliases, bot config/release/platforms, and idempotent event ingestion."""
 from typing import Optional, List
 from pydantic import BaseModel
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, HTTPException
 from db import db, new_id, now_iso, clean
 from auth import get_current_user
 from services import compute_license, get_setting
@@ -35,6 +35,10 @@ async def ext_logout(user: dict = Depends(get_current_user)):
 async def ext_me(request: Request, user: dict = Depends(get_current_user)):
     did = request.headers.get("X-Device-Id")
     device = await db.devices.find_one({"installId": did, "userId": user["id"]}) if did else None
+    if device and device.get("revoked"):
+        raise HTTPException(status_code=403, detail="Device access revoked")
+    # An unregistered device can still read onboarding status before registration.
+    # The license/status and device-registration endpoints enforce device access.
     # Broker selection precedes broker-specific eligibility checks.
     # In particular, a member choosing Coinbase must not be blocked by
     # Pocket Option's separate affiliate verification requirement.
