@@ -126,3 +126,17 @@ def test_string_keyed_checkpoint_id2label_is_resolved(monkeypatch, tmp_path):
         assert result[0]["sentiment_score"] == -0.93
     finally:
         inference._classifier.cache_clear()
+
+
+def test_malformed_classifier_item_fails_cleanly():
+    with pytest.raises(RuntimeError, match="malformed prediction"):
+        classify_headlines(["Unexpected earnings headline"],
+                           classifier=lambda *a, **k: [None])
+
+
+def test_verified_label_whitespace_is_normalized():
+    rows = classify_headlines(["Unexpected earnings headline"],
+                              classifier=lambda *a, **k: [{"label": " Positive ",
+                                                            "score": 0.7}])
+    assert rows[0]["label"] == "positive"
+    assert rows[0]["sentiment_score"] == 0.7
