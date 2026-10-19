@@ -27,7 +27,7 @@ def normalize_event(row, *, symbol):
     if published_at is None or received_at is None:
         return None
     try:
-        publish = instant(published_at)
+        publish = instant(published_at + "T00:00:00+00:00") if kind == "short_interest" and isinstance(published_at, str) and len(published_at) == 10 else instant(published_at)
         receive = instant(received_at)
     except (TypeError, ValueError, OverflowError):
         return None
