@@ -116,6 +116,10 @@ async def record_reversal(reversal_id, event_id, amount_cents=None, kind="refund
         raise KeyError(event_id)
     if pd.get("state") not in (None, "completed"):
         raise RuntimeError("Affiliate payment must be reconciled before reversal")
+    if pd.get("state") is None:
+        # Legacy payment rows must be independently reviewed before issuing
+        # another financial mutation; they lack reliable completion metadata.
+        raise RuntimeError("Legacy affiliate payment requires reconciliation before reversal")
     # A second reversal must not proceed while any reversal for the same
     # payment has uncommitted ledger entries, even with another reversal ID.
     pending = await db.affiliate_ledger_reversals.find_one(
