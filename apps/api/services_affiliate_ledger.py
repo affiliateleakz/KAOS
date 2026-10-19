@@ -116,6 +116,12 @@ async def record_reversal(reversal_id, event_id, amount_cents=None, kind="refund
         raise KeyError(event_id)
     if pd.get("state") not in (None, "completed"):
         raise RuntimeError("Affiliate payment must be reconciled before reversal")
+    # A second reversal must not proceed while any reversal for the same
+    # payment has uncommitted ledger entries, even with another reversal ID.
+    pending = await db.affiliate_ledger_reversals.find_one(
+        {"event_id": event_id, "state": "pending_entries"})
+    if pending:
+        raise RuntimeError("Prior affiliate reversal requires ledger reconciliation")
     ledger = CommissionLedger({})
     ledger.payments[event_id] = Payment(event_id, pd["buyer_id"], pd["plan"], Decimal(pd["amount"]), pd["kind"],
                                         datetime.fromisoformat(pd["at"]), Decimal(pd["reversed_amount"]))
