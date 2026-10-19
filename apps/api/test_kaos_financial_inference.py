@@ -140,3 +140,27 @@ def test_verified_label_whitespace_is_normalized():
                                                             "score": 0.7}])
     assert rows[0]["label"] == "positive"
     assert rows[0]["sentiment_score"] == 0.7
+
+
+def test_verified_wrapper_rejects_malformed_batch_before_normalization(monkeypatch, tmp_path):
+    import sys
+    from types import SimpleNamespace
+    import kaos_financial_inference as inference
+
+    class Loader:
+        @classmethod
+        def from_pretrained(cls, directory, **kwargs):
+            return SimpleNamespace(config=SimpleNamespace(
+                id2label={0: "neutral", 1: "positive", 2: "negative"}))
+
+    fake = SimpleNamespace(
+        AutoTokenizer=Loader, AutoModelForSequenceClassification=Loader,
+        pipeline=lambda *a, **k: lambda texts, **kw: [None])
+    monkeypatch.setitem(sys.modules, "transformers", fake)
+    monkeypatch.setenv("KAOS_TRADING_HERO_MODEL_DIR", str(tmp_path))
+    inference._classifier.cache_clear()
+    try:
+        with pytest.raises(RuntimeError, match="malformed prediction"):
+            inference.classify_headlines(["Unexpected earnings miss"])
+    finally:
+        inference._classifier.cache_clear()
