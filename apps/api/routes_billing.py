@@ -114,7 +114,8 @@ async def _activate(user_id, plan_id, customer, subscription, session_id):
             cust_user = await db.users.find_one({"id": user_id})
             await record_commission(cust_user, plan, "purchase", event_id=f"checkout:{session_id}")
         except Exception:
-            logger.exception("affiliate commission failed for %s", session_id)
+            logger.exception("affiliate purchase commission failed for %s; event must retry", session_id)
+            raise
 
 
 @router.post("/portal")
