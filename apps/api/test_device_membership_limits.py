@@ -39,3 +39,29 @@ def test_revoked_entitlement_blocks_new_device(monkeypatch):
         run(ext.register_device(device_req(),request(),{"id":"u1"}))
     assert raised.value.status_code==403
     fake.devices.insert_one.assert_not_awaited()
+
+def test_existing_device_cannot_bypass_revoked_account(monkeypatch):
+    existing={"id":"dev1","installId":"install-b","userId":"u1","revoked":False}
+    fake=SimpleNamespace(devices=SimpleNamespace(
+        find_one=AsyncMock(return_value=existing), update_one=AsyncMock(),
+        count_documents=AsyncMock()))
+    monkeypatch.setattr(ext,"db",fake)
+    monkeypatch.setattr(services_trading,"get_entitlements",
+                        AsyncMock(return_value={"botAccess":True,"deviceLimit":3}))
+    with pytest.raises(HTTPException) as raised:
+        run(ext.register_device(device_req(),request(),{
+            "id":"u1","extension_access_revoked":True}))
+    assert raised.value.status_code==403
+    fake.devices.update_one.assert_not_awaited()
+
+def test_existing_device_cannot_bypass_disabled_bot_entitlement(monkeypatch):
+    existing={"id":"dev1","installId":"install-b","userId":"u1","revoked":False}
+    fake=SimpleNamespace(devices=SimpleNamespace(
+        find_one=AsyncMock(return_value=existing),update_one=AsyncMock()))
+    monkeypatch.setattr(ext,"db",fake)
+    monkeypatch.setattr(services_trading,"get_entitlements",
+                        AsyncMock(return_value={"botAccess":False,"deviceLimit":1}))
+    with pytest.raises(HTTPException) as raised:
+        run(ext.register_device(device_req(),request(),{"id":"u1"}))
+    assert raised.value.status_code==403
+    fake.devices.update_one.assert_not_awaited()
