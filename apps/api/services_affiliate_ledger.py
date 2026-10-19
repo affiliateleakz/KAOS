@@ -6,6 +6,7 @@ from kaos.affiliate_ledger import CommissionLedger, Payment, Entry, MAX_LEVELS, 
 from kaos.memberships import Affiliate, PRICES
 
 from db import db
+from affiliate_atomic import write_payment, write_reversal
 
 ACTIVE_STATES = ("ACTIVE", "TRIAL")
 
@@ -95,17 +96,11 @@ async def record_payment(event_id, buyer_id, plan, amount_cents, kind="initial",
     at = at or datetime.now(timezone.utc)
     entries = ledger.record_payment(event_id, buyer_id, plan_tier(plan), Decimal(amount_cents) / 100, kind, at)
     p = ledger.payments[event_id]
-    await db.affiliate_ledger_payments.insert_one({
+    await write_payment({
         "event_id": event_id, "buyer_id": buyer_id, "plan": p.plan, "plan_id": (plan or {}).get("id"),
-        "amount": str(p.amount), "kind": kind, "at": at.isoformat(), "reversed_amount": "0",
-        "state": "pending_entries"})
-    if entries:
-        await db.affiliate_ledger_entries.insert_many([_entry_doc(e) for e in entries])
-    result = await db.affiliate_ledger_payments.update_one(
-        {"event_id": event_id, "state": "pending_entries"},
-        {"$set": {"state": "completed"}})
-    if result.modified_count != 1:
-        raise RuntimeError("Affiliate payment completion could not be confirmed")
+        "amount": str(p.amount), "kind": kind, "at": at.isoformat(),
+        "reversed_amount": "0"
+    }, [_entry_doc(e) for e in entries])
     return entries
 
 
@@ -139,19 +134,11 @@ async def record_reversal(reversal_id, event_id, amount_cents=None, kind="refund
     ledger.entries = await _entries_for(event_id)
     amount = None if amount_cents is None else Decimal(amount_cents) / 100
     entries = ledger.record_reversal(reversal_id, event_id, amount, kind, at)
-    await db.affiliate_ledger_reversals.insert_one({"reversal_id": reversal_id, "event_id": event_id, "kind": kind, "requested_amount_cents": amount_cents, "state": "pending_entries"})
-    result = await db.affiliate_ledger_payments.update_one(
-        {"event_id": event_id, "reversed_amount": pd["reversed_amount"]},
-        {"$set": {"reversed_amount": str(ledger.payments[event_id].reversed_amount)}})
-    if result.modified_count != 1:
-        raise RuntimeError("Concurrent affiliate reversal requires ledger reconciliation")
-    if entries:
-        await db.affiliate_ledger_entries.insert_many([_entry_doc(e) for e in entries])
-    completed = await db.affiliate_ledger_reversals.update_one(
-        {"reversal_id": reversal_id, "state": "pending_entries"},
-        {"$set": {"state": "completed"}})
-    if completed.modified_count != 1:
-        raise RuntimeError("Affiliate reversal completion could not be confirmed")
+    await write_reversal({
+        "reversal_id": reversal_id, "event_id": event_id, "kind": kind,
+        "requested_amount_cents": amount_cents
+    }, event_id, pd["reversed_amount"], str(ledger.payments[event_id].reversed_amount),
+       [_entry_doc(e) for e in entries])
     return entries
 
 
