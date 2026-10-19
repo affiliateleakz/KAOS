@@ -157,7 +157,7 @@ async def stripe_webhook(request: Request):
         await db.webhook_events.insert_one({"event_id": event["id"], "type": event["type"],
                                             "state": "received", "createdAt": now_iso()})
     except Exception as exc:
-        if not isinstance(exc, DuplicateKeyError):
+        if not (isinstance(exc, DuplicateKeyError) or\n                (type(exc).__name__ == "DuplicateKeyError" and\n                 type(exc).__module__ == "pymongo.errors")):
             raise
         existing = await db.webhook_events.find_one({"event_id": event["id"]})
         if existing and existing.get("state") == "completed":
