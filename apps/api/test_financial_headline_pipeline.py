@@ -67,3 +67,24 @@ def test_misaligned_model_response_cannot_be_ingested(monkeypatch):
         asyncio.run(api.classify_and_ingest_headlines([data()], "secret-for-test"))
     assert err.value.status_code == 503
     save.assert_not_awaited()
+
+
+def test_same_headline_from_two_models_retains_separate_provenance(monkeypatch):
+    monkeypatch.setenv("KAOS_COLLECTOR_KEY", "secret-for-test")
+    save = AsyncMock()
+    monkeypatch.setattr(api, "db", SimpleNamespace(
+        kaos_intelligence=SimpleNamespace(update_one=save)))
+    shared = dict(ticker="SPY", asset_class="etf",
+                  headline="Revenue rose above expectations",
+                  source_url="https://example.org/earnings",
+                  published_at=datetime.now(timezone.utc))
+    scored = [api.HeadlineScore(**shared, score=0.8, model_id="model-a",
+                                model_version="1"),
+              api.HeadlineScore(**shared, score=-0.4, model_id="model-b",
+                                model_version="2")]
+    result = asyncio.run(api.ingest_headline_scores(scored, "secret-for-test"))
+    assert result["accepted"] == 2
+    records = [call.args[1]["$setOnInsert"] for call in save.await_args_list]
+    assert {r["nlp_model_id"] for r in records} == {"model-a", "model-b"}
+    assert len({r["event_id"] for r in records}) == 2
+    assert {r["nlp_score"] for r in records} == {0.8, -0.4}
