@@ -175,12 +175,12 @@ async def kaos_ai_predict(asset: str, platform: str, context: dict) -> dict:
             return {"source": "AI", "direction": None, "confidence": None,
                     "reason": f"inference_error: {exc}", "authority": "LEARNING_ONLY",
                     "modelVersion": model.get("version"), "simulated": False, "live": True}
-    # ---- simulated fallback (no deployed bundle or no feature vector) ----
-    h = _pseudo("ai", asset, platform, context.get("bucket", ""))
+    # Missing model/data must never masquerade as a market prediction.
     return {
-        "source": "AI", "direction": "BUY" if (h >> 2) % 2 == 0 else "SELL",
-        "expiration": "30s", "confidence": round(0.5 + (h % 40) / 100.0, 2),
-        "modelVersion": tc.get("aiModelVersion"), "authority": "LEARNING_ONLY", "simulated": True,
+        "source": "AI", "direction": None, "expiration": None, "confidence": None,
+        "reason": "No deployed model bundle and valid feature vector available",
+        "modelVersion": tc.get("aiModelVersion"), "authority": "LEARNING_ONLY",
+        "simulated": True, "live": False,
     }
 
 
