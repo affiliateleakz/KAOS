@@ -50,15 +50,22 @@ def _classifier():
                           device=-1)
     def verified_predict(texts, **kwargs):
         predictions = classifier(texts, **kwargs)
+        if not isinstance(predictions, list) or len(predictions) != len(texts):
+            raise RuntimeError("Checkpoint returned incomplete prediction batch")
+        verified = []
         for item in predictions:
-            raw = str(item.get("label", "")).strip()
+            if not isinstance(item, dict):
+                raise RuntimeError("Checkpoint returned malformed prediction")
+            normalized = dict(item)
+            raw = str(normalized.get("label", "")).strip()
             if raw.upper().startswith("LABEL_"):
                 try:
                     index = int(raw[6:])
-                    item["label"] = label_by_index[index]
-                except (ValueError, KeyError, TypeError):
-                    raise RuntimeError("Checkpoint emitted unknown sentiment label")
-        return predictions
+                    normalized["label"] = label_by_index[index]
+                except (ValueError, KeyError, TypeError) as exc:
+                    raise RuntimeError("Checkpoint emitted unknown sentiment label") from exc
+            verified.append(normalized)
+        return verified
     return verified_predict
 
 
