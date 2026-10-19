@@ -77,6 +77,8 @@ async def _user_from_token(token: str) -> dict:
         raise HTTPException(status_code=401, detail="User not found")
     if payload.get("ver", 0) != user.get("token_version", 0):
         raise HTTPException(status_code=401, detail="Session expired")
+    if user.get("account_status", "active") in ("suspended", "banned") or user.get("extension_access_revoked"):
+        raise HTTPException(status_code=403, detail="Account access disabled")
     user = clean(user)
     user.pop("password_hash", None)
     return user
@@ -95,7 +97,7 @@ async def _session_user(token: str):
     if exp and exp < datetime.now(timezone.utc):
         return None
     user = await db.users.find_one({"id": sess["user_id"]})
-    if not user:
+    if not user or user.get("account_status", "active") in ("suspended", "banned") or user.get("extension_access_revoked"):
         return None
     user = clean(user)
     user.pop("password_hash", None)
