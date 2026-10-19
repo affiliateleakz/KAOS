@@ -10,7 +10,6 @@ import os
 
 MODEL_ID = "trading_hero"
 LABEL_SCORE = {"positive": 1.0, "neutral": 0.0, "negative": -1.0}
-LABEL_INDEX = {"label_0": "neutral", "label_1": "positive", "label_2": "negative"}
 
 
 @lru_cache(maxsize=1)
@@ -50,7 +49,6 @@ def classify_headlines(headlines, *, classifier=None):
     scored = []
     for headline, result in zip(headlines, results):
         label = str(result.get("label", "")).lower()
-        label = LABEL_INDEX.get(label, label)
         confidence = result.get("score")
         if label not in LABEL_SCORE or isinstance(confidence, bool) or not isinstance(
                 confidence, (float, int)) or not isfinite(confidence) or not 0 <= confidence <= 1:
