@@ -46,3 +46,26 @@ def test_stale_event_replay_claims_and_completes(monkeypatch):
     assert run(billing.stripe_webhook(DummyRequest()))=={"status":"ok"}
     assert events.update_one.await_count==2
     assert events.update_one.await_args_list[-1].args[1]["$set"]["state"]=="completed"
+
+def test_new_webhook_claim_must_succeed_before_processing(monkeypatch):
+    monkeypatch.setattr(billing, "WEBHOOK_SECRET", "test_secret")
+    monkeypatch.setattr(billing.stripe.Webhook, "construct_event",
+                        lambda *args: {"id":"evt_new","type":"unknown.test","data":{"object":{}}})
+    events=SimpleNamespace(insert_one=AsyncMock(),
+                           update_one=AsyncMock(return_value=SimpleNamespace(modified_count=0)))
+    monkeypatch.setattr(billing,"db",SimpleNamespace(webhook_events=events))
+    with pytest.raises(HTTPException) as exc:
+        run(billing.stripe_webhook(DummyRequest()))
+    assert exc.value.status_code==503
+    assert events.update_one.await_count==1
+
+def test_webhook_completion_must_be_recorded(monkeypatch):
+    events=setup(monkeypatch,{"state":"processing"})
+    events.update_one.side_effect=[
+        SimpleNamespace(modified_count=1),
+        SimpleNamespace(modified_count=0),
+    ]
+    with pytest.raises(HTTPException) as exc:
+        run(billing.stripe_webhook(DummyRequest()))
+    assert exc.value.status_code==503
+    assert events.update_one.await_count==2
