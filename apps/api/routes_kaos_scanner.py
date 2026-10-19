@@ -9,6 +9,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from auth import get_current_user
 from kaos_opportunity_fusion import evaluate_opportunity
+from services_trading import get_entitlements
+from db import db
+from kaos_opportunity import evaluate, SUPPORTED
 
 router = APIRouter(prefix="/api/v1/kaos-ai", tags=["kaos-ai-scanner"])
 
@@ -49,3 +52,38 @@ async def scan_preview(req: ScanInput, user: dict = Depends(get_current_user)):
         results.append(result)
     return {"mode": "UNTRUSTED_PREVIEW", "executable": False, "scanned": len(results),
             "opportunities": results}
+
+
+@router.get("/scan/collected")
+async def collected_opportunities(asset_class: str | None = None,
+                                  limit: int = 30,
+                                  user: dict = Depends(get_current_user)):
+    """Show scored opportunities from KAOS's existing authenticated collector.
+
+    Does not infer verified fills, execution permissions, or source authenticity
+    merely because an observation exists in the research database.
+    """
+    if not (await get_entitlements(user)).get("scanners"):
+        raise HTTPException(status_code=403, detail="Scanner entitlement required")
+    if asset_class is not None and asset_class not in SUPPORTED:
+        raise HTTPException(status_code=422, detail="Unsupported asset class")
+    if not 1 <= limit <= 100:
+        raise HTTPException(status_code=422, detail="Invalid limit")
+    from datetime import timedelta
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+    query = {"observed_at": {"$gte": cutoff}}
+    if asset_class:
+        query["asset_class"] = asset_class
+    rows = await db.kaos_intelligence.find(query, {"_id": 0}).sort(
+        "observed_at", -1).limit(5000).to_list(length=5000)
+    groups = {}
+    for row in rows:
+        if isinstance(row, dict) and row.get("asset") and row.get("asset_class"):
+            groups.setdefault((row["asset"], row["asset_class"]), []).append(row)
+    results = [dict(evaluate(asset, observations), asset_class=kind)
+               for (asset, kind), observations in groups.items()]
+    results.sort(key=lambda r: r.get("score", 0), reverse=True)
+    return {"mode": "COLLECTOR_RESEARCH", "executable": False,
+            "coverage": "ingested_sources_only", "scanned_observations": len(rows),
+            "opportunities": results[:limit],
+            "note": "Research rankings from stored collector observations; not verified executable signals or probabilities."}
