@@ -183,11 +183,11 @@ async def affiliate_config():
     from services import get_setting
     cfg = await get_setting("affiliate", {})
     return {
-        "affiliateUrl": cfg.get("affiliateUrl", "https://pocketoption.com/?ref=DEMO_AFFILIATE"),
-        "programName": cfg.get("programName", "Pocket Option Partners"),
+        "affiliateUrl": cfg.get("affiliateUrl") or None,
+        "programName": cfg.get("programName", "Optional Pocket Option Referral"),
         "verificationMethod": cfg.get("verificationMethod", "manual"),
-        "instructions": cfg.get("instructions",
-                                "Create your Pocket Option account using our link, then submit your Pocket Option UID for verification."),
+        "referralRequired": False,
+        "instructions": "Using a KAOS referral link is optional and is never required for membership or trading access.",
     }
 
 
