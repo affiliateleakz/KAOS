@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from auth import get_current_user
 from kaos_trend_pause_replay import replay
+from kaos_structure_replay import replay as structure_replay
 
 router = APIRouter(prefix="/api/v1/research", tags=["research"])
 
@@ -27,4 +28,19 @@ async def trend_pause_replay(req: ReplayRequest, user: dict = Depends(get_curren
     except (ValueError, TypeError, OverflowError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return {"strategy": "KAOS_TREND_PAUSE_V1", "research_only": True,
+            "execution_enabled": False, **result}
+
+class StructureReplayRequest(BaseModel):
+    candles: list[Candle] = Field(min_length=9, max_length=24000)
+    expiry_bars: int = Field(default=4, ge=1, le=240)
+    lookback: int = Field(default=12, ge=5, le=100)
+
+@router.post("/structure/replay")
+async def structure_replay_endpoint(req: StructureReplayRequest, user: dict = Depends(get_current_user)):
+    try:
+        result = structure_replay([c.model_dump() for c in req.candles],
+                                  expiry_bars=req.expiry_bars, lookback=req.lookback)
+    except (ValueError, TypeError, OverflowError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"strategy": "KAOS_STRUCTURE_RESEARCH_V1", "research_only": True,
             "execution_enabled": False, **result}

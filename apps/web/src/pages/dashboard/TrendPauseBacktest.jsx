@@ -42,9 +42,9 @@ function csvToCandleJson(text){
  return JSON.stringify(rows);
 }
 export default function TrendPauseBacktest(){
- const [minutes,setMinutes]=useState(""),[seconds,setSeconds]=useState(""),[horizon,setHorizon]=useState("60");
+ const [minutes,setMinutes]=useState(""),[seconds,setSeconds]=useState(""),[horizon,setHorizon]=useState("60"),[strategy,setStrategy]=useState("trend-pause");
  const [result,setResult]=useState(null),[error,setError]=useState(""),[loading,setLoading]=useState(false);
- const datasets=[["1-minute",minutes,60000],["15-second",seconds,15000]];
+ const datasets=strategy==="trend-pause"?[["1-minute",minutes,60000],["15-second",seconds,15000]]:[["15-second",seconds,15000]];
  const diagnostics=datasets.map(([label,value,period])=>({label,info:candleDiagnostics(value,label,period)}));
  const importFile=async (event,setter)=>{
   const file=event.target.files?.[0];
@@ -61,14 +61,16 @@ export default function TrendPauseBacktest(){
  const run=async e=>{
   e.preventDefault();setResult(null);setError("");setLoading(true);
   try{
-   const payload={minute_candles:readCandles(minutes,"1-minute"),fifteen_second_candles:readCandles(seconds,"15-second"),horizon_seconds:Number(horizon)};
-   const response=await api.post("/api/v1/research/trend-pause/replay",payload);
+   const payload=strategy==="structure"?{candles:readCandles(seconds,"Research candles"),expiry_bars:Number(horizon)/15,lookback:12}:{minute_candles:readCandles(minutes,"1-minute"),fifteen_second_candles:readCandles(seconds,"15-second"),horizon_seconds:Number(horizon)};
+   const endpoint=strategy==="structure"?"/api/v1/research/structure/replay":"/api/v1/research/trend-pause/replay";
+   const response=await api.post(endpoint,payload);
    setResult(response.data);
   }catch(e){setError(e instanceof SyntaxError?"Invalid JSON input.":errMsg(e)||e.message);}
   finally{setLoading(false)}
  };
  return <section className="card-surface p-5 space-y-4" data-testid="trend-pause-backtest">
-   <h2 className="font-heading text-lg font-bold">KAOS Trend-Pause Backtest · Historical Research</h2>
+   <h2 className="font-heading text-lg font-bold">KAOS Backtest Lab · Historical Research</h2>
+   <label className="block text-sm">Strategy <select value={strategy} onChange={e=>{setStrategy(e.target.value);setResult(null);}} className="ml-2 rounded border border-[#333] bg-[#111] p-2"><option value="trend-pause">Trend-Pause (1m + 15s)</option><option value="structure">Price action (15s candles)</option></select></label>
    <p className="text-xs text-slate-400">Paste real chronological candle arrays containing ts (Unix milliseconds), open, high, low and close. One-minute and 15-second data must refer to the same market and period. No synthetic candles or broker orders.</p>
    <div className="grid gap-2 md:grid-cols-2">
     {diagnostics.map(({label,info})=><div key={label} className="rounded border border-[#333] p-3 text-xs">
@@ -82,7 +84,7 @@ export default function TrendPauseBacktest(){
    </div>
    <form onSubmit={run} className="space-y-3">\n    <div className="grid gap-3 md:grid-cols-2">\n      <label className="text-xs">Import 1-minute JSON or CSV<input type="file" accept=".json,.csv,application/json,text/csv" onChange={e=>importFile(e,setMinutes)} className="mt-1 block w-full text-xs"/></label>\n      <label className="text-xs">Import 15-second JSON or CSV<input type="file" accept=".json,.csv,application/json,text/csv" onChange={e=>importFile(e,setSeconds)} className="mt-1 block w-full text-xs"/></label>\n    </div>
      <div className="grid gap-3 md:grid-cols-2">
-      <label className="text-sm">1-minute candles (at least 53)<textarea value={minutes} onChange={e=>setMinutes(e.target.value)} required rows={5} spellCheck={false} placeholder='[{"ts":1760054400000,"open":1,"high":2,"low":1,"close":2}]' className="mt-1 w-full rounded border border-[#333] bg-[#0c0c0c] p-2 font-mono text-xs"/></label>
+      <label className="text-sm">1-minute candles (Trend-Pause only, at least 53)<textarea value={minutes} onChange={e=>setMinutes(e.target.value)} required={strategy==="trend-pause"} rows={5} spellCheck={false} placeholder='[{"ts":1760054400000,"open":1,"high":2,"low":1,"close":2}]' className="mt-1 w-full rounded border border-[#333] bg-[#0c0c0c] p-2 font-mono text-xs"/></label>
       <label className="text-sm">15-second candles (at least 24)<textarea value={seconds} onChange={e=>setSeconds(e.target.value)} required rows={5} spellCheck={false} placeholder='[{"ts":1760054400000,"open":1,"high":2,"low":1,"close":2}]' className="mt-1 w-full rounded border border-[#333] bg-[#0c0c0c] p-2 font-mono text-xs"/></label>
      </div>
      <label className="block text-sm">Expiry / exit horizon<select value={horizon} onChange={e=>setHorizon(e.target.value)} className="ml-2 rounded border border-[#333] bg-[#111] p-2">{[15,30,60,120,300,900].map(s=><option key={s} value={s}>{s}s</option>)}</select></label>
