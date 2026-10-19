@@ -8,7 +8,10 @@ import os
 from db import db
 
 def transactions_required():
-    return os.getenv("KAOS_AFFILIATE_TXN_MODE", "legacy") == "required"
+    mode = os.getenv("KAOS_AFFILIATE_TXN_MODE", "legacy").strip().lower()
+    if mode not in ("legacy", "required"):
+        raise RuntimeError("Invalid KAOS_AFFILIATE_TXN_MODE: use required or legacy")
+    return mode == "required"
 
 async def write_payment(payment, entries, database=None):
     db = database if database is not None else globals()["db"]
