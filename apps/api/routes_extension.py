@@ -58,10 +58,13 @@ async def v1_license(request: Request, user: dict = Depends(get_current_user)):
     did = request.headers.get("X-Device-Id")
     if did:
         device = await db.devices.find_one({"installId": did, "userId": user["id"]})
-        if device:
-            await db.devices.update_one({"id": device["id"]},
-                                        {"$set": {"lastActive": now_iso(),
-                                                  "lastIp": request.client.host if request.client else None}})
+        if not device:
+            raise HTTPException(status_code=403, detail="Device is not registered")
+        if device.get("revoked"):
+            raise HTTPException(status_code=403, detail="Device access revoked")
+        await db.devices.update_one({"id": device["id"], "userId": user["id"], "revoked": False},
+                                    {"$set": {"lastActive": now_iso(),
+                                              "lastIp": request.client.host if request.client else None}})
     return await compute_license(user, device)
 
 
