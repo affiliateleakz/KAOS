@@ -264,6 +264,15 @@
           detail:'Server health is online but device registration could not complete.' };
         return { step:'OFFLINE', status:'OFFLINE', serverOnline:false, health:hs2 };
       }
+      // Never proceed to the trading dashboard after a failed registration.
+      // Unknown HTTP errors must be visible rather than silently ignored.
+      return { step:'BLOCKED', status:'DEVICE_REGISTRATION_FAILED', serverOnline:true,
+               detail:String(e && e.message || 'Device registration failed'), license:info.license, user:info.user };
+    }
+    if (!device || !device.id || device.revoked) {
+      return { step:'BLOCKED', status:'DEVICE_REGISTRATION_FAILED', serverOnline:true,
+               detail:'Device registration returned an invalid or revoked device',
+               license:info.license, user:info.user };
     }
 
     var plat = await getPlatform();
