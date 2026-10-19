@@ -243,7 +243,12 @@ async def _reverse_for_charge(obj, reason):
     charge_id = obj.get("charge") if reason == "chargeback" else obj.get("id")
     if not isinstance(charge_id, str) or not charge_id.strip():
         raise RuntimeError("Stripe reversal missing charge identity; reconciliation required")
-    u = await db.users.find_one({"stripe_customer_id": obj.get("customer")}) if obj.get("customer") else None
+    customer_id = obj.get("customer")
+    if not isinstance(customer_id, str) or not customer_id.strip():
+        raise RuntimeError("Stripe reversal missing customer identity; reconciliation required")
+    u = await db.users.find_one({"stripe_customer_id": customer_id})
+    if not u:
+        raise RuntimeError("Stripe reversal customer not found; reconciliation required")
     invoice_id = obj.get("invoice")
     if not invoice_id:
         # Never reverse an arbitrary recent payment when Stripe supplied no
@@ -254,7 +259,7 @@ async def _reverse_for_charge(obj, reason):
         # A checkout may have been paid before the invoice journal exists.
         # Do not guess which payment to reverse by sorting a buyer's history.
         raise RuntimeError("Stripe reversal payment journal not found; reconciliation required")
-    if u and pay.get("buyer_id") != u["id"]:
+    if pay.get("buyer_id") != u["id"]:
         raise RuntimeError("Stripe reversal customer does not match ledger buyer")
     from decimal import Decimal
     remaining = int((Decimal(pay["amount"]) - Decimal(pay["reversed_amount"])) * 100)
