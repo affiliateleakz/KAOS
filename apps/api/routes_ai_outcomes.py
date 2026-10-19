@@ -22,7 +22,9 @@ async def settle_verified(req:SettleRequest,admin=Depends(admin_dep)):
     if pred.get("outcomeVerified"):raise HTTPException(409,"Already settled")
     if pred.get("simulated") or not pred.get("productionTrained"):
         raise HTTPException(422,"Not a trained real prediction")
-    if pred.get("horizon_seconds") != req.horizon_seconds or not pred.get("source"):\n        raise HTTPException(422,"Prediction horizon or source provenance missing or mismatched")\n    quotes=await db.kaos_ai_quote_observations.find(
+    if pred.get("horizon_seconds") != req.horizon_seconds or not pred.get("source"):
+        raise HTTPException(422,"Prediction horizon or source provenance missing or mismatched")
+    quotes=await db.kaos_ai_quote_observations.find(
         {"prediction_id":req.prediction_id,"asset":pred.get("asset"),"source":pred["source"]},{"_id":0}).sort("observed_at",1).limit(100).to_list(length=100)
     if len(quotes)<2:raise HTTPException(409,"Independent entry and expiry observations not available")
     result=None
