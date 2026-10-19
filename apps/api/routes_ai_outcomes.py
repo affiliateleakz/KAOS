@@ -6,6 +6,9 @@ from auth import require_role
 from db import db
 from kaos_ai_outcome_verifier import verify
 import os
+from datetime import datetime, timezone
+
+ALLOWED_QUOTE_SOURCES = {"coinbase_exchange_public_ticker"}
 
 router=APIRouter(prefix="/api/admin/ai",tags=["ai-outcomes"])
 admin_dep=require_role("admin")
@@ -52,12 +55,20 @@ async def record_observations(items:list[CollectorObservation],x_kaos_collector_
     if not 1<=len(items)<=100:raise HTTPException(422,"Batch must contain 1-100 observations")
     # These fields are accepted only from the trusted server collector, not member browsers.
     for item in items:
+        pred=await db.ai_predictions.find_one({"id":item.prediction_id})
+        if not pred or pred.get("asset")!=item.asset or pred.get("simulated") or not pred.get("productionTrained"):
+            raise HTTPException(422,"Observation does not match a trained stored forecast")
+        if item.source not in ALLOWED_QUOTE_SOURCES:
+            raise HTTPException(422,"Unapproved quote provenance")
         from decimal import Decimal
         from kaos_ai_outcome_verifier import timestamp
         try:
             price=Decimal(item.price)
             ts=timestamp(item.observed_at)
             if not price.is_finite() or price<=0 or ts<=0:raise ValueError()
+            if ts>datetime.now(timezone.utc).timestamp()+2:raise ValueError()
+            issued=timestamp(pred["timestamp"])
+            if not issued<=ts<=issued+3602:raise ValueError()
         except (ValueError,ArithmeticError,TypeError) as exc:
             raise HTTPException(422,"Invalid market observation") from exc
     for item in items:
