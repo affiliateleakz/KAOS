@@ -19,3 +19,12 @@ def test_license_refuses_untrusted_device(monkeypatch,device,expected):
         asyncio.run(ext.v1_license(request,user={"id":"u1"}))
     assert err.value.status_code==403
     devices.update_one.assert_not_awaited()
+
+def test_license_requires_installation_identity(monkeypatch):
+    devices=SimpleNamespace(find_one=AsyncMock(),update_one=AsyncMock())
+    monkeypatch.setattr(ext,"db",SimpleNamespace(devices=devices))
+    request=SimpleNamespace(headers={},client=None)
+    with pytest.raises(HTTPException,match="X-Device-Id required") as err:
+        asyncio.run(ext.v1_license(request,user={"id":"u1"}))
+    assert err.value.status_code==400
+    devices.find_one.assert_not_awaited()
