@@ -56,6 +56,8 @@ async def v1_logout(user: dict = Depends(get_current_user)):
 async def v1_license(request: Request, user: dict = Depends(get_current_user)):
     device = None
     did = request.headers.get("X-Device-Id")
+    if not did or not did.strip():
+        raise HTTPException(status_code=400, detail="X-Device-Id required for extension license")
     if did:
         device = await db.devices.find_one({"installId": did, "userId": user["id"]})
         if not device:
