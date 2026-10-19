@@ -54,3 +54,15 @@ def test_refund_rejects_cross_customer_payment(monkeypatch):
     with pytest.raises(RuntimeError,match="does not match"):
         asyncio.run(billing._reverse_for_charge(
             {"id":"ch1","invoice":"inv1","customer":"cus1","amount_refunded":500}, "refund"))
+
+@pytest.mark.parametrize("reason,payload", [
+    ("refund", {"invoice":"inv1","customer":"cus1","amount_refunded":500}),
+    ("chargeback", {"id":"dp1","invoice":"inv1","customer":"cus1","amount":500}),
+])
+def test_reversal_requires_stable_charge_identifier(monkeypatch,reason,payload):
+    db=SimpleNamespace(users=SimpleNamespace(find_one=AsyncMock()),
+                       affiliate_ledger_payments=SimpleNamespace(find_one=AsyncMock()))
+    monkeypatch.setattr(billing,"db",db)
+    with pytest.raises(RuntimeError,match="missing charge identity"):
+        asyncio.run(billing._reverse_for_charge(payload,reason))
+    db.affiliate_ledger_payments.find_one.assert_not_awaited()
