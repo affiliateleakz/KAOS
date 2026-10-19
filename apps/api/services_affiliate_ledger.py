@@ -101,8 +101,11 @@ async def record_payment(event_id, buyer_id, plan, amount_cents, kind="initial",
         "state": "pending_entries"})
     if entries:
         await db.affiliate_ledger_entries.insert_many([_entry_doc(e) for e in entries])
-    await db.affiliate_ledger_payments.update_one({"event_id": event_id, "state": "pending_entries"},
+    result = await db.affiliate_ledger_payments.update_one(
+        {"event_id": event_id, "state": "pending_entries"},
         {"$set": {"state": "completed"}})
+    if result.modified_count != 1:
+        raise RuntimeError("Affiliate payment completion could not be confirmed")
     return entries
 
 
@@ -142,9 +145,11 @@ async def record_reversal(reversal_id, event_id, amount_cents=None, kind="refund
         raise RuntimeError("Concurrent affiliate reversal requires ledger reconciliation")
     if entries:
         await db.affiliate_ledger_entries.insert_many([_entry_doc(e) for e in entries])
-    await db.affiliate_ledger_reversals.update_one(
+    completed = await db.affiliate_ledger_reversals.update_one(
         {"reversal_id": reversal_id, "state": "pending_entries"},
         {"$set": {"state": "completed"}})
+    if completed.modified_count != 1:
+        raise RuntimeError("Affiliate reversal completion could not be confirmed")
     return entries
 
 
