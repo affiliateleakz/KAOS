@@ -160,8 +160,27 @@ async def stripe_webhook(request: Request):
         existing = await db.webhook_events.find_one({"event_id": event["id"]})
         if existing and existing.get("state") == "completed":
             return {"status": "duplicate"}
-        # Fails closed rather than pretending that incomplete events succeeded.
-        raise HTTPException(status_code=503, detail="Webhook delivery requires reconciliation")
+        # A retry must be allowed to finish a previously interrupted event.
+        # Lease ownership atomically; do not concurrently run financial effects.
+        from datetime import datetime, timezone, timedelta
+        from uuid import uuid4
+        claim = str(uuid4())
+        now_at = datetime.now(timezone.utc)
+        lease = await db.webhook_events.update_one(
+            {"event_id": event["id"], "state": {"$in": ["received", "processing"]},
+             "$or": [{"lease_until": {"$lt": now_at}}, {"lease_until": {"$exists": False}}]},
+            {"$set": {"state": "processing", "claim": claim,
+                       "lease_until": now_at + timedelta(minutes=5)}})
+        if lease.modified_count != 1:
+            raise HTTPException(status_code=503, detail="Webhook already processing; retry later")
+    else:
+        from datetime import datetime, timezone, timedelta
+        from uuid import uuid4
+        claim = str(uuid4())
+        await db.webhook_events.update_one(
+            {"event_id": event["id"], "state": "received"},
+            {"$set": {"state": "processing", "claim": claim,
+                       "lease_until": datetime.now(timezone.utc) + timedelta(minutes=5)}})
     obj = event["data"]["object"]
     t = event["type"]
     if t == "checkout.session.completed":
@@ -199,8 +218,9 @@ async def stripe_webhook(request: Request):
                     logger.exception("affiliate renewal commission failed for %s", obj["id"])
     elif t in ("charge.refunded", "charge.dispute.created"):
         await _reverse_for_charge(obj, "chargeback" if t == "charge.dispute.created" else "refund")
-    await db.webhook_events.update_one({"event_id": event["id"]},
-        {"$set": {"state": "completed", "completedAt": now_iso()}})
+    await db.webhook_events.update_one({"event_id": event["id"], "claim": claim},
+        {"$set": {"state": "completed", "completedAt": now_iso()},
+         "$unset": {"lease_until": "", "claim": ""}})
     return {"status": "ok"}
 
 
