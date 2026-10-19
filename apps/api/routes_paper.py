@@ -90,6 +90,10 @@ async def _reject(user, now, client_order_id, symbol, side, quantity, quote_pric
 
 
 async def _submit(user, symbol, asset_class, side, quantity, quote_price, client_order_id, *, close_all=False):
+    # No trusted server-side quote verifier is wired to this legacy manual simulator.
+    # Strict deployments must refuse fills rather than silently accept client prices.
+    if os.getenv("KAOS_PAPER_REQUIRE_VERIFIED_QUOTES", "").lower() in ("1", "true", "yes"):
+        raise HTTPException(status_code=503, detail="Verified paper-trading quote feed is not configured")
     now = datetime.now(timezone.utc)
     symbol = symbol.upper()
     client_order_id = client_order_id or f"web-{uuid.uuid4().hex[:16]}"
@@ -132,7 +136,8 @@ async def _submit(user, symbol, asset_class, side, quantity, quote_price, client
         return existing
     doc = {"user_id": user["id"], "client_order_id": client_order_id, "symbol": symbol, "asset_class": asset_class,
            "side": side, "quantity": quantity, "quote_price": quote_price, "fill_price": quote_price,
-           "base_qty": format(units, "f"), "fill_type": "SIMULATED",
+           "base_qty": format(units, "f"), "fill_type": "SIMULATED", "quote_source": "CLIENT_SUPPLIED",
+           "quote_verified": False,
            "state": report.state.value, "broker": report.broker, "paper": True, "created_at": now.isoformat()}
     if side == "SELL":
         avg = pos["cost"] / pos["units"]
