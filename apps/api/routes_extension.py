@@ -130,6 +130,10 @@ async def sync_push(req: SyncPushReq, user: dict = Depends(get_current_user)):
     applied, conflicts = [], []
     for incoming in req.strategies:
         sid = incoming.get("id")
+        if sid is not None and (not isinstance(sid, str) or not sid.strip() or len(sid) > 128):
+            raise HTTPException(status_code=422, detail="Strategy id must be a nonempty string")
+        if "ownerUserId" in incoming and incoming["ownerUserId"] != user["id"]:
+            raise HTTPException(status_code=403, detail="Cannot change strategy ownership")
         existing = await db.strategies.find_one({"id": sid, "ownerUserId": user["id"]}) if sid else None
         if not existing:
             incoming["ownerUserId"] = user["id"]
@@ -144,7 +148,7 @@ async def sync_push(req: SyncPushReq, user: dict = Depends(get_current_user)):
                 conflicts.append({"id": sid, "reason": "server_newer", "server": clean(existing)})
             else:
                 incoming["updatedAt"] = now_iso()
-                await db.strategies.update_one({"id": sid}, {"$set": {k: v for k, v in incoming.items() if k not in ("id", "ownerUserId")}})
+                await db.strategies.update_one({"id": sid, "ownerUserId": user["id"]}, {"$set": {k: v for k, v in incoming.items() if k not in ("id", "ownerUserId", "_id")}})
                 applied.append(sid)
     return {"applied": applied, "conflicts": conflicts, "serverTime": now_iso()}
 
