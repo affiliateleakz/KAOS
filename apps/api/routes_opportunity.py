@@ -131,11 +131,9 @@ async def ingest_headline_scores(items: list[HeadlineScore],
         # Persist each valid headline separately for audit; the existing radar
         # counts "news" as a single independent source regardless of volume.
         for entry in output["headline_scores"]:
-            matching = next(h for h in headlines if h["source_url"] == entry["source_url"]
-                            and h["headline"] == entry["headline"])
             identity = "|".join((ticker, entry["source_url"], entry["headline"],
-                                  entry["published_at"], matching["model_id"],
-                                  matching["model_version"]))
+                                  entry["published_at"], entry["model_id"],
+                                  entry["model_version"]))
             event_id = "nlp:" + sha256(identity.encode()).hexdigest()
             val = entry["score"]
             observation = {"asset": ticker, "asset_class": asset_class,
@@ -145,8 +143,8 @@ async def ingest_headline_scores(items: list[HeadlineScore],
                            "published_at": entry["published_at"],
                            "source_url": entry["source_url"],
                            "summary": entry["headline"],
-                           "nlp_score": val, "nlp_model_id": matching["model_id"],
-                           "nlp_model_version": matching["model_version"],
+                           "nlp_score": val, "nlp_model_id": entry["model_id"],
+                           "nlp_model_version": entry["model_version"],
                            "research_only": True}
             await db.kaos_intelligence.update_one(
                 {"source": "news", "event_id": event_id},
