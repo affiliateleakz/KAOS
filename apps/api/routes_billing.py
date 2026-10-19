@@ -132,8 +132,8 @@ async def cancel(user: dict = Depends(get_current_user)):
     if sub_id:
         try:
             stripe.Subscription.modify(sub_id, cancel_at_period_end=True)
-        except stripe.error.StripeError:
-            pass
+        except stripe.error.StripeError as exc:
+            raise HTTPException(status_code=502, detail="Stripe cancellation failed") from exc
     await db.users.update_one({"id": user["id"]}, {"$set": {"cancel_at_period_end": bool(sub_id), "updated_at": now_iso()}})
     return {"canceled": True}
 
@@ -150,10 +150,18 @@ async def stripe_webhook(request: Request):
         event = stripe.Webhook.construct_event(payload, sig, WEBHOOK_SECRET)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid signature")
-    # idempotency
-    if await db.webhook_events.find_one({"event_id": event["id"]}):
-        return {"status": "duplicate"}
-    await db.webhook_events.insert_one({"event_id": event["id"], "type": event["type"], "createdAt": now_iso()})
+    # Record receipt separately from successful processing so a failed event
+    # remains retryable. Unique event_id index is created in db.ensure_indexes.
+    from pymongo.errors import DuplicateKeyError
+    try:
+        await db.webhook_events.insert_one({"event_id": event["id"], "type": event["type"],
+                                            "state": "received", "createdAt": now_iso()})
+    except DuplicateKeyError:
+        existing = await db.webhook_events.find_one({"event_id": event["id"]})
+        if existing and existing.get("state") == "completed":
+            return {"status": "duplicate"}
+        # Fails closed rather than pretending that incomplete events succeeded.
+        raise HTTPException(status_code=503, detail="Webhook delivery requires reconciliation")
     obj = event["data"]["object"]
     t = event["type"]
     if t == "checkout.session.completed":
@@ -191,6 +199,8 @@ async def stripe_webhook(request: Request):
                     logger.exception("affiliate renewal commission failed for %s", obj["id"])
     elif t in ("charge.refunded", "charge.dispute.created"):
         await _reverse_for_charge(obj, "chargeback" if t == "charge.dispute.created" else "refund")
+    await db.webhook_events.update_one({"event_id": event["id"]},
+        {"$set": {"state": "completed", "completedAt": now_iso()}})
     return {"status": "ok"}
 
 
