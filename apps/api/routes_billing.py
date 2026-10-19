@@ -184,10 +184,12 @@ async def stripe_webhook(request: Request):
         from datetime import datetime, timezone, timedelta
         from uuid import uuid4
         claim = str(uuid4())
-        await db.webhook_events.update_one(
+        claimed = await db.webhook_events.update_one(
             {"event_id": event["id"], "state": "received"},
             {"$set": {"state": "processing", "claim": claim,
                        "lease_until": datetime.now(timezone.utc) + timedelta(minutes=5)}})
+        if claimed.modified_count != 1:
+            raise HTTPException(status_code=503, detail="Unable to claim webhook event; retry later")
     obj = event["data"]["object"]
     t = event["type"]
     if t == "checkout.session.completed":
@@ -227,9 +229,12 @@ async def stripe_webhook(request: Request):
                     raise
     elif t in ("charge.refunded", "charge.dispute.created"):
         await _reverse_for_charge(obj, "chargeback" if t == "charge.dispute.created" else "refund")
-    await db.webhook_events.update_one({"event_id": event["id"], "claim": claim},
+    completed = await db.webhook_events.update_one(
+        {"event_id": event["id"], "claim": claim, "state": "processing"},
         {"$set": {"state": "completed", "completedAt": now_iso()},
          "$unset": {"lease_until": "", "claim": ""}})
+    if completed.modified_count != 1:
+        raise HTTPException(status_code=503, detail="Webhook completion not recorded; reconciliation required")
     return {"status": "ok"}
 
 
