@@ -4,6 +4,7 @@ from db import db, new_id, now, now_iso, clean
 from auth import (verify_password, create_access_token, create_refresh_token,
                   get_current_user, _secret, JWT_ALGORITHM)
 from services import compute_license, public_user, audit_log
+from services_trading import get_entitlements
 from models import LoginReq, DeviceReq, SyncPushReq, AffiliateSubmitReq
 import jwt as pyjwt
 
@@ -73,7 +74,6 @@ async def v1_license(request: Request, user: dict = Depends(get_current_user)):
 # ---------- Devices ----------
 @v1.post("/devices/register")
 async def register_device(req: DeviceReq, request: Request, user: dict = Depends(get_current_user)):
-    from services_trading import get_entitlements
     # Apply authorization before both existing-device re-registration and new registration.
     # Otherwise a suspended or revoked member could refresh an already enrolled device.
     entitlements = await get_entitlements(user)
