@@ -108,10 +108,10 @@ async def record_reversal(reversal_id, event_id, amount_cents=None, kind="refund
     """Offset a payment's commissions (full when amount_cents is None). Idempotent on reversal_id."""
     existing_reversal = await db.affiliate_ledger_reversals.find_one({"reversal_id": reversal_id})
     if existing_reversal:
-        if existing_reversal.get("event_id") != event_id or existing_reversal.get("kind") != kind or ("requested_amount_cents" in existing_reversal and existing_reversal["requested_amount_cents"] != amount_cents):
-            raise RuntimeError("Affiliate reversal ID reused with mismatched financial details")
         if existing_reversal.get("state") != "completed":
             raise RuntimeError("Affiliate reversal requires ledger reconciliation")
+        if existing_reversal.get("event_id") != event_id or existing_reversal.get("kind") != kind or ("requested_amount_cents" in existing_reversal and existing_reversal["requested_amount_cents"] != amount_cents):
+            raise RuntimeError("Affiliate reversal ID reused with mismatched financial details")
         return await _entries_for(reversal_id)
     pd = await db.affiliate_ledger_payments.find_one({"event_id": event_id})
     if not pd:
