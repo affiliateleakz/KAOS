@@ -457,9 +457,15 @@ async def share_og(sid: str, request: Request, ref: Optional[str] = None):
     from fastapi.responses import HTMLResponse
     import html as _html
     doc = await db.signal_shares.find_one({"id": sid}, {"_id": 0})
-    dest = f"/s/{sid}" + (f"?ref={_html.escape(ref, quote=True)}" if ref else "")
+    from urllib.parse import quote
+    from fastapi import HTTPException
+    import re
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", sid):
+        raise HTTPException(status_code=404, detail="Share not found")
+    dest = f"/s/{quote(sid, safe='')}" + (f"?ref={quote(ref, safe='')}" if ref else "")
+    escaped_dest = _html.escape(dest, quote=True)
     if not doc:
-        return HTMLResponse(f"<!doctype html><meta http-equiv=refresh content='0; url={dest}'>", status_code=404)
+        return HTMLResponse(f"<!doctype html><meta http-equiv=refresh content='0; url={escaped_dest}'>", status_code=404)
     base = str(request.base_url).rstrip("/")
     fwd_host = request.headers.get("x-forwarded-host") or request.headers.get("host")
     if fwd_host:
