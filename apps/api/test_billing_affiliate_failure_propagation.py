@@ -34,3 +34,23 @@ def test_checkout_commission_errors_propagate(monkeypatch):
     monkeypatch.setattr(routes_affiliate,"record_commission",fail)
     with pytest.raises(RuntimeError,match="commission storage offline"):
         asyncio.run(billing._activate("buyer1","pro","cus1","sub1","session1"))
+
+def test_refund_does_not_guess_latest_buyer_payment(monkeypatch):
+    payments=SimpleNamespace(find_one=AsyncMock(return_value=None))
+    db=SimpleNamespace(users=SimpleNamespace(find_one=AsyncMock(return_value={"id":"buyer1"})),
+                       affiliate_ledger_payments=payments)
+    monkeypatch.setattr(billing,"db",db)
+    with pytest.raises(RuntimeError,match="payment journal not found"):
+        asyncio.run(billing._reverse_for_charge(
+            {"id":"ch1","invoice":"inv_unknown","customer":"cus1","amount_refunded":500}, "refund"))
+    payments.find_one.assert_awaited_once_with({"event_id":"invoice:inv_unknown"})
+
+def test_refund_rejects_cross_customer_payment(monkeypatch):
+    payments=SimpleNamespace(find_one=AsyncMock(return_value={
+        "event_id":"invoice:inv1","buyer_id":"someone_else","amount":"10","reversed_amount":"0"}))
+    db=SimpleNamespace(users=SimpleNamespace(find_one=AsyncMock(return_value={"id":"buyer1"})),
+                       affiliate_ledger_payments=payments)
+    monkeypatch.setattr(billing,"db",db)
+    with pytest.raises(RuntimeError,match="does not match"):
+        asyncio.run(billing._reverse_for_charge(
+            {"id":"ch1","invoice":"inv1","customer":"cus1","amount_refunded":500}, "refund"))
