@@ -114,6 +114,8 @@ async def record_reversal(reversal_id, event_id, amount_cents=None, kind="refund
     pd = await db.affiliate_ledger_payments.find_one({"event_id": event_id})
     if not pd:
         raise KeyError(event_id)
+    if pd.get("state") not in (None, "completed"):
+        raise RuntimeError("Affiliate payment must be reconciled before reversal")
     ledger = CommissionLedger({})
     ledger.payments[event_id] = Payment(event_id, pd["buyer_id"], pd["plan"], Decimal(pd["amount"]), pd["kind"],
                                         datetime.fromisoformat(pd["at"]), Decimal(pd["reversed_amount"]))
