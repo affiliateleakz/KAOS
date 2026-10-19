@@ -60,10 +60,10 @@ def test_suspended_account_gets_nothing():
     assert ent["botAccess"] is False and ent["modes"] == []
 
 
-def test_license_allows_free_but_keeps_affiliate_and_suspension_checks():
+def test_license_allows_free_without_referral_but_keeps_suspension_checks():
     free = run(compute_license({"membership_status": "EXPIRED", "affiliate_status": "VERIFIED"}))
     assert free["authorized"] is True and free["tier"] == "free"
-    assert run(compute_license({"membership_status": "EXPIRED", "affiliate_status": "PENDING"}))["authorized"] is False
+    assert run(compute_license({"membership_status": "EXPIRED", "affiliate_status": "PENDING"}))["authorized"] is True
     banned = run(compute_license({"account_status": "banned", "membership_status": "ACTIVE", "affiliate_status": "VERIFIED"}))
     assert banned["authorized"] is False
 
@@ -83,13 +83,13 @@ def test_free_member_has_no_premium_capabilities():
     assert not any(ent.get(k) for k in ("scanners", "aiInsights", "premiumTools"))
 
 
-def test_pocket_option_referral_requirement_applies_only_to_pocket_option():
+def test_referral_is_optional_for_every_broker():
     from services import compute_license
     free = {"id": "u1", "membership_status": None, "affiliate_status": "PENDING"}
     po = run(compute_license(free))
-    assert po["authorized"] is False and po["reasons"] == ["affiliate_not_verified"]
-    assert "Pocket Option" in po["reasonMessages"][0]
-    assert po["brokerEligibility"]["pocket_option"]["eligible"] is False
+    assert po["authorized"] is True and po["reasons"] == []
+    assert po["brokerEligibility"]["pocket_option"]["eligible"] is True
+    assert po["brokerEligibility"]["pocket_option"]["referralRequired"] is False
     other = run(compute_license(free, broker="coinbase"))
     assert other["authorized"] is True and other["reasons"] == []
 
