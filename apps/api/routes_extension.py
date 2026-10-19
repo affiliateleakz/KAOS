@@ -17,6 +17,8 @@ async def v1_login(req: LoginReq):
     user = await db.users.find_one({"email": req.email.lower()})
     if not user or not verify_password(req.password, user.get("password_hash") or ""):
         raise HTTPException(status_code=401, detail="Invalid credentials")
+    if user.get("account_status", "active") in ("suspended", "banned") or user.get("extension_access_revoked"):
+        raise HTTPException(status_code=403, detail="Account access disabled")
     tv = user.get("token_version", 0)
     return {"accessToken": create_access_token(user["id"], user["email"], tv),
             "refreshToken": create_refresh_token(user["id"], tv),
@@ -38,6 +40,8 @@ async def v1_refresh(request: Request):
     user = await db.users.find_one({"id": payload["sub"]})
     if not user or payload.get("ver", 0) != user.get("token_version", 0):
         raise HTTPException(status_code=401, detail="Session expired")
+    if user.get("account_status", "active") in ("suspended", "banned") or user.get("extension_access_revoked"):
+        raise HTTPException(status_code=403, detail="Account access disabled")
     tv = user.get("token_version", 0)
     return {"accessToken": create_access_token(user["id"], user["email"], tv),
             "refreshToken": create_refresh_token(user["id"], tv)}
