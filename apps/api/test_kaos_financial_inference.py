@@ -101,3 +101,28 @@ def test_checkpoint_mapping_resolves_generic_output_labels(monkeypatch, tmp_path
         assert result[0]["sentiment_score"] == -0.91
     finally:
         inference._classifier.cache_clear()
+
+
+def test_string_keyed_checkpoint_id2label_is_resolved(monkeypatch, tmp_path):
+    import sys
+    from types import SimpleNamespace
+    import kaos_financial_inference as inference
+
+    class Loader:
+        @classmethod
+        def from_pretrained(cls, directory, **kwargs):
+            return SimpleNamespace(config=SimpleNamespace(
+                id2label={"0": "neutral", "1": "positive", "2": "negative"}))
+
+    fake = SimpleNamespace(
+        AutoTokenizer=Loader, AutoModelForSequenceClassification=Loader,
+        pipeline=lambda *a, **k: lambda texts, **kw: [
+            {"label": "LABEL_2", "score": 0.93} for _ in texts])
+    monkeypatch.setitem(sys.modules, "transformers", fake)
+    monkeypatch.setenv("KAOS_TRADING_HERO_MODEL_DIR", str(tmp_path))
+    inference._classifier.cache_clear()
+    try:
+        result = inference.classify_headlines(["Earnings miss expectations"])
+        assert result[0]["sentiment_score"] == -0.93
+    finally:
+        inference._classifier.cache_clear()
