@@ -80,3 +80,80 @@ async def health(user=Depends(member)):
         {'_id': 0, 'asset_class': 1, 'source': 1, 'event_id': 1, 'observed_at': 1}
     ).sort('observed_at', -1).limit(5000).to_list(length=5000)
     return summarize_health(records)
+
+
+class HeadlineScore(BaseModel):
+    """Score from an authenticated collector's separately-run financial NLP model."""
+    ticker: str = Field(pattern=r"^[A-Za-z0-9._-]{1,20}$")
+    asset_class: Literal["stock", "etf", "crypto", "forex"]
+    headline: str = Field(min_length=5, max_length=500)
+    source_url: str = Field(min_length=12, max_length=2000, pattern=r"^https://")
+    published_at: datetime
+    score: float = Field(ge=-1, le=1)
+    model_id: str = Field(min_length=1, max_length=100)
+    model_version: str = Field(min_length=1, max_length=100)
+
+
+@router.post("/ingest/headline-scores")
+async def ingest_headline_scores(items: list[HeadlineScore],
+                                 x_kaos_collector_key: str | None = Header(default=None)):
+    """Authenticated, attributable sentiment; no autonomous trading authority.
+
+    Server collector must separately verify the original news source and run
+    an actual model. A model's output is never represented as a win probability.
+    """
+    from hashlib import sha256
+    from math import isfinite
+    from secrets import compare_digest
+    from kaos_news_catalysts import aggregate_headlines
+    key = os.getenv("KAOS_COLLECTOR_KEY", "")
+    if not key or not x_kaos_collector_key or not compare_digest(key, x_kaos_collector_key):
+        raise HTTPException(403, "Collector authentication required")
+    if not items or len(items) > 100:
+        raise HTTPException(422, "Expected 1–100 headline scores")
+    now = datetime.now(timezone.utc)
+    buckets = {}
+    for item in items:
+        if not isfinite(item.score):
+            raise HTTPException(422, "Finite sentiment score required")
+        published = utc(item.published_at)
+        if not (now - __import__("datetime").timedelta(hours=24) <= published <= now):
+            raise HTTPException(422, "Headline timestamp out of range")
+        ticker = item.ticker.upper()
+        buckets.setdefault((ticker, item.asset_class), []).append({
+            "ticker": ticker, "headline": item.headline,
+            "source_url": item.source_url, "published_at": published, "score": item.score,
+            "model_id": item.model_id, "model_version": item.model_version})
+    written = 0
+    summary = []
+    for (ticker, asset_class), headlines in buckets.items():
+        output = aggregate_headlines(ticker, headlines, now=now)
+        # Persist each valid headline separately for audit; the existing radar
+        # counts "news" as a single independent source regardless of volume.
+        for entry in output["headline_scores"]:
+            matching = next(h for h in headlines if h["source_url"] == entry["source_url"]
+                            and h["headline"] == entry["headline"])
+            identity = "|".join((ticker, entry["source_url"], entry["headline"],
+                                  entry["published_at"], matching["model_id"],
+                                  matching["model_version"]))
+            event_id = "nlp:" + sha256(identity.encode()).hexdigest()
+            val = entry["score"]
+            observation = {"asset": ticker, "asset_class": asset_class,
+                           "source": "news", "event_id": event_id,
+                           "direction": "bullish" if val > 0.15 else "bearish" if val < -0.15 else "neutral",
+                           "strength": abs(val), "observed_at": now.isoformat(),
+                           "published_at": entry["published_at"],
+                           "source_url": entry["source_url"],
+                           "summary": entry["headline"],
+                           "nlp_score": val, "nlp_model_id": matching["model_id"],
+                           "nlp_model_version": matching["model_version"],
+                           "research_only": True}
+            await db.kaos_intelligence.update_one(
+                {"source": "news", "event_id": event_id},
+                {"$setOnInsert": observation}, upsert=True)
+            written += 1
+        summary.append({"asset": ticker, "asset_class": asset_class,
+                        "valid_headlines": output["sample_count"],
+                        "sentiment_mean": output["sentiment_mean"]})
+    return {"accepted": written, "markets": summary, "mode": "research_only",
+            "trade_execution_enabled": False}
