@@ -73,7 +73,7 @@ async def v1_license(request: Request, user: dict = Depends(get_current_user)):
 # ---------- Devices ----------
 @v1.post("/devices/register")
 async def register_device(req: DeviceReq, request: Request, user: dict = Depends(get_current_user)):
-    from routes_billing import get_plans
+    from services_trading import get_entitlements
     existing = await db.devices.find_one({"installId": req.installId, "userId": user["id"]})
     if existing:
         # A revoked device must not be able to restore its own authorization
@@ -83,9 +83,14 @@ async def register_device(req: DeviceReq, request: Request, user: dict = Depends
         await db.devices.update_one({"id": existing["id"], "userId": user["id"], "revoked": False},
                                     {"$set": {"extensionVersion": req.extensionVersion, "lastActive": now_iso()}})
         return clean(await db.devices.find_one({"id": existing["id"], "userId": user["id"]}))
-    plans = await get_plans()
-    plan = next((p for p in plans if p["id"] == user.get("membership_plan")), None)
-    limit = plan["deviceLimit"] if plan else 3
+    # The license and device registration must use the same plan authority.
+    # Free members are limited to one device, not the old hardcoded three.
+    entitlements = await get_entitlements(user)
+    if not entitlements.get("botAccess"):
+        raise HTTPException(status_code=403, detail="Bot access is not authorized")
+    limit = int(entitlements.get("deviceLimit") or 1)
+    if limit < 1:
+        raise HTTPException(status_code=403, detail="No devices permitted for this account")
     count = await db.devices.count_documents({"userId": user["id"], "revoked": False})
     if count >= limit:
         raise HTTPException(status_code=403, detail=f"Device limit reached ({limit})")
