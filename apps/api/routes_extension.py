@@ -68,7 +68,11 @@ async def v1_license(request: Request, user: dict = Depends(get_current_user)):
         await db.devices.update_one({"id": device["id"], "userId": user["id"], "revoked": False},
                                     {"$set": {"lastActive": now_iso(),
                                               "lastIp": request.client.host if request.client else None}})
-    return await compute_license(user, device)
+    selection = await db.member_broker_selections.find_one(
+        {"user_id": user["id"]}, {"_id": 0, "broker": 1})
+    selected = (selection or {}).get("broker")
+    broker = "pocket_option" if selected in ("pocketoption", "pocket_option") else (selected or "unselected")
+    return await compute_license(user, device, broker=broker)
 
 
 # ---------- Devices ----------
