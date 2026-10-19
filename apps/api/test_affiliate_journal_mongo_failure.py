@@ -9,8 +9,7 @@ from db import db
 import services_affiliate_ledger as ledger
 
 # Motor's shared client must never be used from an asyncio.run() loop that closes.
-loop = asyncio.new_event_loop()
-run = loop.run_until_complete
+from test_affiliate_ledger_api import run
 
 def test_pending_payment_cannot_be_acknowledged():
     event = "checkout:pending:" + uuid4().hex
