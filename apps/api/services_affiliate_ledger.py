@@ -106,7 +106,10 @@ async def record_payment(event_id, buyer_id, plan, amount_cents, kind="initial",
 
 async def record_reversal(reversal_id, event_id, amount_cents=None, kind="refund", at=None):
     """Offset a payment's commissions (full when amount_cents is None). Idempotent on reversal_id."""
-    if await db.affiliate_ledger_reversals.find_one({"reversal_id": reversal_id}):
+    existing_reversal = await db.affiliate_ledger_reversals.find_one({"reversal_id": reversal_id})
+    if existing_reversal:
+        if existing_reversal.get("state") != "completed":
+            raise RuntimeError("Affiliate reversal requires ledger reconciliation")
         return await _entries_for(reversal_id)
     pd = await db.affiliate_ledger_payments.find_one({"event_id": event_id})
     if not pd:
@@ -117,11 +120,14 @@ async def record_reversal(reversal_id, event_id, amount_cents=None, kind="refund
     ledger.entries = await _entries_for(event_id)
     amount = None if amount_cents is None else Decimal(amount_cents) / 100
     entries = ledger.record_reversal(reversal_id, event_id, amount, kind, at)
-    await db.affiliate_ledger_reversals.insert_one({"reversal_id": reversal_id, "event_id": event_id, "kind": kind})
+    await db.affiliate_ledger_reversals.insert_one({"reversal_id": reversal_id, "event_id": event_id, "kind": kind, "state": "pending_entries"})
     await db.affiliate_ledger_payments.update_one(
         {"event_id": event_id}, {"$set": {"reversed_amount": str(ledger.payments[event_id].reversed_amount)}})
     if entries:
         await db.affiliate_ledger_entries.insert_many([_entry_doc(e) for e in entries])
+    await db.affiliate_ledger_reversals.update_one(
+        {"reversal_id": reversal_id, "state": "pending_entries"},
+        {"$set": {"state": "completed"}})
     return entries
 
 
