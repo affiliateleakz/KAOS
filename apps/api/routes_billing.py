@@ -242,12 +242,18 @@ async def _reverse_for_charge(obj, reason):
     """Offset affiliate commissions for a refunded or disputed charge (incremental for partial refunds)."""
     charge_id = obj.get("charge") if reason == "chargeback" else obj.get("id")
     u = await db.users.find_one({"stripe_customer_id": obj.get("customer")}) if obj.get("customer") else None
-    pay = await db.affiliate_ledger_payments.find_one({"event_id": f"invoice:{obj.get('invoice')}"}) \
-        if obj.get("invoice") else None
-    if not pay and u:
-        pay = await db.affiliate_ledger_payments.find_one({"buyer_id": u["id"]}, sort=[("at", -1)])
+    invoice_id = obj.get("invoice")
+    if not invoice_id:
+        # Never reverse an arbitrary recent payment when Stripe supplied no
+        # stable invoice identity. Queue for operator reconciliation instead.
+        raise RuntimeError("Stripe reversal missing invoice identity; reconciliation required")
+    pay = await db.affiliate_ledger_payments.find_one({"event_id": f"invoice:{invoice_id}"})
     if not pay:
-        return
+        # A checkout may have been paid before the invoice journal exists.
+        # Do not guess which payment to reverse by sorting a buyer's history.
+        raise RuntimeError("Stripe reversal payment journal not found; reconciliation required")
+    if u and pay.get("buyer_id") != u["id"]:
+        raise RuntimeError("Stripe reversal customer does not match ledger buyer")
     from decimal import Decimal
     remaining = int((Decimal(pay["amount"]) - Decimal(pay["reversed_amount"])) * 100)
     if reason == "chargeback":
