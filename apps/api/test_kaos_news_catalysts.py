@@ -25,3 +25,17 @@ def test_valid_negative_news_remains_context_only():
     assert r["sentiment_mean"] == -0.7
     assert r["status"] == "CONTEXT_ONLY"
     assert not r["executable"]
+
+
+def test_multimodel_scores_do_not_overweight_one_story():
+    observations = [
+        headline(score=1.0, model_id="a", model_version="1"),
+        headline(score=1.0, model_id="b", model_version="1"),
+        headline(score=-1.0, headline="Company cuts guidance",
+                 source_url="https://example.org/news/2",
+                 model_id="a", model_version="1"),
+    ]
+    result = aggregate_headlines("SPY", observations, now=NOW)
+    assert result["sample_count"] == 3
+    assert result["distinct_stories"] == 2
+    assert result["sentiment_mean"] == 0.0
