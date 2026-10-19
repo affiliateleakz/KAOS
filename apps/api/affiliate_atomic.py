@@ -10,7 +10,8 @@ from db import db
 def transactions_required():
     return os.getenv("KAOS_AFFILIATE_TXN_MODE", "legacy") == "required"
 
-async def write_payment(payment, entries):
+async def write_payment(payment, entries, database=None):
+    db = database if database is not None else globals()["db"]
     if transactions_required():
         async with await db.client.start_session() as session:
             async with session.start_transaction():
@@ -28,7 +29,8 @@ async def write_payment(payment, entries):
     if result.modified_count != 1:
         raise RuntimeError("Affiliate payment completion could not be confirmed")
 
-async def write_reversal(reversal, payment_event_id, previous_amount, next_amount, entries):
+async def write_reversal(reversal, payment_event_id, previous_amount, next_amount, entries, database=None):
+    db = database if database is not None else globals()["db"]
     if transactions_required():
         async with await db.client.start_session() as session:
             async with session.start_transaction():
