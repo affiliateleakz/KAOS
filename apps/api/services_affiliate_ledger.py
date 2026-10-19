@@ -76,6 +76,16 @@ async def record_payment(event_id, buyer_id, plan, amount_cents, kind="initial",
     """Record a settled initial/renewal payment. Idempotent on event_id."""
     existing = await db.affiliate_ledger_payments.find_one({"event_id": event_id})
     if existing:
+        if existing.get("state") is None:
+            # Legacy records predate processing-state tracking. Do not assume
+            # completeness without matching expected commission entry count.
+            expected = CommissionLedger(await _members(buyer_id)).record_payment(
+                event_id, buyer_id, plan_tier(plan), Decimal(amount_cents) / 100,
+                kind, at or datetime.now(timezone.utc))
+            persisted = await _entries_for(event_id)
+            if {e.entry_id for e in persisted} != {e.entry_id for e in expected}:
+                raise RuntimeError("Legacy affiliate payment requires ledger reconciliation")
+            return persisted
         if existing.get("state") != "completed":
             raise RuntimeError("Affiliate payment requires ledger reconciliation")
         return await _entries_for(event_id)
