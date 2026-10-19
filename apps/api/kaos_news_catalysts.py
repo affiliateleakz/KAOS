@@ -45,9 +45,18 @@ def aggregate_headlines(ticker, observations, *, now=None, max_age_hours=24):
                          "published_at": published.isoformat(), "score": float(raw),
                          "model_id": item.get("model_id"),
                          "model_version": item.get("model_version")})
+    # Multiple models scoring one story are not independent news events.
+    # Average per distinct story first, avoiding exaggerated influence from
+    # stories evaluated by more models than others.
+    stories = {}
+    for item in accepted:
+        story_id = (item["headline"].casefold(), item["source_url"])
+        stories.setdefault(story_id, []).append(item["score"])
+    story_means = [sum(scores) / len(scores) for scores in stories.values()]
     n = len(accepted)
-    avg = sum(item["score"] for item in accepted) / n if n else None
-    return {"ticker": ticker, "sample_count": n, "sentiment_mean": round(avg, 5) if avg is not None else None,
+    avg = sum(story_means) / len(story_means) if story_means else None
+    return {"ticker": ticker, "sample_count": n, "distinct_stories": len(stories),
+            "sentiment_mean": round(avg, 5) if avg is not None else None,
             "headline_scores": accepted, "excluded_count": len(discarded),
             "excluded_reasons": discarded, "status": "CONTEXT_ONLY" if n else "NO_VALID_HEADLINES",
             "executable": False}
