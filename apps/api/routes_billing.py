@@ -241,6 +241,8 @@ async def stripe_webhook(request: Request):
 async def _reverse_for_charge(obj, reason):
     """Offset affiliate commissions for a refunded or disputed charge (incremental for partial refunds)."""
     charge_id = obj.get("charge") if reason == "chargeback" else obj.get("id")
+    if not isinstance(charge_id, str) or not charge_id.strip():
+        raise RuntimeError("Stripe reversal missing charge identity; reconciliation required")
     u = await db.users.find_one({"stripe_customer_id": obj.get("customer")}) if obj.get("customer") else None
     invoice_id = obj.get("invoice")
     if not invoice_id:
