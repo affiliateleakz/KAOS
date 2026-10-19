@@ -77,14 +77,16 @@ async def checkout(req: CheckoutReq, user: dict = Depends(get_current_user)):
 
 
 @router.get("/status/{session_id}")
-async def status(session_id: str):
-    rec = await db.subscriptions.find_one({"session_id": session_id})
+async def status(session_id: str, user: dict = Depends(get_current_user)):
+    rec = await db.subscriptions.find_one({"session_id": session_id, "userId": user["id"]})
     if not rec:
         raise HTTPException(status_code=404, detail="Not found")
     if rec.get("state") not in ("active", "completed"):
         try:
             s = stripe.checkout.Session.retrieve(session_id)
-            if s.payment_status == "paid" or s.status == "complete":
+            if (s.payment_status == "paid" and s.status == "complete"
+                    and s.get("customer") == rec.get("stripe_customer_id")
+                    and s.get("metadata", {}).get("user_id") == user["id"]):
                 await _activate(rec["userId"], rec["planId"], s.get("customer"), s.get("subscription"), session_id)
                 rec = await db.subscriptions.find_one({"session_id": session_id})
         except stripe.error.StripeError:
@@ -132,7 +134,7 @@ async def cancel(user: dict = Depends(get_current_user)):
             stripe.Subscription.modify(sub_id, cancel_at_period_end=True)
         except stripe.error.StripeError:
             pass
-    await db.users.update_one({"id": user["id"]}, {"$set": {"membership_status": "CANCELED", "updated_at": now_iso()}})
+    await db.users.update_one({"id": user["id"]}, {"$set": {"cancel_at_period_end": bool(sub_id), "updated_at": now_iso()}})
     return {"canceled": True}
 
 
