@@ -75,3 +75,27 @@ def test_generic_positional_labels_are_not_treated_as_sentiment():
     with pytest.raises(RuntimeError, match="invalid prediction"):
         classify_headlines(["Unexpected earnings miss"],
                            classifier=lambda *a, **k: [{"label": "LABEL_2", "score": 0.99}])
+
+
+def test_checkpoint_mapping_resolves_generic_output_labels(monkeypatch, tmp_path):
+    import sys
+    from types import SimpleNamespace
+    import kaos_financial_inference as inference
+    class Loader:
+        @classmethod
+        def from_pretrained(cls, directory, **kwargs):
+            return SimpleNamespace(config=SimpleNamespace(
+                id2label={0: "neutral", 1: "positive", 2: "negative"}))
+    fake = SimpleNamespace(
+        AutoTokenizer=Loader, AutoModelForSequenceClassification=Loader,
+        pipeline=lambda task, **kwargs: lambda texts, **kw: [
+            {"label": "LABEL_2", "score": 0.91}])
+    monkeypatch.setitem(sys.modules, "transformers", fake)
+    monkeypatch.setenv("KAOS_TRADING_HERO_MODEL_DIR", str(tmp_path))
+    inference._classifier.cache_clear()
+    try:
+        result = inference.classify_headlines(["Earnings decline sharply"])
+        assert result[0]["label"] == "negative"
+        assert result[0]["sentiment_score"] == -0.91
+    finally:
+        inference._classifier.cache_clear()
