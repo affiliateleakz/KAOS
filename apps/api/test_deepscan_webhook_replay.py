@@ -18,7 +18,7 @@ def run(coro):
 def setup(monkeypatch, existing, claim_result=1):
     event={"id":"evt_123","type":"unknown.test","data":{"object":{}}}
     monkeypatch.setattr(billing.stripe.Webhook,"construct_event",lambda *args:event)
-    async def duplicate(*args,**kwargs):
+    def duplicate(*args,**kwargs):
         raise DuplicateKeyError("event exists")
     events=SimpleNamespace(
         insert_one=AsyncMock(side_effect=duplicate),
