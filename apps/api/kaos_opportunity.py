@@ -30,6 +30,8 @@ def evaluate(asset, observations, now=None):
         except (KeyError,ValueError,TypeError,OverflowError):continue
         if at>now or published>at or age<0 or age>168 or not isfinite(strength):continue
         event_id=o.get('event_id') or o.get('id')
+        # A missing event identity must not become one shared synthetic vote.
+        if not isinstance(event_id,str) or not event_id.strip():continue
         key=(source,event_id)
         if key in seen:continue
         seen.add(key)
