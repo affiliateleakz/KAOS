@@ -323,3 +323,13 @@ border-bottom:1px solid rgba(217,181,106,.25);border-radius:12px;opacity:.62}
 .kaos-ai-control>h1{padding:14px 10px;color:#eaf2ff;text-shadow:0 3px 24px rgba(47,140,255,.3)}
 .kaos-ai-control .card-surface{border-color:rgba(63,122,177,.32);background:linear-gradient(145deg,rgba(9,25,43,.9),rgba(7,12,22,.94))}
 .kaos-ai-control button:focus-visible{outline:2px solid #d9b56a;outline-offset:2px}
+
+/* Trading workspace design shell — retains chart/replay and order semantics. */
+.kaos-trading-console{position:relative;isolation:isolate}
+.kaos-trading-console::before{content:"";position:absolute;z-index:-1;pointer-events:none;inset:-18px -12px auto;height:160px;
+ background:linear-gradient(90deg,rgba(4,12,23,.96),rgba(7,24,43,.76)),url('./kaos-cinematic-header.jpg') center 39%/cover no-repeat;
+ border-radius:12px;border-bottom:1px solid rgba(217,181,106,.3);opacity:.66}
+.kaos-trading-console>div:first-child{padding:15px 10px 17px}
+.kaos-trading-console>div:first-child h1{text-shadow:0 4px 22px rgba(47,140,255,.32);color:#eff6ff}
+.kaos-trading-console .card-surface{border-color:rgba(65,130,183,.32);background:linear-gradient(150deg,rgba(8,21,38,.92),rgba(6,10,18,.95))}
+.kaos-trading-console button:focus-visible{outline:2px solid #d9b56a;outline-offset:2px}
