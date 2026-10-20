@@ -370,7 +370,7 @@ export default function Trading() {
   const s = d.summary;
 
   return (
-    <div>
+    <div className="kaos-trading-console">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="font-heading text-2xl font-bold tracking-wide">Trading</h1>
         <StatusBadge value={ent.botAccess ? "ACTIVE" : "EXPIRED"} testid="trading-bot-access" />
