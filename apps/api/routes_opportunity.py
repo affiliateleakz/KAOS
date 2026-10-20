@@ -188,6 +188,9 @@ async def classify_and_ingest_headlines(
     for item in items:
         if not now - timedelta(hours=24) <= utc(item.published_at) <= now:
             raise HTTPException(422, "Headline timestamp out of range")
+    model_version = os.getenv("KAOS_TRADING_HERO_MODEL_VERSION", "").strip()
+    if not model_version or model_version == "unversioned-local":
+        raise HTTPException(503, "Financial NLP model revision is not configured")
     try:
         predictions = await run_in_threadpool(
             classify_headlines, [item.headline for item in items])
@@ -212,6 +215,5 @@ async def classify_and_ingest_headlines(
             headline=item.headline, source_url=item.source_url,
             published_at=item.published_at,
             score=prediction["sentiment_score"],
-            model_id="trading_hero", model_version=os.getenv(
-                "KAOS_TRADING_HERO_MODEL_VERSION", "unversioned-local")))
+            model_id="trading_hero", model_version=model_version))
     return await ingest_headline_scores(scored, x_kaos_collector_key)
