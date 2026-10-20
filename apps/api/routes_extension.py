@@ -14,10 +14,27 @@ member = APIRouter(prefix="/api", tags=["member"])
 
 # ---------- v1 Auth (bearer tokens in body for the extension) ----------
 @v1.post("/auth/login")
-async def v1_login(req: LoginReq):
-    user = await db.users.find_one({"email": req.email.lower()})
+async def v1_login(req: LoginReq, request: Request):
+    # Share the web login's lockout authority: extension logins cannot bypass it.
+    from datetime import datetime, timedelta
+    from routes_auth import MAX_ATTEMPTS, LOCK_MINUTES
+    email = req.email.lower()
+    ip = request.client.host if request.client else "0.0.0.0"
+    identifier = f"{ip}:{email}"
+    attempt = await db.login_attempts.find_one({"identifier": identifier})
+    if attempt and attempt.get("count", 0) >= MAX_ATTEMPTS:
+        until = attempt.get("locked_until")
+        if until and datetime.fromisoformat(until) > now():
+            raise HTTPException(status_code=429, detail="Too many attempts. Try again later.")
+    user = await db.users.find_one({"email": email})
     if not user or not verify_password(req.password, user.get("password_hash") or ""):
+        await db.login_attempts.update_one(
+            {"identifier": identifier},
+            {"$set": {"identifier": identifier, "email": email,
+                      "locked_until": (now() + timedelta(minutes=LOCK_MINUTES)).isoformat()},
+             "$inc": {"count": 1}}, upsert=True)
         raise HTTPException(status_code=401, detail="Invalid credentials")
+    await db.login_attempts.delete_many({"identifier": identifier})
     if user.get("account_status", "active") in ("suspended", "banned") or user.get("extension_access_revoked"):
         raise HTTPException(status_code=403, detail="Account access disabled")
     tv = user.get("token_version", 0)
