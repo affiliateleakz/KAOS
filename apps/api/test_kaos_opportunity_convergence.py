@@ -46,6 +46,12 @@ class Tests(unittest.TestCase):
         result=evaluate('GME',[identified,unknown],NOW)
         self.assertEqual(result['status'],'insufficient_confirmation')
         self.assertEqual(result['confirming_directional_sources'],1)
+    def test_malformed_collector_records_are_ignored(self):
+        valid=obs('technical','bullish')
+        result=evaluate('GME',[None,[],42,valid],NOW)
+        self.assertEqual(result['status'],'insufficient_confirmation')
+        self.assertEqual(result['confirming_directional_sources'],1)
+        self.assertEqual(len(result['evidence']),1)
     def test_limit_evidence_payload(self):
         r=evaluate('GME',[obs('news','neutral',i) for i in range(100)],NOW)
         self.assertEqual(len(r['evidence']),30)
