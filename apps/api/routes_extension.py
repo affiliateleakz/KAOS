@@ -17,7 +17,7 @@ member = APIRouter(prefix="/api", tags=["member"])
 async def v1_login(req: LoginReq, request: Request):
     # Share the web login's lockout authority: extension logins cannot bypass it.
     from datetime import datetime, timedelta
-    from auth import MAX_LOGIN_ATTEMPTS as MAX_ATTEMPTS, LOGIN_LOCK_MINUTES as LOCK_MINUTES
+    from login_policy import MAX_LOGIN_ATTEMPTS as MAX_ATTEMPTS, LOGIN_LOCK_MINUTES as LOCK_MINUTES
     email = req.email.lower()
     ip = request.client.host if request.client else "0.0.0.0"
     identifier = f"{ip}:{email}"
