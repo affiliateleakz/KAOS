@@ -306,7 +306,7 @@ export default function Landing() {
       `}</style>
 
       {/* ============================ HERO — exact approved artwork ============================ */}
-      <main ref={mainRef} id="kx-hero" aria-label="KAOS Trading Bot" style={{ position: "relative", background: "radial-gradient(1100px 560px at 78% 28%, rgba(240,195,93,.10), transparent 62%), #020303", padding: "0 22px 72px", borderBottom: "1px solid #17130a" }}>
+      <main ref={mainRef} id="kx-hero" aria-label="KAOS Trading Bot" style={{ position: "relative", background: "linear-gradient(90deg,rgba(2,5,11,.97) 0%,rgba(2,6,14,.91) 44%,rgba(2,8,18,.65) 100%), url(/kaos-cinematic-header.jpg) center 22% / cover no-repeat, #02050b", padding: "0 22px 84px", borderBottom: "1px solid rgba(47,140,255,.28)" }}>
         <header style={{ maxWidth: 1280, margin: "0 auto", padding: "18px 0", display: "flex", alignItems: "center", gap: 22, flexWrap: "wrap" }}>
           <a href="#top" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
             <img src="/kaos-viking.png" alt="" style={{ width: 44, height: 44, objectFit: "contain" }} />
@@ -320,10 +320,10 @@ export default function Landing() {
             <Link to="/register" className="kx-cta" style={{ padding: "10px 18px", fontSize: 12.5 }}>GET KAOS</Link>
           </div>
         </header>
-        <div style={{ maxWidth: 1280, margin: "36px auto 0", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(340px,1fr))", gap: 44, alignItems: "center" }}>
+        <div style={{ maxWidth: 1280, margin: "54px auto 0", minHeight: 480, display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(340px,1fr))", gap: 44, alignItems: "center" }}>
           <div>
-            <p style={{ color: GOLD, letterSpacing: ".3em", fontSize: 12, margin: 0 }}>TRADE WITH KAOS</p>
-            <h1 style={{ fontFamily: "'Oswald',sans-serif", fontSize: "clamp(40px,6vw,76px)", lineHeight: 1.02, margin: "14px 0 18px", color: "#ebeff7", letterSpacing: ".02em" }}>KAOS TRADING BOT</h1>
+            <p style={{ color: GOLD, letterSpacing: ".3em", fontSize: 12, margin: 0 }}>WHERE WE GIVE THE ADVANTAGE TO THE TRADER</p>
+            <h1 style={{ fontFamily: "'Oswald',sans-serif", fontSize: "clamp(40px,6vw,76px)", lineHeight: 1.02, margin: "14px 0 18px", color: "#ebeff7", letterSpacing: ".02em", textShadow: "0 3px 32px rgba(0,0,0,.9)" }}>KAOS TRADING BOT</h1>
             <p style={{ fontSize: 17, lineHeight: 1.7, color: "#bbbfc7", maxWidth: 560, margin: 0 }}>
               Rule-based KAOS strategies, AI market analysis, multi-market tools and risk limits in one command center. Start free in Strategy mode and practise with paper trading before you risk real money.
             </p>
