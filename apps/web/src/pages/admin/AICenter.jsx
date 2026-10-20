@@ -45,7 +45,7 @@ export function AICenter() {
     finally { setTraining(false); }
   };
   return (
-    <div><H>KAOS AI Control Center</H>
+    <div className="kaos-ai-control"><H>KAOS AI Control Center</H>
       <div className="mb-4 rounded-lg border border-[#D4AF37]/20 bg-[#D4AF37]/5 p-3 text-xs text-[#D4AF37]">Raw samples never auto-deploy. Training builds a CANDIDATE (native XGBoost/LightGBM tree bundle) from consented learning samples; it must pass chronological + out-of-sample validation and an explicit Deploy before it serves live inference. AI is learning/reporting only — it never overrides the deterministic KAOS Strategy.</div>
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <Button data-testid="ai-train-button" onClick={train} disabled={training} className="bg-[#22C55E] text-black">
