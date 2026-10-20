@@ -30,6 +30,15 @@ class Tests(unittest.TestCase):
     def test_future_event_rejected(self):
         r=evaluate('GME',[obs('news','neutral',age=-10)],NOW)
         self.assertEqual(r['evidence'],[])
+    def test_publication_after_observation_cannot_confirm(self):
+        legitimate=obs('technical','bullish')
+        forged=obs('news','bullish')
+        forged['published_at']=(NOW-timedelta(minutes=1)).isoformat()
+        forged['observed_at']=(NOW-timedelta(minutes=3)).isoformat()
+        result=evaluate('GME',[legitimate,forged],NOW)
+        self.assertEqual(result['status'],'insufficient_confirmation')
+        self.assertEqual(result['confirming_directional_sources'],1)
+        self.assertEqual(len(result['evidence']),1)
     def test_limit_evidence_payload(self):
         r=evaluate('GME',[obs('news','neutral',i) for i in range(100)],NOW)
         self.assertEqual(len(r['evidence']),30)
