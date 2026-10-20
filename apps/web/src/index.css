@@ -303,3 +303,14 @@ tbody tr:hover{background:rgba(47,140,255,.035) !important}
 .kaos-member-header{background:linear-gradient(90deg,rgba(5,13,24,.97),rgba(7,23,42,.87)),url('./kaos-cinematic-header.jpg') center 35% / cover no-repeat!important;border-bottom:1px solid rgba(217,181,106,.32)!important}
 .kaos-member-main{background:linear-gradient(160deg,rgba(4,11,22,.55),rgba(5,7,13,.94)),radial-gradient(circle at 80% 0%,rgba(47,140,255,.06),transparent 60%)}
 .kaos-member-sidebar a:focus-visible,.kaos-member-header button:focus-visible{outline:2px solid #d9b56a;outline-offset:2px}
+
+/* KAOS Opportunity Radar: cinematic research console, without changing data logic. */
+.kaos-radar-screen{position:relative;isolation:isolate}
+.kaos-radar-screen::before{content:"";position:absolute;z-index:-1;pointer-events:none;inset:-18px -14px auto;height:220px;
+ background:linear-gradient(90deg,rgba(3,10,21,.94),rgba(5,20,38,.74)),url('./kaos-cinematic-header.jpg') center 35% / cover no-repeat;
+ opacity:.55;border-bottom:1px solid rgba(217,181,106,.25);border-radius:12px}
+.kaos-radar-screen>div:first-child{padding:18px 16px 24px}
+.kaos-radar-screen>div:first-child h1{text-shadow:0 3px 24px rgba(47,140,255,.28)}
+.kaos-radar-screen button{transition:border-color .16s ease,background .16s ease}
+.kaos-radar-screen button:focus-visible{outline:2px solid #d9b56a;outline-offset:3px}
+@media(prefers-reduced-motion:reduce){.kaos-radar-screen button{transition:none}}
