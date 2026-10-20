@@ -39,6 +39,13 @@ class Tests(unittest.TestCase):
         self.assertEqual(result['status'],'insufficient_confirmation')
         self.assertEqual(result['confirming_directional_sources'],1)
         self.assertEqual(len(result['evidence']),1)
+    def test_missing_event_identity_does_not_confirm(self):
+        identified=obs('technical','bullish')
+        unknown=obs('news','bullish')
+        unknown.pop('event_id')
+        result=evaluate('GME',[identified,unknown],NOW)
+        self.assertEqual(result['status'],'insufficient_confirmation')
+        self.assertEqual(result['confirming_directional_sources'],1)
     def test_limit_evidence_payload(self):
         r=evaluate('GME',[obs('news','neutral',i) for i in range(100)],NOW)
         self.assertEqual(len(r['evidence']),30)
