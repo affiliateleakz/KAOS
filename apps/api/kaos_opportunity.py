@@ -28,7 +28,7 @@ def evaluate(asset, observations, now=None):
             age=(now-min(at,published)).total_seconds()/3600
             strength=float(o.get('strength',0))
         except (KeyError,ValueError,TypeError,OverflowError):continue
-        if at>now or published>now or age<0 or age>168 or not isfinite(strength):continue
+        if at>now or published>at or age<0 or age>168 or not isfinite(strength):continue
         event_id=o.get('event_id') or o.get('id')
         key=(source,event_id)
         if key in seen:continue
