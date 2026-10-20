@@ -49,7 +49,7 @@ export default function DashboardLayout() {
 
   const renderSidebar = (onNavigate) => (
     <>
-      <div className="flex items-center justify-between px-5 py-5">
+      <div className="kaos-sidebar-brand flex items-center justify-between px-5 py-5">
         <Brand />
         {onNavigate && (
           <button onClick={onNavigate} data-testid="mobile-menu-close" className="text-slate-400 hover:text-white lg:hidden">
@@ -57,7 +57,7 @@ export default function DashboardLayout() {
           </button>
         )}
       </div>
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3">
+      <nav className="kaos-sidebar-links flex-1 space-y-1 overflow-y-auto px-3">
         {NAV.map(([path, label, Icon]) => (
           <NavLink key={path} to={`/dashboard/${path}`} end={path === ""} onClick={onNavigate}
             data-testid={`${onNavigate ? "mobile-" : ""}nav-${label.toLowerCase().replace(/ /g, "-")}-link`}
@@ -100,7 +100,7 @@ export default function DashboardLayout() {
             </button>
             <Brand />
           </div>
-          <div className="hidden lg:block"><span className="label-mono">Member Portal</span></div>
+          <div className="hidden lg:block"><span className="label-mono">KAOS · Trading Command Center</span><p className="kaos-member-motto">Where We Give the Advantage to the Trader</p></div>
           <div className="flex items-center gap-4">
             <div className="relative">
               <button data-testid="notifications-button" onClick={() => { setOpen(!open); if (!open && unread) api.post("/api/notifications/read").then(loadNotifs); }} className="relative text-slate-400 hover:text-white">
