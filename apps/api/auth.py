@@ -13,6 +13,8 @@ from db import db, clean
 
 logger = logging.getLogger(__name__)
 JWT_ALGORITHM = "HS256"
+MAX_LOGIN_ATTEMPTS = 5
+LOGIN_LOCK_MINUTES = 15
 
 ROLE_RANK = {"user": 0, "moderator": 1, "admin": 2, "super_admin": 3}
 
