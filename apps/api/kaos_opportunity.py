@@ -21,6 +21,7 @@ def evaluate(asset, observations, now=None):
     now=utc(now or datetime.now(timezone.utc))
     seen=set(); details=[]; votes={}; neutral=set()
     for o in observations:
+        if not isinstance(o,dict):continue
         source=o.get('source'); direction=o.get('direction')
         if source not in SOURCES or direction not in ('bullish','bearish','neutral'):continue
         try:
