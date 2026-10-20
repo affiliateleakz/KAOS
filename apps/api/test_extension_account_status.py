@@ -12,9 +12,9 @@ import routes_extension as ext
 def test_extension_login_rejects_disabled_account(monkeypatch,status,revoked):
     user={"id":"u1","email":"test@example.com","password_hash":"hash",
           "account_status":status,"extension_access_revoked":revoked}
-    monkeypatch.setattr(ext,"db",SimpleNamespace(users=SimpleNamespace(find_one=AsyncMock(return_value=user))))
+    monkeypatch.setattr(ext,"db",SimpleNamespace(users=SimpleNamespace(find_one=AsyncMock(return_value=user)), login_attempts=SimpleNamespace(find_one=AsyncMock(return_value=None),delete_many=AsyncMock())))
     monkeypatch.setattr(ext,"verify_password",lambda plain,hashed:True)
     from models import LoginReq
     with pytest.raises(HTTPException) as error:
-        asyncio.run(ext.v1_login(LoginReq(email="test@example.com",password="example password")))
+        asyncio.run(ext.v1_login(LoginReq(email="test@example.com",password="example password"), SimpleNamespace(client=SimpleNamespace(host="127.0.0.1"))))
     assert error.value.status_code==403
