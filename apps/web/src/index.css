@@ -314,3 +314,12 @@ tbody tr:hover{background:rgba(47,140,255,.035) !important}
 .kaos-radar-screen button{transition:border-color .16s ease,background .16s ease}
 .kaos-radar-screen button:focus-visible{outline:2px solid #d9b56a;outline-offset:3px}
 @media(prefers-reduced-motion:reduce){.kaos-radar-screen button{transition:none}}
+
+/* Admin AI Control Center: branded research console; no inference logic changes. */
+.kaos-ai-control{position:relative;isolation:isolate}
+.kaos-ai-control::before{content:"";position:absolute;inset:-20px -16px auto;height:180px;z-index:-1;pointer-events:none;
+background:linear-gradient(90deg,rgba(4,12,23,.97),rgba(8,28,49,.65)),url('./kaos-cinematic-header.jpg') center 40% / cover no-repeat;
+border-bottom:1px solid rgba(217,181,106,.25);border-radius:12px;opacity:.62}
+.kaos-ai-control>h1{padding:14px 10px;color:#eaf2ff;text-shadow:0 3px 24px rgba(47,140,255,.3)}
+.kaos-ai-control .card-surface{border-color:rgba(63,122,177,.32);background:linear-gradient(145deg,rgba(9,25,43,.9),rgba(7,12,22,.94))}
+.kaos-ai-control button:focus-visible{outline:2px solid #d9b56a;outline-offset:2px}
