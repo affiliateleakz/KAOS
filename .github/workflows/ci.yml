@@ -1,10 +1,13 @@
 name: CI
-# Full CI is manual on review branches to conserve private-repo Actions minutes.
-# Main-branch pushes continue to be tested automatically.
+# CI runs on PR changes again. New commits cancel superseded runs to save minutes.
 on:
   workflow_dispatch:
+  pull_request:
   push:
     branches: [main]
+concurrency:
+  group: kaos-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 jobs:
   python:
     runs-on: ubuntu-latest
