@@ -149,10 +149,21 @@ async def sync_pull(since: str = None, user: dict = Depends(get_current_user)):
     return {"serverTime": now_iso(), "strategies": docs}
 
 
+# Fields derived from publication, moderation or engagement are server-owned.
+# The cloud sync API may edit strategy definitions, not grant community status.
+SYNC_SERVER_FIELDS = frozenset({
+    "_id", "published", "verified", "likesCount", "createdAt",
+    "publishedAt", "verifiedAt", "moderationStatus", "featured",
+    "approved", "approvalStatus", "likes", "forksCount", "downloadsCount",
+})
+
 @v1.post("/sync")
 async def sync_push(req: SyncPushReq, user: dict = Depends(get_current_user)):
     applied, conflicts = [], []
     for incoming in req.strategies:
+        if not isinstance(incoming, dict) or SYNC_SERVER_FIELDS.intersection(incoming):
+            raise HTTPException(status_code=422, detail="Server-managed strategy fields cannot be synced")
+        incoming = dict(incoming)
         sid = incoming.get("id")
         if sid is not None and (not isinstance(sid, str) or not sid.strip() or len(sid) > 128):
             raise HTTPException(status_code=422, detail="Strategy id must be a nonempty string")
