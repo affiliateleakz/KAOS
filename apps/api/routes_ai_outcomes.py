@@ -52,14 +52,18 @@ async def record_observations(items:list[CollectorObservation],x_kaos_collector_
     if not key or not x_kaos_collector_key or not compare_digest(key,x_kaos_collector_key):
         raise HTTPException(403,"Server collector authentication required")
     if not 1<=len(items)<=100:raise HTTPException(422,"Batch must contain 1-100 observations")
-    # These fields are accepted only from the trusted server collector, not member browsers.
+    # Validate the entire batch before any database writes. A collector must not
+    # supply future observations that could pre-settle a prediction.
+    from datetime import datetime, timezone, timedelta
+    now = datetime.now(timezone.utc).timestamp()
     for item in items:
         from decimal import Decimal
         from kaos_ai_outcome_verifier import timestamp
         try:
             price=Decimal(item.price)
             ts=timestamp(item.observed_at)
-            if not price.is_finite() or price<=0 or ts<=0:raise ValueError()
+            if not price.is_finite() or price<=0 or ts<=0 or ts>now+2 or ts<now-timedelta(days=7).total_seconds():
+                raise ValueError()
         except (ValueError,ArithmeticError,TypeError) as exc:
             raise HTTPException(422,"Invalid market observation") from exc
     for item in items:
