@@ -19,7 +19,7 @@ html,body{background:var(--kh-bg)!important;color:var(--kh-txt)!important}
   position:fixed!important;left:0!important;right:0!important;top:0!important;
   height:var(--kh-h)!important;min-height:var(--kh-h)!important;width:100%!important;
   padding:0 14px!important;box-sizing:border-box!important;overflow:hidden!important;
-  background:linear-gradient(180deg,#0a121b 0%,#070d14 55%,#05090e 100%)!important;
+  background:linear-gradient(90deg,rgba(4,9,17,.94),rgba(5,15,27,.85) 55%,rgba(5,17,31,.63)),url('kaos_header.jpg') center 44% / cover no-repeat!important;
   border:0!important;border-bottom:1px solid #10293c!important;box-shadow:none!important;z-index:60!important}
 .header.kaos-banner-header:before{content:""!important;display:block!important;position:absolute!important;left:0!important;right:0!important;top:0!important;height:1px!important;
   background:linear-gradient(90deg,rgba(200,151,59,0) 0%,#c8973b 18%,#f9e7ab 50%,#c8973b 82%,rgba(200,151,59,0) 100%)!important;
@@ -235,3 +235,10 @@ html,body{background:var(--kh-bg)!important;color:var(--kh-txt)!important}
   .control-center,.top-strategy-summary{grid-column:1!important}
   .logo-name{font-size:20px!important}
 }
+
+/* KAOS cinematic brand polish — uses bundled artwork; no external image fetches. */
+.header.kaos-banner-header{border-bottom:1px solid rgba(216,174,88,.48)!important;box-shadow:0 3px 24px rgba(9,65,113,.26)!important}
+.kaos-app-nav{background:linear-gradient(180deg,#06121f 0%,#04090e 100%)!important}
+.kaos-nav-btn.active{border-left-color:#dfb760!important;box-shadow:inset 0 0 24px rgba(40,137,219,.22)!important}
+.kaos-footer{border-top-color:rgba(216,174,88,.3)!important}
+@media (prefers-reduced-motion: reduce){.kaos-nav-btn{transition:none!important}}
