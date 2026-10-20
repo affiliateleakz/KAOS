@@ -4,9 +4,9 @@ from server import app
 
 def test_extension_login_preflight_allows_published_origin():
     origin = "chrome-extension://" + "gbobopmnjgeeegniphckfpalhnebapjm"
-    with TestClient(app) as client:
-        response = client.options(
-            "/api/v1/auth/login",
+    client = TestClient(app)
+    response = client.options(
+        "/api/v1/auth/login",
             headers={
                 "Origin": origin,
                 "Access-Control-Request-Method": "POST",
