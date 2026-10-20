@@ -78,22 +78,22 @@ export default function DashboardLayout() {
   );
 
   return (
-    <div className="flex min-h-screen bg-[#080808] text-white">
-      <aside className="hidden w-60 shrink-0 flex-col border-r border-[#2E2E2E] bg-[#0A0A0A] lg:flex">
+    <div className="kaos-member-shell flex min-h-screen bg-[#080808] text-white">
+      <aside className="kaos-member-sidebar hidden w-60 shrink-0 flex-col border-r border-[#2E2E2E] bg-[#0A0A0A] lg:flex">
         {renderSidebar()}
       </aside>
 
       {mobileNav && (
         <div className="fixed inset-0 z-[60] lg:hidden" data-testid="mobile-nav-drawer">
           <div className="absolute inset-0 bg-black/60" onClick={() => setMobileNav(false)} />
-          <aside className="absolute left-0 top-0 flex h-full w-72 max-w-[85%] flex-col border-r border-[#2E2E2E] bg-[#0A0A0A]">
+          <aside className="kaos-member-sidebar absolute left-0 top-0 flex h-full w-72 max-w-[85%] flex-col border-r border-[#2E2E2E] bg-[#0A0A0A]">
             {renderSidebar(() => setMobileNav(false))}
           </aside>
         </div>
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="glass-nav flex items-center justify-between px-4 py-3 sm:px-6">
+        <header className="kaos-member-header glass-nav flex items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3 lg:hidden">
             <button data-testid="mobile-menu-button" onClick={() => setMobileNav(true)} className="text-slate-300 hover:text-white">
               <Menu className="h-6 w-6" />
@@ -121,7 +121,7 @@ export default function DashboardLayout() {
             </Link>
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6"><Outlet /></main>
+        <main className="kaos-member-main flex-1 overflow-y-auto p-4 sm:p-6"><Outlet /></main>
         <div style={{fontSize:12,padding:"6px 24px",textAlign:"right"}}><a href="/privacy.html" style={{color:"#b9a36e"}}>Privacy Policy</a></div>
         <RiskBar />
       </div>
