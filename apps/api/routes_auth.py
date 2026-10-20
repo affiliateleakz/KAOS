@@ -22,8 +22,7 @@ EMAIL_BASE_URL = (os.environ.get("INTEGRATION_PROXY_URL") or "").strip().rstrip(
 EMAIL_KEY = os.environ.get("EMERGENT_EMAIL_KEY", "")
 EMAIL_FROM_NAME = os.environ.get("EMAIL_FROM_NAME") or "Trading Platform"
 
-MAX_ATTEMPTS = 5
-LOCK_MINUTES = 15
+from auth import MAX_LOGIN_ATTEMPTS as MAX_ATTEMPTS, LOGIN_LOCK_MINUTES as LOCK_MINUTES
 
 
 async def send_password_reset_email(to_email: str, token: str) -> bool:
