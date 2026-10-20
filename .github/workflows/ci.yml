@@ -41,6 +41,13 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - run: npm run build
         env: { CI: "false" }
+      - name: Archive built KAOS website
+        uses: actions/upload-artifact@v4
+        with:
+          name: kaos-website-build
+          path: apps/web/build/
+          if-no-files-found: error
+          retention-days: 14
   secrets:
     runs-on: ubuntu-latest
     permissions: { contents: read, pull-requests: read }
@@ -100,3 +107,41 @@ jobs:
           node --check apps/extension/kaos-cloud-ui.js
           node --check apps/extension/kaos-cloud.js
           node --check apps/extension/popup.js
+
+  release-packages:
+    runs-on: ubuntu-latest
+    needs: [extension-smoke, web, python, secrets, research]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Chrome Web Store ZIP
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile, ZIP_DEFLATED
+          import json
+          root = Path("apps/extension")
+          manifest = json.loads((root / "manifest.json").read_text())
+          assert manifest["manifest_version"] == 3
+          out = Path("dist")
+          out.mkdir(exist_ok=True)
+          files = sorted(p for p in root.rglob("*") if p.is_file() and
+                         "__pycache__" not in p.parts and not p.name.startswith(".") and
+                         p.suffix.lower() not in (".pyc", ".zip"))
+          assert (root / "popup.html") in files
+          assert (root / "manifest.json") in files
+          with ZipFile(out / "kaos-chrome-extension.zip", "w", ZIP_DEFLATED) as archive:
+              for p in files:
+                  archive.write(p, p.relative_to(root).as_posix())
+          with ZipFile(out / "kaos-chrome-extension.zip") as archive:
+              assert "manifest.json" in archive.namelist()
+              assert "popup.html" in archive.namelist()
+              assert len(archive.namelist()) == len(set(archive.namelist()))
+              print("Chrome extension package files:", len(archive.namelist()))
+          PY
+      - name: Upload Chrome extension package
+        uses: actions/upload-artifact@v4
+        with:
+          name: kaos-chrome-extension-zip
+          path: dist/kaos-chrome-extension.zip
+          if-no-files-found: error
+          retention-days: 14
