@@ -32,6 +32,7 @@ def test_missing_model_rejected_without_fake_result(monkeypatch):
 
 def test_real_classifier_output_is_persisted_as_research(monkeypatch):
     monkeypatch.setenv("KAOS_COLLECTOR_KEY","secret-for-test")
+    monkeypatch.setenv("KAOS_TRADING_HERO_MODEL_VERSION", "reviewed-test-revision")
     monkeypatch.setattr(kaos_financial_inference,"classify_headlines",
         lambda xs:[{"headline":xs[0],"sentiment_score":0.7,"label":"positive","confidence":0.7}])
     save=AsyncMock()
