@@ -18,12 +18,12 @@ def test_extension_login_preflight_allows_published_origin():
     assert "content-type" in response.headers["access-control-allow-headers"].lower()
 
 def test_unknown_extension_origin_not_allowed():
-    with TestClient(app) as client:
-        response = client.options(
-            "/api/v1/auth/login",
-            headers={
-                "Origin": "chrome-extension://" + "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-                "Access-Control-Request-Method": "POST",
-            },
-        )
+    client = TestClient(app)
+    response = client.options(
+        "/api/v1/auth/login",
+        headers={
+            "Origin": "chrome-extension://" + "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
     assert response.headers.get("access-control-allow-origin") is None
