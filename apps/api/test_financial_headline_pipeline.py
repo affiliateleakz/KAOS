@@ -15,6 +15,7 @@ def data():
 
 def test_model_not_called_for_unauthorized_collector(monkeypatch):
     monkeypatch.setenv("KAOS_COLLECTOR_KEY","secret-for-test")
+    monkeypatch.setenv("KAOS_TRADING_HERO_MODEL_VERSION", "reviewed-test-revision")
     monkeypatch.setattr(kaos_financial_inference,"classify_headlines",
                         lambda *args: (_ for _ in ()).throw(AssertionError("called")))
     with pytest.raises(HTTPException) as err:
@@ -44,6 +45,7 @@ def test_real_classifier_output_is_persisted_as_research(monkeypatch):
 
 def test_incomplete_model_batch_cannot_be_ingested(monkeypatch):
     monkeypatch.setenv("KAOS_COLLECTOR_KEY", "secret-for-test")
+    monkeypatch.setenv("KAOS_TRADING_HERO_MODEL_VERSION", "reviewed-test-revision")
     monkeypatch.setattr(kaos_financial_inference, "classify_headlines",
                         lambda texts: [])
     save = AsyncMock()
@@ -88,3 +90,15 @@ def test_same_headline_from_two_models_retains_separate_provenance(monkeypatch):
     assert {r["nlp_model_id"] for r in records} == {"model-a", "model-b"}
     assert len({r["event_id"] for r in records}) == 2
     assert {r["nlp_score"] for r in records} == {0.8, -0.4}
+
+
+def test_unversioned_model_is_not_allowed_to_persist_predictions(monkeypatch):
+    monkeypatch.setenv("KAOS_COLLECTOR_KEY", "secret-for-test")
+    monkeypatch.delenv("KAOS_TRADING_HERO_MODEL_VERSION", raising=False)
+    save = AsyncMock()
+    monkeypatch.setattr(api, "db", SimpleNamespace(
+        kaos_intelligence=SimpleNamespace(update_one=save)))
+    with pytest.raises(HTTPException) as err:
+        asyncio.run(api.classify_and_ingest_headlines([data()], "secret-for-test"))
+    assert err.value.status_code == 503
+    save.assert_not_awaited()
