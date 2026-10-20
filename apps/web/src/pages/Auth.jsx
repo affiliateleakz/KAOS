@@ -12,11 +12,11 @@ const BACKEND = process.env.REACT_APP_BACKEND_URL;
 
 function Shell({ title, subtitle, children }) {
   return (
-    <div className="flex min-h-screen flex-col bg-[#080808]">
-      <div className="glass-nav px-6 py-4"><Brand /></div>
+    <div className="kaos-auth-shell flex min-h-screen flex-col bg-[#080808]">
+      <div className="kaos-auth-nav glass-nav px-6 py-4"><Brand /></div>
       <div className="flex flex-1 items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md">
-          <div className="card-surface p-8">
+        <div className="kaos-auth-content w-full max-w-md">
+          <div className="kaos-auth-card card-surface p-8">
             <h1 className="font-heading text-2xl font-bold text-white">{title}</h1>
             {subtitle && <p className="mt-1 text-sm text-slate-400">{subtitle}</p>}
             <div className="mt-6">{children}</div>
