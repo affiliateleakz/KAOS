@@ -39,8 +39,8 @@ export function Overview() {
     ["Devices", <span className="font-mono text-xl text-white">{d.counts.devices}</span>],
   ];
   return (
-    <div>
-      <H>Dashboard</H>
+    <div className="kaos-overview-console">
+      <div className="kaos-overview-intro"><p className="kaos-overview-eyebrow">KAOS · TRADER COMMAND CENTER</p><H>Dashboard</H><p className="text-sm text-slate-400">Your account, tools and research workspace. Live figures appear only when verified data is available.</p></div>
       {rank?.ranked && (
         <Link to="/dashboard/affiliate" data-testid="rank-badge"
           className="mb-6 flex items-center justify-between rounded-lg border border-[#D4AF37]/30 bg-[#D4AF37]/5 p-4 transition hover:bg-[#D4AF37]/10">
@@ -60,12 +60,12 @@ export function Overview() {
           <Link to="/onboarding"><Button className="bg-[#FFB800] text-[#080808] font-semibold">Continue onboarding</Button></Link>
         </div>
       )}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="kaos-overview-stats grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map(([l, v]) => (
           <div key={l} className="card-surface p-5"><div className="label-mono">{l}</div><div className="mt-3">{v}</div></div>
         ))}
       </div>
-      <div className="mt-6 grid gap-4 lg:grid-cols-3">
+      <div className="kaos-overview-resources mt-6 grid gap-4 lg:grid-cols-3">
         {[["My Strategies", d.counts.myStrategies], ["Published", d.counts.published], ["Saved", d.counts.saved]].map(([l, v]) => (
           <div key={l} className="card-surface p-5"><div className="label-mono">{l}</div><div className="mt-2 font-mono text-3xl font-bold text-[#D4AF37]">{v}</div></div>
         ))}
