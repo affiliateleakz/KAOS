@@ -33,7 +33,7 @@ def pack(output: Path, mappings):
                 items = [(source, prefix)]
             elif source.is_dir():
                 items = [(p, f"{prefix}/{p.relative_to(source).as_posix()}".lstrip("/"))
-                         for p in sorted(source.rglob("*")) if permitted(p)]
+                         for p in sorted(source.rglob("*")) if permitted(p) and not (source == WEB_BUILD and p.name == ".htaccess")]
             else:
                 raise RuntimeError(f"Missing required package input: {source}")
             for path, name in items:
