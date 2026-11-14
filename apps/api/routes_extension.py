@@ -97,7 +97,7 @@ async def extension_me(request: Request, user: dict = Depends(get_current_user))
     """Current extension session, with a device-checked license and server entitlements."""
     license_status = await v1_license(request, user)
     return {
-        "user": public_user(user),
+        "user": {**public_user(user), "email": user.get("email")},
         "license": license_status,
         "entitlements": await get_entitlements(user),
     }
