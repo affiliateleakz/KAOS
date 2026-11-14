@@ -72,6 +72,9 @@ jobs:
           SSH_PORT: ${{ vars.ASURA_SSH_PORT }}
         run: |
           set -euo pipefail
+          umask 077
+          [[ "$SSH_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]]
+          [[ "$SSH_USER" =~ ^[a-zA-Z0-9_][a-zA-Z0-9_-]*$ ]]
           test -n "$SSH_HOST" && test -n "$SSH_USER"
           test -n "$SSH_PRIVATE_KEY" && test -n "$SSH_KNOWN_HOSTS"
           install -d -m 700 "$HOME/.ssh"
@@ -97,16 +100,7 @@ jobs:
       - name: Upload release to private account directory only
         env:
           GIT_SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          # Hard-coded PRIVATE staging path, outside public_html and the API app.
-          # Avoid user-supplied shell paths and prevent accidental live overwrites.
-          stage="kaos_release_staging/${GIT_SHA}"
-          ssh kaos-host "mkdir -p \"\$HOME/kaos_release_staging/${GIT_SHA}\""
-          scp dist/kaos-cpanel-website.zip dist/kaos-cpanel-backend.zip \
-              dist/SHA256SUMS dist/RELEASE.txt "kaos-host:${stage}/"
-          ssh kaos-host "cd \"\$HOME/kaos_release_staging/${GIT_SHA}\" && sha256sum -c SHA256SUMS"
-          echo "Release ZIPs staged outside the live site and API. Manual activation is intentionally disabled."
+        run: bash scripts/asura_stage.sh
 
       - name: Remove local SSH material
         if: always()

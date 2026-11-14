@@ -49,3 +49,24 @@ Only after that validation should we implement a separately approved deployment 
 ## If SSH is unavailable
 
 The current workflow cannot connect through cPanel File Manager alone. Ask Asura to enable SSH or use the two prebuilt cPanel ZIPs for a manual upload. Do not expose FTP passwords or SSH private keys in chat.
+
+## Staging integrity and retries
+
+The staging transport is `scripts/asura_stage.sh`. It validates a full commit
+SHA, refuses a symlink staging root, restricts directories to mode 700 and files
+to 600, and refuses an existing revision directory. `COMPLETE` is written only
+after both ZIP checksums and the release revision pass. A failed upload can leave
+an incomplete private folder; it is never activated or automatically deleted.
+An operator must inspect and move that incomplete folder aside before retrying
+the same SHA. Keep complete releases for rollback; do not re-upload over them.
+The account owner must verify the private staging directory is not exposed by
+any Apache alias, symlink, or additional document root.
+
+The SSH host and user are restricted to single hostname/account values before
+writing OpenSSH configuration; newlines, options, and shell syntax are rejected.
+Only independently verified host keys are trusted. No private deployment key is
+available to repository tests; local transport tests simulate SSH/SCP and do not
+prove a connection to Asura.
+
+See [issue #55 validation and activation gates](ISSUE_55_VALIDATION.md) for the
+current evidence, missing legacy-runtime inputs, and recovery procedure.

@@ -20,7 +20,7 @@ SKIP_FILES = {".env", ".env.local", ".env.production", ".env.staging", ".DS_Stor
 
 
 def permitted(path: Path) -> bool:
-    return (path.is_file() and not any(p in SKIP_DIRS for p in path.parts)
+    return (path.is_file() and not path.is_symlink() and not any(p in SKIP_DIRS for p in path.parts)
             and path.name not in SKIP_FILES and not path.name.startswith(".env.")
             and path.suffix.lower() not in SKIP_SUFFIXES)
 

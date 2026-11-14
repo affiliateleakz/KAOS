@@ -130,6 +130,18 @@
     if (!res.ok) {
       var detail = '';
       try { var failed = await res.json(); detail = String(failed.detail || failed.error || failed.message || ''); } catch (_) {}
+      // A missing v1 route is a runtime mismatch, not bad credentials. Never
+      // retry passwords against guessed legacy routes or accept cookie-only auth.
+      if (res.status === 404) {
+        var server = await health();
+        var runtime = server.body && server.body.runtime;
+        var incompatible = new Error(runtime === 'native-wsgi' ?
+          'This KAOS server runs the legacy API and does not support extension sign-in. A validated server compatibility update is required.' :
+          'This KAOS server does not provide extension sign-in. Check the API host and server version.');
+        incompatible.kind = 'INCOMPATIBLE_SERVER';
+        incompatible.httpStatus = 404;
+        throw incompatible;
+      }
       var safe = detail.slice(0, 180);
       var label = res.status === 401 ? 'Invalid email or password' :
                   res.status === 403 ? (safe || 'Account access denied') :
