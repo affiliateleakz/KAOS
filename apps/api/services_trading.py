@@ -92,6 +92,11 @@ FREE_ENTITLEMENTS = {
 
 
 async def get_entitlements(user: dict) -> dict:
+    from device_policy import device_entitlements
+    return device_entitlements(user, await _membership_entitlements(user))
+
+
+async def _membership_entitlements(user: dict) -> dict:
     """Feature entitlements derived from the user's active plan. Admin-configurable, never hardcoded per-component."""
     from routes_billing import get_plans, find_plan
     if user.get("account_status", "active") in ("suspended", "banned"):

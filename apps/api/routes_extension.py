@@ -11,6 +11,7 @@ import os
 import httpx
 from routes_auth import _google_signin_identity
 from device_records import device_public, device_query, device_record_query
+from device_policy import unlimited_devices
 
 v1 = APIRouter(prefix="/api/v1", tags=["extension-v1"])
 member = APIRouter(prefix="/api", tags=["member"])
@@ -164,14 +165,15 @@ async def register_device(req: DeviceReq, request: Request, user: dict = Depends
         await db.devices.update_one({**device_record_query(existing, user["id"]), "revoked": False},
                                     {"$set": {"extensionVersion": req.extensionVersion, "lastActive": now_iso()}})
         return device_public(await db.devices.find_one(device_record_query(existing, user["id"])))
-    # The license and device registration must use the same plan authority.
-    # Free members are limited to one device, not the old hardcoded three.
-    limit = int(entitlements.get("deviceLimit") or 1)
-    if limit < 1:
-        raise HTTPException(status_code=403, detail="No devices permitted for this account")
-    count = await db.devices.count_documents({"userId": user["id"], "revoked": False})
-    if count >= limit:
-        raise HTTPException(status_code=403, detail=f"Device limit reached ({limit})")
+    # Only trusted server-side admin roles have unlimited capacity. Revocation
+    # and bot/account checks above still apply; plan fields cannot grant this.
+    if not unlimited_devices(user):
+        limit = int(entitlements.get("deviceLimit") or 1)
+        if limit < 1:
+            raise HTTPException(status_code=403, detail="No devices permitted for this account")
+        count = await db.devices.count_documents({"userId": user["id"], "revoked": False})
+        if count >= limit:
+            raise HTTPException(status_code=403, detail=f"Device limit reached ({limit})")
     doc = {"id": new_id("dev"), "userId": user["id"], "deviceName": req.deviceName,
            "installId": req.installId, "extensionVersion": req.extensionVersion,
            "lastIp": request.client.host if request.client else None,

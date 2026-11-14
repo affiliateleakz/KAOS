@@ -237,3 +237,17 @@ broker market data, strategy performance or real-money execution.
 Update an unpacked extension in its existing folder and Reload it to preserve
 its installation/device identity. Deploy a newly prepared website package for
 the login design; installing website files does not update Chrome extensions.
+
+### Administrator device capacity
+
+Active, non-revoked accounts whose server-stored role is `admin` or `super_admin`
+have unlimited device capacity. Entitlements expose `devicesUnlimited: true` and
+`deviceLimit: null`; registration uses the same role policy and does not apply a
+numeric device-count cap. This changes only device capacity, not chart counts,
+paid feature access, trading approval, billing or account roles.
+
+Members and moderators retain their membership limits. Usernames (including
+`owner`), client request fields and a plan's `devicesUnlimited` flag cannot grant
+the capability. Suspended/banned accounts, revoked extension access and revoked
+installations remain rejected. Apply through a newly prepared backend release
+and restart the API; no database role edits or key rotation are needed.
