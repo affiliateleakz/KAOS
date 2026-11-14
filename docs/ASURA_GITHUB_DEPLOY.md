@@ -170,3 +170,22 @@ For an unpacked extension, update files in the existing installation directory
 and click Reload: removing/reinstalling or selecting a different directory can
 change extension/install identity and consume another device slot. Do not delete
 or revoke devices belonging to other users to troubleshoot the owner account.
+
+### Legacy device record management
+
+Device lists now provide a stable selector for older MongoDB device documents
+that lack a KAOS `id`. This is computed from MongoDB `_id` without changing the
+record during a GET. Member revocation resolves that selector together with the
+authenticated user's `userId`; administrator revocation retains its role check.
+Selectors for legacy records cannot target records with a nonempty KAOS id.
+Both endpoints now return 404 when no device matched instead of falsely reporting
+success. Existing legacy installations can refresh their device metadata without
+requiring a nonexistent `id`. Revoked installations remain denied.
+
+Member and administrator pages display unknown/missing activity timestamps as
+Unknown and report device-list loading errors. No automatic revocation, account
+upgrade or device-limit increase is performed. Deploy a newly prepared release
+containing both API and built website changes, restart the API, then revoke only
+the obsolete device through the authenticated dashboard and re-check the current
+extension. This record-shape incompatibility is covered by regression tests; the
+actual live record was not exported or modified during development.

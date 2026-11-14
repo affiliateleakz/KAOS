@@ -1,3 +1,4 @@
+import { deviceDate } from "../../lib/deviceDate";
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, errMsg } from "../../lib/api";
@@ -329,9 +330,9 @@ export function Subscription() {
 // ---------- Devices ----------
 export function Devices() {
   const [list, setList] = useState([]);
-  const load = () => api.get("/api/v1/devices").then((r) => setList(r.data)).catch(() => {});
+  const load = () => api.get("/api/v1/devices").then((r) => setList(r.data)).catch((e) => toast.error(errMsg(e)));
   useEffect(() => { load(); }, []);
-  const revoke = async (id) => { try { await api.delete(`/api/v1/devices/${id}`); toast.success("Device revoked"); load(); } catch (e) { toast.error(errMsg(e)); } };
+  const revoke = async (id) => { try { await api.delete(`/api/v1/devices/${encodeURIComponent(id)}`); toast.success("Device revoked"); load(); } catch (e) { toast.error(errMsg(e)); } };
   return (
     <div><H>Connected Devices</H>
       {list.length === 0 ? <Empty>No devices registered. Install the extension to register one.</Empty> : (
@@ -339,7 +340,7 @@ export function Devices() {
           <div key={d.id} className="card-surface flex items-center justify-between p-4">
             <div className="flex items-center gap-3"><Cpu className="h-5 w-5 text-[#D4AF37]" />
               <div><div className="font-medium text-white">{d.deviceName}</div>
-                <div className="font-mono text-xs text-slate-500">v{d.extensionVersion || "?"} · last active {new Date(d.lastActive).toLocaleString()}{d.revoked && " · REVOKED"}</div></div></div>
+                <div className="font-mono text-xs text-slate-500">v{d.extensionVersion || "?"} · last active {deviceDate(d)}{d.revoked && " · REVOKED"}</div></div></div>
             {!d.revoked && <Button data-testid={`revoke-device-${d.id}`} onClick={() => revoke(d.id)} variant="outline" size="sm" className="border-[#C62828]/30 bg-transparent text-[#C62828]">Revoke</Button>}
           </div>
         ))}</div>

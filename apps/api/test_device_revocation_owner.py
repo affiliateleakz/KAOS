@@ -9,7 +9,7 @@ from auth import get_current_user
 
 
 def test_device_revocation_requires_authenticated_owner(monkeypatch):
-    update = AsyncMock()
+    update = AsyncMock(return_value=SimpleNamespace(matched_count=1))
     monkeypatch.setattr(ext, 'db', SimpleNamespace(devices=SimpleNamespace(update_one=update)))
     app = FastAPI()
     app.include_router(ext.v1)

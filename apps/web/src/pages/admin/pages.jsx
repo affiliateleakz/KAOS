@@ -1,3 +1,4 @@
+import { deviceDate } from "../../lib/deviceDate";
 import React, { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { api, errMsg } from "../../lib/api";
@@ -149,12 +150,12 @@ export function Subscriptions() {
 
 export function AdminDevices() {
   const [list, setList] = useState([]);
-  const load = () => api.get("/api/admin/devices").then((r) => setList(r.data)).catch(() => {});
+  const load = () => api.get("/api/admin/devices").then((r) => setList(r.data)).catch((e) => toast.error(errMsg(e)));
   useEffect(() => { load(); }, []);
-  const revoke = async (id) => { try { await api.post(`/api/admin/devices/${id}/revoke`); toast.success("Revoked"); load(); } catch (e) { toast.error(errMsg(e)); } };
+  const revoke = async (id) => { try { await api.post(`/api/admin/devices/${encodeURIComponent(id)}/revoke`); toast.success("Revoked"); load(); } catch (e) { toast.error(errMsg(e)); } };
   return (<div><H>Connected Devices Monitor</H>
     <div className="card-surface p-0 overflow-x-auto"><Table><TableHeader><TableRow className="border-[#2E2E2E]"><TableHead>User</TableHead><TableHead>Device</TableHead><TableHead>Version</TableHead><TableHead>Last Active</TableHead><TableHead>Status</TableHead><TableHead></TableHead></TableRow></TableHeader>
-      <TableBody>{list.map((d) => (<TableRow key={d.id} className="border-[#2E2E2E]" data-testid={`admin-device-row-${d.id}`}><TableCell className="font-mono text-sm">{d.user?.username}</TableCell><TableCell>{d.deviceName}</TableCell><TableCell className="font-mono text-xs">{d.extensionVersion}</TableCell><TableCell className="font-mono text-xs">{new Date(d.lastActive).toLocaleString()}</TableCell><TableCell className={d.revoked ? "text-[#C62828]" : "text-[#D4AF37]"}>{d.revoked ? "REVOKED" : "ACTIVE"}</TableCell><TableCell>{!d.revoked && <Button data-testid={`admin-revoke-device-${d.id}`} size="sm" variant="outline" className="border-[#C62828]/30 bg-transparent text-[#C62828]" onClick={() => revoke(d.id)}>Revoke</Button>}</TableCell></TableRow>))}</TableBody></Table></div>
+      <TableBody>{list.map((d) => (<TableRow key={d.id} className="border-[#2E2E2E]" data-testid={`admin-device-row-${d.id}`}><TableCell className="font-mono text-sm">{d.user?.username}</TableCell><TableCell>{d.deviceName}</TableCell><TableCell className="font-mono text-xs">{d.extensionVersion}</TableCell><TableCell className="font-mono text-xs">{deviceDate(d)}</TableCell><TableCell className={d.revoked ? "text-[#C62828]" : "text-[#D4AF37]"}>{d.revoked ? "REVOKED" : "ACTIVE"}</TableCell><TableCell>{!d.revoked && <Button data-testid={`admin-revoke-device-${d.id}`} size="sm" variant="outline" className="border-[#C62828]/30 bg-transparent text-[#C62828]" onClick={() => revoke(d.id)}>Revoke</Button>}</TableCell></TableRow>))}</TableBody></Table></div>
   </div>);
 }
 

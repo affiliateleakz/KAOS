@@ -3,6 +3,7 @@ from db import db, new_id, now, now_iso, clean
 from auth import require_role, get_current_user, ROLE_RANK
 from services import audit_log, set_setting, get_setting, notify
 from models import RoleReq, PlanReq, SettingsReq
+from device_records import device_public, device_query
 from datetime import timedelta
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -196,7 +197,9 @@ async def set_membership(uid: str, req: SettingsReq, admin: dict = Depends(admin
 
 @router.post("/devices/{did}/revoke")
 async def admin_revoke_device(did: str, admin: dict = Depends(admin_dep)):
-    await db.devices.update_one({"id": did}, {"$set": {"revoked": True}})
+    result = await db.devices.update_one(device_query(did), {"$set": {"revoked": True}})
+    if result.matched_count != 1:
+        raise HTTPException(status_code=404, detail="Device not found")
     await audit_log(admin, "revoke_device", "device", did)
     return {"revoked": True}
 
@@ -210,7 +213,8 @@ async def revoke_all_devices(uid: str, admin: dict = Depends(admin_dep)):
 
 @router.get("/devices")
 async def admin_devices(admin: dict = Depends(admin_dep)):
-    docs = await db.devices.find({}, {"_id": 0}).sort("lastActive", -1).to_list(1000)
+    records = await db.devices.find({}).sort("lastActive", -1).to_list(1000)
+    docs = [device_public(record) for record in records]
     for d in docs:
         u = await db.users.find_one({"id": d["userId"]}, {"_id": 0, "username": 1, "email": 1})
         d["user"] = u

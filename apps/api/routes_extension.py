@@ -10,6 +10,7 @@ import jwt as pyjwt
 import os
 import httpx
 from routes_auth import _google_signin_identity
+from device_records import device_public, device_query, device_record_query
 
 v1 = APIRouter(prefix="/api/v1", tags=["extension-v1"])
 member = APIRouter(prefix="/api", tags=["member"])
@@ -85,7 +86,7 @@ async def v1_license(request: Request, user: dict = Depends(get_current_user)):
             raise HTTPException(status_code=403, detail="Device is not registered")
         if device.get("revoked"):
             raise HTTPException(status_code=403, detail="Device access revoked")
-        await db.devices.update_one({"id": device["id"], "userId": user["id"], "revoked": False},
+        await db.devices.update_one({**device_record_query(device, user["id"]), "revoked": False},
                                     {"$set": {"lastActive": now_iso(),
                                               "lastIp": request.client.host if request.client else None}})
     selection = await db.member_broker_selections.find_one(
@@ -160,9 +161,9 @@ async def register_device(req: DeviceReq, request: Request, user: dict = Depends
         # simply by calling registration with the same install identifier.
         if existing.get("revoked"):
             raise HTTPException(status_code=403, detail="Device access revoked")
-        await db.devices.update_one({"id": existing["id"], "userId": user["id"], "revoked": False},
+        await db.devices.update_one({**device_record_query(existing, user["id"]), "revoked": False},
                                     {"$set": {"extensionVersion": req.extensionVersion, "lastActive": now_iso()}})
-        return clean(await db.devices.find_one({"id": existing["id"], "userId": user["id"]}))
+        return device_public(await db.devices.find_one(device_record_query(existing, user["id"])))
     # The license and device registration must use the same plan authority.
     # Free members are limited to one device, not the old hardcoded three.
     limit = int(entitlements.get("deviceLimit") or 1)
@@ -181,12 +182,15 @@ async def register_device(req: DeviceReq, request: Request, user: dict = Depends
 
 @v1.get("/devices")
 async def list_devices(user: dict = Depends(get_current_user)):
-    return await db.devices.find({"userId": user["id"]}, {"_id": 0}).to_list(100)
+    records = await db.devices.find({"userId": user["id"]}).to_list(100)
+    return [device_public(record) for record in records]
 
 
 @v1.delete("/devices/{did}")
 async def delete_device(did: str, user: dict = Depends(get_current_user)):
-    await db.devices.update_one({"id": did, "userId": user["id"]}, {"$set": {"revoked": True}})
+    result = await db.devices.update_one(device_query(did, user["id"]), {"$set": {"revoked": True}})
+    if result.matched_count != 1:
+        raise HTTPException(status_code=404, detail="Device not found for this account")
     return {"revoked": True}
 
 
