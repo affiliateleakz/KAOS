@@ -206,8 +206,15 @@
     host.appendChild(wrap);
   }
 
+  function chartSessionState(state) {
+    if (!state) return null;
+    // DOM events can be observed by the broker page. Never publish account data.
+    return { step: state.step, status: state.status, platform: state.platform,
+      license: { authorized: !!(state.license && state.license.authorized) } };
+  }
+
   function route(state) {
-    document.dispatchEvent(new CustomEvent('kaos-cloud-state-changed', { detail: { state: state } }));
+    document.dispatchEvent(new CustomEvent('kaos-cloud-state-changed', { detail: { state: chartSessionState(state) } }));
     mount();
     if (!state) { renderOffline(); return; }
     switch (state.step) {

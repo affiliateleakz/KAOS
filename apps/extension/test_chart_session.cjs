@@ -80,3 +80,13 @@ test('logout during broker script registration removes stale scripts',async()=>{
   c.context.cancel();c.finishRegistration();await assert.rejects(pending,/session changed/);
   assert.equal(c.unregistered.length,1);assert.equal(c.context.authorized(),false);
 });
+test('cloud DOM events expose chart readiness without account or token data',()=>{
+  const source=fs.readFileSync(__dirname+'/kaos-cloud-ui.js','utf8');
+  const start=source.indexOf('function chartSessionState(state)');
+  const end=source.indexOf('\n  function route(state)',start);
+  const context={};vm.runInNewContext(source.slice(start,end)+';globalThis.publicState=chartSessionState;',context);
+  const published=context.publicState({...connected,user:{email:'private@example.com'},accessToken:'private-token',
+    device:{installId:'private-install'},license:{authorized:true,userId:'private-user'}});
+  assert.deepEqual(JSON.parse(JSON.stringify(published)),connected);
+  assert.equal(JSON.stringify(published).includes('private'),false);
+});

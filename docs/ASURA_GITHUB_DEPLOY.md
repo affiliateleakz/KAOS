@@ -209,7 +209,8 @@ an explicit operator repair, not an automatic device replacement policy.
 The popup broker picker now uses `KAOS_CONNECT_PLATFORM`, which verifies the
 server/device license, attaches the authorized broker integration, and reuses
 an existing supported broker tab. It no longer merely opens a new broker tab.
-The popup receives cloud state through a detailed event and restores charts
+The popup receives only chart-readiness fields through a DOM event (no user,
+account, token or device identifiers) and restores charts
 through the same authorized handler. It retries chart discovery when its saved
 broker tab finishes loading. Sign-out invalidates pending connection responses and prevents stale worker
 registrations from completing after logout;
@@ -224,7 +225,7 @@ retain their API contracts. Email/password labels and autofill attributes are
 provided, and the Google button width fits the form on small screens. The prior
 blue split-panel design was discarded at the owner's request.
 
-Validation: 19 Node cloud/chart-session tests, broker isolation guards, production
+Validation: 20 Node cloud/chart-session tests, broker isolation guards, production
 web build, and headless Chromium checks. The real popup HTML reached its chart
 dashboard after fresh sign-in/broker selection and a restored session using
 mock Chrome/broker responses, with no JavaScript errors or Start Bot messages.
