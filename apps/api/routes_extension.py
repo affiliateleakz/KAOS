@@ -92,6 +92,17 @@ async def v1_license(request: Request, user: dict = Depends(get_current_user)):
     return await compute_license(user, device, broker=broker)
 
 
+@v1.get("/extension/me")
+async def extension_me(request: Request, user: dict = Depends(get_current_user)):
+    """Current extension session, with a device-checked license and server entitlements."""
+    license_status = await v1_license(request, user)
+    return {
+        "user": public_user(user),
+        "license": license_status,
+        "entitlements": await get_entitlements(user),
+    }
+
+
 # ---------- Devices ----------
 @v1.post("/devices/register")
 async def register_device(req: DeviceReq, request: Request, user: dict = Depends(get_current_user)):
