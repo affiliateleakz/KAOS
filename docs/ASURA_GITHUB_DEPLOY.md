@@ -105,3 +105,33 @@ checkout's origin to `git@github.com:affiliateleakz/KAOS.git` and its local
 `StrictHostKeyChecking=yes`. Verify GitHub's host fingerprint independently.
 Updating from Remote still requires a manual click/pull; this setup is not a
 GitHub push webhook and does not automatically activate each new commit.
+
+### Explicit first activation in login-validation mode
+
+The owner has separately requested a live update and declined a full backup.
+`scripts/cpanel_activate.py --revision FULL_PREPARED_SHA` verifies a prepared
+release without installing it; adding `--activate` installs it into the existing
+website/backend paths. The prepared SHA may precede the activation helper commit
+when the application sources are unchanged. It checks hashes, archive paths,
+symlink destinations and dependencies before writing. The live backend `.env`,
+website `.htaccess`, uploads and legacy `wsgi_app.py` remain. It does not delete
+obsolete assets, migrate the DB, seed accounts, install dependencies or restart
+Passenger. Writes are atomic per file, not across the entire release; an I/O
+failure can leave a partially installed release. No full backup is made.
+
+The generated startup file loads the existing backend-root `.env`. It forces
+Coinbase live orders and Stripe credentials off, and temporarily permits writes
+only for authentication and device registration. Other write requests and all
+`/api/billing` requests return 503. This is intentionally a sign-in validation
+release, not approval to trade or charge users. Existing GET handlers retain
+their normal behavior and may perform routine metadata updates. Restart through
+cPanel after installation; check `/api`, extension email sign-in, registration,
+licenses, revoked devices, refresh/logout, Google OAuth and browser session
+behavior. Google remains dependent on correct server/provider client settings.
+Do not remove the validation restrictions until separately authorized.
+
+If the new API fails, restore the known legacy entrypoint importing
+`from wsgi_app import application` with the backend directory in `sys.path`,
+then restart through cPanel. This recovers the old runtime but does not undo
+website asset updates or any account/session writes made during login tests.
+Keep the extension login attempt disconnected from broker execution.
