@@ -152,3 +152,21 @@ prepared revision to refresh just `backend/passenger_wsgi.py`. Dependencies and
 the release hashes are still checked first. Source files, frontend assets, .env,
 .htaccess and databases are not rewritten by this option. Restart the API in
 cPanel afterward. Login-validation restrictions remain enabled.
+
+### Device management during login validation
+
+The validation gate permits the existing authenticated single-device revocation
+handlers: member DELETE `/api/v1/devices/{id}` and administrator POST
+`/api/admin/devices/{id}/revoke`. Member ownership filters and administrator role
+checks remain in those handlers. Mass revocation and other non-authentication
+writes remain blocked; no plan, device limit or revoked flag is overridden.
+Refresh only the entrypoint to apply this exception to an installed release.
+
+Extension 1.7.14 preserves the registration endpoint's detail (device limit,
+revoked installation or denied bot access) and displays it on the blocked screen.
+The Manage Devices button opens the member devices page. Re-check still performs
+registration and license checks; website sign-in alone cannot change them.
+For an unpacked extension, update files in the existing installation directory
+and click Reload: removing/reinstalling or selecting a different directory can
+change extension/install identity and consume another device slot. Do not delete
+or revoke devices belonging to other users to troubleshoot the owner account.

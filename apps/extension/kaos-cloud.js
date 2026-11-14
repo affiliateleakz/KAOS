@@ -207,8 +207,14 @@
         extensionVersion: (chrome.runtime.getManifest && chrome.runtime.getManifest().version) || '1.0'
       })
     });
-    if (res.status === 403) { var e = new Error('Device not authorized'); e.kind = 'DEVICE_NOT_AUTHORIZED'; throw e; }
-    if (!res.ok) { var e2 = new Error('device register failed'); e2.kind = 'API_ERROR'; throw e2; }
+    if (!res.ok) {
+      var failed = await res.json().catch(function () { return {}; });
+      var detail = typeof failed.detail === 'string' ? failed.detail.slice(0, 240) : '';
+      var error = new Error(detail || 'Device registration failed (HTTP ' + res.status + ')');
+      error.kind = res.status === 403 ? 'DEVICE_NOT_AUTHORIZED' : 'API_ERROR';
+      error.httpStatus = res.status;
+      throw error;
+    }
     return res.json();
   }
 

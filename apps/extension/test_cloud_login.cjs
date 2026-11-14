@@ -6,7 +6,7 @@ function cloud(responses) {
   const storage = {}, calls = [];
   const context = {module: {exports: {}}, crypto: {randomUUID: () => 'device-test'},
     setTimeout, clearTimeout, AbortController,
-    chrome: {storage: {local: {
+    chrome: {runtime: {getManifest: () => ({version:"1.7.14"})}, storage: {local: {
       get: (keys, cb) => cb(storage), set: (obj, cb) => {Object.assign(storage, obj); cb();}
     }}},
     fetch: async (url, opts) => {
@@ -43,4 +43,24 @@ test('cookie-only legacy response cannot establish an extension session', async 
   const c = cloud([{status:200, body:{user:{id:'u1'}}}]);
   await assert.rejects(c.api.login('member@example.com', 'secret'), /access token/);
   assert.equal(c.storage.kaos_tokens, undefined);
+});
+
+for (const detail of ['Device limit reached (1)', 'Device access revoked', 'Bot access is not authorized']) {
+  test('device registration preserves server reason: ' + detail, async () => {
+    const c = cloud([{status:403, body:{detail}}]);
+    await assert.rejects(c.api.registerDevice(), e => e.message === detail && e.httpStatus === 403);
+    assert.equal(c.calls.length, 1);
+  });
+}
+test('registration outage is reported as an API failure rather than device revocation', async () => {
+  const c = cloud([{status:503, body:{detail:'Login validation mode: this operation is disabled'}}]);
+  await assert.rejects(c.api.registerDevice(), e => e.kind === 'API_ERROR' && e.httpStatus === 503);
+});
+test('startup carries the exact registration refusal into the blocked screen', async () => {
+  const c = cloud([{status:200, body:{accessToken:'access', user:{id:'u1'}}},
+    {status:403, body:{detail:'Device limit reached (1)'}}]);
+  await c.api.login('member@example.com', 'secret');
+  const state = await c.api.startup();
+  assert.equal(state.step, 'BLOCKED');
+  assert.equal(state.detail, 'Device limit reached (1)');
 });

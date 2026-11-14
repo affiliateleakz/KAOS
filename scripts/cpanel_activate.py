@@ -12,6 +12,7 @@ import tempfile
 from zipfile import ZipFile
 
 WRAPPER = '''import os
+import re
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
@@ -34,6 +35,13 @@ async def login_validation_only(request, call_next):
     auth = path.startswith(("/api/auth/", "/api/v1/auth/"))
     allowed_write = auth or path in (
         "/api/v1/devices/register", "/api/v1/extension/google/access-token")
+    # These handlers still enforce the authenticated owner/admin authority.
+    device_revoke = (
+        request.method == "DELETE" and re.fullmatch(r"/api/v1/devices/[^/]+", path)
+    ) or (
+        request.method == "POST" and re.fullmatch(r"/api/admin/devices/[^/]+/revoke", path)
+    )
+    allowed_write = allowed_write or bool(device_revoke)
     if (path.startswith("/api/billing") or
             (request.method not in ("GET", "HEAD", "OPTIONS") and not allowed_write)):
         return JSONResponse({"detail": "Login validation mode: this operation is disabled"}, status_code=503)

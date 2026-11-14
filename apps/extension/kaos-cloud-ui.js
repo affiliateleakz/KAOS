@@ -127,13 +127,15 @@
     var st = state.status || 'LICENSE_INVALID';
     card.appendChild(el('div', 'kaos-status-big kaos-red', STATUS_LABEL[st] || st));
     var reasons = (state.license && state.license.reasons) || [];
-    if (st === 'DEVICE_NOT_AUTHORIZED') card.appendChild(el('div', 'kaos-muted', 'This device is not authorized or your device limit is reached. Manage devices in your KAOS dashboard.'));
+    if (state.detail) card.appendChild(el('div', 'kaos-muted', state.detail));
+    else if (st === 'DEVICE_NOT_AUTHORIZED') card.appendChild(el('div', 'kaos-muted', 'This installation is not authorized. Check your registered devices or account access.'));
     else {
       var msgs = (state.license && state.license.reasonMessages) || [];
       if (msgs.length) msgs.forEach(function (m) { card.appendChild(el('div', 'kaos-muted', m)); });
       else card.appendChild(el('div', 'kaos-muted', 'Your KAOS membership or entitlement is not active. ' + (reasons.length ? '(' + reasons.join(', ') + ')' : '')));
     }
-    var manage = el('a', 'kaos-btn kaos-btn-gold', 'MANAGE MEMBERSHIP'); manage.href = 'https://tradingwithkaos.com/dashboard'; manage.target = '_blank';
+    var deviceProblem = st === 'DEVICE_NOT_AUTHORIZED' || st === 'DEVICE_REGISTRATION_FAILED';
+    var manage = el('a', 'kaos-btn kaos-btn-gold', deviceProblem ? 'MANAGE DEVICES' : 'MANAGE MEMBERSHIP'); manage.href = deviceProblem ? 'https://tradingwithkaos.com/dashboard/devices' : 'https://tradingwithkaos.com/dashboard'; manage.target = '_blank';
     manage.setAttribute('data-testid', 'kaos-blocked-manage');
     card.appendChild(manage);
     var row = el('div', 'kaos-row');

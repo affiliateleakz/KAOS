@@ -48,8 +48,8 @@
     "nativeMessaging",
     "identity"
   ],
-  "version": "1.7.13",
-  "version_name": "1.7.13 · BROKER LOGIN ISOLATION",
+  "version": "1.7.14",
+  "version_name": "1.7.14 · DEVICE STATUS",
   "web_accessible_resources": [
     {
       "resources": [
