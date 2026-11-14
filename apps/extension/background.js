@@ -250,11 +250,14 @@ function v219Stop(){
 }
 
 chrome.runtime.onStartup.addListener(() => {
+  // Registrations are non-persistent; signed-out browser startups never hook broker traffic.
+  kaosAuthorizedPo = false;
   botState = { running: false, tabId: null, config: null };
   chrome.storage.local.set({ botRunning: false });
 });
 
 chrome.runtime.onInstalled.addListener(() => {
+  kaosAuthorizedPo = false;
   botState = { running: false, tabId: null, config: null };
   chrome.storage.local.set({ botRunning: false });
 });
@@ -322,6 +325,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // existing bot handler never hijacks their sendResponse channel.
   if (msg && typeof msg.type === 'string' && msg.type.indexOf('KAOS_') === 0) return false;
   if (msg.type === 'START_BOT') {
+    if (!kaosAuthorizedPo) { sendResponse({ok:false,error:'KAOS sign-in and broker connection required'}); return false; }
     botState.running = true;
     botState.tabId   = msg.tabId;
     botState.config  = msg;
@@ -550,27 +554,74 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 });
 
 
-// KAOS 1.6.7 — attach to an already-open Pocket Option page without requiring F5.
-const kaosPoReloadStamp=new Map();
-async function kaosEnsurePoAttached(tabId){
-  if(!tabId)return {ok:false,reason:'NO_TAB'};
+// KAOS broker isolation: no Pocket Option page scripts are registered at install.
+// A member must authenticate and explicitly connect to Pocket Option first.
+const KAOS_PO_PATTERNS = [
+  'https://pocketoption.com/*', 'https://*.pocketoption.com/*',
+  'https://platform58.po2.capital/*', 'https://p.finance/*',
+  'https://po.company/*', 'https://po1.capital/*', 'https://pocket-link22.co/*'
+];
+const KAOS_PO_BRIDGE_SCRIPT = 'kaos-authorized-po-bridge';
+const KAOS_PO_ENGINE_SCRIPT = 'kaos-authorized-po-engine';
+const KAOS_PO_SCRIPT_IDS = [KAOS_PO_BRIDGE_SCRIPT, KAOS_PO_ENGINE_SCRIPT];
+let kaosAuthorizedPo = false;
+const kaosAttachedTabIds = new Set();
+
+async function kaosStopBrokerIntegration() {
+  kaosAuthorizedPo = false;
+  botState.running = false;
+  botState.config = null;
+  await chrome.storage.local.set({botRunning:false, kaosPoAttached:false});
+  const existing = await chrome.scripting.getRegisteredContentScripts({ids:KAOS_PO_SCRIPT_IDS});
+  if (existing.length) await chrome.scripting.unregisterContentScripts({ids:existing.map(s=>s.id)});
+  // A MAIN-world wrapper persists until the document is unloaded. Reload only
+  // documents to which KAOS attached, restoring the broker's native WebSocket.
+  const tabs = [...kaosAttachedTabIds];
+  kaosAttachedTabIds.clear();
+  for(const id of tabs) {
+    try { await chrome.tabs.reload(id, {bypassCache:false}); } catch (_) {}
+  }
+}
+
+async function kaosPermitBrokerIntegration() {
+  const state = await self.KaosCloud.startup();
+  const broker = String(state.platform || '').toLowerCase();
+  if (state.step !== 'DASHBOARD' || state.status !== 'CONNECTED' ||
+      !state.license?.authorized ||
+      (broker !== 'pocketoption' && broker !== 'pocket_option')) {
+    throw new Error('Sign in to KAOS and select Pocket Option before attaching broker scripts');
+  }
+  const existing = await chrome.scripting.getRegisteredContentScripts({ids:KAOS_PO_SCRIPT_IDS});
+  if (existing.length) await chrome.scripting.unregisterContentScripts({ids:existing.map(x=>x.id)});
+  await chrome.scripting.registerContentScripts([
+    {id:KAOS_PO_BRIDGE_SCRIPT, matches:KAOS_PO_PATTERNS,
+     js:['po-bridge.js'], runAt:'document_start', world:'MAIN', persistAcrossSessions:false},
+    {id:KAOS_PO_ENGINE_SCRIPT, matches:KAOS_PO_PATTERNS,
+     js:['candidate7b_strategy.js','kaos_expiry_collector.js','content.js','kaos-cloud-ui.js'],
+     css:['kaos-cloud-ui.css'], runAt:'document_idle', world:'ISOLATED', persistAcrossSessions:false}
+  ]);
+  kaosAuthorizedPo = true;
+  return state;
+}
+
+async function kaosEnsurePoAttached(tabId) {
+  if(!tabId) return {ok:false,reason:'NO_TAB'};
+  if(!kaosAuthorizedPo) return {ok:false,reason:'KAOS_AUTH_REQUIRED'};
+  const tab = await chrome.tabs.get(tabId);
+  if(!kaosIsSupportedPoUrl(tab.url))return {ok:false,reason:'NOT_POCKET_OPTION'};
   try{
-    const pong=await chrome.tabs.sendMessage(tabId,{type:'KAOS_PO_PING'}).catch(()=>null);
-    if(pong&&pong.ok)return {ok:true,alreadyAttached:true};
+    const pong=await chrome.tabs.sendMessage(tabId,{type:'KAOS_PO_PING'});
+    if(pong?.ok){kaosAttachedTabIds.add(tabId);return {ok:true,alreadyAttached:true};}
   }catch(_){}
-  // Do NOT execute candidate7b_strategy.js/content.js manually. They contain the
-  // live chart/candle stores and are manifest-managed. A second isolated-world
-  // injection can redeclare top-level engine identifiers and leave Charts dead.
-  const now=Date.now(),last=kaosPoReloadStamp.get(tabId)||0;
-  if(now-last<15000)return {ok:false,reason:'WAITING_FOR_MANIFEST_CONTENT'};
-  kaosPoReloadStamp.set(tabId,now);
+  kaosAttachedTabIds.add(tabId);
   try{
     await chrome.tabs.reload(tabId,{bypassCache:false});
-    return {ok:true,reloaded:true,reason:'MANIFEST_REATTACH'};
+    return {ok:true,reloaded:true,reason:'AUTHORIZED_ATTACH'};
   }catch(e){return {ok:false,reason:'RELOAD_FAILED',error:String(e&&e.message||e)};}
 }
 async function kaosEnsureAnyPoAttached(){
-  const tabs=await chrome.tabs.query({url:['https://pocketoption.com/*','https://*.pocketoption.com/*','https://platform58.po2.capital/*','https://p.finance/*','https://po.company/*','https://po1.capital/*','https://pocket-link22.co/*']});
+  if(!kaosAuthorizedPo)return {ok:false,reason:'KAOS_AUTH_REQUIRED'};
+  const tabs=await chrome.tabs.query({url:KAOS_PO_PATTERNS});
   if(!tabs?.length)return {ok:false,reason:'NO_PO_TAB'};
   return kaosEnsurePoAttached(tabs[0].id);
 }
@@ -769,7 +820,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           catch (startupError) { state = {status:'OFFLINE', authenticated:true, detail:String(startupError?.message || startupError)}; }
           sendResponse({ ok: true, state }); break;
         }
-        case 'KAOS_LOGOUT': await self.KaosCloud.logout(); sendResponse({ ok: true }); break;
+        case 'KAOS_LOGOUT': await kaosStopBrokerIntegration(); await self.KaosCloud.logout(); sendResponse({ ok: true }); break;
         case 'KAOS_GET_PLATFORMS': sendResponse({ ok: true, platforms: await self.KaosCloud.platforms() }); break;
         case 'KAOS_SELECT_PLATFORM':
           await self.KaosCloud.selectPlatform(msg.platform, msg.remember);
@@ -795,7 +846,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             await chrome.tabs.update(poTab.id, { active: true });
             if (poTab.windowId != null) await chrome.windows.update(poTab.windowId, { focused: true });
           }
+          // No page injection until the KAOS session, membership/device and
+          // selected broker are accepted by the server.
+          await kaosPermitBrokerIntegration();
           await chrome.storage.local.set({ KAOSTargetTabId: poTab.id, KAOSTargetWindowId: poTab.windowId, kaosPoAttached: true });
+          await kaosEnsurePoAttached(poTab.id);
           KAOS_FLOATING_WINDOW.targetTabId = poTab.id;
           KAOS_FLOATING_WINDOW.targetWindowId = poTab.windowId;
           sendResponse({ ok: true, tabId: poTab.id, state: await self.KaosCloud.startup() }); break;
@@ -840,10 +895,10 @@ function kaosIsSupportedPoUrl(url){
   try{const h=new URL(url||'').hostname.toLowerCase();return h==='pocketoption.com'||h.endsWith('.pocketoption.com')||h==='platform58.po2.capital'||h==='p.finance'||h==='po.company'||h==='po1.capital'||h==='pocket-link22.co';}catch(_){return false;}
 }
 chrome.tabs.onUpdated.addListener((tabId,changeInfo,tab)=>{
-  if(tab&&kaosIsSupportedPoUrl(tab.url)&&(changeInfo.status==='complete'||changeInfo.url)) kaosEnsurePoAttached(tabId).catch(()=>{});
+  if(kaosAuthorizedPo&&tab&&kaosIsSupportedPoUrl(tab.url)&&(changeInfo.status==='complete'||changeInfo.url)) kaosEnsurePoAttached(tabId).catch(()=>{});
 });
 chrome.tabs.onActivated.addListener(async({tabId})=>{
-  try{const tab=await chrome.tabs.get(tabId);if(kaosIsSupportedPoUrl(tab.url))await kaosEnsurePoAttached(tabId);}catch(_){}
+  try{const tab=await chrome.tabs.get(tabId);if(kaosAuthorizedPo&&kaosIsSupportedPoUrl(tab.url))await kaosEnsurePoAttached(tabId);}catch(_){}
 });
 
 chrome.runtime.onMessage.addListener((msg,_sender,sendResponse)=>{
