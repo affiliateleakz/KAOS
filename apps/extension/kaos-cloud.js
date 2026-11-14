@@ -93,7 +93,7 @@
     var t = await getTokens();
     if (!t.refreshToken) return false;
     try {
-      var res = await fetch((await apiBase()) + '/extension/refresh', {
+      var res = await fetch((await apiBase()) + '/auth/refresh', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken: t.refreshToken })
       });
@@ -122,7 +122,7 @@
   async function login(email, password) {
     var res;
     try {
-      res = await fetch((await apiBase()) + '/extension/login', {
+      res = await fetch((await apiBase()) + '/auth/login', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email, password: password })
       });
@@ -172,7 +172,7 @@
   }
 
   async function logout() {
-    try { await authFetch('/extension/logout', { method: 'POST' }); } catch (e) {}
+    try { await authFetch('/auth/logout', { method: 'POST' }); } catch (e) {}
     await setTokens({});
     await sset({ kaos_user: null, kaos_cloud_state: 'LOGGED_OUT' });
     return true;
@@ -234,6 +234,20 @@
   async function startup() {
     var t = await getTokens();
     if (!t.accessToken && !t.refreshToken) return { step: 'LOGIN', status: 'LOGGED_OUT' };
+    // Register first: server license lookup requires a device associated with this member.
+    // Device registration is server-authoritative and refuses revoked or over-limit IDs.
+    var device = null;
+    try { device = await registerDevice(); }
+    catch (e) {
+      if (e.kind === 'SESSION_EXPIRED') return { step: 'LOGIN', status: 'SESSION_EXPIRED' };
+      if (e.kind === 'OFFLINE') return { step: 'OFFLINE', status: 'OFFLINE', serverOnline: false };
+      return { step: 'BLOCKED', status: e.kind === 'DEVICE_NOT_AUTHORIZED' ?
+               'DEVICE_NOT_AUTHORIZED' : 'DEVICE_REGISTRATION_FAILED',
+               detail: String(e && e.message || 'Device registration failed') };
+    }
+    if (!device || !device.id || device.revoked)
+      return { step: 'BLOCKED', status: 'DEVICE_REGISTRATION_FAILED',
+               detail: 'Device registration returned an invalid or revoked device' };
     var info;
     try { info = await me(); }
     catch (e) {
@@ -253,27 +267,6 @@
     var cl = classifyLicense(info.license);
     if (!cl.ok) return { step: 'BLOCKED', status: cl.status, license: info.license, user: info.user, entitlements: info.entitlements };
 
-    var device = null;
-    try { device = await registerDevice(); }
-    catch (e) {
-      if (e.kind === 'DEVICE_NOT_AUTHORIZED') return { step: 'BLOCKED', status: 'DEVICE_NOT_AUTHORIZED', license: info.license, user: info.user };
-      if (e.kind === 'SESSION_EXPIRED') return { step: 'LOGIN', status: 'SESSION_EXPIRED' };
-      if (e.kind === 'OFFLINE') {
-        var hs2=await health();
-        if (hs2 && hs2.ok) return { step:'LOGIN', status:'ACCOUNT_CONNECTION_ERROR', serverOnline:true, health:hs2,
-          detail:'Server health is online but device registration could not complete.' };
-        return { step:'OFFLINE', status:'OFFLINE', serverOnline:false, health:hs2 };
-      }
-      // Never proceed to the trading dashboard after a failed registration.
-      // Unknown HTTP errors must be visible rather than silently ignored.
-      return { step:'BLOCKED', status:'DEVICE_REGISTRATION_FAILED', serverOnline:true,
-               detail:String(e && e.message || 'Device registration failed'), license:info.license, user:info.user };
-    }
-    if (!device || !device.id || device.revoked) {
-      return { step:'BLOCKED', status:'DEVICE_REGISTRATION_FAILED', serverOnline:true,
-               detail:'Device registration returned an invalid or revoked device',
-               license:info.license, user:info.user };
-    }
 
     var plat = await getPlatform();
     // Membership/auth/device establish cloud connectivity. Optional config/release
