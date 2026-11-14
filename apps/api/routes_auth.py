@@ -117,7 +117,7 @@ async def register(req: RegisterReq, response: Response):
     # Registration must not let a user verify an unowned email address.
     # The demo token is available only in development; production requires a
     # separately authenticated email delivery/verification flow.
-    if os.environ.get("KAOS_ENV", "").lower() not in ("production", "prod"):
+    if os.environ.get("KAOS_ENV", "production").lower() in ("development", "dev", "test"):
         out["verificationToken"] = vtoken
     return out
 
