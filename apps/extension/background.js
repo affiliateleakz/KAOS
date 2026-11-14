@@ -566,6 +566,7 @@ const KAOS_PO_ENGINE_SCRIPT = 'kaos-authorized-po-engine';
 const KAOS_PO_SCRIPT_IDS = [KAOS_PO_BRIDGE_SCRIPT, KAOS_PO_ENGINE_SCRIPT];
 let kaosAuthorizedPo = false;
 const kaosAttachedTabIds = new Set();
+const kaosAttachAttemptAt = new Map();
 
 async function kaosStopBrokerIntegration() {
   kaosAuthorizedPo = false;
@@ -578,6 +579,7 @@ async function kaosStopBrokerIntegration() {
   // documents to which KAOS attached, restoring the broker's native WebSocket.
   const tabs = [...kaosAttachedTabIds];
   kaosAttachedTabIds.clear();
+  kaosAttachAttemptAt.clear();
   for(const id of tabs) {
     try { await chrome.tabs.reload(id, {bypassCache:false}); } catch (_) {}
   }
@@ -613,6 +615,9 @@ async function kaosEnsurePoAttached(tabId) {
     const pong=await chrome.tabs.sendMessage(tabId,{type:'KAOS_PO_PING'});
     if(pong?.ok){kaosAttachedTabIds.add(tabId);return {ok:true,alreadyAttached:true};}
   }catch(_){}
+  const now = Date.now(), last = kaosAttachAttemptAt.get(tabId) || 0;
+  if (now - last < 15000) return {ok:false,reason:'ATTACH_RETRY_COOLDOWN'};
+  kaosAttachAttemptAt.set(tabId, now);
   kaosAttachedTabIds.add(tabId);
   try{
     await chrome.tabs.reload(tabId,{bypassCache:false});
