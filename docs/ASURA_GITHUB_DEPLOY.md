@@ -189,3 +189,17 @@ containing both API and built website changes, restart the API, then revoke only
 the obsolete device through the authenticated dashboard and re-check the current
 extension. This record-shape incompatibility is covered by regression tests; the
 actual live record was not exported or modified during development.
+
+### Targeted hosting-operator recovery of the obsolete owner device
+
+When dashboard revocation cannot be completed, the account owner can run
+`scripts/retire_legacy_owner_device.py` using the existing hosting virtualenv.
+Default execution is read-only. `--retire` explicitly retires the known obsolete
+device only if there is exactly one `owner` account, exactly one active device
+for that account, and that device has version `1.1.6`. It updates only the matched
+MongoDB `_id` with the same owner, version and active-state filters. All ambiguous
+cases stop without mutation; a failed/racing update is not reported as success.
+It reads credentials from the existing backend `.env` without printing them.
+No website deployment or API restart is needed. The current extension must still
+register normally through the account/device limit and license checks. This is
+an explicit operator repair, not an automatic device replacement policy.
