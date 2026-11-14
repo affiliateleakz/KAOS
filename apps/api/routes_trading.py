@@ -80,9 +80,11 @@ class FailReq(BaseModel):
 async def _require_authorized(request: Request, user: dict, broker: str = "pocket_option"):
     """Trading endpoints require a live, server-authorized license + registered device."""
     did = request.headers.get("X-Device-Id")
-    device = None
-    if did:
-        device = await db.devices.find_one({"installId": did, "userId": user["id"]})
+    if not did or not did.strip():
+        raise HTTPException(status_code=403, detail="Registered device required")
+    device = await db.devices.find_one({"installId": did, "userId": user["id"]})
+    if not device or device.get("revoked"):
+        raise HTTPException(status_code=403, detail="Device not authorized")
     lic = await compute_license(user, device, broker)
     if not lic["authorized"]:
         raise HTTPException(status_code=403, detail={"error": "not_authorized", "license": lic})
