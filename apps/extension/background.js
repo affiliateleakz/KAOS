@@ -565,10 +565,12 @@ const KAOS_PO_BRIDGE_SCRIPT = 'kaos-authorized-po-bridge';
 const KAOS_PO_ENGINE_SCRIPT = 'kaos-authorized-po-engine';
 const KAOS_PO_SCRIPT_IDS = [KAOS_PO_BRIDGE_SCRIPT, KAOS_PO_ENGINE_SCRIPT];
 let kaosAuthorizedPo = false;
+let kaosBrokerGeneration = 0;
 const kaosAttachedTabIds = new Set();
 const kaosAttachAttemptAt = new Map();
 
 async function kaosStopBrokerIntegration() {
+  kaosBrokerGeneration++;
   kaosAuthorizedPo = false;
   botState.running = false;
   botState.config = null;
@@ -586,7 +588,9 @@ async function kaosStopBrokerIntegration() {
 }
 
 async function kaosPermitBrokerIntegration() {
+  const generation = kaosBrokerGeneration;
   const state = await self.KaosCloud.startup();
+  if (generation !== kaosBrokerGeneration) throw new Error('KAOS session changed during broker connection');
   const broker = String(state.platform || '').toLowerCase();
   if (state.step !== 'DASHBOARD' || state.status !== 'CONNECTED' ||
       !state.license?.authorized ||
@@ -594,7 +598,9 @@ async function kaosPermitBrokerIntegration() {
     throw new Error('Sign in to KAOS and select Pocket Option before attaching broker scripts');
   }
   const existing = await chrome.scripting.getRegisteredContentScripts({ids:KAOS_PO_SCRIPT_IDS});
+  if (generation !== kaosBrokerGeneration) throw new Error('KAOS session changed during broker connection');
   if (existing.length) await chrome.scripting.unregisterContentScripts({ids:existing.map(x=>x.id)});
+  if (generation !== kaosBrokerGeneration) throw new Error('KAOS session changed during broker connection');
   await chrome.scripting.registerContentScripts([
     {id:KAOS_PO_BRIDGE_SCRIPT, matches:KAOS_PO_PATTERNS,
      js:['po-bridge.js'], runAt:'document_start', world:'MAIN', persistAcrossSessions:false},
@@ -602,6 +608,10 @@ async function kaosPermitBrokerIntegration() {
      js:['candidate7b_strategy.js','kaos_expiry_collector.js','content.js','kaos-cloud-ui.js'],
      css:['kaos-cloud-ui.css'], runAt:'document_idle', world:'ISOLATED', persistAcrossSessions:false}
   ]);
+  if (generation !== kaosBrokerGeneration) {
+    await chrome.scripting.unregisterContentScripts({ids:KAOS_PO_SCRIPT_IDS});
+    throw new Error('KAOS session changed during broker connection');
+  }
   kaosAuthorizedPo = true;
   return state;
 }

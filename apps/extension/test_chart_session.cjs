@@ -56,3 +56,27 @@ test('broker picker preserves the connection error and does not select failed br
 test('broker picker cannot connect before cloud sign-in',async()=>{
   const c=picker({step:'LOGIN'},{ok:true,state:connected}); await c.init(); await c.choose(); assert.equal(c.calls.length,1);
 });
+function permitGate({deferStartup=false,deferRegistration=false}={}) {
+  const source=fs.readFileSync(__dirname+'/background.js','utf8');
+  const start=source.indexOf('async function kaosPermitBrokerIntegration()');
+  const end=source.indexOf('\nasync function kaosEnsurePoAttached',start);
+  const registered=[],unregistered=[];let finishStartup,finishRegistration;
+  const context={self:{KaosCloud:{startup:()=>deferStartup?new Promise(r=>finishStartup=()=>r(connected)):Promise.resolve(connected)}},
+    KAOS_PO_SCRIPT_IDS:['bridge','engine'],KAOS_PO_PATTERNS:['https://pocketoption.com/*'],KAOS_PO_BRIDGE_SCRIPT:'bridge',KAOS_PO_ENGINE_SCRIPT:'engine',
+    chrome:{scripting:{getRegisteredContentScripts:async()=>[],unregisterContentScripts:async opts=>unregistered.push(opts),
+      registerContentScripts:opts=>{registered.push(opts);return deferRegistration?new Promise(r=>finishRegistration=r):Promise.resolve();}}}};
+  vm.createContext(context);
+  vm.runInContext('let kaosBrokerGeneration=0;let kaosAuthorizedPo=false;'+source.slice(start,end)+
+    ';globalThis.permit=kaosPermitBrokerIntegration;globalThis.cancel=()=>kaosBrokerGeneration++;globalThis.authorized=()=>kaosAuthorizedPo;',context);
+  return {context,registered,unregistered,finishStartup:()=>finishStartup(),finishRegistration:()=>finishRegistration()};
+}
+test('logout during cloud authorization prevents broker script registration',async()=>{
+  const c=permitGate({deferStartup:true});const pending=c.context.permit();c.context.cancel();c.finishStartup();
+  await assert.rejects(pending,/session changed/);assert.equal(c.registered.length,0);assert.equal(c.context.authorized(),false);
+});
+test('logout during broker script registration removes stale scripts',async()=>{
+  const c=permitGate({deferRegistration:true});const pending=c.context.permit();
+  while(!c.registered.length)await new Promise(r=>setImmediate(r));
+  c.context.cancel();c.finishRegistration();await assert.rejects(pending,/session changed/);
+  assert.equal(c.unregistered.length,1);assert.equal(c.context.authorized(),false);
+});
