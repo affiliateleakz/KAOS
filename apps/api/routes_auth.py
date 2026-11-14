@@ -114,7 +114,11 @@ async def register(req: RegisterReq, response: Response):
     rt = create_refresh_token(doc["id"], 0)
     set_auth_cookies(response, at, rt)
     out = _user_public(doc)
-    out["verificationToken"] = vtoken  # DEMO MODE only
+    # Registration must not let a user verify an unowned email address.
+    # The demo token is available only in development; production requires a
+    # separately authenticated email delivery/verification flow.
+    if os.environ.get("KAOS_ENV", "").lower() not in ("production", "prod"):
+        out["verificationToken"] = vtoken
     return out
 
 
@@ -167,7 +171,7 @@ async def logout(response: Response):
 
 @router.get("/me")
 async def me(user: dict = Depends(get_current_user)):
-    return user
+    return _user_public(user)
 
 
 @router.post("/refresh")
@@ -184,6 +188,8 @@ async def refresh(request: Request, response: Response):
     user = await db.users.find_one({"id": payload["sub"]})
     if not user or payload.get("ver", 0) != user.get("token_version", 0):
         raise HTTPException(status_code=401, detail="Session expired")
+    if user.get("account_status", "active") != "active" or user.get("extension_access_revoked"):
+        raise HTTPException(status_code=403, detail="Account access disabled")
     tv = user.get("token_version", 0)
     at = create_access_token(user["id"], user["email"], tv)
     rt = create_refresh_token(user["id"], tv)
