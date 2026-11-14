@@ -100,6 +100,8 @@ jobs:
                   raise AssertionError(f"Missing extension runtime asset: {file}")
           print(f"Checked {len(scripts)} extension runtime assets")
           PY
+      - name: Verify Pocket Option login isolation
+        run: python -m pytest -q apps/extension/test_broker_login_isolation.py
       - name: Syntax-check extension JavaScript
         run: |
           node --check apps/extension/background.js
