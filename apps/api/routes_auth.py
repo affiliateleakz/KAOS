@@ -52,10 +52,18 @@ async def send_password_reset_email(to_email: str, token: str) -> bool:
         return False
 
 
+# Public account responses use an explicit allowlist. Mongo documents also contain
+# authentication, verification, Stripe, licensing and administrative fields.
+PUBLIC_ACCOUNT_FIELDS = frozenset({
+    "id", "email", "name", "username", "role", "avatar", "bio",
+    "email_verified", "auth_provider", "account_status", "onboarding_step",
+    "affiliate_status", "affiliate_ref", "membership_status", "membership_plan",
+    "membership_expires_at", "is_demo", "created_at", "updated_at",
+})
+
 def _user_public(user: dict) -> dict:
-    u = clean(dict(user))
-    u.pop("password_hash", None)
-    return u
+    safe = clean(dict(user))
+    return {key: safe[key] for key in PUBLIC_ACCOUNT_FIELDS if key in safe}
 
 
 async def _new_user_doc(email, name, username=None, password=None, provider="password",
