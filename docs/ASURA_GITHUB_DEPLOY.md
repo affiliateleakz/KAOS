@@ -70,3 +70,38 @@ prove a connection to Asura.
 
 See [issue #55 validation and activation gates](ISSUE_55_VALIDATION.md) for the
 current evidence, missing legacy-runtime inputs, and recovery procedure.
+
+## cPanel Git with a private GitHub deploy key
+
+For the existing checkout `/home/itsabout/repositories/KAOS`, `.cpanel.yml`
+now runs `scripts/cpanel_prepare.sh` when **Deploy HEAD Commit** is selected.
+The equivalent Terminal command is `bash scripts/cpanel_prepare.sh` from the
+checkout. Node 20 comes from `/opt/alt/alt-nodejs20/root/usr/bin`; Python uses
+the existing account's `virtualenv/tradingwithkaos.com/backend/3.11` environment.
+No dependency installation into the live Python environment is performed.
+
+This builds the React website with the existing API domain, builds both cPanel
+ZIPs, checks their hashes, and publishes an immutable private release under
+`~/kaos_cpanel_releases/<full-commit>/`. The complete source backend package
+includes API routes such as affiliates, and kaos-core. Extension distribution
+is separate; services/research/mobile are not automatically started by cPanel.
+A clean checkout is required. Preparation is serialized; a hard-killed process
+may leave `.prepare-lock`, which an operator should remove only after verifying
+no preparation is running. Failed temporary builds are cleaned on normal exit.
+
+**Deploy HEAD Commit currently means prepare, not activate.** It does not copy
+into `/home/itsabout/tradingwithkaos.com`, replace its `.htaccess`, change the
+legacy API entrypoint, or modify any database. The target installation remains
+the complete website plus backend at that path, but source/runtime parity and
+session/device/license checks remain prerequisites for the first live switch.
+Keep the existing root routing rule blocking backend/source folders. Existing
+`.env` is at the backend root; the new server expects environment variables or
+`apps/api/.env`, so activation must explicitly arrange loading the root settings
+without moving secrets into Git. Do not extract both ZIPs blindly over the site.
+
+Private GitHub access uses a read-only repository deploy key. Configure the
+checkout's origin to `git@github.com:affiliateleakz/KAOS.git` and its local
+`core.sshCommand` with the dedicated identity, `IdentitiesOnly=yes`, and
+`StrictHostKeyChecking=yes`. Verify GitHub's host fingerprint independently.
+Updating from Remote still requires a manual click/pull; this setup is not a
+GitHub push webhook and does not automatically activate each new commit.
