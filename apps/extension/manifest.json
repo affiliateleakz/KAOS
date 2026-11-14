@@ -11,45 +11,7 @@
   "background": {
     "service_worker": "background.js"
   },
-  "content_scripts": [
-    {
-      "js": [
-        "po-bridge.js"
-      ],
-      "matches": [
-        "https://*.pocketoption.com/*",
-        "https://p.finance/*",
-        "https://platform58.po2.capital/*",
-        "https://po.company/*",
-        "https://po1.capital/*",
-        "https://pocket-link22.co/*",
-        "https://pocketoption.com/*"
-      ],
-      "run_at": "document_start",
-      "world": "MAIN"
-    },
-    {
-      "js": [
-        "candidate7b_strategy.js",
-        "kaos_expiry_collector.js",
-        "content.js",
-        "kaos-cloud-ui.js"
-      ],
-      "matches": [
-        "https://*.pocketoption.com/*",
-        "https://p.finance/*",
-        "https://platform58.po2.capital/*",
-        "https://po.company/*",
-        "https://po1.capital/*",
-        "https://pocket-link22.co/*",
-        "https://pocketoption.com/*"
-      ],
-      "run_at": "document_idle",
-      "css": [
-        "kaos-cloud-ui.css"
-      ]
-    }
-  ],
+  "content_scripts": [],
   "description": "KAOS specialist reversal runner breakout per-expiry training research",
   "host_permissions": [
     "https://pocketoption.com/*",
@@ -86,8 +48,8 @@
     "nativeMessaging",
     "identity"
   ],
-  "version": "1.7.11",
-  "version_name": "1.7.11 · AI BOOTSTRAP ACCESS",
+  "version": "1.7.13",
+  "version_name": "1.7.13 · BROKER LOGIN ISOLATION",
   "web_accessible_resources": [
     {
       "resources": [
