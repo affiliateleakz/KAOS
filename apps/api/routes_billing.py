@@ -65,8 +65,8 @@ async def checkout(req: CheckoutReq, user: dict = Depends(get_current_user)):
     session = stripe.checkout.Session.create(
         mode="subscription", customer=customer_id,
         line_items=[{"price": price.id, "quantity": 1}],
-        success_url=f"{req.origin_url}/payment/success?session_id={{CHECKOUT_SESSION_ID}}",
-        cancel_url=f"{req.origin_url}/payment/cancel",
+        success_url=f"{os.environ['FRONTEND_URL'].rstrip('/')}/payment/success?session_id={{CHECKOUT_SESSION_ID}}",
+        cancel_url=f"{os.environ['FRONTEND_URL'].rstrip('/')}/payment/cancel",
         metadata={"user_id": user["id"], "plan_id": plan["id"], "lookup_key": plan["lookup_key"]})
     await db.subscriptions.insert_one({
         "id": new_id("sub"), "userId": user["id"], "session_id": session.id,
@@ -123,7 +123,7 @@ async def billing_portal(req: CheckoutReq, user: dict = Depends(get_current_user
     if not user.get("stripe_customer_id"):
         raise HTTPException(status_code=400, detail="No billing account")
     session = stripe.billing_portal.Session.create(customer=user["stripe_customer_id"],
-                                                    return_url=f"{req.origin_url}/dashboard/subscription")
+                                                    return_url=f"{os.environ['FRONTEND_URL'].rstrip('/')}/dashboard/subscription")
     return {"url": session.url}
 
 
