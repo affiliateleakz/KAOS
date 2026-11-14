@@ -226,6 +226,64 @@ async def reset_password(req: ResetReq):
     return {"ok": True}
 
 
+# ---- Direct Google Identity Services credential sign-in ----
+# This route is distinct from the legacy Emergent OAuth session integration.
+# Audience must come from the server configuration, never from the caller.
+async def _google_signin_identity(data: dict) -> dict:
+    email = str(data.get("email") or "").lower().strip()
+    google_id = str(data.get("sub") or "").strip()
+    if not email or not google_id or data.get("email_verified") not in (True, "true", "True"):
+        raise HTTPException(status_code=401, detail="Google email identity not verified")
+    user = await db.users.find_one({"email": email})
+    if user:
+        if user.get("google_id") and user.get("google_id") != google_id:
+            raise HTTPException(status_code=403, detail="Google account does not match linked identity")
+        if user.get("account_status", "active") in ("suspended", "banned", "deleted") or user.get("extension_access_revoked"):
+            raise HTTPException(status_code=403, detail="Account access disabled")
+        await db.users.update_one({"id": user["id"]}, {"$set": {
+            "google_id": google_id,
+            "email_verified": True,
+            "avatar": user.get("avatar") or data.get("picture"),
+        }})
+    else:
+        doc = await _new_user_doc(email, data.get("name") or email, None, None,
+                                  provider="google", google_id=google_id,
+                                  avatar=data.get("picture"), verified=True)
+        await db.users.insert_one(dict(doc))
+        user = doc
+    return user
+
+
+@router.post("/google/credential")
+async def google_credential(request: Request, response: Response):
+    """Verify Google ID token; exchange it for first-party HttpOnly session cookies."""
+    from google.oauth2 import id_token
+    from google.auth.transport.requests import Request as GoogleRequest
+    import asyncio
+
+    client_id = os.environ.get("KAOS_GOOGLE_WEB_CLIENT_ID", "").strip()
+    if not client_id:
+        raise HTTPException(status_code=503, detail="Google sign-in is not configured")
+    body = await request.json()
+    credential = body.get("credential") if isinstance(body, dict) else None
+    if not isinstance(credential, str) or not credential or len(credential) > 8192:
+        raise HTTPException(status_code=400, detail="Google credential required")
+    try:
+        claims = await asyncio.to_thread(
+            id_token.verify_oauth2_token, credential, GoogleRequest(), client_id
+        )
+    except Exception as exc:
+        logger.warning("Google ID-token verification failed: %s", type(exc).__name__)
+        raise HTTPException(status_code=401, detail="Invalid Google credential") from exc
+    if claims.get("iss") not in ("accounts.google.com", "https://accounts.google.com"):
+        raise HTTPException(status_code=401, detail="Invalid Google issuer")
+    user = await _google_signin_identity(claims)
+    tv = user.get("token_version", 0)
+    set_auth_cookies(response, create_access_token(user["id"], user["email"], tv),
+                     create_refresh_token(user["id"], tv))
+    return _user_public(user)
+
+
 # ---- Emergent Google OAuth ----
 @router.post("/google/session")
 async def google_session(request: Request, response: Response):
