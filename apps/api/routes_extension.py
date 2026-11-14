@@ -7,6 +7,9 @@ from services import compute_license, public_user, audit_log
 from services_trading import get_entitlements
 from models import LoginReq, DeviceReq, SyncPushReq, AffiliateSubmitReq
 import jwt as pyjwt
+import os
+import httpx
+from routes_auth import _google_signin_identity
 
 v1 = APIRouter(prefix="/api/v1", tags=["extension-v1"])
 member = APIRouter(prefix="/api", tags=["member"])
@@ -100,6 +103,46 @@ async def extension_me(request: Request, user: dict = Depends(get_current_user))
         "user": {**public_user(user), "email": user.get("email")},
         "license": license_status,
         "entitlements": await get_entitlements(user),
+    }
+
+
+@v1.post("/extension/google/access-token")
+async def extension_google_access_token(request: Request):
+    """Exchange a Google-authenticated Chrome Identity access token for a KAOS JWT.
+
+    Google verifies the access token; the audience is pinned to the extension's
+    configured OAuth client ID, and email ownership is verified with Google.
+    """
+    expected_client = os.environ.get("KAOS_GOOGLE_EXTENSION_CLIENT_ID", "").strip()
+    if not expected_client:
+        raise HTTPException(status_code=503, detail="Extension Google sign-in not configured")
+    payload = await request.json()
+    token = payload.get("access_token") if isinstance(payload, dict) else None
+    if not isinstance(token, str) or not token or len(token) > 4096:
+        raise HTTPException(status_code=400, detail="Google access token required")
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            info_response = await client.get("https://oauth2.googleapis.com/tokeninfo",
+                                             params={"access_token": token})
+            if info_response.status_code != 200:
+                raise HTTPException(status_code=401, detail="Invalid Google access token")
+            info = info_response.json()
+            if info.get("aud") != expected_client and info.get("issued_to") != expected_client:
+                raise HTTPException(status_code=401, detail="Unrecognized Google OAuth client")
+            profile_response = await client.get(
+                "https://openidconnect.googleapis.com/v1/userinfo",
+                headers={"Authorization": "Bearer " + token})
+            if profile_response.status_code != 200:
+                raise HTTPException(status_code=401, detail="Google identity unavailable")
+            profile = profile_response.json()
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=503, detail="Google identity service unavailable") from exc
+    user = await _google_signin_identity(profile)
+    tv = user.get("token_version", 0)
+    return {
+        "accessToken": create_access_token(user["id"], user["email"], tv),
+        "refreshToken": create_refresh_token(user["id"], tv),
+        "user": {"id": user["id"], "username": user.get("username"), "email": user["email"]},
     }
 
 
