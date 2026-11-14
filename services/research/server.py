@@ -1,7 +1,7 @@
 """Local-only, research-only adapter for TauricResearch TradingAgents.
 No trading API, broker credentials, order routing, or live signal endpoint.
 """
-import json,os,re,datetime,traceback,statistics
+import json,os,re,datetime,traceback,statistics,hmac
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from urllib.parse import urlsplit
 
@@ -45,16 +45,39 @@ def _ema(vals,n):
     return result
 
 HOST='127.0.0.1';PORT=8765
+
+def origin_allowed(origin):
+    if origin is None:return True
+    configured=os.getenv('KAOS_RESEARCH_ALLOWED_ORIGINS','chrome-extension://gbobopmnjgeeegniphckfpalhnebapjm')
+    allowed={value.strip() for value in configured.split(',') if value.strip() not in ('','*','null')}
+    return origin in allowed
+
 class Handler(BaseHTTPRequestHandler):
     def reply(self,status,data):
         b=json.dumps(data,default=str).encode();self.send_response(status)
         self.send_header('Content-Type','application/json');self.send_header('Content-Length',str(len(b)))
-        self.send_header('Access-Control-Allow-Origin','*') # local-only binding; no broker secrets exposed
+        origin=self.headers.get('Origin')
+        if origin is not None and origin_allowed(origin):self.send_header('Access-Control-Allow-Origin',origin)
+        self.send_header('Vary','Origin')
         self.send_header('Access-Control-Allow-Methods','POST, GET, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers','Content-Type')
+        self.send_header('Access-Control-Allow-Headers','Content-Type, Authorization')
         self.end_headers();self.wfile.write(b)
-    def do_OPTIONS(self):self.reply(200,{'ok':True})
+    def authorize(self,preflight=False):
+        try:host=urlsplit('http://'+self.headers.get('Host','')).hostname
+        except ValueError:host=None
+        if host not in ('127.0.0.1','localhost','::1'):
+            self.reply(403,{'error':'Local Host header required'});return False
+        if not origin_allowed(self.headers.get('Origin')):
+            self.reply(403,{'error':'Origin not allowed'});return False
+        token=os.getenv('KAOS_RESEARCH_TOKEN','')
+        if token and not preflight and self.path!='/health':
+            if not hmac.compare_digest(self.headers.get('Authorization',''),'Bearer '+token):
+                self.reply(401,{'error':'Research authorization required'});return False
+        return True
+    def do_OPTIONS(self):
+        if self.authorize(preflight=True):self.reply(200,{'ok':True})
     def do_GET(self):
+        if not self.authorize():return
         if self.path=='/kaos-ai/archive':
             from kaos_ai_lab import list_archive
             return self.reply(200,{'datasets':list_archive(),'trade_authorized':False})
@@ -69,6 +92,12 @@ class Handler(BaseHTTPRequestHandler):
         except ImportError:installed=False
         self.reply(200,{'status':'ok','mode':'research-only','otc_research_supported':True,'tradingagents_installed':installed,'trading_enabled':False})
     def do_POST(self):
+        if not self.authorize():return
+        try:n=int(self.headers.get('Content-Length','0'))
+        except ValueError:return self.reply(400,{'error':'Invalid content length'})
+        if n<1:return self.reply(400,{'error':'A non-empty JSON body is required'})
+        if n>8000000:return self.reply(413,{'error':'Request too large'})
+        self.connection.settimeout(10)
         if self.path in ('/kaos-ai/ingest','/kaos-ai/notebook'):
             try:
                 n=int(self.headers.get('Content-Length','0'))

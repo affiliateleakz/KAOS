@@ -227,7 +227,8 @@ console.info('[KAOS BUILD] V24.1.287-B21 · BB WINNER PRO (15s BB20/2) + ACTIVE 
 //// ═══════════════════════════════════════════════════════════════
 (function () {
   'use strict';
-  console.info('[KAOS BUILD] V24.1.280 · PAYOUT-AWARE ENTRY FLOOR (90% backstop) · UNDER-92% AUTO PAIR-SWITCH · REAL+DEMO EXECUTION · BASELINE V24.1.152');
+  const KAOS_AUDIT_READ_ONLY = true;
+  console.info('[KAOS BUILD] 1.7.16 · read-only chart audit · order execution disabled');
   if (window.__poatContent137) return;
   window.__poatContent137 = true;
 
@@ -11157,7 +11158,7 @@ const t3MinConsensus = aiLearning ? 1 : 3;
   //  BRIDGE LISTENER
   // ════════════════════════════════════════════════════════════
   window.addEventListener('message', (ev) => {
-    if (!ev.data || !ev.data._poat) return;
+    if (ev.source !== window || !ev.data || !ev.data._poat) return;
     const msg = ev.data;
 
     if (msg.type === 'PREWARM_RESET') {
@@ -11199,6 +11200,7 @@ const t3MinConsensus = aiLearning ? 1 : 3;
     }
 
     if (msg.type === 'STREAM') {
+      if (!Array.isArray(msg.ticks)) return;
       // 1.1.28: Pocket Option can stream prices before it republishes updateHistory/
       // CHART_ASSET. For read-only charts, bind the first real streaming symbol
       // immediately instead of leaving activeAsset blank forever.
@@ -11213,7 +11215,7 @@ const t3MinConsensus = aiLearning ? 1 : 3;
         }
       }
       msg.ticks.forEach(tick => {
-        if (!tick.asset || isNaN(tick.price) || tick.price <= 0) return;
+        if (typeof tick.asset !== 'string' || !tick.asset || !Number.isFinite(Number(tick.price)) || Number(tick.price) <= 0) return;
 
         // B15.10.24: In 4-chart mode, Pocket Option can continue publishing
         // background/stale market streams after a chart has been replaced.
@@ -11439,7 +11441,7 @@ const t3MinConsensus = aiLearning ? 1 : 3;
           let o,h,l,c;
           if(r?.kind==='ohlc') { o=Number(r.open);h=Number(r.high);l=Number(r.low);c=Number(r.close); }
           else { const px=Number(r?.price);o=h=l=c=px; }
-          if(![o,h,l,c].every(Number.isFinite)||c<=0) continue;
+          if(![o,h,l,c].every(Number.isFinite)||Math.min(o,h,l,c)<=0||h<Math.max(o,c)||l>Math.min(o,c)) continue;
           const q=buckets.get(b);
           if(!q) buckets.set(b,[o,h,l,c,t]);
           else { q[1]=Math.max(q[1],h);q[2]=Math.min(q[2],l);q[3]=c;q[4]=Math.max(q[4],t); }
@@ -11452,10 +11454,9 @@ const t3MinConsensus = aiLearning ? 1 : 3;
           const liveLast=a.lastPrice||0, liveTick=a.lastTickSec||0;
           a.prices=[];a.rates={};a.tf={};a.lastClosed=-1;a.lastBucket=null;a.newCandle=false;
           let prevClose=0, first=keys[0], last=keys[keys.length-1];
-          // Fill only gaps inside the chart history range so TF alignment remains exact.
-          for(let b=first;b<=last;b+=BUCKET_SEC){
-            let q=buckets.get(b);
-            if(!q){ if(!prevClose) continue; q=[prevClose,prevClose,prevClose,prevClose,b+BUCKET_SEC]; }
+          // Preserve actual broker gaps; never invent flat candles or iterate a huge gap.
+          for(const b of keys){
+            const q=buckets.get(b);
             a.rates[b]=q; a.prices.push(q[3]); feedTF(a,b,q); a.lastClosed=b; prevClose=q[3];
           }
           if(a.prices.length>MAX_PRICES) a.prices=a.prices.slice(-MAX_PRICES);
@@ -11675,6 +11676,7 @@ try {
     // START BOT
     // ─────────────────────────────────────────────────────────
     if (msg.type === 'START_BOT') {
+      if (KAOS_AUDIT_READ_ONLY) { sendResponse({ok:false,error:'Trading disabled during release audit'}); return false; }
 
       isRunning = true;
       botConfig = msg;

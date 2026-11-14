@@ -3,6 +3,7 @@ let kaosExpiryStorageQueue = Promise.resolve();
 // KAOS cloud clients are loaded alongside the existing bot worker (broker execution untouched).
 importScripts('kaos-sync-client.js', 'kaos-learning-client.js', 'kaos-cloud.js');
 
+const KAOS_AUDIT_READ_ONLY = true;
 let botState = { running: false, tabId: null, config: null };
 
 // ── Automatic XGBoost trainer bridge ─────────────────────────────
@@ -323,8 +324,10 @@ async function kaosOpenSingleAppWindow(){
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // KAOS_* messages are owned by the dedicated KAOS cloud listener below — ignore here so the
   // existing bot handler never hijacks their sendResponse channel.
-  if (msg && typeof msg.type === 'string' && msg.type.indexOf('KAOS_') === 0) return false;
+  if (msg && typeof msg.type === 'string' && msg.type.indexOf('KAOS_') === 0 &&
+      !['KAOS_EXPIRY_LABEL_BATCH','KAOS_EXPIRY_TRAIN_COLLECTED','KAOS_TRAIN_SPECIALISTS'].includes(msg.type)) return false;
   if (msg.type === 'START_BOT') {
+    if (KAOS_AUDIT_READ_ONLY) { sendResponse({ok:false,error:'Trading is disabled during the release audit; chart data remains available'}); return false; }
     if (!kaosAuthorizedPo) { sendResponse({ok:false,error:'KAOS sign-in and broker connection required'}); return false; }
     botState.running = true;
     botState.tabId   = msg.tabId;
@@ -622,8 +625,12 @@ async function kaosEnsurePoAttached(tabId) {
   const tab = await chrome.tabs.get(tabId);
   if(!kaosIsSupportedPoUrl(tab.url))return {ok:false,reason:'NOT_POCKET_OPTION'};
   try{
-    const pong=await chrome.tabs.sendMessage(tabId,{type:'KAOS_PO_PING'});
-    if(pong?.ok){kaosAttachedTabIds.add(tabId);return {ok:true,alreadyAttached:true};}
+    const pong=await new Promise(resolve=>{
+      const timer=setTimeout(()=>resolve(null),2000);
+      chrome.tabs.sendMessage(tabId,{type:'GET_TERMINAL_SNAPSHOT'}).then(
+        response=>{clearTimeout(timer);resolve(response);},()=>{clearTimeout(timer);resolve(null);});
+    });
+    if(pong?.ok&&Array.isArray(pong.markets)){kaosAttachedTabIds.add(tabId);return {ok:true,alreadyAttached:true};}
   }catch(_){}
   const now = Date.now(), last = kaosAttachAttemptAt.get(tabId) || 0;
   if (now - last < 15000) return {ok:false,reason:'ATTACH_RETRY_COOLDOWN'};
@@ -634,8 +641,9 @@ async function kaosEnsurePoAttached(tabId) {
     return {ok:true,reloaded:true,reason:'AUTHORIZED_ATTACH'};
   }catch(e){return {ok:false,reason:'RELOAD_FAILED',error:String(e&&e.message||e)};}
 }
-async function kaosEnsureAnyPoAttached(){
-  if(!kaosAuthorizedPo)return {ok:false,reason:'KAOS_AUTH_REQUIRED'};
+async function kaosEnsureAnyPoAttached(tabId){
+  if(!kaosAuthorizedPo)await kaosPermitBrokerIntegration();
+  if(Number.isInteger(tabId))return kaosEnsurePoAttached(tabId);
   const tabs=await chrome.tabs.query({url:KAOS_PO_PATTERNS});
   if(!tabs?.length)return {ok:false,reason:'NO_PO_TAB'};
   return kaosEnsurePoAttached(tabs[0].id);
@@ -813,7 +821,7 @@ async function kaosOnTradeEvent(type, trade) {
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (!msg || typeof msg.type !== 'string' || msg.type.indexOf('KAOS_') !== 0 || msg.type === 'KAOS_BROKER_VAULT') return false; // broker vault has its own async listener below
+  if (!msg || typeof msg.type !== 'string' || msg.type.indexOf('KAOS_') !== 0 || ['KAOS_BROKER_VAULT','KAOS_PO_ENSURE_ATTACH','KAOS_OPEN_APP_WINDOW','KAOS_KEEP_PO_ACTIVE','KAOS_RESIZE_APP','KAOS_EXPIRY_LABEL_BATCH','KAOS_EXPIRY_TRAIN_COLLECTED','KAOS_TRAIN_SPECIALISTS'].includes(msg.type)) return false; // Dedicated listeners own these response channels
   (async () => {
     try {
       switch (msg.type) {
@@ -919,7 +927,7 @@ chrome.tabs.onActivated.addListener(async({tabId})=>{
 
 chrome.runtime.onMessage.addListener((msg,_sender,sendResponse)=>{
   if(msg?.type!=='KAOS_PO_ENSURE_ATTACH')return;
-  kaosEnsureAnyPoAttached().then(sendResponse).catch(e=>sendResponse({ok:false,error:String(e)}));
+  kaosEnsureAnyPoAttached(msg.tabId).then(sendResponse).catch(e=>sendResponse({ok:false,error:String(e)}));
   return true;
 });
 

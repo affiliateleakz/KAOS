@@ -192,9 +192,11 @@ async def stripe_webhook(request: Request):
             raise HTTPException(status_code=503, detail="Unable to claim webhook event; retry later")
     obj = event["data"]["object"]
     t = event["type"]
-    if t == "checkout.session.completed":
+    if t in ("checkout.session.completed", "checkout.session.async_payment_succeeded"):
         meta = obj.get("metadata", {})
-        if meta.get("user_id"):
+        # A completed Checkout can still be unpaid for delayed payment methods.
+        # Only the paid transition may grant membership/affiliate commission.
+        if meta.get("user_id") and obj.get("payment_status") == "paid" and obj.get("status") == "complete":
             await _activate(meta["user_id"], meta.get("plan_id"), obj.get("customer"), obj.get("subscription"), obj["id"])
     elif t == "invoice.payment_failed":
         cust = obj.get("customer")

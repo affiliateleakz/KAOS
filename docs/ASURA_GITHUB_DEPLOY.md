@@ -251,3 +251,16 @@ Members and moderators retain their membership limits. Usernames (including
 the capability. Suspended/banned accounts, revoked extension access and revoked
 installations remain rejected. Apply through a newly prepared backend release
 and restart the API; no database role edits or key rotation are needed.
+# Chart-data audit release (extension 1.7.16)
+
+See [the audit report](CODE_AUDIT_AND_CHART_DATA.md) before upgrading. This release
+repairs dashboard candle polling and keeps extension order execution disabled.
+Update the existing unpacked extension folder and reload it; a website update
+alone does not update browser extension files.
+
+The updated Python dependencies require MongoDB 4.4+. Run the read-only
+`scripts/check_cpanel_runtime.py` using the hosting Python environment before any
+dependency upgrade. Review environment rollback separately from file activation.
+Authentication session revocation, payments readiness and recovery remain open
+release blockers described in the report. Do not enable live trading/payments
+or merge the draft PR as part of installing the chart fix.

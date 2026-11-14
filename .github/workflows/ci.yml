@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [apps/api, services/collectors, packages/kaos-core, research/strategy_v2, research/strategy_v2_1]
+        suite: [apps/api, services/collectors, services/research, packages/kaos-core, research/strategy_v2, research/strategy_v2_1]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -39,10 +39,13 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: "20", cache: npm, cache-dependency-path: apps/web/package-lock.json }
       - run: npm ci --no-audit --no-fund
+      - run: npm test
       - run: npm run build
         env:
           CI: "false"
           REACT_APP_BACKEND_URL: "https://api.tradingwithkaos.com"
+      - name: Browser checks with fixture accounts and candles
+        run: node ../../scripts/browser/run.cjs
       - name: Archive built KAOS website
         uses: actions/upload-artifact@v4
         with:
@@ -107,7 +110,7 @@ jobs:
           python -m pip install pytest
           python -m pytest -q apps/extension/test_broker_login_isolation.py
       - name: Test extension login runtime compatibility
-        run: node --test apps/extension/test_cloud_login.cjs apps/extension/test_chart_session.cjs
+        run: node --test apps/extension/test_cloud_login.cjs apps/extension/test_chart_session.cjs apps/extension/test_chart_data_audit.cjs
       - name: Syntax-check extension JavaScript
         run: |
           node --check apps/extension/background.js
@@ -117,6 +120,7 @@ jobs:
           node --check apps/extension/popup.js
           node --check apps/extension/kaos-chart-session.js
           node --check apps/extension/kaos-broker-selector.js
+          node --check apps/extension/po-bridge.js
 
   release-packages:
     runs-on: ubuntu-latest
@@ -170,7 +174,7 @@ jobs:
         with: { python-version: "3.11" }
       - name: Test private release staging
         run: |
-          python -m pip install pytest fastapi==0.110.1 httpx==0.28.1 python-dotenv a2wsgi
+          python -m pip install pytest fastapi==0.162.7 starlette==1.10.0 httpx==0.28.1 python-dotenv a2wsgi
           python -m pytest -q scripts/tests
       - name: Build ready-to-upload cPanel packages
         run: python scripts/build_cpanel_packages.py

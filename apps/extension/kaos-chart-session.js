@@ -9,7 +9,11 @@
       (state.platform === 'pocketoption' || state.platform === 'pocket_option'));
   }
   function refreshCharts() {
-    if (ready && attached && typeof startFlow === 'function') startFlow();
+    if (ready && attached) {
+      window.__kaosChartSessionAuthorized = true;
+      if (typeof startFlow === 'function') startFlow();
+      if (typeof kaosStartChartFeed === 'function') kaosStartChartFeed();
+    }
   }
   function connect() {
     if (!ready || attached || connecting) { refreshCharts(); return; }
@@ -31,7 +35,7 @@
   document.addEventListener('kaos-cloud-state-changed', function (event) {
     var detail = event.detail || {};
     ready = verified(detail.state);
-    if (!ready) { attached = false; connecting = false; generation++; return; }
+    if (!ready) { attached = false; connecting = false; generation++; window.__kaosChartSessionAuthorized = false; if(typeof kaosStopChartFeed === 'function')kaosStopChartFeed(); return; }
     if (detail.brokerAttached) attached = true;
     connect();
   });

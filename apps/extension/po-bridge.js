@@ -6,6 +6,7 @@
 //  Now: all close events while started are forwarded unconditionally.
 // ═══════════════════════════════════════════════════════════════
 (() => {
+  const KAOS_AUDIT_READ_ONLY = true;
   if (window.__poatBridge440) return;
   window.__poatBridge440 = true;
 
@@ -836,6 +837,9 @@
     if (ev.source && ev.source !== window) return;
     if (!ev.data || !ev.data._poatCmd) return;
     const cmd = ev.data;
+    if (KAOS_AUDIT_READ_ONLY && (cmd.type === 'START' || cmd.type === 'PLACE_TRADE')) {
+      post({type:'TRADE_ERROR',reason:'Trading disabled during release audit'});return;
+    }
 
 
     // KAOS 1.1.27 — READ-ONLY MARKET DATA PROBE

@@ -90,3 +90,27 @@ test('cloud DOM events expose chart readiness without account or token data',()=
   assert.deepEqual(JSON.parse(JSON.stringify(published)),connected);
   assert.equal(JSON.stringify(published).includes('private'),false);
 });
+test('attachment recovery message is owned by its dedicated listener, not cloud unknown-message handler',async()=>{
+  const source=fs.readFileSync(__dirname+'/background.js','utf8');
+  const start=source.indexOf('chrome.runtime.onMessage.addListener',source.indexOf('async function kaosOnTradeEvent'));
+  const end=source.indexOf('\nfunction kaosIsSupportedPoUrl',start);
+  const dedicatedAt=source.indexOf("if(msg?.type!=='KAOS_PO_ENSURE_ATTACH')return;");
+  const dedicatedStart=source.lastIndexOf('chrome.runtime.onMessage.addListener',dedicatedAt);
+  const dedicatedEnd=source.indexOf('\nchrome.runtime.onMessage.addListener',dedicatedAt);
+  const listeners=[],context={chrome:{runtime:{onMessage:{addListener:cb=>listeners.push(cb)}}},
+    kaosEnsureAnyPoAttached:async id=>({ok:true,tabId:id,alreadyAttached:true})};
+  vm.runInNewContext(source.slice(start,end)+source.slice(dedicatedStart,dedicatedEnd),context);
+  const response=await new Promise(resolve=>listeners.forEach(cb=>cb({type:'KAOS_PO_ENSURE_ATTACH',tabId:42},{},resolve)));
+  assert.equal(response.ok,true);assert.equal(response.tabId,42);
+});
+test('chart feed starts with authorized session and stops on sign-out',()=>{
+  const events={},messages=[];let started=0,stopped=0;
+  const context={window:{},document:{addEventListener:(name,cb)=>events[name]=cb},
+    startFlow(){},kaosStartChartFeed:()=>started++,kaosStopChartFeed:()=>stopped++,
+    chrome:{runtime:{sendMessage:(msg,cb)=>{messages.push(msg);cb({ok:true,state:connected});}}}};
+  vm.runInNewContext(fs.readFileSync(__dirname+'/kaos-chart-session.js','utf8'),context);
+  events['kaos-cloud-state-changed']({detail:{state:connected}});
+  assert.equal(started,1);assert.equal(context.window.__kaosChartSessionAuthorized,true);
+  events['kaos-cloud-state-changed']({detail:{state:{step:'LOGIN'}}});
+  assert.equal(stopped,1);assert.equal(context.window.__kaosChartSessionAuthorized,false);
+});

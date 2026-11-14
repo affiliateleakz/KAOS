@@ -2,6 +2,7 @@
 /* KAOS v19.8 — no automatic sample downloads/popups.
    Local AI training is in-memory; explicit user export/import is the only AI persistence path. */
 const KAOS_NO_AUTO_SAMPLE_DOWNLOADS = true;
+const KAOS_AUDIT_READ_ONLY = true;
 function KAOSV198IsAutoSampleDownload(opts) {
   const s = String(opts?.reason ?? opts?.source ?? opts?.kind ?? "").toLowerCase();
   return s.includes("sample") || s.includes("training") || s.includes("dataset") || s.includes("auto");
@@ -704,7 +705,7 @@ function renderExactModelResearch(s) {
   const fmt=(h)=>{const x=st[h]||{},w=Number(x.wins||0),l=Number(x.losses||0),d=Number(x.draws||0),n=w+l;const wr=n?(100*w/n).toFixed(1)+'%':'—';return `<div style="padding:6px 4px;border:1px solid var(--border);border-radius:6px;text-align:center"><b style="color:var(--accent)">${h==='60s'?'1m':h}</b><br><strong>${wr}</strong><br><span style="font-size:10px;color:var(--muted)">${w}W/${l}L${d?`/${d}D`:''}</span></div>`;};
   box.innerHTML=['5s','15s','30s','60s'].map(fmt).join('');
   const n5=Number(st['5s']?.wins||0)+Number(st['5s']?.losses||0);
-  if(note)note.textContent=`Historical reference: 20W/0L (small original sample) · New exact-model signals: ${n5} · Same entry is measured at 5s, 15s, 30s and 1m.`;
+  if(note)note.textContent=`Observed research outcomes: ${n5} · Same entry is measured at 5s, 15s, 30s and 1m. Research outcomes are not a trading-performance guarantee.`;
   const meta=r.raw5Meta||{}, parts=Object.entries(meta).map(([a,v])=>`${a} ${Number(v?.count||0)}`);
   if(raw)raw.textContent=`Raw 5s archive: ${parts.length?parts.join(' · '):'collecting…'}`;
 }
@@ -854,6 +855,10 @@ $('start-btn').addEventListener('click', () => {
 });
 
 function startBot() {
+  if (KAOS_AUDIT_READ_ONLY) {
+    setStatus('idle', 'CHART AUDIT · TRADING DISABLED');
+    return;
+  }
   const strategy        = getStrategy();
   const timeframe       = getTimeframe();
   const amount          = parseFloat($('amount-input').value)     || 5;
@@ -915,7 +920,8 @@ function stopBot() {
 function setRunningUI(running) {
   const btn = $('start-btn');
   btn.className   = 'kaos-start-btn ' + (running ? 'stop-state' : 'start-state');
-  btn.textContent = running ? '■ STOP' : '▶ START KAOS';
+  btn.textContent = running ? '■ STOP' : 'CHART AUDIT · TRADING DISABLED';
+  if (!running) btn.title = 'Chart monitoring is available; order execution awaits separate approval';
   $('edit-hint').style.display = running ? 'block' : 'none';
 
   // Lock all inputs while running
@@ -1521,7 +1527,15 @@ async function exportDebugCsv() {
 // B32.7 — INTERACTIVE MULTI-TF + STRUCTURED TRADE REPLAY TERMINAL
 // Monitoring + research only. KAOS Berserker remains execution authority.
 // ════════════════════════════════════════════════════════════
-let terminalTimer=null,terminalData=null;
+let terminalTimer=null,terminalData=null,kaosChartFeedGeneration=0,kaosChartRefreshBusy=false;
+function kaosStartChartFeed(){
+ if(window.__kaosChartSessionAuthorized!==true || terminalTimer)return;
+ terminalRefresh();terminalTimer=setInterval(terminalRefresh,1000);
+}
+function kaosStopChartFeed(){
+ clearInterval(terminalTimer);terminalTimer=null;kaosChartFeedGeneration++;
+ terminalData=null;kaosFallbackSnap=null;kaosLiveChartOk=false;
+}
 const terminalTradeHits=Array.from({length:4},()=>[]);
 const terminalView=Array.from({length:4},()=>({visibleBars:80,pan:0,tf:5,drag:false,lastX:0,dragCarry:0,crossX:null,crossY:null}));
 async function KAOSSetWindowMode(mode){
@@ -1538,10 +1552,10 @@ async function terminalShow(){
  Object.values(screens).forEach(s=>{if(s)s.style.display='none';});
  const sc=$('screen-chart');if(sc){sc.classList.add('active');sc.style.display='flex';}
  await KAOSSetWindowMode('charts');
- terminalRefresh();clearInterval(terminalTimer);terminalTimer=setInterval(terminalRefresh,1000);
+ kaosStartChartFeed();
 }
 async function terminalHide(){
- clearInterval(terminalTimer);terminalTimer=null;
+ // Keep the read-only feed running for the dashboard mirror. Logout stops it.
  document.querySelectorAll('.market-chart.maximized').forEach(x=>x.classList.remove('maximized'));
  const sc=$('screen-chart');if(sc){sc.classList.remove('active');sc.style.display='none';}
  document.body.classList.remove('chart-mode');
@@ -1607,37 +1621,15 @@ async function kaosGetSnapshot(tabId){
 // is guarded by window.__poatContent137, so this is safe to repeat.
 let kaosHealBusy=false,kaosHealStamp=0,kaosHealNote='';
 async function kaosHealPoTab(tab){
- if(!tab||!tab.id)return false;
+ if(!tab?.id || window.__kaosChartSessionAuthorized!==true)return false;
  const now=Date.now();
  if(kaosHealBusy||now-kaosHealStamp<20000)return false;
  kaosHealBusy=true;kaosHealStamp=now;
  try{
-  // A reloaded unpacked extension can leave the OLD isolated-world and MAIN-world
-  // guard flags alive in an already-open Pocket Option tab. Merely injecting the
-  // files again then exits immediately at their guards and the chart receives no
-  // snapshot. Clear both guards, reinstall MAIN bridge, then reinstall isolated code.
-  await chrome.scripting.executeScript({
-    target:{tabId:tab.id}, world:'MAIN',
-    func:()=>{ try{ delete window.__poatBridge440; }catch(_){ window.__poatBridge440=false; } }
-  });
-  await chrome.scripting.executeScript({target:{tabId:tab.id},world:'MAIN',files:['po-bridge.js']});
-  await chrome.scripting.executeScript({
-    target:{tabId:tab.id},
-    func:()=>{ try{ delete window.__poatContent137; }catch(_){ window.__poatContent137=false; } }
-  });
-  // Manifest owns the KAOS content scripts. Never inject them twice.
-  try{
-    await chrome.tabs.sendMessage(tab.id,{type:'GET_TERMINAL_SNAPSHOT'});
-    kaosHealNote='KAOS Pocket Option bridge reattached';
-    await new Promise(r=>setTimeout(r,700));
-    return true;
-  }catch(_){
-    kaosHealNote='Refreshing Pocket Option once to install the KAOS content context';
-    await chrome.tabs.reload(tab.id);
-    await new Promise(r=>setTimeout(r,1800));
-    return true;
-  }
- }catch(e){kaosHealNote='bridge reattach blocked ('+String((e&&e.message)||e)+')';return false;}
+  const result=await chrome.runtime.sendMessage({type:'KAOS_PO_ENSURE_ATTACH',tabId:tab.id});
+  kaosHealNote=result?.ok ? (result.alreadyAttached?'market-data listener ready':'authorized broker reload requested') : String(result?.error||result?.reason||'attachment failed');
+  return !!result?.ok;
+ }catch(error){kaosHealNote=String(error?.message||'attachment failed');return false;}
  finally{kaosHealBusy=false;}
 }
 function kaosRenderEmptyChartState(reason){
@@ -1646,28 +1638,35 @@ function kaosRenderEmptyChartState(reason){
   const meta=card.querySelector('.mc-meta'),name=card.querySelector('.mc-name'),why=card.querySelector('.mc-why');
   if(name)name.textContent=`CHART ${i+1}`;
   if(meta)meta.textContent='awaiting Pocket Option candles';
-  if(why)why.innerHTML='<strong>NO CANDLE DATA YET</strong> · '+kaosChartDiag+' KAOS will automatically reattach to the open Pocket Option tab and stream closed 5s candles. Once two real candles are received the chart paints automatically.';
+  if(why)why.textContent='NO CANDLE DATA YET · '+kaosChartDiag+' KAOS will automatically reattach to the open Pocket Option tab and stream closed 5s candles. Once two real candles are received the chart paints automatically.';
   terminalDraw(card.querySelector('canvas'),null,i);
  });
 }
-async function kaosTerminalRenderFallback(force=false){
+async function kaosTerminalRenderFallback(force=false,generation=kaosChartFeedGeneration){
  if(kaosFallbackBusy)return true; kaosFallbackBusy=true;
  try{
   const now=Date.now();
   if(force||!kaosFallbackSnap||now-kaosFallbackStamp>5000){kaosFallbackSnap=await kaosLoadFallbackSnapshot();kaosFallbackStamp=now;}
-  if(kaosFallbackSnap&&kaosFallbackSnap.markets.length){terminalData=kaosFallbackSnap;terminalRender(kaosFallbackSnap);return true;}
+  if(window.__kaosChartSessionAuthorized===true&&generation===kaosChartFeedGeneration&&kaosFallbackSnap&&kaosFallbackSnap.markets.length){terminalData=kaosFallbackSnap;terminalRender(kaosFallbackSnap);return true;}
   return false;
  }catch(_){return false;}
  finally{kaosFallbackBusy=false;}
 }
 async function terminalRefresh(){
+ if(window.__kaosChartSessionAuthorized!==true||kaosChartRefreshBusy)return;
+ kaosChartRefreshBusy=true;
+ const generation=kaosChartFeedGeneration;
+ try{return await kaosReadChartFeed(generation);}finally{kaosChartRefreshBusy=false;}
+}
+async function kaosReadChartFeed(generation){
  let live=null,tab=null;
  // Charts are driven only by the manifest-managed Pocket Option content context.
  // Ask the worker to heal/reload the PO tab if that context disappeared.
  try{tab=await getKAOSTargetTab();}catch(_){tab=null;}
  if(tab&&tab.id){
   live=await kaosGetSnapshot(tab.id);
-  if(!live){ try{await chrome.runtime.sendMessage({type:'KAOS_PO_ENSURE_ATTACH'});}catch(_){} }
+  if(window.__kaosChartSessionAuthorized!==true||generation!==kaosChartFeedGeneration)return;
+  if(!live)await kaosHealPoTab(tab);
   if(live&&live.ok&&!kaosSnapshotHasCandles(live)){
    kaosChartDiag='Pocket Option tab connected · live candle store empty ('+(kaosHealNote||'bridge healthy')+').';
    if(await kaosHealPoTab(tab)){
@@ -1676,12 +1675,18 @@ async function terminalRefresh(){
    }
   }
  }
+ if(window.__kaosChartSessionAuthorized!==true||generation!==kaosChartFeedGeneration)return;
  // Working-build behaviour: render whatever the live bridge returned.
  if(live&&live.ok&&kaosSnapshotHasCandles(live)){kaosLiveChartOk=true;terminalData=live;terminalRender(live);return;}
  // No usable live candles yet — paint the persisted candle archives instead.
- if(await kaosTerminalRenderFallback()){kaosChartDiag='rendering persisted candle archive ('+(tab&&tab.id?'live bridge has no candles yet':'no Pocket Option tab open')+').';return;}
+ if(await kaosTerminalRenderFallback(false,generation)){kaosChartDiag='rendering persisted candle archive ('+(tab&&tab.id?'live bridge has no candles yet':'no Pocket Option tab open')+').';return;}
+ if(window.__kaosChartSessionAuthorized!==true||generation!==kaosChartFeedGeneration)return;
  // Archive empty too: still render the live snapshot so the panels populate.
- if(live&&live.ok){kaosLiveChartOk=true;terminalData=live;terminalRender(live);return;}
+ if(live&&live.ok){
+  kaosLiveChartOk=false;terminalData=live;terminalRender(live);
+  const stores=Number(live.marketDataDiag?.assetStoreCount)||0;
+  kaosRenderEmptyChartState('Market-data listener ready; '+stores+' asset stores; waiting for two closed candles.');return;
+ }
  kaosRenderEmptyChartState(tab&&tab.id?'Pocket Option tab connected but returned no snapshot.':'No Pocket Option tab is open.');
 }
 function tp(v){return Number.isFinite(+v)?(+v*100).toFixed(1)+'%':'—'} function tn(v,n=2){return Number.isFinite(+v)?(+v).toFixed(n):'—'}
@@ -3095,7 +3100,7 @@ setInterval(kaos1628Dashboard,1500);
    while(grid.children.length<n){
      const i=grid.children.length,cell=document.createElement('div');
      cell.className='kaos-live-cell';
-     cell.innerHTML='<div class="kaos-live-cell-head"><span>CH'+(i+1)+' · <b class="klm-name">WAITING</b></span><span>LIVE</span></div><canvas width="700" height="260"></canvas><div class="kaos-live-cell-foot"><span class="klm-status">WAITING FOR DATA</span></div>';
+     cell.innerHTML='<div class="kaos-live-cell-head"><span>CH'+(i+1)+' · <b class="klm-name">WAITING</b></span><span class="klm-source">WAITING</span></div><canvas width="700" height="260"></canvas><div class="kaos-live-cell-foot"><span class="klm-status">WAITING FOR DATA</span></div>';
      grid.appendChild(cell);
    }
    [...grid.children].forEach((el,i)=>el.style.display=i<n?'':'none');
@@ -3111,6 +3116,7 @@ setInterval(kaos1628Dashboard,1500);
      const sc=src?.querySelector('.mc-canvas,canvas');
      if(sc&&sc.width&&sc.height){try{ctx.drawImage(sc,0,0,dst.width,dst.height)}catch(_){}}
      else{ctx.fillStyle='#71818a';ctx.font='12px monospace';ctx.textAlign='center';ctx.fillText('WAITING FOR MARKET DATA',dst.width/2,dst.height/2)}
+     cell.querySelector('.klm-source').textContent=terminalData?.fallback?'RECORDED':kaosLiveChartOk?'LIVE':'WAITING';
      cell.querySelector('.klm-name').textContent=src?.querySelector('.mc-name')?.textContent?.trim()||`CHART ${i+1}`;
      const st=src?.querySelector('.mc-status,.mc-why')?.textContent?.trim();
      cell.querySelector('.klm-status').textContent=(st||'LIVE').slice(0,55);

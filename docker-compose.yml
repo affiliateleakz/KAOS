@@ -20,12 +20,10 @@ services:
   web:
     image: node:20-alpine
     working_dir: /app
-    command: sh -c "npm ci --no-audit --no-fund && npm start"
+    command: sh -c "npm ci --no-audit --no-fund && npm start -- --host 0.0.0.0"
     environment:
       REACT_APP_BACKEND_URL: ""
       KAOS_API_PROXY: http://api:8001
-      BROWSER: none
-      WDS_SOCKET_PORT: "0"
     ports: ["3000:3000"]
     volumes: [./apps/web:/app, web-node-modules:/app/node_modules]
     depends_on: [api]
