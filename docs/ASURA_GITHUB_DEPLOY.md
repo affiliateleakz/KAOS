@@ -203,3 +203,35 @@ It reads credentials from the existing backend `.env` without printing them.
 No website deployment or API restart is needed. The current extension must still
 register normally through the account/device limit and license checks. This is
 an explicit operator repair, not an automatic device replacement policy.
+
+### Extension 1.7.15 chart session and Viking account login
+
+The popup broker picker now uses `KAOS_CONNECT_PLATFORM`, which verifies the
+server/device license, attaches the authorized broker integration, and reuses
+an existing supported broker tab. It no longer merely opens a new broker tab.
+The popup receives cloud state through a detailed event and restores charts
+through the same authorized handler. It retries chart discovery when its saved
+broker tab finishes loading. Sign-out invalidates pending connection responses;
+unselected, signed-out and unlicensed states do not restore a broker session.
+Connection failures remain visible in the broker picker. No Start Bot/order
+messages are sent by the new chart-session bridge. Real Pocket Option login and
+market-feed behavior still require installed-extension validation without orders.
+
+Website account pages use the existing KAOS Viking artwork with black/gold form
+styling. Email/password login, Google sign-in, registration and recovery routes
+retain their API contracts. Email/password labels and autofill attributes are
+provided, and the Google button width fits the form on small screens. The prior
+blue split-panel design was discarded at the owner's request.
+
+Validation: 17 Node cloud/chart-session tests, broker isolation guards, production
+web build, and headless Chromium checks. The real popup HTML reached its chart
+dashboard after fresh sign-in/broker selection and a restored session using
+mock Chrome/broker responses, with no JavaScript errors or Start Bot messages.
+Website checks covered 1440px, 390px and 320px widths, login failure messaging,
+unchanged credential payload and successful dashboard navigation using mocked
+API/Google provider responses. This does not certify live Google provisioning,
+broker market data, strategy performance or real-money execution.
+
+Update an unpacked extension in its existing folder and Reload it to preserve
+its installation/device identity. Deploy a newly prepared website package for
+the login design; installing website files does not update Chrome extensions.

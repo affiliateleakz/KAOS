@@ -193,7 +193,8 @@ async function startFlow() {
     showScreen('checking');
     setCheckMsg('VERIFYING KAOS MEMBERSHIP...');
     const cloud = await new Promise(resolve => chrome.runtime.sendMessage({type:'KAOS_STARTUP'}, r => {void chrome.runtime.lastError; resolve(r); }));
-    if (!cloud?.ok || !['PLATFORM','DASHBOARD'].includes(cloud.state?.step)) {
+    if (!cloud?.ok || cloud.state?.step !== 'DASHBOARD' || cloud.state?.status !== 'CONNECTED' ||
+        !cloud.state?.license?.authorized || !['pocketoption','pocket_option'].includes(cloud.state?.platform)) {
       setCheckMsg('SIGN IN TO KAOS TO CONTINUE');
       showScreen('notPo');
       return;

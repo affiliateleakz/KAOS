@@ -171,7 +171,6 @@
           return;
         }
         var next = r.state || await refreshState();
-        if (next && next.platform) next.step = 'DASHBOARD';
         route(next);
       };
       rowc.appendChild(connect);
@@ -208,14 +207,17 @@
   }
 
   function route(state) {
-    document.dispatchEvent(new CustomEvent('kaos-cloud-state-changed'));
+    document.dispatchEvent(new CustomEvent('kaos-cloud-state-changed', { detail: { state: state } }));
     mount();
     if (!state) { renderOffline(); return; }
     switch (state.step) {
       case 'LOGIN': renderLogin(state); break;
       case 'OFFLINE': renderOffline(); break;
       case 'BLOCKED': renderBlocked(state); break;
-      case 'PLATFORM': pill(state); setTimeout(function(){if(window.KAOSBroker)window.KAOSBroker.refresh();},0); break;
+      case 'PLATFORM':
+        if (document.getElementById('kaos-broker-overlay')) { pill(state); if(window.KAOSBroker)window.KAOSBroker.refresh(); }
+        else renderPlatform(state);
+        break;
       case 'DASHBOARD': pill(state); break;
       default: renderLogin(state);
     }

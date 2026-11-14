@@ -855,7 +855,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           // selected broker are accepted by the server.
           await kaosPermitBrokerIntegration();
           await chrome.storage.local.set({ KAOSTargetTabId: poTab.id, KAOSTargetWindowId: poTab.windowId, kaosPoAttached: true });
-          await kaosEnsurePoAttached(poTab.id);
+          const attached = await kaosEnsurePoAttached(poTab.id);
+          if (!attached.ok) throw new Error('Pocket Option charts could not attach: ' + attached.reason);
           KAOS_FLOATING_WINDOW.targetTabId = poTab.id;
           KAOS_FLOATING_WINDOW.targetWindowId = poTab.windowId;
           sendResponse({ ok: true, tabId: poTab.id, state: await self.KaosCloud.startup() }); break;
