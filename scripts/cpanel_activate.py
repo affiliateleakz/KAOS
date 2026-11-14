@@ -39,7 +39,30 @@ async def login_validation_only(request, call_next):
         return JSONResponse({"detail": "Login validation mode: this operation is disabled"}, status_code=503)
     return await call_next(request)
 
-application = ASGIMiddleware(app)
+# Create the event-loop thread inside the serving worker, not a preloaded parent.
+import threading
+_adapter = None
+_adapter_pid = None
+_adapter_lock = threading.Lock()
+
+def _after_fork():
+    global _adapter, _adapter_pid, _adapter_lock
+    _adapter = None
+    _adapter_pid = None
+    _adapter_lock = threading.Lock()
+
+if hasattr(os, "register_at_fork"):
+    os.register_at_fork(after_in_child=_after_fork)
+
+def application(environ, start_response):
+    global _adapter, _adapter_pid
+    pid = os.getpid()
+    with _adapter_lock:
+        if _adapter is None or _adapter_pid != pid:
+            _adapter = ASGIMiddleware(app)
+            _adapter_pid = pid
+        adapter = _adapter
+    return adapter(environ, start_response)
 '''
 
 
@@ -144,6 +167,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--revision', required=True)
     parser.add_argument('--activate', action='store_true')
+    parser.add_argument('--entrypoint-only', action='store_true', help='Refresh only the startup adapter')
     args = parser.parse_args()
     sha = args.revision
     if len(sha) != 40 or any(c not in '0123456789abcdef' for c in sha):
@@ -174,7 +198,10 @@ def main():
                  'from server import app; import a2wsgi; print("Backend preflight OK")')
         env = dict(os.environ, PYTHONPATH=f'{candidate}/apps/api:{candidate}/packages/kaos-core')
         subprocess.run([str(python), '-c', check, str(site / 'backend/.env')], env=env, check=True)
-    install(site, web, backend)
+    if args.entrypoint_only:
+        write_file(safe_destination(site, 'backend/passenger_wsgi.py'), WRAPPER.encode(), 0o600)
+    else:
+        install(site, web, backend)
     print('Files installed. Restart the API in cPanel, then check /api and extension sign-in.')
     print('Payments and non-authentication writes are disabled in login-validation mode.')
     print('Legacy wsgi_app.py remains available; no database migration or full backup was performed.')

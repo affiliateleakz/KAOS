@@ -135,3 +135,20 @@ If the new API fails, restore the known legacy entrypoint importing
 then restart through cPanel. This recovers the old runtime but does not undo
 website asset updates or any account/session writes made during login tests.
 Keep the extension login attempt disconnected from broker execution.
+
+### Public request timeout with a working direct WSGI test
+
+A standalone `/api` WSGI request succeeded on Asura while public requests timed
+out. One reproducible failure mode is a server forking after the ASGI adapter
+starts its event-loop thread: the child inherits the adapter but not its thread.
+The adapter now initializes lazily in the serving process and resets its state
+and lock after a fork. A regression test warms the adapter in a parent, forks,
+and verifies the child responds; the former eager adapter hangs in that test.
+This does not prove the Asura worker lifecycle was the cause; recheck public
+HTTP after the change and inspect hosting configuration if it still times out.
+
+Use the activation helper's `--entrypoint-only --activate` with the existing
+prepared revision to refresh just `backend/passenger_wsgi.py`. Dependencies and
+the release hashes are still checked first. Source files, frontend assets, .env,
+.htaccess and databases are not rewritten by this option. Restart the API in
+cPanel afterward. Login-validation restrictions remain enabled.

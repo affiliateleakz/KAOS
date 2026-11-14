@@ -93,3 +93,47 @@ def test_validation_wrapper_blocks_orders_and_billing(monkeypatch, tmp_path):
     assert client.post('/api/v1/devices/register').status_code == 200
     assert client.post('/api/trading/execute').status_code == 503
     assert client.get('/api/billing/status').status_code == 503
+
+
+def test_wsgi_adapter_survives_preloaded_parent_fork(tmp_path):
+    """A worker must never wait on an event-loop thread inherited from its parent."""
+    import subprocess
+    script = tmp_path / 'fork_check.py'
+    wrapper = tmp_path / 'wrapper.txt'
+    wrapper.write_text(activation.WRAPPER)
+    script.write_text('''import os, signal, sys
+from pathlib import Path
+from types import ModuleType
+from wsgiref.util import setup_testing_defaults
+from fastapi import FastAPI
+server = ModuleType("server")
+server.app = FastAPI()
+@server.app.get("/api")
+def health():
+    return {"status": "ok"}
+sys.modules["server"] = server
+scope = {"__file__": str(Path(sys.argv[1]).parent / "passenger_wsgi.py")}
+exec(Path(sys.argv[1]).read_text(), scope)
+def request():
+    env = {}
+    setup_testing_defaults(env)
+    env["PATH_INFO"] = "/api"
+    status = []
+    body = b"".join(scope["application"](env, lambda s, h, exc_info=None: status.append(s)))
+    assert status == ["200 OK"], status
+    assert b'"status":"ok"' in body, body
+request()
+pid = os.fork()
+if pid == 0:
+    signal.alarm(5)
+    request()
+    os._exit(0)
+_, status = os.waitpid(pid, 0)
+assert os.waitstatus_to_exitcode(status) == 0, status
+''')
+    result = subprocess.run([sys.executable, str(script), str(wrapper)], capture_output=True, timeout=15)
+    assert result.returncode == 0, result.stderr.decode()
+    eager = activation.WRAPPER.split('# Create the event-loop thread')[0] + 'application = ASGIMiddleware(app)\n'
+    wrapper.write_text(eager)
+    old = subprocess.run([sys.executable, str(script), str(wrapper)], capture_output=True, timeout=15)
+    assert old.returncode != 0, 'Regression fixture should reproduce the inherited-thread hang'
