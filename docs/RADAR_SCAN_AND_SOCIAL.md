@@ -109,3 +109,31 @@ AI citations and balanced evidence. Browser fixtures cover source statuses,
 social filtering, optional auto-scan cleanup, admin settings and mobile layout.
 These checks do not establish that production credentials or live provider access
 are configured; run a hosting scan and inspect each returned source status.
+
+## Signal dashboard: separate horizons
+
+Radar opens on **Market opportunities**, with a keyless Coinbase/Yahoo candle scan
+for up to five crypto, stock or ETF symbols. Closed 15-minute bars feed an EMA9/21
+and 20-bar breakout rule, with ATR reference stop/target levels and a 45-minute
+research horizon. This is a technical baseline, **not a trained AI forecast or a
+validated profitable strategy**. The existing cited AI evidence workspace is now
+lazy-loaded under Advanced evidence; paid AI/source calls never run on opening
+this dashboard. No automatic orders are placed.
+
+Missing, stale, malformed or incomplete recent bars produce WAIT. Free providers
+can refuse requests or delay data. Stocks require a complete recent 20-bar
+session, so early-session scans may wait. Five-minute shared Mongo caches and
+per-symbol 20-second leases limit repeated outbound work across members/workers.
+
+**Bot entries** reads only the signed-in user's recorded SIGNAL_GENERATED entries,
+retains exact platform/OTC identifiers, and excludes simulated, future, expired or
+unknown-expiry records. Only explicit 30s/45s expiries are accepted. Entries expire
+in the browser too. These are extension-reported, not independently verified;
+extension versions that do not upload signals will show an empty state. Opening
+a broker chart does not itself guarantee telemetry. This view is not a new
+seconds-long prediction service or an instruction to chase an existing entry.
+
+A separate trained longer-horizon AI model is not deployed by this change. The
+broker model cannot be applied to 15-minute stock/crypto candles without new
+training and chronological validation. Social, whale and delayed disclosure
+sources remain optional research context rather than mandatory signal gates.

@@ -20,6 +20,7 @@ import routes_coinbase
 import routes_finbert
 import routes_opportunity
 import routes_radar
+import radar_signals  # registers signal views on the Radar router
 import routes_radar_admin
 import routes_disclosures
 import routes_crypto_scanner

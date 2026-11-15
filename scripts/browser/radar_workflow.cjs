@@ -20,6 +20,8 @@ const BASE=process.env.KAOS_WEB_PREVIEW_URL;
   if(path==='/api/notifications')return route.fulfill({json:[]});
   if(path==='/api/v1/trading/config')return route.fulfill({json:{entitlements:{tier:'ultimate',scanners:true}}});
   if(path==='/api/v1/intelligence/opportunities'){sourceQueries.push(url.searchParams.get('source_filter'));return route.fulfill({json:{results:[],scanned_observations:0}});}
+  if(path==='/api/v1/intelligence/signals/market')return route.fulfill({json:{signals:[{symbol:'BTC',direction:'WAIT',reason:'No confirmed trend breakout.',source:'Fixture candles'}],ai_status:'Technical baseline; not trained AI'}});
+  if(path==='/api/v1/intelligence/signals/bot')return route.fulfill({json:{signals:[]}});
   if(path==='/api/v1/intelligence/scan/status')return route.fulfill({json:{providers:providers(),maximum_assets:5,cache_seconds:300}});
   if(path==='/api/v1/intelligence/scan/latest')return route.fulfill({json:{scan:latest}});
   if(path==='/api/v1/intelligence/scan'){
@@ -32,8 +34,14 @@ const BASE=process.env.KAOS_WEB_PREVIEW_URL;
  });
  const page=await context.newPage({viewport:{width:1440,height:1000}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.clock.install();
- await page.goto(BASE+'/dashboard/opportunities');await page.getByRole('heading',{name:'Opportunity Radar',exact:true}).waitFor();
+ await page.goto(BASE+'/dashboard/opportunities');await page.getByRole('heading',{name:'KAOS Opportunity Radar',exact:true}).waitFor();
  assert.equal(scanCalls,0,'Opening Radar must not silently start paid AI calls');
+ await page.getByRole('button',{name:'Scan market setups',exact:true}).click();
+ await page.getByText('No confirmed trend breakout.',{exact:true}).waitFor();
+ await page.getByRole('button',{name:'Bot entries · seconds',exact:true}).click();
+ await page.getByRole('button',{name:'Refresh bot entries',exact:true}).click();
+ await page.getByText('No fresh bot entries.',{exact:false}).waitFor();
+ await page.getByRole('button',{name:'Open Advanced evidence & optional AI research',exact:true}).click();
  await page.getByLabel('Watchlist · up to 5 symbols',{exact:true}).fill('AAPL:stock, ETH:crypto');
  await page.getByRole('button',{name:'Scan sources + AI',exact:true}).click();
  await page.getByText('AI research fixture: public evidence requires source verification.',{exact:true}).waitFor();
