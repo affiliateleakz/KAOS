@@ -297,3 +297,15 @@ Chromium fixtures cover gold login styles, labels, compact login width, validati
 all primary navigation, website-link destinations, chart polling, Demo/Real
 status, Stop, sign-out and absence of automatic Start. Fixture quotes/account
 states are not a live-broker validation. No real orders were submitted.
+
+### Extension 1.7.19: broker loading recovery
+
+Repeated attachment requests during a broker reload no longer fail Connect with
+`ATTACH_RETRY_COOLDOWN`. They report a loading state; Connect waits up to 20 seconds
+for the actual terminal snapshot receiver, without requesting further reloads.
+Success requires that receiver, not merely a successful reload request. Logout
+or authorization-generation changes cancel the wait. A timed-out load shows a
+plain message to keep the broker tab open and retry Connect. Attachment is saved
+only after the receiver is ready. No hosting update or trading-logic change is
+required. Tests cover concurrent/recent reloads, receiver readiness, bounded
+timeout and logout cancellation. No real broker orders were submitted.

@@ -19,6 +19,23 @@ test('early ping-only listener cannot masquerade as a working chart engine',asyn
 test('unapproved attachment never reloads or probes the broker',async()=>{
  const c=attachment({ok:true,markets:[]},false);assert.equal((await c.run()).reason,'KAOS_AUTH_REQUIRED');assert.deepEqual(c.calls,[]);
 });
+test('recent reload reports loading without reloading the broker twice',async()=>{
+ const c=attachment({ok:true});await c.run();const result=await c.run();
+ assert.equal(result.reason,'BROKER_LOADING');assert.ok(result.retryAfterMs>0);
+ assert.equal(c.calls.filter(type=>type==='RELOAD').length,1);
+});
+for(const mode of ['ready','timeout','logout'])test('connection waits for real receiver: '+mode,async()=>{
+ const begin=source.indexOf('async function kaosWaitForPoAttached('),end=source.indexOf('\nasync function kaosEnsureAnyPoAttached',begin);
+ const attempts=[];let now=0;
+ const context={kaosBrokerGeneration:1,kaosAuthorizedPo:true,Date:{now:()=>now},
+  setTimeout:cb=>{now+=1000;if(mode==='logout')context.kaosAuthorizedPo=false;cb();},
+  kaosEnsurePoAttached:async(id,reload)=>{attempts.push(reload);return attempts.length===1?{ok:false,reason:'BROKER_LOADING'}:mode==='ready'?{ok:true,alreadyAttached:true}:{ok:false,reason:'BROKER_LOADING'};}};
+ vm.runInNewContext(source.slice(begin,end)+';globalThis.wait=kaosWaitForPoAttached;',context);
+ const result=await context.wait(42);
+ assert.equal(result.ok,mode==='ready');assert.ok(attempts.slice(1).every(reload=>reload===false));
+ if(mode==='timeout')assert.match(result.reason,/still loading/);
+ if(mode==='logout')assert.equal(result.reason,'KAOS_AUTH_REQUIRED');
+});
 test('audit build rejects Start Bot before any state or browser write',()=>{
  const begin=source.indexOf('chrome.runtime.onMessage.addListener('),end=source.indexOf('\nconst KAOS_PO_PATTERNS',begin);
  let listener;const botState={running:false},writes=[],context={KAOS_AUDIT_READ_ONLY:true,kaosAuthorizedPo:true,botState,

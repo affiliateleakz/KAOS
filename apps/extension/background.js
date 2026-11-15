@@ -619,7 +619,7 @@ async function kaosPermitBrokerIntegration() {
   return state;
 }
 
-async function kaosEnsurePoAttached(tabId) {
+async function kaosEnsurePoAttached(tabId, allowReload = true) {
   if(!tabId) return {ok:false,reason:'NO_TAB'};
   if(!kaosAuthorizedPo) return {ok:false,reason:'KAOS_AUTH_REQUIRED'};
   const tab = await chrome.tabs.get(tabId);
@@ -630,16 +630,31 @@ async function kaosEnsurePoAttached(tabId) {
       chrome.tabs.sendMessage(tabId,{type:'GET_TERMINAL_SNAPSHOT'}).then(
         response=>{clearTimeout(timer);resolve(response);},()=>{clearTimeout(timer);resolve(null);});
     });
+    if(!kaosAuthorizedPo)return {ok:false,reason:'KAOS_AUTH_REQUIRED'};
     if(pong?.ok&&Array.isArray(pong.markets)){kaosAttachedTabIds.add(tabId);return {ok:true,alreadyAttached:true};}
   }catch(_){}
   const now = Date.now(), last = kaosAttachAttemptAt.get(tabId) || 0;
-  if (now - last < 15000) return {ok:false,reason:'ATTACH_RETRY_COOLDOWN'};
+  if(!kaosAuthorizedPo)return {ok:false,reason:'KAOS_AUTH_REQUIRED'};
+  if (!allowReload || now - last < 15000) return {ok:false,reason:'BROKER_LOADING',retryAfterMs:Math.max(400,15000-(now-last))};
   kaosAttachAttemptAt.set(tabId, now);
   kaosAttachedTabIds.add(tabId);
   try{
     await chrome.tabs.reload(tabId,{bypassCache:false});
     return {ok:true,reloaded:true,reason:'AUTHORIZED_ATTACH'};
   }catch(e){return {ok:false,reason:'RELOAD_FAILED',error:String(e&&e.message||e)};}
+}
+async function kaosWaitForPoAttached(tabId) {
+  const generation = kaosBrokerGeneration;
+  const deadline = Date.now() + 20000;
+  let result = await kaosEnsurePoAttached(tabId);
+  while (true) {
+    if (!kaosAuthorizedPo || generation !== kaosBrokerGeneration) return {ok:false,reason:'KAOS_AUTH_REQUIRED'};
+    if (result.alreadyAttached) return result;
+    if (!result.reloaded && result.reason !== 'BROKER_LOADING') return result;
+    if (Date.now() >= deadline) return {ok:false,reason:'Pocket Option is still loading. Keep its tab open and try Connect again.'};
+    await new Promise(resolve => setTimeout(resolve, 400));
+    result = await kaosEnsurePoAttached(tabId, false);
+  }
 }
 async function kaosEnsureAnyPoAttached(tabId){
   if(!kaosAuthorizedPo)await kaosPermitBrokerIntegration();
@@ -872,9 +887,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           // No page injection until the KAOS session, membership/device and
           // selected broker are accepted by the server.
           await kaosPermitBrokerIntegration();
-          await chrome.storage.local.set({ KAOSTargetTabId: poTab.id, KAOSTargetWindowId: poTab.windowId, kaosPoAttached: true });
-          const attached = await kaosEnsurePoAttached(poTab.id);
+          const attached = await kaosWaitForPoAttached(poTab.id);
           if (!attached.ok) throw new Error('Pocket Option charts could not attach: ' + attached.reason);
+          await chrome.storage.local.set({ KAOSTargetTabId: poTab.id, KAOSTargetWindowId: poTab.windowId, kaosPoAttached: true });
           KAOS_FLOATING_WINDOW.targetTabId = poTab.id;
           KAOS_FLOATING_WINDOW.targetWindowId = poTab.windowId;
           sendResponse({ ok: true, tabId: poTab.id, state: await self.KaosCloud.startup() }); break;
