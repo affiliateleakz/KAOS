@@ -10,6 +10,7 @@ import routes_radar_admin as admin_api
 import routes_radar
 import routes_opportunity
 import radar_trending  # registers keyless trending and the retired endpoint
+import radar_opportunities  # registers the multi-market scanner
 
 class SettingsStore:
  def __init__(self):self.docs={}
@@ -44,6 +45,7 @@ def test_admin_setup_rejects_non_owner_and_member_scan_rejects_free_access(monke
   assert client.put('/api/admin/radar/providers/x',json={'credentials':{'bearer_token':'fixture'}}).status_code==403
   assert client.get('/api/v1/intelligence/scan/status').status_code==403
   assert client.post('/api/v1/intelligence/social/mentions').status_code==403
+  assert client.post('/api/v1/intelligence/signals/opportunities',json={'market':'stocks'}).status_code==403
   assert client.post('/api/v1/intelligence/scan',json={'assets':[{'symbol':'AAPL','asset_class':'stock'}]}).status_code==403
 
 

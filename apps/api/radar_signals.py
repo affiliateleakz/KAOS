@@ -16,7 +16,7 @@ def assess(candles, now):
     rows = sorted({float(r[0]): [float(x) for x in r[:6]] for r in candles
                    if len(r) >= 6 and all(math.isfinite(float(x)) for x in r[:6])
                    and float(r[0]) + 900 <= now}.values())
-    rows = [r for r in rows if 0 < r[1] <= min(r[3], r[4]) <= max(r[3], r[4]) <= r[2]]
+    rows = [r for r in rows if r[5]>=0 and 0 < r[1] <= min(r[3], r[4]) <= max(r[3], r[4]) <= r[2]]
     if len(rows) < 60:
         return {'direction': 'WAIT', 'reason': 'At least 60 closed 15-minute candles are required.'}
     last = rows[-1]
@@ -25,8 +25,8 @@ def assess(candles, now):
             'price': last[4], 'execution_enabled': False}
     if now - (last[0]+900) > 1200:
         return {**base, 'direction': 'WAIT', 'reason': 'Market data is stale or the market is closed.'}
-    if any(b[0]-a[0] != 900 for a,b in zip(rows[-20:], rows[-19:])):
-        return {**base, 'direction': 'WAIT', 'reason': 'Recent candle gaps; waiting for a complete trading session.'}
+    if any(b[0]-a[0] != 900 for a,b in zip(rows[-5:], rows[-4:])):
+        return {**base, 'direction': 'WAIT', 'reason': 'Recent candle gaps; waiting for one complete recent hour.'}
     def ema(period):
         value = rows[0][4]
         for row in rows[1:]:
@@ -69,12 +69,15 @@ async def market(asset):
                 response.raise_for_status()
                 candles = response.json()
                 source = 'Coinbase spot USD'
-            elif asset.asset_class in ('stock', 'etf'):
-                response = await client.get(f'https://query1.finance.yahoo.com/v8/finance/chart/{asset.symbol}', params={'interval':'15m','range':'1mo'}, headers={'User-Agent':'KAOS Radar/1.0'})
+            elif asset.asset_class in ('stock', 'etf', 'forex'):
+                ticker = asset.symbol+'=X' if asset.asset_class=='forex' else asset.symbol
+                response = await client.get(f'https://query1.finance.yahoo.com/v8/finance/chart/{ticker}', params={'interval':'15m','range':'5d'}, headers={'User-Agent':'KAOS Radar/1.0'})
                 response.raise_for_status()
                 data = response.json()['chart']['result'][0]
                 quote = data['indicators']['quote'][0]
-                candles = [[t]+[quote[k][i] for k in ('low','high','open','close','volume')] for i,t in enumerate(data['timestamp']) if all(quote[k][i] is not None for k in ('low','high','open','close','volume'))]
+                required=('low','high','open','close') if asset.asset_class=='forex' else ('low','high','open','close','volume')
+                volumes=quote.get('volume') or [0]*len(data['timestamp'])
+                candles = [[t]+[quote[k][i] for k in ('low','high','open','close')]+[(volumes[i] or 0)] for i,t in enumerate(data['timestamp']) if all(quote[k][i] is not None for k in required)]
                 source = 'Yahoo Finance; may be delayed'
             else:
                 return {'symbol':asset.symbol,'direction':'WAIT','reason':'This market does not have a supported candle source yet.'}

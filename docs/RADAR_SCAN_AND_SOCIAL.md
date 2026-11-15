@@ -75,14 +75,14 @@ associations, not causal explanations.
 
 Scans save immutable evidence snapshots per asset/closed bar. Later actual
 closed candles label 45–60 minute forward moves; missing/session-gap candles
-cannot be bridged, and moves under 10 basis points are excluded from directional
+cannot be bridged, and moves under 10 basis points (2 for forex) are excluded from directional
 training. This threshold is not a fee/slippage model. Training requires at least
 120 non-overlapping labeled samples (80 training, 30 held-out, both directions),
 uses at most 2,000 recent rows, and purges outcomes crossing the chronological
 holdout split. Normalization is fitted on training rows only.
 
 **Admin → Radar Sources & AI** shows training progress, candidate metrics and
-separate stock/crypto train buttons. Training is manual, bounded, runs off the
+separate stock/crypto/forex train buttons. Training is manual, bounded, runs off the
 request event loop, and has a five-minute group cooldown. A candidate must pass
 historical gates (balanced directional accuracy >=55%, at least 15 strong-score
 signals with >=60% directional accuracy, both holdout classes represented)
@@ -213,3 +213,69 @@ and need fresh training/validation. No trading authority changes.
 Provider documentation: https://apewisdom.io/api/
 Methodology/coverage: https://apewisdom.io/methodology/
 No paid alternative service or subscription is enabled.
+
+## Multi-market opportunity discovery
+
+**AI Signal** now scans a market instead of requiring a single ticker. Choose
+Stocks, Crypto, Forex or Options and a result count from 1–10. Scans start on
+entry/selection, refresh every five minutes while visible (one minute for options),
+and stop polling when the tab is left. A focused ticker selected from Trending
+is supported, with a one-click return to the broader market.
+
+The scan checks a bounded universe: up to 16 stock candidates (ApeWisdom leaders
+plus liquid core stocks/ETFs), 12 crypto USD pairs, 8 major FX pairs, or 10 liquid
+options underlyings. This is not a claim to screen every exchange instrument.
+Each market shares a Mongo cache across members: five minutes, or one minute
+for options. New uncached scans have a 30-second member/market cooldown, an
+atomic shared lease, at most three candidate workers, a 35-second candidate
+budget and a 50-second total budget. News uses the existing shared hourly cache.
+Changing result count/score reuses the same cached scan rather than fetching data.
+
+### Honest setup scores
+
+The visible minimum is **70/100**. Strong trend/momentum/range setups get quality
+points: trend up to 25, aligned momentum 20, range position/breakout up to 15,
+bounded risk up to 10, relative volume up to 10, agreeing news sentiment up to
+10, and validated native-AI agreement 10. Contradictory news subtracts 10;
+a validated model opposing the technical direction rejects the candidate.
+Missing news/model confirmation earns no points. Forex has no meaningful volume
+feed here, so it omits those 10 points and scales the remaining 90 to 100.
+
+This is a deterministic **setup-quality score**, not a calibrated probability,
+AI confidence, backtest win rate or profitability claim. Cards explicitly label
+technical setups vs validated AI-confirmed setups. Untrained AI can collect
+samples while technical candidates are ranked, but is not presented as trained
+AI direction. Fewer qualifying opportunities means fewer cards, including zero;
+results are never padded to satisfy the requested count. Reference entry/stop/
+target levels use actual closed prices, ATR and 2:1 reference reward/risk; they
+exclude fees/slippage and are not executable broker quotes.
+
+Stock/crypto candles remain keyless. Forex uses Yahoo chart currency symbols
+(e.g. EURUSD=X); absent FX volume is marked unavailable and never scored as true
+zero volume. One recent complete hour is required; older real session boundaries
+are allowed without inserting synthetic candles. Forex learns and validates in
+its own model group and never loads the stock or crypto model.
+
+### Listed options, not binary broker expiry
+
+Options means long CALL/PUT contract candidates, distinct from the seconds-long
+Bot Entries view. Configure **Admin → Radar Sources → Options market data** once
+with Alpaca market-data credentials entitled to **OPRA** (environment fallback:
+APCA_API_KEY_ID / APCA_API_SECRET_KEY). This makes read-only requests to
+`https://data.alpaca.markets/v1beta1/options/snapshots/{underlying}` with feed=opra.
+No subscription is purchased and no order endpoint is called. Free indicative
+quotes (which can be modified/delayed) are not used for contract recommendations.
+
+The underlying must first qualify. Up to 100 filtered contracts are considered:
+7–45 days to expiry, strikes within 10% of the reference underlying, correct
+CALL/PUT direction, absolute delta 0.3–0.7, positive two-sided quoted sizes,
+positive bid/ask, relative bid/ask spread <=15%, and quote age <=120 seconds.
+Adjusted OCC roots are excluded. The card shows the actual contract, strike,
+expiry, bid/ask and source. Quotes expire locally and are rechecked on cached
+responses. The score and risk levels describe the underlying setup; this is not
+an options pricing/profitability model or a premium target. Missing OPRA access
+or no qualifying contract returns no options plays with a visible explanation.
+The Alpha Vantage free news key does not supply this OPRA entitlement.
+
+All outputs remain advisory. No automatic orders, broker permissions, payment
+settings, homepage design or short-expiry strategy rules are changed.

@@ -69,6 +69,9 @@ def test_validation_wrapper_blocks_orders_and_billing(monkeypatch, tmp_path):
     @app.post('/api/v1/intelligence/scan')
     def radar_scan():
         return {'research_only': True}
+    @app.post('/api/v1/intelligence/signals/opportunities')
+    def opportunity_scan():
+        return {'plays':[],'execution_enabled':False}
     @app.post('/api/v1/intelligence/news/feed')
     def news_feed():
         return {'articles':[]}
@@ -145,6 +148,8 @@ def test_validation_wrapper_blocks_orders_and_billing(monkeypatch, tmp_path):
     assert client.post('/api/v1/auth/login').status_code == 200
     assert client.post('/api/v1/devices/register').status_code == 200
     assert client.post('/api/v1/intelligence/scan').status_code == 200
+    assert client.post('/api/v1/intelligence/signals/opportunities').status_code == 200
+    assert client.put('/api/admin/radar/providers/options_data').status_code == 200
     assert client.post('/api/v1/intelligence/news/feed').status_code == 200
     assert client.put('/api/admin/radar/providers/alphavantage').status_code == 200
     assert client.post('/api/v1/intelligence/social/mentions').status_code == 200

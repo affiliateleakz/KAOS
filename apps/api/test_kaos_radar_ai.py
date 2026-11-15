@@ -163,3 +163,12 @@ def test_recent_discussion_counts_feed_the_native_model_with_missing_source_flag
     for missing in ({**discovery,'fetched_at':(now-timedelta(hours=2)).isoformat()}, {**discovery,'rankings':[]}, {**discovery,'stale':True}):
         out=asyncio.run(ai.assessment({'symbol':'AAPL','asset_class':'stock'},quote(now),[],now,missing))
         assert out['feature_values']['trending_available']==0
+
+
+def test_forex_never_loads_the_stock_or_crypto_model(monkeypatch):
+    now=datetime.now(timezone.utc)
+    model=SimpleNamespace(find_one=AsyncMock(return_value=None))
+    monkeypatch.setattr(ai,'db',SimpleNamespace(kaos_radar_sentiment=Samples(),kaos_radar_samples=Samples(),kaos_radar_models=model))
+    out=asyncio.run(ai.assessment({'symbol':'EURUSD','asset_class':'forex'},quote(now),[],now))
+    assert out['direction']=='WAIT'
+    assert model.find_one.call_args.args[0]=={'_id':'forex','state':'active'}

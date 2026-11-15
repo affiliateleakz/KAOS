@@ -6,6 +6,7 @@ from db import db
 from commerce_providers import cipher, vault_ready, initialize_vault
 
 CATALOG = {
+ 'options_data': {'name':'Options market data','description':'Read-only Alpaca OPRA option chains. Requires an account/plan entitled to OPRA. Indicative or modified quotes are not used for options plays.', 'fields':{'api_key':('API key','APCA_API_KEY_ID'),'api_secret':('API secret','APCA_API_SECRET_KEY')}},
  'alphavantage': {'name':'Alpha Vantage','description':'Shared market news, cached for one hour. KAOS caps its requests at 20 per UTC day; your provider plan may impose additional limits.', 'fields':{'api_key':('API key','ALPHAVANTAGE_API_KEY')}},
  'reddit': {'name':'Reddit','description':'Read-only Reddit post search. Requires approved OAuth API access. Priority social source.', 'fields':{'client_id':('Client ID','REDDIT_CLIENT_ID'),'client_secret':('Client secret','REDDIT_CLIENT_SECRET'),'user_agent':('Identifying User-Agent','REDDIT_USER_AGENT')}},
  'x': {'name':'X','description':'Official recent-post search; your X API plan must permit this endpoint. Priority social source.', 'fields':{'bearer_token':('API bearer token','X_BEARER_TOKEN')}},
@@ -38,4 +39,4 @@ async def public_settings(provider):
  ready=all(configured.values()) if provider!='bluesky' else True
  return {'id':provider,'name':info['name'],'description':info['description'],'enabled':doc.get('enabled',True),
          'configured':ready,'access':'Public search / optional login' if provider=='bluesky' else ('Ready to try' if ready else 'Setup required'),
-         'fields':[{'name':name,'label':label,'configured':configured[name],'secret':name in ('client_secret','bearer_token','app_password','access_token','api_key','rpc_url')} for name,(label,_) in info['fields'].items()]}
+         'fields':[{'name':name,'label':label,'configured':configured[name],'secret':name in ('client_secret','api_secret','bearer_token','app_password','access_token','api_key','rpc_url')} for name,(label,_) in info['fields'].items()]}

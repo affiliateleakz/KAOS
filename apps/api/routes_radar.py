@@ -84,7 +84,7 @@ async def scan(request:ScanInput,user=Depends(member)):
  if request.include_ai:
   from radar_trending import snapshot
   trending=await snapshot()
-  models=await asyncio.gather(*(db.kaos_radar_models.find_one({'_id':group,'state':'active'}) for group in ('stock','crypto')))
+  models=await asyncio.gather(*(db.kaos_radar_models.find_one({'_id':group,'state':'active'}) for group in ('stock','crypto','forex')))
   context=[trending.get('fetched_at'),trending.get('state'),trending.get('stale'),[(model or {}).get('version') for model in models]]
  version=sha256(json.dumps([settings,context],sort_keys=True).encode()).hexdigest()+SCHEMA
  key=sha256(json.dumps([user['id'],assets,sources,request.include_ai,version],sort_keys=True).encode()).hexdigest()

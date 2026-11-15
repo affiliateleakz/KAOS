@@ -179,7 +179,7 @@ async def assessment(asset, market, evidence, now=None, discovery=None):
         return {**result, 'model_state':'invalid_features','explanation':'Invalid input; no signal generated.'}
     result['feature_values'] = dict(zip(FEATURES,vector))
     result['source_time'] = market['source_time']
-    group = 'crypto' if kind == 'crypto' else 'stock'
+    group = kind if kind in ('crypto','forex') else 'stock'
     # Actual later closed-candle prices label prior snapshots, never provider text
     # or a guessed trade outcome. Session gaps cannot become 45-minute labels.
     history = {int(t):p for t,p in market.get('closed_history', [])}
@@ -190,9 +190,9 @@ async def assessment(asset, market, evidence, now=None, discovery=None):
         if target not in history or any(t not in history for t in range(int(row['source_at']),target+1,900)):
             continue
         move = history[target]/row['price']-1
-        # Flat moves under ten basis points do not become directional labels.
+        # Flat moves below the market-specific threshold do not become directional labels.
         await db.kaos_radar_samples.update_one({'_id':row['_id'],'label':{'$exists':False}},
-            {'$set':{'label':int(move>0) if abs(move)>=.001 else None,'forward_return':move}})
+            {'$set':{'label':int(move>0) if abs(move)>=(.0002 if group=='forex' else .001) else None,'forward_return':move}})
     key = sha256(f'{SCHEMA}:{kind}:{symbol}:{source_time.timestamp()}'.encode()).hexdigest()
     await db.kaos_radar_samples.update_one({'_id':key},{'$setOnInsert':{
         'schema':SCHEMA,'group':group,'symbol':symbol,'x':vector,'asof':now.timestamp(),

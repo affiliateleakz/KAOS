@@ -57,3 +57,13 @@ def test_bearish_breakout_and_flat_market():
     result=assess(rows,80*900)
     assert result['direction']=='SELL'
     assert result['reference_target']<result['price']<result['reference_stop']
+
+
+def test_old_session_gaps_do_not_prevent_a_fresh_complete_hour():
+    rows=bars()
+    # An overnight gap well before the latest hour is a real session boundary;
+    # no synthetic bars are inserted and current one-hour returns remain valid.
+    for row in rows[60:]:row[0]+=86400
+    rows[-1]=[rows[-1][0],99,106,100,105,20]
+    out=assess(rows,rows[-1][0]+900)
+    assert out['direction']=='BUY' and len(out['feature_vector'])==7

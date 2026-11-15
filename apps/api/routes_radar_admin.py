@@ -40,7 +40,7 @@ async def save(provider:str,request:ProviderInput,admin=Depends(owner)):
 
 class TrainInput(BaseModel):
  model_config=ConfigDict(extra='forbid')
- group:str=Field(pattern=r'^(stock|crypto)$')
+ group:str=Field(pattern=r'^(stock|crypto|forex)$')
 
 
 class ActivateInput(TrainInput):
@@ -51,7 +51,7 @@ class ActivateInput(TrainInput):
 async def model_status(admin=Depends(owner)):
  from kaos_radar_ai import SCHEMA
  groups=[]
- for group in ('stock','crypto'):
+ for group in ('stock','crypto','forex'):
   count=await db.kaos_radar_samples.count_documents({'group':group,'schema':SCHEMA,'label':{'$in':[0,1]}})
   active=await db.kaos_radar_models.find_one({'_id':group},{'bundle':0})
   candidate=await db.kaos_radar_models.find_one({'_id':'candidate:'+group},{'bundle':0})
