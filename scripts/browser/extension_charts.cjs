@@ -58,6 +58,18 @@ const assert=require('node:assert/strict');
  assert.ok((await page.locator('[data-companion-asset]').textContent()).includes('EURUSD'));
  assert.ok(await page.getByRole('heading',{name:'Trading dashboard',exact:true}).isVisible());
  assert.equal(await page.locator('.kaos-companion-brand').getAttribute('src'),'assets/kaos-logo-horizontal.png');
+
+ assert.equal(await page.locator('#debug-fold').count(),1);
+ assert.equal(await page.locator('#screen-main .dashboard-top #debug-fold').count(),1);
+ await page.locator('#debug-fold > summary').click();
+ assert.equal(await page.locator('#debug-fold').evaluate(el=>el.open),true);
+ assert.ok(await page.locator('#dbg-asset').isVisible());
+ await page.evaluate(()=>window.kaosRoute('settings'));
+ assert.equal(await page.locator('#debug-fold').isVisible(),false);
+ await page.locator('#k14-head-diag').evaluate(button=>button.click());
+ await page.waitForFunction(()=>document.getElementById('screen-main').classList.contains('view-dashboard'));
+ assert.ok(await page.locator('#dbg-asset').isVisible());
+ await page.locator('#debug-fold > summary').click();
  console.log('Companion receives minimal broker status without chart snapshots or automatic Start.');
  await page.goto(BASE+'/popup.html?restored');
  await page.waitForFunction(()=>document.getElementById('screen-main')?.classList.contains('active'),{timeout:15000});

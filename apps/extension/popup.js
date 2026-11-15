@@ -2533,7 +2533,7 @@ if (document.readyState === 'loading') {
   }
 
   function openFoldAndGo(foldId) {
-    if (typeof window.kaosRoute === 'function') window.kaosRoute('strategy');
+    if (typeof window.kaosRoute === 'function') window.kaosRoute(foldId === 'debug-fold' ? 'dashboard' : 'strategy');
     setTimeout(() => {
       const fold = $(foldId);
       if (fold) { fold.open = true; fold.scrollIntoView({ block: 'start' }); }

@@ -4364,6 +4364,45 @@ body.kaos-fullpage #screen-main.view-dashboard #kaos-dashboard-live{
             </div>
           </div>
         </div>
+        <details class="dashboard-fold dbg-fold" id="debug-fold"><summary>LIVE DEBUG &amp; DIAGNOSTICS</summary><div class="fold-body">
+          <!-- Live Debug Panel -->
+          <div class="dbg-panel">
+            <div class="dbg-title" style="display:flex;justify-content:space-between;align-items:center">
+              <span>Live Debug</span>
+            </div>
+            <div class="dbg-status-row">
+              <div class="dbg-item"><span class="dbg-label">ASSET</span><span class="dbg-value" id="dbg-asset">--</span></div>
+              <div class="dbg-item"><span class="dbg-label">TIMEFRAME</span><span class="dbg-value" id="dbg-tf">--</span></div>
+              <div class="dbg-item"><span class="dbg-label">CANDLES</span><span class="dbg-value" id="dbg-storage">--</span></div>
+              <div class="dbg-item"><span class="dbg-label">IND TF</span><span class="dbg-value" id="dbg-tfcount">--</span></div>
+            </div>
+            <div class="dbg-warmup">
+              <div class="dbg-warmup-head"><span>WARMUP</span><span id="dbg-warmup-txt">0/40</span></div>
+              <div class="dbg-warmup-track"><div class="dbg-warmup-bar" id="dbg-warmup-bar"></div></div>
+            </div>
+            <div class="dbg-reason" id="dbg-reason">IDLE</div>
+            <div class="dbg-title" style="margin-top:10px">4 Channels</div>
+            <div id="dbg-channels">
+              <div class="dbg-log-empty">Grid mode off — start the 4-chart bot to populate channels</div>
+            </div>
+            <div class="dbg-title ui-obsolete" style="margin-top:10px">Indicators</div>
+            <div class="dbg-grid ui-obsolete">
+              <div class="dbg-ind"><span class="dbg-ind-name">RSI</span><span class="dbg-ind-val" id="dbg-rsi">--</span></div>
+              <div class="dbg-ind"><span class="dbg-ind-name">EMA5</span><span class="dbg-ind-val" id="dbg-ema5">--</span></div>
+              <div class="dbg-ind"><span class="dbg-ind-name">EMA9</span><span class="dbg-ind-val" id="dbg-ema9">--</span></div>
+              <div class="dbg-ind"><span class="dbg-ind-name">EMA21</span><span class="dbg-ind-val" id="dbg-ema21">--</span></div>
+              <div class="dbg-ind"><span class="dbg-ind-name">ATR</span><span class="dbg-ind-val" id="dbg-atr">--</span></div>
+              <div class="dbg-ind"><span class="dbg-ind-name">STOCH</span><span class="dbg-ind-val" id="dbg-stoch">--</span></div>
+              <div class="dbg-ind"><span class="dbg-ind-name">MACD</span><span class="dbg-ind-val" id="dbg-macd">--</span></div>
+              <div class="dbg-ind buy"><span class="dbg-ind-name">BUY</span><span class="dbg-ind-val" id="dbg-buy">--</span></div>
+              <div class="dbg-ind sell"><span class="dbg-ind-name">SELL</span><span class="dbg-ind-val" id="dbg-sell">--</span></div>
+            </div>
+            <div class="dbg-title">Signals</div>
+            <div class="dbg-log" id="dbg-log">
+              <div class="dbg-log-empty">No signal decisions yet</div>
+            </div>
+          </div>
+        </div></details>
       </div>
     </div>
     <div class="main-columns">
@@ -4599,45 +4638,7 @@ body.kaos-fullpage #screen-main.view-dashboard #kaos-dashboard-live{
           <div class="pf-target"><span>BUY ≥56% · SELL ≤44% · middle = NO TRADE</span><strong id="pf-live-verdict">TARGET &gt;60%</strong></div>
         </div>
 
-        <details class="dashboard-fold dbg-fold" id="debug-fold"><summary>LIVE DEBUG &amp; DIAGNOSTICS</summary><div class="fold-body">
-          <!-- Live Debug Panel -->
-          <div class="dbg-panel">
-            <div class="dbg-title" style="display:flex;justify-content:space-between;align-items:center">
-              <span>Live Debug</span>
-            </div>
-            <div class="dbg-status-row">
-              <div class="dbg-item"><span class="dbg-label">ASSET</span><span class="dbg-value" id="dbg-asset">--</span></div>
-              <div class="dbg-item"><span class="dbg-label">TIMEFRAME</span><span class="dbg-value" id="dbg-tf">--</span></div>
-              <div class="dbg-item"><span class="dbg-label">CANDLES</span><span class="dbg-value" id="dbg-storage">--</span></div>
-              <div class="dbg-item"><span class="dbg-label">IND TF</span><span class="dbg-value" id="dbg-tfcount">--</span></div>
-            </div>
-            <div class="dbg-warmup">
-              <div class="dbg-warmup-head"><span>WARMUP</span><span id="dbg-warmup-txt">0/40</span></div>
-              <div class="dbg-warmup-track"><div class="dbg-warmup-bar" id="dbg-warmup-bar"></div></div>
-            </div>
-            <div class="dbg-reason" id="dbg-reason">IDLE</div>
-            <div class="dbg-title" style="margin-top:10px">4 Channels</div>
-            <div id="dbg-channels">
-              <div class="dbg-log-empty">Grid mode off — start the 4-chart bot to populate channels</div>
-            </div>
-            <div class="dbg-title ui-obsolete" style="margin-top:10px">Indicators</div>
-            <div class="dbg-grid ui-obsolete">
-              <div class="dbg-ind"><span class="dbg-ind-name">RSI</span><span class="dbg-ind-val" id="dbg-rsi">--</span></div>
-              <div class="dbg-ind"><span class="dbg-ind-name">EMA5</span><span class="dbg-ind-val" id="dbg-ema5">--</span></div>
-              <div class="dbg-ind"><span class="dbg-ind-name">EMA9</span><span class="dbg-ind-val" id="dbg-ema9">--</span></div>
-              <div class="dbg-ind"><span class="dbg-ind-name">EMA21</span><span class="dbg-ind-val" id="dbg-ema21">--</span></div>
-              <div class="dbg-ind"><span class="dbg-ind-name">ATR</span><span class="dbg-ind-val" id="dbg-atr">--</span></div>
-              <div class="dbg-ind"><span class="dbg-ind-name">STOCH</span><span class="dbg-ind-val" id="dbg-stoch">--</span></div>
-              <div class="dbg-ind"><span class="dbg-ind-name">MACD</span><span class="dbg-ind-val" id="dbg-macd">--</span></div>
-              <div class="dbg-ind buy"><span class="dbg-ind-name">BUY</span><span class="dbg-ind-val" id="dbg-buy">--</span></div>
-              <div class="dbg-ind sell"><span class="dbg-ind-name">SELL</span><span class="dbg-ind-val" id="dbg-sell">--</span></div>
-            </div>
-            <div class="dbg-title">Signals</div>
-            <div class="dbg-log" id="dbg-log">
-              <div class="dbg-log-empty">No signal decisions yet</div>
-            </div>
-          </div>
-        </div></details>
+
       </div><!-- /runtime-col -->
     </div><!-- /main-columns -->
 

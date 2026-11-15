@@ -69,3 +69,10 @@ html body.kaos-companion #screen-main.view-dashboard .kaos-banner-toolbar .kaos-
 html body.kaos-companion #screen-main.view-dashboard .kaos-banner-toolbar .kaos-tb-gear{display:none!important}
 html body.kaos-companion #screen-main.view-dashboard .kaos-banner-toolbar :is(input,select,#kaos-strategy-box){position:static!important;min-height:42px!important;height:42px!important;width:100%!important;margin:0!important}
 html body.kaos-companion #screen-main.view-dashboard .kaos-app-workspace.k14-workspace .kaos-run-rail{flex:none!important}
+
+/* Diagnostics belongs to the Bot workspace beside account and trade activity. */
+html body.kaos-companion #screen-main.view-dashboard #debug-fold{display:block!important;margin:0!important;min-width:0!important;width:100%!important;border:1px solid #71582a!important;border-radius:6px!important;background:#0a0e0b!important}
+html body.kaos-companion #screen-main:not(.view-dashboard) #debug-fold{display:none!important}
+html body.kaos-companion #debug-fold>summary{min-height:44px;display:flex;align-items:center;padding:12px;color:#e8c46f;line-height:1.5}
+html body.kaos-companion #debug-fold .fold-body{padding:10px;min-width:0;overflow-wrap:anywhere}
+html body.kaos-companion #debug-fold .dbg-panel{padding:0;background:transparent!important;min-width:0}
