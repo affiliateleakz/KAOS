@@ -33,6 +33,13 @@ def setup(tmp_path):
         path = tools / name
         path.write_text('#!/bin/bash\nexit "${BUILD_FAIL:-0}"\n')
         path.chmod(0o755)
+    (tools / 'npm').write_text(
+        '#!/bin/bash\n'
+        'if [ \"$1\" = run ]; then\n'
+        '  [ \"$RAYON_NUM_THREADS\" = 1 ] && [ \"$TOKIO_WORKER_THREADS\" = 1 ] && '
+        '[ \"$UV_THREADPOOL_SIZE\" = 1 ] || exit 90\n'
+        'fi\nexit \"${BUILD_FAIL:-0}\"\n'
+    )
     env = dict(os.environ, HOME=str(home), PATH=f'{tools}:{os.environ["PATH"]}')
     def git(*args):
         return subprocess.check_output(['git', *args], cwd=repo, env=env).decode().strip()

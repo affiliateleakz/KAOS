@@ -35,6 +35,8 @@ work="$(mktemp -d "$base/.preparing.XXXXXX")"
 (
   cd apps/web
   npm ci --no-audit --no-fund
+  # CloudLinux accounts may expose many CPUs but allow very few worker threads.
+  RAYON_NUM_THREADS=1 TOKIO_WORKER_THREADS=1 UV_THREADPOOL_SIZE=1 \
   CI=false REACT_APP_BACKEND_URL=https://api.tradingwithkaos.com npm run build
 )
 "$python" scripts/build_cpanel_packages.py

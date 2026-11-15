@@ -79,6 +79,9 @@ The equivalent Terminal command is `bash scripts/cpanel_prepare.sh` from the
 checkout. Node 20 comes from `/opt/alt/alt-nodejs20/root/usr/bin`; Python uses
 the existing account's `virtualenv/tradingwithkaos.com/backend/3.11` environment.
 No dependency installation into the live Python environment is performed.
+The cPanel website build limits Rayon, Tokio and libuv worker pools to one
+worker each to reduce thread pressure on shared hosting. This does not change
+Passenger workers or guarantee a build under an exhausted account quota.
 
 This builds the React website with the existing API domain, builds both cPanel
 ZIPs, checks their hashes, and publishes an immutable private release under
