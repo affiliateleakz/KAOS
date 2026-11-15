@@ -36,8 +36,8 @@ export function Overview() {
   const stats = [
     ["Membership", <StatusBadge value={d.membershipStatus} testid="stat-membership" />],
     ["Affiliate", <StatusBadge value={d.affiliateStatus} testid="stat-affiliate" />],
-    ["License", <StatusBadge value={d.license.authorized ? "ACTIVE" : "REVOKED"} testid="stat-license" />],
-    ["Devices", <span className="font-mono text-xl text-white">{d.counts.devices}</span>],
+    ["License", <StatusBadge value={d.license?.authorized ? "ACTIVE" : "REVOKED"} testid="stat-license" />],
+    ["Devices", <span className="font-mono text-xl text-white">{d.counts?.devices ?? 0}</span>],
   ];
   return (
     <div className="kaos-overview-console">

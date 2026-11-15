@@ -1,6 +1,8 @@
 """KAOS read-only DEX market lookup. No trading or token safety endorsement."""
+import asyncio
 import os
 import re
+import time
 from math import isfinite
 from urllib.parse import quote
 import httpx
@@ -43,6 +45,99 @@ def pair_card(pair):
         "fdv":numeric(pair.get("fdv")),"buys_24h":(txns.get("h24") or {}).get("buys"),
         "sells_24h":(txns.get("h24") or {}).get("sells"),
         "url":pair_url,"source":"DEX Screener","verified_safe":False}
+
+COINGECKO="https://api.coingecko.com/api/v3"
+COINBASE="https://api.exchange.coinbase.com"
+# Coinbase fallback universe: liquid USD pairs that need no key or account.
+COINBASE_MAJORS=("BTC","ETH","SOL","XRP","ADA","DOGE","AVAX","LINK","DOT","MATIC","LTC","BCH","UNI","ATOM","XLM","ETC","FIL","APT","ARB","OP","SUI","NEAR","INJ","AAVE","MKR","GRT","SAND","MANA","CRV","COMP")
+# The bubble map is market-wide, so one cached snapshot serves every member and
+# keeps the free endpoints inside their published rate limits.
+_MARKET_CACHE={"at":0.0,"payload":None,"provider":None}
+_MARKET_TTL=90.0
+_MARKET_STALE=600.0
+
+
+def _coin_row(raw):
+    return {"symbol":str(raw.get("symbol") or "").upper()[:12],
+            "name":str(raw.get("name") or "")[:60],
+            "price_usd":numeric(raw.get("current_price")),
+            "market_cap":numeric(raw.get("market_cap")),
+            "volume_24h":numeric(raw.get("total_volume")),
+            "change_1h":numeric(raw.get("price_change_percentage_1h_in_currency")),
+            "change_24h":numeric(raw.get("price_change_percentage_24h_in_currency") or raw.get("price_change_percentage_24h")),
+            "change_7d":numeric(raw.get("price_change_percentage_7d_in_currency")),
+            "image":raw.get("image") if isinstance(raw.get("image"),str) and raw["image"].startswith("https://") else None,
+            "url":"https://www.coingecko.com/en/coins/"+quote(str(raw.get("id") or ""),safe=""),
+            "source":"CoinGecko"}
+
+
+async def _coingecko_market(limit):
+    params={"vs_currency":"usd","order":"market_cap_desc","per_page":limit,"page":1,
+            "price_change_percentage":"1h,24h,7d","sparkline":"false"}
+    async with httpx.AsyncClient(timeout=15,follow_redirects=False) as client:
+        response=await client.get(COINGECKO+"/coins/markets",params=params,
+                                  headers={"Accept":"application/json","User-Agent":"KAOSTrading-Research/1.0"})
+        response.raise_for_status()
+        rows=[_coin_row(c) for c in response.json() if isinstance(c,dict)]
+    rows=[r for r in rows if r["price_usd"] is not None and r["symbol"]]
+    if not rows: raise ValueError("Empty CoinGecko response")
+    return rows
+
+
+async def _coinbase_market(limit, semaphore):
+    async def one(client,symbol):
+        async with semaphore:
+            try:
+                response=await client.get(f"{COINBASE}/products/{symbol}-USD/stats",
+                                          headers={"Accept":"application/json","User-Agent":"KAOSTrading-Research/1.0"})
+                if response.status_code!=200: return None
+                data=response.json()
+                last=numeric(data.get("last")); open_=numeric(data.get("open")); volume=numeric(data.get("volume"))
+            except (httpx.HTTPError,ValueError):
+                return None
+        if last is None or open_ in (None,0): return None
+        return {"symbol":symbol,"name":symbol,"price_usd":last,"market_cap":None,
+                "volume_24h":(volume*last) if volume is not None else None,
+                "change_1h":None,"change_7d":None,
+                "change_24h":round(100*(last-open_)/open_,3),
+                "image":None,"url":f"https://www.coinbase.com/price/{symbol.lower()}","source":"Coinbase"}
+    async with httpx.AsyncClient(timeout=15,follow_redirects=False,
+                                 limits=httpx.Limits(max_connections=6,max_keepalive_connections=6)) as client:
+        rows=await asyncio.gather(*(one(client,s) for s in COINBASE_MAJORS[:limit]))
+    rows=[r for r in rows if r]
+    if not rows: raise ValueError("Empty Coinbase response")
+    return rows
+
+
+@router.get("/market")
+async def crypto_market(limit:int=Query(60,ge=10,le=100),user=Depends(require_scanner)):
+    """Market-wide bubble map data. Keyless: CoinGecko, then Coinbase as fallback."""
+    now=time.monotonic()
+    cache=_MARKET_CACHE
+    if cache["payload"] and now-cache["at"]<_MARKET_TTL:
+        return {**cache["payload"],"cached":True}
+    rows,provider,failures=None,None,[]
+    try:
+        rows=await _coingecko_market(limit); provider="CoinGecko (free, no key)"
+    except Exception:
+        failures.append("coingecko")
+    if not rows:
+        try:
+            rows=await _coinbase_market(limit,asyncio.Semaphore(6)); provider="Coinbase Exchange public stats (free, no key)"
+        except Exception:
+            failures.append("coinbase")
+    if not rows:
+        # Serve a recent snapshot rather than an empty page during a provider hiccup.
+        if cache["payload"] and now-cache["at"]<_MARKET_STALE:
+            return {**cache["payload"],"cached":True,"stale":True}
+        raise HTTPException(503,"Crypto market data unavailable from free providers")
+    payload={"coins":rows[:limit],"count":min(len(rows),limit),"provider":provider,
+             "weighting":"market_cap" if provider.startswith("CoinGecko") else "24h_volume",
+             "failures":failures,"research_only":True,"trade_execution_enabled":False,
+             "warning":"Bubble size is a liquidity or market-cap measure, not a recommendation. Prices can be manipulated."}
+    _MARKET_CACHE.update(at=now,payload=payload,provider=provider)
+    return {**payload,"cached":False}
+
 
 async def dex_get(path):
     # Route is selected from fixed internal paths, never a user-supplied URL.

@@ -11,14 +11,24 @@ import { Bot, Brain, Layers, Lock, Cpu, Wifi, WifiOff, RefreshCw, Zap, Share2, L
 
 const STATE_COLOR = {
   SIGNAL_GENERATED: "text-slate-300", SIGNAL_DELIVERED: "text-slate-300",
-  ORDER_SUBMIT_ATTEMPT: "text-amber-300", BROKER_CONFIRMED: "text-[#2F8CFF]",
-  TRADE_OPEN: "text-[#2F8CFF]", TRADE_RESULT: "text-white", ORDER_FAILED: "text-[#C62828]",
+  ORDER_SUBMIT_ATTEMPT: "text-amber-300", BROKER_CONFIRMED: "text-[#D4AF37]",
+  TRADE_OPEN: "text-[#D4AF37]", TRADE_RESULT: "text-white", ORDER_FAILED: "text-[#C62828]",
 };
 const MODE_META = {
   STRATEGY: { label: "Strategy", icon: Bot, desc: "Trade using the deterministic KAOS Strategy." },
   AI: { label: "AI", icon: Brain, desc: "Trade using KAOS AI predictions." },
   STRATEGY_AI: { label: "Strategy + AI", icon: Layers, desc: "Use both systems together." },
 };
+
+// Display fallback for the three engines the server-side Berserker strategy runs.
+// `officialStrategy` from /api/trading/overview carries a single `engine` plus the
+// per-engine logic in kaos_strategy.py (REVERSAL / RUNNER / BREAKOUT), so the summary
+// card must not assume the payload already contains an `engines` array.
+const STRATEGY_ENGINE_FALLBACK = [
+  { key: "REVERSAL", label: "Reversal", expiration: "30s", description: "Failed-break rejection on the 30s structure." },
+  { key: "RUNNER", label: "Runner", expiration: "15s", description: "First-pullback continuation on the 5s structure." },
+  { key: "BREAKOUT", label: "Breakout", expiration: "30s", description: "Confirmed break with hold/retest on the 15s structure." },
+];
 
 function relTime(iso) {
   if (!iso) return "never";
@@ -39,7 +49,7 @@ function SyncHealth({ sync, expired, onRefresh }) {
           <WifiOff className="h-5 w-5" />
           <span data-testid="sync-health-state" className="font-heading text-sm font-semibold">Session expired — sign in again</span>
         </div>
-        <a href="/login" className="ml-auto text-xs text-[#2F8CFF] hover:underline">Sign in</a>
+        <a href="/login" className="ml-auto text-xs text-[#D4AF37] hover:underline">Sign in</a>
       </div>
     );
   }
@@ -53,7 +63,7 @@ function SyncHealth({ sync, expired, onRefresh }) {
       </div>
       <div className="font-mono text-xs text-slate-400">Last event <span data-testid="sync-health-last" className="text-white">{relTime(sync.lastEventAt)}</span></div>
       <div className="font-mono text-xs text-slate-400">Confirmed trade <span className="text-white">{relTime(sync.lastConfirmedAt)}</span></div>
-      <div className="font-mono text-xs text-slate-400">Events synced <span data-testid="sync-health-total" className="text-[#2F8CFF]">{sync.totalEvents}</span></div>
+      <div className="font-mono text-xs text-slate-400">Events synced <span data-testid="sync-health-total" className="text-[#D4AF37]">{sync.totalEvents}</span></div>
       <button data-testid="sync-health-refresh" onClick={onRefresh} className="ml-auto flex items-center gap-1 text-xs text-slate-400 hover:text-white">
         <RefreshCw className="h-3.5 w-3.5" /> Refresh
       </button>
@@ -91,7 +101,7 @@ function CandleSpark({ candles, barIndex, direction }) {
       {win.map((c, i) => {
         const isTrigger = from + i === barIndex;
         const up = c.close >= c.open;
-        const color = isTrigger ? "#2F8CFF" : up ? "#22C55E" : "#C62828";
+        const color = isTrigger ? "#D4AF37" : up ? "#22C55E" : "#C62828";
         const x = i * cw + cw / 2;
         const bodyTop = y(Math.max(c.open, c.close));
         const bodyH = Math.max(1, Math.abs(y(c.open) - y(c.close)));
@@ -135,9 +145,9 @@ function drawShareCard({ candles, barIndex, sig, version }) {
   const g = cv.getContext("2d");
   // background
   g.fillStyle = "#0B0B0B"; g.fillRect(0, 0, W, Hc);
-  g.strokeStyle = "#2F8CFF"; g.lineWidth = 3; g.strokeRect(14, 14, W - 28, Hc - 28);
+  g.strokeStyle = "#D4AF37"; g.lineWidth = 3; g.strokeRect(14, 14, W - 28, Hc - 28);
   // wordmark
-  g.fillStyle = "#2F8CFF"; g.font = "bold 54px Georgia, serif";
+  g.fillStyle = "#D4AF37"; g.font = "bold 54px Georgia, serif";
   g.fillText("KAOS TRADING", 60, 90);
   g.fillStyle = "#8a8a8a"; g.font = "600 20px Georgia, serif";
   g.fillText("TRADE WITH KAOS", 62, 122);
@@ -160,7 +170,7 @@ function drawShareCard({ candles, barIndex, sig, version }) {
     win.forEach((c, i) => {
       const trigger = from + i === barIndex;
       const up = c.close >= c.open;
-      const col = trigger ? "#2F8CFF" : up ? "#22C55E" : "#C62828";
+      const col = trigger ? "#D4AF37" : up ? "#22C55E" : "#C62828";
       const cx = x0 + i * cw + cw / 2;
       if (trigger) { g.fillStyle = "rgba(212,175,55,0.15)"; g.fillRect(x0 + i * cw, y0, cw, cH); }
       g.strokeStyle = col; g.lineWidth = trigger ? 2.4 : 1.4;
@@ -202,7 +212,7 @@ function StrategyReplay() {
   return (
     <div className="card-surface mb-6 p-5" data-testid="strategy-replay">
       <div className="flex flex-wrap items-center gap-3">
-        <Zap className="h-5 w-5 text-[#2F8CFF]" />
+        <Zap className="h-5 w-5 text-[#D4AF37]" />
         <h3 className="font-heading font-semibold">Strategy Replay</h3>
         <span className="font-mono text-xs text-slate-500">Runs the real server-side KAOS engine — no live trade.</span>
         <div className="ml-auto flex items-center gap-2">
@@ -218,7 +228,7 @@ function StrategyReplay() {
             placeholder='Paste candles: JSON [{"ts","open","high","low","close"}, …] or CSV with header open,high,low,close'
             className="min-h-[90px] bg-[#080808] border-[#3A3A3A] font-mono text-xs" />
           <div className="mt-2 flex items-center gap-3">
-            <Button data-testid="strategy-replay-run-pasted" onClick={runPasted} disabled={busy} size="sm" className="bg-[#2F8CFF] text-black">Run on pasted candles</Button>
+            <Button data-testid="strategy-replay-run-pasted" onClick={runPasted} disabled={busy} size="sm" className="bg-[#D4AF37] text-black">Run on pasted candles</Button>
             <span className="font-mono text-[10px] text-slate-500">Your data is analyzed live and never stored.</span>
           </div>
         </div>
@@ -226,9 +236,9 @@ function StrategyReplay() {
       {res && (
         <div className="mt-4" data-testid="strategy-replay-result">
           {res.decision === "TRADE" && sig ? (
-            <div className="rounded-md border border-[#2F8CFF]/30 bg-[#2F8CFF]/5 p-4">
+            <div className="rounded-md border border-[#D4AF37]/30 bg-[#D4AF37]/5 p-4">
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-                <span className="font-heading text-lg font-bold text-[#2F8CFF]">{sig.engine}</span>
+                <span className="font-heading text-lg font-bold text-[#D4AF37]">{sig.engine}</span>
                 <span className={`font-mono text-sm font-bold ${sig.direction === "BUY" ? "text-[#22C55E]" : "text-[#C62828]"}`}>{sig.direction}</span>
                 <span className="font-mono text-xs text-slate-400">expiry {sig.expiration}</span>
                 <span className="font-mono text-xs text-slate-400">confidence {sig.confidence}</span>
@@ -253,7 +263,7 @@ function StrategyReplay() {
                     }}>
                     <LinkIcon className="mr-1 h-3.5 w-3.5" /> Copy share link
                   </Button>
-                  <Button data-testid="strategy-replay-share" size="sm" variant="outline" className="border-[#2F8CFF]/40 bg-transparent text-[#2F8CFF] hover:bg-[#2F8CFF]/10"
+                  <Button data-testid="strategy-replay-share" size="sm" variant="outline" className="border-[#D4AF37]/40 bg-transparent text-[#D4AF37] hover:bg-[#D4AF37]/10"
                     onClick={() => {
                       try {
                         const url = drawShareCard({ candles, barIndex: res.barIndex, sig, version: res.strategyVersion });
@@ -307,7 +317,7 @@ function BacktestExplorer() {
   return (
     <div className="card-surface mb-6 p-5" data-testid="backtest-explorer">
       <div className="flex flex-wrap items-center gap-3">
-        <LineChart className="h-5 w-5 text-[#2F8CFF]" />
+        <LineChart className="h-5 w-5 text-[#D4AF37]" />
         <h3 className="font-heading font-semibold">Backtest Explorer</h3>
         <span className="font-mono text-xs text-slate-500">real engine win-rate per strategy over market history</span>
         <div className="ml-auto flex items-center gap-2">
@@ -319,14 +329,14 @@ function BacktestExplorer() {
         <div className="mt-3">
           <Textarea data-testid="backtest-paste-input" value={pasteText} onChange={(e) => setPasteText(e.target.value)}
             placeholder='Paste candles: JSON array or CSV with open,high,low,close' className="min-h-[80px] bg-[#080808] border-[#3A3A3A] font-mono text-xs" />
-          <Button data-testid="backtest-run-pasted" onClick={() => { try { run(parseCandles(pasteText).filter((x) => [x.open, x.high, x.low, x.close].every(Number.isFinite))); } catch (e) { toast.error("Could not parse candles."); } }} disabled={busy} size="sm" className="mt-2 bg-[#2F8CFF] text-black">Run on pasted candles</Button>
+          <Button data-testid="backtest-run-pasted" onClick={() => { try { run(parseCandles(pasteText).filter((x) => [x.open, x.high, x.low, x.close].every(Number.isFinite))); } catch (e) { toast.error("Could not parse candles."); } }} disabled={busy} size="sm" className="mt-2 bg-[#D4AF37] text-black">Run on pasted candles</Button>
         </div>
       )}
       {res && (
         <div className="mt-4" data-testid="backtest-result">
           <div className="mb-3 flex flex-wrap items-center gap-x-6 gap-y-1">
             <span className="font-mono text-sm text-slate-300">Overall</span>
-            <span className="font-mono text-2xl font-bold text-[#2F8CFF]" data-testid="backtest-overall-winrate">{res.overall.winRate}%</span>
+            <span className="font-mono text-2xl font-bold text-[#D4AF37]" data-testid="backtest-overall-winrate">{res.overall.winRate}%</span>
             <span className="font-mono text-xs text-slate-400">{res.overall.trades} trades · {res.overall.wins}W / {res.overall.losses}L / {res.overall.ties}T</span>
             <span className="ml-auto font-mono text-[10px] uppercase text-slate-500">{res.bars} bars · v{res.strategyVersion} · LIVE</span>
           </div>
@@ -336,7 +346,7 @@ function BacktestExplorer() {
               return (
                 <div key={e} className="rounded-md border border-[#2E2E2E] bg-[#0c0c0c] p-3" data-testid={`backtest-engine-${e}`}>
                   <div className="label-mono">{e}</div>
-                  <div className="mt-1 font-mono text-xl font-bold text-[#2F8CFF]">{d.winRate}%</div>
+                  <div className="mt-1 font-mono text-xl font-bold text-[#D4AF37]">{d.winRate}%</div>
                   <div className="mt-1 font-mono text-[10px] text-slate-500">{d.trades} trades · {d.wins}W/{d.losses}L/{d.ties}T</div>
                 </div>
               );
@@ -368,6 +378,9 @@ export default function Trading() {
   if (!d) return <p className="text-slate-500">Loading…</p>;
   const ent = d.entitlements;
   const s = d.summary;
+  const os = d.officialStrategy || {};
+  const structureTag = os.structureComponent || os.signalTimeframe || "";
+  const strategyEngines = Array.isArray(os.engines) && os.engines.length ? os.engines : STRATEGY_ENGINE_FALLBACK;
 
   return (
     <div className="kaos-trading-console">
@@ -378,7 +391,7 @@ export default function Trading() {
 
       <FourChartTerminal entitlements={ent} />
       <div className="mb-6"><TrendPauseBacktest /></div>
-      <div className="mb-6 rounded-lg border border-[#2F8CFF]/20 bg-[#2F8CFF]/5 p-3 text-xs text-[#2F8CFF]">
+      <div className="mb-6 rounded-lg border border-[#D4AF37]/20 bg-[#D4AF37]/5 p-3 text-xs text-[#D4AF37]">
         The real KAOS Strategy (Berserker · Reversal/Runner/Breakout) runs server-side and returns live decisions when the extension streams market candles. KAOS AI serves live inference once a trained model is deployed. Broker execution happens only inside the extension — no live trades occur on this page.
       </div>
 
@@ -396,11 +409,11 @@ export default function Trading() {
             const M = MODE_META[m]; const allowed = (ent.modes || []).includes(m); const active = d.mode === m;
             return (
               <button key={m} data-testid={`trading-mode-${m}`} disabled={!allowed} onClick={() => setMode(m)}
-                className={`card-surface p-5 text-left transition-all ${active ? "border-[#2F8CFF] ring-1 ring-[#2F8CFF]/40" : ""} ${!allowed ? "opacity-50 cursor-not-allowed" : "hover:border-[#2F8CFF]/60"}`}>
+                className={`card-surface p-5 text-left transition-all ${active ? "border-[#D4AF37] ring-1 ring-[#D4AF37]/40" : ""} ${!allowed ? "opacity-50 cursor-not-allowed" : "hover:border-[#D4AF37]/60"}`}>
                 <div className="flex items-center justify-between">
-                  <M.icon className={`h-6 w-6 ${active ? "text-[#2F8CFF]" : "text-slate-400"}`} />
+                  <M.icon className={`h-6 w-6 ${active ? "text-[#D4AF37]" : "text-slate-400"}`} />
                   {!allowed && <Lock className="h-4 w-4 text-slate-500" />}
-                  {active && <span className="font-mono text-[10px] uppercase text-[#2F8CFF]">Active</span>}
+                  {active && <span className="font-mono text-[10px] uppercase text-[#D4AF37]">Active</span>}
                 </div>
                 <div className="mt-3 font-heading font-semibold">{M.label}</div>
                 <p className="mt-1 text-sm text-slate-400">{M.desc}</p>
@@ -413,15 +426,15 @@ export default function Trading() {
 
       {/* KAOS Strategy engines */}
       <div className="card-surface mb-6 p-5">
-        <div className="flex items-center gap-2"><Cpu className="h-5 w-5 text-[#2F8CFF]" />
-          <h3 className="font-heading font-semibold">{d.officialStrategy.name} <span className="font-mono text-xs text-slate-500">v{d.officialStrategy.version} · {d.officialStrategy.structureComponent}</span></h3>
-          <span className="ml-auto inline-flex items-center gap-1 rounded bg-[#2F8CFF]/10 border border-[#2F8CFF]/30 px-2 py-0.5 font-mono text-[10px] uppercase text-[#2F8CFF]"><Lock className="h-3 w-3" />Official · Locked</span>
+        <div className="flex items-center gap-2"><Cpu className="h-5 w-5 text-[#D4AF37]" />
+          <h3 className="font-heading font-semibold">{os.name} <span className="font-mono text-xs text-slate-500">v{os.version}{structureTag ? ` · ${structureTag}` : ""}</span></h3>
+          <span className="ml-auto inline-flex items-center gap-1 rounded bg-[#D4AF37]/10 border border-[#D4AF37]/30 px-2 py-0.5 font-mono text-[10px] uppercase text-[#D4AF37]"><Lock className="h-3 w-3" />Official · Locked</span>
         </div>
         <div className="mt-4 grid gap-4 md:grid-cols-3">
-          {d.officialStrategy.engines.map((e) => (
+          {strategyEngines.map((e) => (
             <div key={e.key} className="rounded-md border border-[#2E2E2E] bg-[#0c0c0c] p-4">
               <div className="flex items-center justify-between"><span className="font-heading font-semibold text-white">{e.label}</span>
-                <span className="font-mono text-xs text-[#2F8CFF]">{e.expiration}</span></div>
+                <span className="font-mono text-xs text-[#D4AF37]">{e.expiration}</span></div>
               <p className="mt-2 text-xs text-slate-400">{e.description}</p>
             </div>
           ))}
@@ -432,7 +445,7 @@ export default function Trading() {
       <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
         {[["Signals", s.signals], ["Attempts", s.orderAttempts], ["Confirmed", s.brokerConfirmed],
           ["Failed", s.failed], ["Win Rate", s.winRate != null ? s.winRate + "%" : "—"], ["Net P/L", s.netPnl]].map(([l, v]) => (
-          <div key={l} className="card-surface p-4"><div className="label-mono">{l}</div><div className="mt-1 font-mono text-xl font-bold text-[#2F8CFF]">{v}</div></div>
+          <div key={l} className="card-surface p-4"><div className="label-mono">{l}</div><div className="mt-1 font-mono text-xl font-bold text-[#D4AF37]">{v}</div></div>
         ))}
       </div>
 
@@ -446,11 +459,11 @@ export default function Trading() {
             {d.recentTrades.map((t) => (
               <TableRow key={t.id} className="border-[#2E2E2E]" data-testid={`trade-row-${t.id}`}>
                 <TableCell className="font-mono text-sm">{t.asset}</TableCell>
-                <TableCell className={t.direction === "BUY" ? "text-[#2F8CFF]" : "text-[#C62828]"}>{t.direction}</TableCell>
+                <TableCell className={t.direction === "BUY" ? "text-[#D4AF37]" : "text-[#C62828]"}>{t.direction}</TableCell>
                 <TableCell className="font-mono text-xs">{t.engine || "—"}</TableCell>
                 <TableCell className="font-mono text-xs">{t.tradingMode}</TableCell>
                 <TableCell className={`font-mono text-xs ${STATE_COLOR[t.state] || ""}`}>{t.state}{t.simulated && " ·SIM"}</TableCell>
-                <TableCell className={t.result === "WIN" ? "text-[#2F8CFF]" : t.result === "LOSS" ? "text-[#C62828]" : "text-slate-400"}>{t.result || (t.failureCode ? t.failureCode : "—")}</TableCell>
+                <TableCell className={t.result === "WIN" ? "text-[#D4AF37]" : t.result === "LOSS" ? "text-[#C62828]" : "text-slate-400"}>{t.result || (t.failureCode ? t.failureCode : "—")}</TableCell>
                 <TableCell className="font-mono text-xs">{t.pnl != null ? t.pnl : "—"}</TableCell>
               </TableRow>
             ))}

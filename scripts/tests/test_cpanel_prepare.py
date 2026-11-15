@@ -13,7 +13,8 @@ def setup(tmp_path):
     repo = home / 'repositories' / 'KAOS'
     repo.mkdir(parents=True)
     for name in ('scripts/cpanel_prepare.sh', 'scripts/build_cpanel_packages.py',
-                 'deploy/cpanel/passenger_wsgi.py', 'deploy/cpanel/frontend.htaccess'):
+                 'deploy/cpanel/passenger_wsgi.py', 'deploy/cpanel/frontend.htaccess',
+                 'services/collectors/gdelt_news.py', 'services/collectors/collector_common.py'):
         dest = repo / name
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / name, dest)

@@ -66,6 +66,9 @@ def test_validation_wrapper_blocks_orders_and_billing(monkeypatch, tmp_path):
     @app.post('/api/v1/devices/register')
     def device():
         return {'ok': True}
+    @app.post('/api/v1/intelligence/sync-news')
+    def sync_news():
+        return {'ok': True}
     @app.post('/api/affiliate/activate')
     def affiliate_enrollment():
         return {'ok': True}
@@ -122,6 +125,8 @@ def test_validation_wrapper_blocks_orders_and_billing(monkeypatch, tmp_path):
     assert client.get('/api').status_code == 200
     assert client.post('/api/v1/auth/login').status_code == 200
     assert client.post('/api/v1/devices/register').status_code == 200
+    assert client.post('/api/v1/intelligence/sync-news').status_code == 200
+    assert client.post('/api/v1/intelligence/ingest').status_code == 503
     assert client.post('/api/affiliate/activate').status_code == 200
     assert client.post('/api/affiliate/connect/onboarding').status_code == 200
     assert client.post('/api/affiliate/connect/transfer').status_code == 503

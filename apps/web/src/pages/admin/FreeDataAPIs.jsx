@@ -24,7 +24,7 @@ export default function FreeDataAPIs(){
    {src.key_required&&<div className="mt-3 flex flex-wrap gap-2">
     <input aria-label={src.name+" API key"} type="password" autoComplete="off" placeholder={src.key_saved?"Replace stored key":"Enter free API key"} value={keys[src.id]||""}
       onChange={e=>setKeys(old=>({...old,[src.id]:e.target.value}))} className="min-w-0 flex-1 rounded border border-[#444] bg-[#111] p-2 text-sm"/>
-    <button disabled={!(keys[src.id]||"").trim()} onClick={()=>save(src.id)} className="rounded border border-[#2F8CFF] px-3 text-sm disabled:opacity-40">Save</button>
+    <button disabled={!(keys[src.id]||"").trim()} onClick={()=>save(src.id)} className="rounded border border-[#D4AF37] px-3 text-sm disabled:opacity-40">Save</button>
     {src.key_saved&&<button onClick={()=>remove(src.id)} className="rounded border border-red-600 px-3 text-sm">Remove</button>}
    </div>}
    {src.key_required&&<p className="mt-1 text-xs text-slate-500">{src.key_saved?"Key encrypted and stored · integration not activated":"No stored key"}</p>}

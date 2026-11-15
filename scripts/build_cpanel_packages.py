@@ -11,6 +11,7 @@ DIST = ROOT / "dist"
 WEB_BUILD = ROOT / "apps" / "web" / "build"
 API = ROOT / "apps" / "api"
 CORE = ROOT / "packages" / "kaos-core"
+COLLECTORS = ROOT / "services" / "collectors"
 PASSENGER = ROOT / "deploy" / "cpanel" / "passenger_wsgi.py"
 HTACCESS = ROOT / "deploy" / "cpanel" / "frontend.htaccess"
 
@@ -66,6 +67,8 @@ def main():
     pack(DIST / "kaos-cpanel-backend.zip", [
         (PASSENGER, "passenger_wsgi.py"),
         (API, "apps/api"),
+        (COLLECTORS / "gdelt_news.py", "apps/api/_news_collectors/gdelt_news.py"),
+        (COLLECTORS / "collector_common.py", "apps/api/_news_collectors/collector_common.py"),
         (CORE, "packages/kaos-core"),
     ])
 
