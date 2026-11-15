@@ -275,3 +275,25 @@ broker account, including a real account if that is selected in Pocket Option.
 Update the existing unpacked extension folder and Reload; no hosting rebuild is
 needed for this extension-only change. Backend/payment restrictions and the
 audit's unresolved findings remain unchanged. No real orders were used in tests.
+
+### Extension 1.7.18: Viking trading desk
+
+The extension adopts the website's existing Viking artwork, black/gold sign-in
+and gold controls. Sign-in has visible email/password labels, autofill hints,
+empty-field feedback and a website recovery link. Both sidebars share Dashboard,
+Charts, Strategies, Trade History, Risk Controls and Settings; Backtester, AI and
+Performance are grouped under Advanced tools. Separate website links open account,
+membership, devices, stock/crypto scanners, research and affiliate pages in new
+tabs. These links do not transfer extension tokens or bypass website sign-in.
+
+A persistent session strip reports broker authorization, the snapshot's confirmed
+Demo/Real account type (otherwise explicitly unconfirmed), running/stopped state,
+and Stop. It reuses existing state and Stop behavior; it makes no additional API
+requests. Returning to Dashboard retains the authorized candle poller. Existing
+execution logic and owner-approved trading remain unchanged. No hosting rebuild
+is required. Update the existing unpacked extension folder and Reload.
+
+Chromium fixtures cover gold login styles, labels, compact login width, validation,
+all primary navigation, website-link destinations, chart polling, Demo/Real
+status, Stop, sign-out and absence of automatic Start. Fixture quotes/account
+states are not a live-broker validation. No real orders were submitted.

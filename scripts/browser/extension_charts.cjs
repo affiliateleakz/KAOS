@@ -24,13 +24,24 @@ const assert=require('node:assert/strict');
    storage:{onChanged:{addListener(){}},local:{get:(keys,cb)=>dual(data,cb),set:(obj,cb)=>{Object.assign(data,obj);return dual(undefined,cb)},remove:(keys,cb)=>dual(undefined,cb)}},
    tabs:{onUpdated:{addListener(){}},get:(id,cb)=>dual({id,url:'https://pocketoption.com/en/cabinet/demo-quick-high-low/'},cb),query:(opts,cb)=>dual([{id:42,url:'https://pocketoption.com/'}],cb),sendMessage:(id,msg,cb)=>{window.tabMessages.push(msg);if(msg.type==='GET_TERMINAL_SNAPSHOT'){
       const candles=Array.from({length:30},(_,i)=>({ts:1700000000000+i*5000,open:1.1+i*.0001,high:1.101+i*.0001,low:1.099+i*.0001,close:1.1005+i*.0001}));
-      return dual({ok:true,readOnly:true,markets:[{asset:'EURUSD',source:'TEST_FIXTURE',candles,ready:false,history:{canonical:30},ai:{},timeframes:{}}],allTrades:[],research:[],aiSummary:{},analytics:{}},cb);
+      return dual({ok:true,readOnly:true,accountIsDemo:window.fixtureDemo??null,markets:[{asset:'EURUSD',source:'TEST_FIXTURE',candles,ready:false,history:{canonical:30},ai:{},timeframes:{}}],allTrades:[],research:[],aiSummary:{},analytics:{}},cb);
      }return dual({ok:true},cb);} ,create:async()=>({id:42}),update:async()=>({id:42})},
    scripting:{executeScript:async()=>[{result:'12345678'}]},windows:{getCurrent:async()=>({id:1}),update:async()=>({}),onBoundsChanged:{addListener(){}}},downloads:{onChanged:{addListener(){}}}};
  });
  const errors=[];page.on('pageerror',e=>errors.push(e.stack));
  await page.goto(BASE+'/popup.html');
  await page.getByTestId('kaos-login-email').waitFor();
+ assert.equal(await page.getByLabel('Email address',{exact:true}).count(),1);
+ assert.equal(await page.getByLabel('Password',{exact:true}).count(),1);
+ await page.getByTestId('kaos-login-submit').click();
+ await page.getByRole('alert').filter({hasText:'Enter your email address and password.'}).waitFor();
+ assert.ok(!(await page.evaluate(()=>window.testMessages)).some(m=>m.type==='KAOS_LOGIN'));
+ await page.setViewportSize({width:390,height:844});
+ assert.ok((await page.getByTestId('kaos-login-panel').boundingBox()).width<=390);
+ await page.setViewportSize({width:1280,height:900});
+ assert.equal(await page.locator('.kaos-brand-title').evaluate(el=>getComputedStyle(el).color),'rgb(232, 196, 111)');
+ assert.ok((await page.getByTestId('kaos-login-submit').evaluate(el=>getComputedStyle(el).backgroundImage)).includes('232, 196, 111'));
+ if(process.env.KAOS_CAPTURE_DIR)await page.screenshot({path:process.env.KAOS_CAPTURE_DIR+'/extension-login.png'});
  assert.equal(await page.evaluate(()=>window.testMessages.some(m=>m.type==='KAOS_CONNECT_PLATFORM')),false);
  await page.getByTestId('kaos-login-email').fill('test@example.com');await page.getByTestId('kaos-login-password').fill('test-password');
  await page.getByTestId('kaos-login-submit').click();
@@ -50,6 +61,32 @@ const assert=require('node:assert/strict');
  await page.waitForFunction(()=>document.getElementById('screen-main')?.classList.contains('active'),{timeout:15000});
  assert.ok(!(await page.evaluate(()=>window.testMessages)).some(m=>m.type==='START_BOT'));
  console.log('Restored authorized session also reached charts.');
+ const mainNav=page.locator('#screen-main .kaos-app-nav');
+ assert.equal(await mainNav.getByRole('link').count(),7);
+ for(const link of await mainNav.getByRole('link').all()){
+  assert.ok((await link.getAttribute('href')).startsWith('https://tradingwithkaos.com/dashboard/'));
+  assert.equal(await link.getAttribute('target'),'_blank');
+ }
+ for(const [view,label] of [['history','Trade History'],['risk','Risk Controls'],['settings','Settings'],['strategy','Strategies'],['dashboard','Dashboard']]){
+  await mainNav.getByRole('button',{name:label,exact:true}).click();
+  await page.waitForFunction(view=>document.getElementById('screen-main').classList.contains('view-'+view),view);
+ }
+ await page.waitForFunction(()=>terminalData?.markets?.length>0);
+ assert.equal(await page.locator('#screen-main .kaos-session-strip').count(),1);
+ assert.equal(await page.locator('#screen-main .kaos-session-strip').isVisible(),true);
+ assert.ok((await page.locator('#screen-main .kaos-session-strip').boundingBox()).y<120);
+ assert.ok((await page.locator('#screen-main .kaos-session-strip').textContent()).includes('BOT STOPPED'));
+ if(process.env.KAOS_CAPTURE_DIR)await page.screenshot({path:process.env.KAOS_CAPTURE_DIR+'/extension-dashboard.png'});
+ assert.ok(!(await page.evaluate(()=>window.testMessages)).some(m=>m.type==='START_BOT'));
+ await page.evaluate(()=>{window.fixtureDemo=true;terminalData.accountIsDemo=true;});
+ await page.locator('#screen-main [data-session-status=account]').filter({hasText:'DEMO ACCOUNT'}).waitFor();
+ await page.evaluate(()=>{window.fixtureDemo=false;terminalData.accountIsDemo=false;state.running=true;});
+ await page.locator('#screen-main [data-session-status=account]').filter({hasText:'REAL ACCOUNT'}).waitFor();
+ await page.locator('#screen-main [data-session-status=bot]').filter({hasText:'BOT RUNNING'}).waitFor();
+ await page.locator('#screen-main [data-session-stop]').click();
+ assert.equal(await page.evaluate(()=>state.running),false);
+ assert.ok((await page.evaluate(()=>window.testMessages)).some(m=>m.type==='STOP_BOT'));
+ console.log('Gold login, accessible labels, website links, primary navigation, account status and Stop passed.');
  await page.locator('[data-testid=kaos-pill-menu]').click();
  await page.locator('[data-testid=kaos-menu-logout]').click();
  await page.getByTestId('kaos-login-email').waitFor();

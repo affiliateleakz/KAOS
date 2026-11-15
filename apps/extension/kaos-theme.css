@@ -1,0 +1,57 @@
+/* KAOS 1.7.18: one presentation layer for the Viking trading desk. */
+:root{--accent:#d4af37;--accent2:#b58a36;--text:#f3ead8;--text2:#bdaf96;--muted:#aa9a80;--border:#393020;--border2:#6b542b;--kg2:#6b542b;--k14-blue:#d4af37;--k14-gold:#d4af37}
+body{background:#080808!important;color:#f3ead8!important}
+html body #kaos-cloud-root .kaos-input{background:#151411!important;border:1px solid #66502a!important;color:#f3ead8!important}
+html body #kaos-cloud-root .kaos-input:focus{border-color:#e8c46f!important}
+html body #kaos-cloud-root .kaos-btn-google{background:#1c1a16!important;color:#f3ead8!important;border:1px solid #655437!important}
+html body #kaos-cloud-root .kaos-login-heading{font-family:Georgia,serif!important}
+html body:is(.kaos-mini,.kaos-mid,.kaos-max,.kaos-fullpage) #screen-main.kaos-five-app .kaos-session-strip,html body:is(.kaos-mini,.kaos-mid,.kaos-max,.kaos-fullpage) #screen-chart.kaos-five-app .kaos-session-strip{display:flex!important;visibility:visible!important;position:sticky!important;top:0!important;min-height:48px!important;height:auto!important;flex-shrink:0!important}
+html body:is(.kaos-mini,.kaos-mid,.kaos-max,.kaos-fullpage) #screen-main.kaos-five-app .kaos-app-nav .kaos-nav-btn,html body:is(.kaos-mini,.kaos-mid,.kaos-max,.kaos-fullpage) #screen-chart.kaos-five-app .kaos-app-nav .kaos-nav-btn{background:transparent!important;color:#d9ccb3!important;border:1px solid transparent!important;border-radius:7px!important;box-shadow:none!important;padding:10px!important;font:500 12px system-ui,sans-serif!important}
+html body:is(.kaos-mini,.kaos-mid,.kaos-max,.kaos-fullpage) #screen-main.kaos-five-app .kaos-app-nav .kaos-nav-btn.active,html body:is(.kaos-mini,.kaos-mid,.kaos-max,.kaos-fullpage) #screen-chart.kaos-five-app .kaos-app-nav .kaos-nav-btn.active{background:#322714!important;border-color:#9c7838!important;color:#ffe4a2!important}
+html body .kaos-app-nav .kaos-nav-btn:before{display:none!important}
+html body #screen-main.kaos-five-app #start-btn.kaos-start-btn.start-state{background:linear-gradient(135deg,#ebcb7f,#c39740)!important;color:#171207!important;border:1px solid #e8c46f!important;box-shadow:none!important}
+button,a,input,select,summary{touch-action:manipulation}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid #e8c46f!important;outline-offset:3px}
+#kaos-cloud-root .kaos-overlay{padding:20px;overflow-y:auto;background:linear-gradient(90deg,rgba(0,0,0,.66),rgba(0,0,0,.9)),url('assets/kaos-viking.jpg') center/cover fixed;backdrop-filter:none}
+#kaos-cloud-root .kaos-card{width:430px;max-width:100%;margin:auto;border:1px solid #66502a;border-radius:14px;padding:28px;background:rgba(10,10,9,.97);box-shadow:0 24px 80px #000a}
+#kaos-cloud-root .kaos-card:before{height:100px;margin:-28px -28px 24px;background:linear-gradient(0deg,#0a0a09,transparent),url('assets/kaos-viking.jpg') 50% 35%/cover;border:0;border-radius:14px 14px 0 0}
+#kaos-cloud-root .kaos-brand-title{color:#e8c46f;font-size:20px;letter-spacing:2px}
+#kaos-cloud-root .kaos-mark{color:#151007;background:linear-gradient(135deg,#f0d58d,#ba8e34);border-color:#d4af37;box-shadow:none}
+#kaos-cloud-root .kaos-brand-sub,#kaos-cloud-root .kaos-step{color:#c5b592}
+.kaos-login-heading{font:600 25px/1.2 Georgia,serif;color:#f3ead8;margin:16px 0 8px}
+.kaos-field-label{display:block;font-size:12px;color:#dfd1b5;margin:13px 0 7px}
+#kaos-cloud-root .kaos-input{margin:0;background:#151411;border-color:#51432d;color:#fff;min-height:44px}
+#kaos-cloud-root .kaos-input:focus{border-color:#e8c46f}
+#kaos-cloud-root .kaos-btn-gold{background:linear-gradient(135deg,#e8c46f,#c79a3f);color:#171207;min-height:46px}
+#kaos-cloud-root .kaos-btn-google{background:#1c1a16;color:#f3ead8;border:1px solid #655437;min-height:44px}
+#kaos-cloud-root .kaos-link,#kaos-cloud-root .kaos-pill-btn{color:#e8c46f}
+.kaos-recovery{display:block;text-align:right;margin:10px 0 16px}
+.kaos-login-divider{color:#aa9a80!important;border-color:#51432d!important}
+html body .kaos-app-nav{width:204px!important;flex:0 0 204px!important;padding:16px 12px 66px!important;background:#0d0c0a!important;border-right:1px solid #514027!important;overflow-y:auto!important;gap:3px!important}
+html body .kaos-theme-brand{min-height:70px!important;height:auto!important;padding:0 0 16px!important;margin-bottom:12px!important;display:flex!important;gap:10px}
+html body .kaos-theme-brand img{width:42px!important;height:42px!important;object-fit:contain}
+html body .kaos-theme-brand b{font:700 24px Georgia,serif!important;color:#e8c46f!important}
+html body .kaos-theme-brand small{display:block;color:#bcac8e!important;letter-spacing:1px!important;font-size:8px!important;margin-top:5px}
+.kaos-nav-label{font-size:9px;letter-spacing:1.7px;color:#aa9470;margin:17px 8px 7px}
+html body .kaos-app-nav .kaos-nav-btn{height:auto!important;min-height:38px!important;width:100%;padding:10px 12px!important;margin:0!important;border:1px solid transparent!important;border-radius:7px!important;background:transparent!important;color:#cfc3ac!important;font:500 12px/1.3 system-ui,sans-serif!important;box-shadow:none!important;text-decoration:none;display:flex;align-items:center;justify-content:space-between;white-space:normal!important;text-align:left}
+html body .kaos-app-nav .kaos-nav-btn:hover{background:#211c12!important;color:#ffe4a2!important;border-color:#66502a!important}
+html body .kaos-app-nav .kaos-nav-btn.active{background:#322714!important;border-color:#9c7838!important;color:#ffe4a2!important}
+.kaos-nav-research{margin:5px 0}.kaos-nav-research summary{padding:10px 12px;cursor:pointer;color:#bcac8e;font-size:11px}
+.kaos-session-strip{position:sticky;top:0;z-index:20;display:flex;align-items:center;flex-wrap:wrap;gap:8px 16px;padding:12px 14px;margin:0 0 14px;background:#13110ef5;border:1px solid #574528;border-radius:9px;font-size:11px;color:#dfcc9e;box-shadow:0 6px 15px #0005}
+.kaos-session-strip [data-real=true]{color:#ffbd87;font-weight:700}
+.kaos-session-strip button{margin-left:auto;border:1px solid #9c5142;border-radius:5px;padding:7px 12px;background:#422017;color:#ffd9ce;cursor:pointer}
+.kaos-session-strip button:disabled{opacity:.45;cursor:default}
+html body :is(.kaos-app-workspace,.kaos-terminal-workspace){background:#090909!important;padding:16px!important}
+html body :is(.k14-card,.k14-bcard,.terminal-panel,.market-chart,.dashboard-fold){border-color:#453823!important;background:#12110e!important;border-radius:9px!important}
+html body :is(.k14-head,.mc-head,.k14-banner,.k14-topbar){background:#15120d!important;border-color:#514027!important}
+html body :is(.k14-ghost-btn,.k14-bcard-btn,.kaos-view-btn.active,.kaos-chart-count-btn.active){background:#332814!important;border-color:#98753b!important;color:#f1d58d!important;box-shadow:none!important}
+html body .kaos-start-btn.start-state{background:linear-gradient(135deg,#ebcb7f,#c39740)!important;color:#171207!important;border-color:#e8c46f!important;box-shadow:none!important}
+html body .kaos-start-btn.stop-state{background:#8e3029!important;color:#fff!important}
+html body #kaos-broker-overlay{background:linear-gradient(90deg,#080808ed,#080808f5),url('assets/kaos-viking.jpg') center/cover!important;color:#f3ead8!important}
+html body #kaos-broker-overlay button{background:#19160f!important;border-color:#745b2e!important;color:#efd28a!important}
+html body #kaos-broker-overlay h2{color:#e8c46f!important}
+@media(max-width:700px){html body .kaos-app-nav{width:148px!important;flex-basis:148px!important;padding:10px 7px 60px!important}html body .kaos-app-nav .kaos-nav-btn{font-size:11px!important;padding:9px 7px!important}html body .kaos-theme-brand small{font-size:7px!important}html body :is(.kaos-app-workspace,.kaos-terminal-workspace){padding:8px!important}.kaos-session-strip{gap:8px;padding:9px}}
+@media(max-height:650px){#kaos-cloud-root .kaos-card:before{height:45px;margin-bottom:12px}#kaos-cloud-root .kaos-card{padding:20px}#kaos-cloud-root .kaos-card:before{margin-top:-20px;margin-left:-20px;margin-right:-20px}}
+
+html body #screen-main.kaos-five-app #kaos-page-title{display:none!important}
+html body #screen-main.kaos-five-app .kaos-session-strip{grid-column:1/-1!important;grid-row:1!important;align-self:start!important;margin:0!important}

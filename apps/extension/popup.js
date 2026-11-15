@@ -2158,8 +2158,8 @@ document.addEventListener('DOMContentLoaded',()=>{
         window.dispatchEvent(new Event('resize'));
       }catch(_){}
     }else{
-      // Stop chart polling only when leaving terminal pages.
-      try{ if(terminalTimer){clearInterval(terminalTimer);terminalTimer=null;} }catch(_){}
+      // Dashboard also consumes the candle feed; only sign-out stops it.
+      try{kaosStartChartFeed();}catch(_){}
       setMainView(MAIN_VIEWS[view] ? view : 'dashboard');
     }
     try{ localStorage.setItem('kaosLastView',view); }catch(_){}

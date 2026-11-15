@@ -67,10 +67,18 @@
     if (status === 'SESSION_EXPIRED') card.appendChild(el('div', 'kaos-alert', 'Your KAOS session expired — please sign in again.'));
     var step = el('div', 'kaos-step', 'STEP 1 · SIGN IN TO KAOS');
     card.appendChild(step);
+    card.appendChild(el('h1', 'kaos-login-heading', 'Welcome to your trading desk'));
+    card.appendChild(el('p', 'kaos-muted', 'Sign in to connect your broker, monitor charts and manage your bot.'));
     var email = el('input', 'kaos-input'); email.type = 'email'; email.placeholder = 'Email'; email.setAttribute('data-testid', 'kaos-login-email');
     var pass = el('input', 'kaos-input'); pass.type = 'password'; pass.placeholder = 'Password'; pass.setAttribute('data-testid', 'kaos-login-password');
-    card.appendChild(email); card.appendChild(pass);
-    var err = el('div', 'kaos-error'); err.style.display = 'none'; card.appendChild(err);
+    email.id = 'kaos-signin-email'; email.autocomplete = 'username';
+    pass.id = 'kaos-signin-password'; pass.autocomplete = 'current-password';
+    var emailLabel = el('label', 'kaos-field-label', 'Email address'); emailLabel.htmlFor = email.id;
+    var passwordLabel = el('label', 'kaos-field-label', 'Password'); passwordLabel.htmlFor = pass.id;
+    card.appendChild(emailLabel); card.appendChild(email); card.appendChild(passwordLabel); card.appendChild(pass);
+    var recovery = el('a', 'kaos-link kaos-recovery', 'Forgot password?');
+    recovery.href = 'https://tradingwithkaos.com/forgot-password'; recovery.target = '_blank'; recovery.rel = 'noopener noreferrer'; card.appendChild(recovery);
+    var err = el('div', 'kaos-error'); err.setAttribute('role', 'alert'); err.style.display = 'none'; card.appendChild(err);
 
     var google = el('button', 'kaos-btn kaos-btn-google', 'G  CONTINUE WITH GOOGLE');
     google.type = 'button';
@@ -90,6 +98,8 @@
     var btn = el('button', 'kaos-btn kaos-btn-gold', 'SIGN IN'); btn.setAttribute('data-testid', 'kaos-login-submit');
     card.appendChild(btn);
     btn.onclick = async function () {
+      if (btn.disabled) return;
+      if (!email.value.trim() || !pass.value) { err.textContent = 'Enter your email address and password.'; err.style.display = 'block'; return; }
       err.style.display = 'none'; btn.disabled = true; btn.textContent = 'VERIFYING…';
       var r = await send({ type: 'KAOS_LOGIN', email: email.value.trim(), password: pass.value });
       btn.disabled = false; btn.textContent = 'SIGN IN';
@@ -97,6 +107,7 @@
       route(r.state);
     };
     pass.onkeydown = function (e) { if (e.key === 'Enter') btn.click(); };
+    email.onkeydown = function (e) { if (e.key === 'Enter') btn.click(); };
     var foot = el('div', 'kaos-foot');
     var link = el('a', 'kaos-link', 'Need an account? Join KAOS →'); link.href = 'https://tradingwithkaos.com/register'; link.target = '_blank';
     foot.appendChild(link);
