@@ -29,7 +29,7 @@ export default function CryptoScanner(){
    <select value={chain} onChange={e=>setChain(e.target.value)} className="rounded border border-[#444] bg-[#111] p-2">
     {["","solana","ethereum","base","bsc","arbitrum","polygon"].map(x=><option key={x} value={x}>{x||"All chains"}</option>)}
    </select>
-   <button disabled={loading} className="rounded bg-[#2F8CFF] px-4 py-2 font-semibold text-black">{loading?"Loading…":"Scan crypto"}</button>
+   <button disabled={loading} className="rounded bg-[#D4AF37] px-4 py-2 font-semibold text-black">{loading?"Loading…":"Scan crypto"}</button>
   </form>
   <div className="flex flex-wrap items-center gap-2 text-sm"><label htmlFor="crypto-sort">Rank by</label>
    <select id="crypto-sort" value={sort} onChange={e=>setSort(e.target.value)} className="rounded border border-[#444] bg-[#111] p-2">
@@ -40,7 +40,7 @@ export default function CryptoScanner(){
   {!!pairs.length&&<><h2 className="font-semibold">24h market heat map</h2>
    <div className="grid grid-cols-2 gap-2 md:grid-cols-4 lg:grid-cols-5">
     {ordered.slice(0,30).map(p=><a key={p.chain+":"+p.pair_address} href={p.url||"#"} target="_blank" rel="noopener noreferrer"
-      style={{background:shade(p.change_24h)}} className="min-h-24 rounded border border-white/10 p-3 text-white hover:ring-2 hover:ring-[#2F8CFF]"
+      style={{background:shade(p.change_24h)}} className="min-h-24 rounded border border-white/10 p-3 text-white hover:ring-2 hover:ring-[#D4AF37]"
       title={p.name+" · "+p.chain+" · "+p.dex}>
       <div className="truncate font-bold">{p.symbol||"Unknown"}</div><div className="text-xs opacity-80">{p.chain}</div>
       <div className="mt-2 text-xl font-bold">{percent(p.change_24h)}</div>
@@ -54,7 +54,7 @@ export default function CryptoScanner(){
       <td className="p-3">{percent(p.change_1h)}</td><td className="p-3">{percent(p.change_24h)}</td>
       <td className="p-3">${money(p.liquidity_usd)}</td><td className="p-3">${money(p.volume_24h)}</td>
       <td className="p-3">{p.buys_24h??"—"} / {p.sells_24h??"—"}</td>
-      <td className="p-3">{p.url?<a className="text-[#2F8CFF] underline" href={p.url} target="_blank" rel="noopener noreferrer">DEX Screener</a>:"—"}</td></tr>)}</tbody>
+      <td className="p-3">{p.url?<a className="text-[#D4AF37] underline" href={p.url} target="_blank" rel="noopener noreferrer">DEX Screener</a>:"—"}</td></tr>)}</tbody>
    </table></div></>}
   <p className="text-xs text-slate-500">DEX Screener data is attributed to its source. Access and commercial use are subject to the provider's terms. No live orders placed.</p>
  </div>;

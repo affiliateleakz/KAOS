@@ -298,7 +298,7 @@ async def create_release(req: SettingsReq, admin: dict = Depends(admin_dep)):
 async def get_settings(admin: dict = Depends(admin_dep)):
     plans = await get_setting("plans")
     affiliate = await get_setting("affiliate", {})
-    branding = await get_setting("branding", {"productName": "Trading Platform"})
+    branding = await get_setting("branding", {"productName": "KAOS Trading"})
     from routes_billing import DEFAULT_PLANS
     return {"plans": plans or DEFAULT_PLANS, "affiliate": affiliate, "branding": branding}
 

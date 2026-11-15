@@ -61,7 +61,7 @@ async def checkout(req: CheckoutReq, user: dict = Depends(get_current_user)):
         await db.users.update_one({"id": user["id"]}, {"$set": {"stripe_customer_id": customer_id}})
     price = stripe.Price.create(unit_amount=plan["amount"], currency=plan["currency"],
                                 recurring={"interval": plan["interval"]},
-                                product_data={"name": f"Trading Platform {plan['name']}"})
+                                product_data={"name": f"KAOS Trading {plan['name']}"})
     session = stripe.checkout.Session.create(
         mode="subscription", customer=customer_id,
         line_items=[{"price": price.id, "quantity": 1}],

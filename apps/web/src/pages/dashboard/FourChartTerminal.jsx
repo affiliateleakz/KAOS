@@ -38,7 +38,7 @@ function Tile({index,config,onChange,onSave}){
    <input aria-label={`Chart ${index+1} symbol`} value={config.symbol} onChange={e=>onChange({...config,symbol:e.target.value.toUpperCase().slice(0,32)})} className="w-28 rounded bg-[#222] p-1 text-xs"/>
    <select aria-label={`Chart ${index+1} timeframe`} value={config.seconds} onChange={e=>onChange({...config,seconds:Number(e.target.value)})} className="rounded bg-[#222] p-1 text-xs"><option value={60}>1m</option><option value={300}>5m</option><option value={900}>15m</option></select>
    <button type="button" onClick={load} className="ml-auto rounded border border-slate-600 px-2 py-1 text-xs">Refresh</button>
-   <button type="button" onClick={()=>onSave(index,config)} className="rounded border border-[#2F8CFF] px-2 py-1 text-xs">Save chart</button>
+   <button type="button" onClick={()=>onSave(index,config)} className="rounded border border-[#D4AF37] px-2 py-1 text-xs">Save chart</button>
   </div>
   {error?<p role="status" className="text-xs text-amber-300">{error}</p>:<CandleChart candles={response?.candles}/>}
   <p className="mt-2 text-xs text-slate-400">{loading?"Refreshing · ":""}Source: {response?.source||"Not available"} · read-only · no order submission</p>

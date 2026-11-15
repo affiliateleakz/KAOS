@@ -30,18 +30,18 @@ export default function PublicTradesScanner(){
   <div className="flex flex-wrap items-end gap-3">
    <label className="text-sm">Disclosure category<select value={source} onChange={e=>setSource(e.target.value)} className="mt-1 block rounded border border-[#444] bg-[#151515] p-2">{SOURCE.map(([id,label])=><option value={id} key={id}>{label}</option>)}</select></label>
    <label className="text-sm">Ticker<input value={ticker} onChange={e=>setTicker(e.target.value.toUpperCase().slice(0,24))} placeholder="e.g. AAPL" className="mt-1 block rounded border border-[#444] bg-[#151515] p-2" /></label>
-   <button type="button" onClick={load} disabled={loading} className="rounded bg-[#2F8CFF] px-4 py-2 font-semibold text-black disabled:opacity-50">{loading?"Loading…":"Search disclosures"}</button>
+   <button type="button" onClick={load} disabled={loading} className="rounded bg-[#D4AF37] px-4 py-2 font-semibold text-black disabled:opacity-50">{loading?"Loading…":"Search disclosures"}</button>
   </div>
   {source&&<p className="text-xs text-slate-400">{INFO[source]}</p>}
   <section className="rounded border border-[#333] p-3 space-y-2">
    <h2 className="font-semibold">Institutional 13F Position Changes</h2>
    <p className="text-xs text-slate-400">Enter the SEC institutional filer CIK. Compares two recorded public quarterly filings, not intraday trades.</p>
-   <div className="flex flex-wrap items-center gap-2"><input aria-label="Institutional filer CIK" type="number" min="1" value={cik} onChange={e=>setCik(e.target.value)} className="rounded border border-[#444] bg-[#151515] p-2" placeholder="SEC CIK"/><button disabled={!cik} onClick={viewChanges} className="rounded bg-[#2F8CFF] px-3 py-2 text-black">View reported changes</button></div>
+   <div className="flex flex-wrap items-center gap-2"><input aria-label="Institutional filer CIK" type="number" min="1" value={cik} onChange={e=>setCik(e.target.value)} className="rounded border border-[#444] bg-[#151515] p-2" placeholder="SEC CIK"/><button disabled={!cik} onClick={viewChanges} className="rounded bg-[#D4AF37] px-3 py-2 text-black">View reported changes</button></div>
    {comparisonError&&<p role="alert" className="text-red-400">{comparisonError}</p>}
    {changes&&!changes.comparison_available&&<p className="text-xs text-amber-300">No verified two-quarter comparison stored for this filer yet.</p>}
    {changes?.data&&<><p className="text-xs text-slate-400">Reported filing dates: {changes.data.previous_filing_date} → {changes.data.latest_filing_date}</p>
      <div className="max-h-72 overflow-auto"><table className="w-full text-left text-xs"><thead><tr><th>CUSIP / issuer</th><th>Position change</th><th>Net reported shares</th></tr></thead><tbody>{(changes.data.changes||[]).map(r=><tr key={r.cusip} className="border-t border-[#333]"><td className="p-2">{r.issuer} ({r.cusip})</td><td className="p-2">{r.change}</td><td className="p-2">{r.net_reported_change}</td></tr>)}</tbody></table></div>
-     <a href={changes.data.latest_source_url} target="_blank" rel="noopener noreferrer" className="text-xs text-[#2F8CFF] underline">Latest official SEC filing</a>
+     <a href={changes.data.latest_source_url} target="_blank" rel="noopener noreferrer" className="text-xs text-[#D4AF37] underline">Latest official SEC filing</a>
    </>}
   </section>
   {error&&<p role="alert" className="text-sm text-red-400">{error}</p>}
@@ -53,7 +53,7 @@ export default function PublicTradesScanner(){
       <td className="p-2">{r.ticker||r.asset}</td><td className="p-2">{r.action}</td>
       <td className="p-2">{r.transaction_date||"Not reported"}</td><td className="p-2">{r.filing_date}</td>
       <td className="p-2">{r.amount_min_usd==null?"Not specified":"$"+r.amount_min_usd.toLocaleString()+(r.amount_max_usd==null?"":" – $"+r.amount_max_usd.toLocaleString())}</td>
-      <td className="p-2"><a href={r.source_url} target="_blank" rel="noopener noreferrer" className="text-[#2F8CFF] underline">View official filing</a></td>
+      <td className="p-2"><a href={r.source_url} target="_blank" rel="noopener noreferrer" className="text-[#D4AF37] underline">View official filing</a></td>
      </tr>)}</tbody>
     </table></div>}
    </section>}

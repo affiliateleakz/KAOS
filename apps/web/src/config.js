@@ -7,5 +7,5 @@ export const CONFIG = {
   supportEmail: "support@tradewithkaos.com",
   icon: "/kaos-icon.png",
   logoHorizontal: "/kaos-logo-horizontal.png",
-  colors: { blue: "#2F8CFF", silver: "#C9CED6", gold: "#D4AF37", red: "#C62828", black: "#080808" },
+  colors: { gold: "#D4AF37", red: "#C62828", black: "#080808" },
 };

@@ -20,7 +20,7 @@ export default function StockHeatmap(){
     <option>All</option>{(data?.sectors||[]).map(s=><option key={s.sector}>{s.sector}</option>)}</select></label>
    <label className="text-sm">Sort <select value={rank} onChange={e=>setRank(e.target.value)} className="ml-2 rounded border border-[#444] bg-[#111] p-2">
     <option value="change_pct">24h performance</option><option value="volume">Daily volume</option><option value="price">Price</option></select></label>
-   <button onClick={reload} disabled={busy} className="rounded bg-[#2F8CFF] px-4 py-2 text-black">{busy?"Refreshing…":"Refresh stocks"}</button>
+   <button onClick={reload} disabled={busy} className="rounded bg-[#D4AF37] px-4 py-2 text-black">{busy?"Refreshing…":"Refresh stocks"}</button>
   </div>
   <p className="rounded border border-amber-600/30 p-3 text-xs text-amber-200">A curated watchlist, not every US-listed stock. The default IEX feed covers only part of US market trading, and quotes may be delayed. Heat map colors indicate reported price change, not trading recommendations.</p>
   {error&&<p role="alert" className="text-sm text-red-400">{error}</p>}
