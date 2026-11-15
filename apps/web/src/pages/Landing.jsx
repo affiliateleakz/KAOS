@@ -3,8 +3,8 @@ import { Link } from "react-router-dom";
 
 /* =====================================================================================
    KAOS TRADING — one-page product site (2.2.0)
-   Top of page: code-built hero (no performance figures; the old raster artwork
-   contained unverified win-rate/P&L numbers and was removed).
+   Top of page: owner-approved Viking artwork from the supplied 2.2.0 archive,
+   with accessible navigation hotspots. Figures in the artwork are illustrative.
    Below it: real content sections the navigation scrolls to:
    KAOS BOT, FEATURES, PRICING, RESULTS, FAQ + footer.
    ===================================================================================== */
@@ -16,6 +16,32 @@ const GREEN = "#35d07f";
 const RED = "#ff5c5c";
 
 /* ---------------------------------------------------------------- helpers ---------- */
+
+const hotspots = [
+  // Top navigation bar (percentage coordinates of the 1536x1024 artwork)
+  { label: "Home",    left: 30.0, top: 1.0,  width: 5.3,  height: 5.4, href: "#top" },
+  { label: "KAOS Bot", left: 36.2, top: 1.0,  width: 7.3,  height: 5.4, href: "#kaos-bot" },
+  { label: "Features", left: 44.3, top: 1.0,  width: 7.1,  height: 5.4, href: "#features" },
+  { label: "Pricing",  left: 52.2, top: 1.0,  width: 6.6,  height: 5.4, href: "#pricing" },
+  { label: "Results",  left: 60.0, top: 1.0,  width: 6.5,  height: 5.4, href: "#results" },
+  { label: "FAQ",      left: 67.2, top: 1.0,  width: 5.0,  height: 5.4, href: "#faq" },
+  { label: "Login",    left: 76.7, top: 1.2,  width: 8.2,  height: 4.9, to: "/login" },
+  { label: "Get KAOS", left: 85.4, top: 1.2,  width: 11.0, height: 4.9, to: "/register" },
+  // Hero buttons
+  { label: "Get KAOS Trading Bot", left: 6.1,  top: 43.0, width: 24.5, height: 5.7, to: "/register" },
+  { label: "Watch Demo",           left: 31.8, top: 43.0, width: 16.6, height: 5.7, href: "#kaos-bot" },
+  // Bottom call to action on the artwork
+  { label: "Start Trading With KAOS", left: 80.6, top: 92.0, width: 17.2, height: 5.4, to: "/register" },
+];
+
+const hotspotStyle = (h) => ({
+  position: "absolute",
+  left: `${h.left}%`,
+  top: `${h.top}%`,
+  width: `${h.width}%`,
+  height: `${h.height}%`,
+  display: "block",
+});
 
 /* Deterministic sample series (same every render) */
 const CANDLES_A = [
@@ -291,6 +317,11 @@ export default function Landing() {
     <div id="top" style={{ background: "#020303", color: "#e8e2d4", margin: 0 }}>
       <style>{`
         html{scroll-behavior:smooth}
+        .k-hotspot:focus-visible{outline:2px solid ${GOLD};outline-offset:2px}
+        .kx-art-caption{font-size:11px;color:#b7ad92;padding:10px 20px;margin:0;line-height:1.6}
+        .kx-mobile-actions{display:none}
+        @media(max-width:700px){.kx-mobile-actions{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px}.kx-mobile-actions a{display:flex;align-items:center;justify-content:center;min-height:44px;padding:8px 16px;border:1px solid ${GOLD_BORDER};border-radius:6px;color:${GOLD}}}
+
         .kx-section{scroll-margin-top:74px}
         .kx-navlink{position:relative;padding:6px 2px;color:#d9d0b8;text-decoration:none;font-size:12.5px;letter-spacing:.14em;white-space:nowrap;transition:color .2s}
         .kx-navlink:hover{color:${GOLD}}
@@ -306,53 +337,32 @@ export default function Landing() {
       `}</style>
 
       {/* ============================ HERO — exact approved artwork ============================ */}
-      <main ref={mainRef} id="kx-hero" aria-label="KAOS Trading Bot" style={{ position: "relative", background: "radial-gradient(1100px 560px at 78% 28%, rgba(240,195,93,.10), transparent 62%), #020303", padding: "0 22px 72px", borderBottom: "1px solid #17130a" }}>
-        <header style={{ maxWidth: 1280, margin: "0 auto", padding: "18px 0", display: "flex", alignItems: "center", gap: 22, flexWrap: "wrap" }}>
-          <a href="#top" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-            <img src="/kaos-viking.png" alt="" style={{ width: 44, height: 44, objectFit: "contain" }} />
-            <span style={{ fontFamily: "'Oswald',sans-serif", color: GOLD, letterSpacing: ".16em", fontSize: 18, fontWeight: 700 }}>KAOS TRADING</span>
-          </a>
-          <nav aria-label="Homepage navigation" style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
-            {navLinks.map(([label, id]) => <a key={id} href={`#${id}`} className="kx-navlink">{label}</a>)}
+      <main ref={mainRef} id="kx-hero" aria-label="KAOS Trading Bot" style={{ margin: 0, background: "#020303", position: "relative", lineHeight: 0 }}>
+        <h1 className="sr-only">KAOS TRADING BOT</h1>
+        <div style={{ position: "relative", width: "100%" }}>
+          <img
+            src="/kaos-home-target.png"
+            alt="KAOS Trading Bot — Trade With KAOS. Automated, intelligent, relentless: real market strategies, AI powered learning, multi-market support and risk management in one command center."
+            style={{ display: "block", width: "100%", height: "auto", userSelect: "none" }}
+            draggable={false}
+          />
+          <span id="systems" aria-hidden="true" style={{ position: "absolute", left: 0, top: "54%", width: 1, height: 1 }} />
+          <nav aria-label="Homepage navigation" style={{ position: "absolute", inset: 0, lineHeight: "normal" }}>
+            {hotspots.map((h) =>
+              h.to ? (
+                <Link key={h.label} to={h.to} aria-label={h.label} className="k-hotspot" style={hotspotStyle(h)} />
+              ) : (
+                <a key={h.label} href={h.href} aria-label={h.label} className="k-hotspot" style={hotspotStyle(h)} />
+              )
+            )}
           </nav>
-          <div style={{ marginLeft: "auto", display: "flex", gap: 14, alignItems: "center" }}>
-            <Link to="/login" className="kx-navlink">LOGIN</Link>
-            <Link to="/register" className="kx-cta" style={{ padding: "10px 18px", fontSize: 12.5 }}>GET KAOS</Link>
-          </div>
-        </header>
-        <div style={{ maxWidth: 1280, margin: "36px auto 0", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(340px,1fr))", gap: 44, alignItems: "center" }}>
-          <div>
-            <p style={{ color: GOLD, letterSpacing: ".3em", fontSize: 12, margin: 0 }}>TRADE WITH KAOS</p>
-            <h1 style={{ fontFamily: "'Oswald',sans-serif", fontSize: "clamp(40px,6vw,76px)", lineHeight: 1.02, margin: "14px 0 18px", color: "#f5efe0", letterSpacing: ".02em" }}>KAOS TRADING BOT</h1>
-            <p style={{ fontSize: 17, lineHeight: 1.7, color: "#c9c0a8", maxWidth: 560, margin: 0 }}>
-              Rule-based KAOS strategies, AI market analysis, multi-market tools and risk limits in one command center. Start free in Strategy mode and practise with paper trading before you risk real money.
-            </p>
-            <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginTop: 28 }}>
-              <Link to="/register" className="kx-cta">GET KAOS FREE <span aria-hidden="true">→</span></Link>
-              <a href="#kaos-bot" className="kx-ghost">SEE HOW IT WORKS</a>
-            </div>
-            <ul style={{ listStyle: "none", padding: 0, margin: "26px 0 0", display: "flex", gap: "10px 22px", flexWrap: "wrap", color: "#b7ad92", fontSize: 13, letterSpacing: ".06em" }}>
-              {["Works with Pocket Option", "Paper trading included", "Free plan · no card required"].map((t) => (
-                <li key={t}><span style={{ color: GREEN }} aria-hidden="true">✓</span> {t}</li>
-              ))}
-            </ul>
-          </div>
-          <figure style={{ margin: 0, ...cardStyle, padding: 18 }}>
-            <div style={{ display: "flex", gap: 6, marginBottom: 8, fontSize: 10, color: "#b7ad92" }}>
-              <span style={{ background: "#141109", border: "1px solid #2c2415", borderRadius: 6, padding: "3px 8px" }}>EURUSD</span>
-              <span style={{ background: "#141109", border: "1px solid #2c2415", borderRadius: 6, padding: "3px 8px" }}>30s</span>
-              <span style={{ marginLeft: "auto", color: GOLD }}>STRATEGY · PAPER</span>
-            </div>
-            <CandleChart height={170} />
-            <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-              <Kpi label="Win Rate" value="—" />
-              <Kpi label="Trades" value="—" />
-              <Kpi label="P/L" value="—" />
-            </div>
-            <figcaption style={{ marginTop: 10, fontSize: 11, color: "#6f6753", lineHeight: 1.5 }}>Illustrative interface layout. Not real trades or performance.</figcaption>
-          </figure>
         </div>
       </main>
+
+      <p className="kx-art-caption">Interface artwork for illustration. Figures shown are examples, not verified trading results.</p>
+      <nav className="kx-mobile-actions" aria-label="Mobile homepage navigation">
+        <Link to="/login">Login</Link><Link to="/register">Get KAOS</Link><a href="#features">Features</a><a href="#pricing">Pricing</a>
+      </nav>
 
       {/* ============================ STICKY MINI-NAV ============================ */}
       <div

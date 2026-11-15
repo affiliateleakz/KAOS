@@ -21,6 +21,18 @@ const BASE=process.env.KAOS_WEB_PREVIEW_URL;
  });
  await page.goto(BASE+'/');
  await page.getByRole('heading',{name:'KAOS TRADING BOT',exact:true}).waitFor();
+ const artwork=page.locator('#kx-hero img');
+ await artwork.evaluate(img=>img.decode());
+ assert.equal(await artwork.getAttribute('src'),'/kaos-home-target.png');
+ assert.equal(await artwork.evaluate(img=>img.naturalWidth),1536);
+ assert.equal(await page.getByRole('navigation',{name:'Homepage navigation',exact:true}).getByRole('link',{name:'Login',exact:true}).getAttribute('href'),'/login');
+ assert.equal(await page.getByRole('navigation',{name:'Homepage navigation',exact:true}).getByRole('link',{name:'Get KAOS',exact:true}).getAttribute('href'),'/register');
+ if(process.env.KAOS_CAPTURE_DIR)await page.screenshot({path:process.env.KAOS_CAPTURE_DIR+'/approved-homepage.png'});
+ await page.setViewportSize({width:390,height:844});
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+ assert.ok(await page.getByRole('navigation',{name:'Mobile homepage navigation'}).isVisible());
+ await page.setViewportSize({width:1280,height:900});
+
  assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--primary').trim()),'46 65% 52%');
  await page.goto(BASE+'/dashboard/stock-heatmap');
  await page.getByRole('heading',{name:'US stocks & ETFs by daily dollar volume'}).waitFor();

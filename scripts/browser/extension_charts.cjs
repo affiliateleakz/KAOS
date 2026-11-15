@@ -56,6 +56,8 @@ const assert=require('node:assert/strict');
  assert.equal(await page.locator('#screen-chart').isVisible(),false);
  assert.equal(await page.evaluate(()=>window.tabMessages.filter(m=>m.type==='GET_TERMINAL_SNAPSHOT').length),0);
  assert.ok((await page.locator('[data-companion-asset]').textContent()).includes('EURUSD'));
+ assert.ok(await page.getByRole('heading',{name:'Trading dashboard',exact:true}).isVisible());
+ assert.equal(await page.locator('.kaos-companion-brand').getAttribute('src'),'assets/kaos-logo-horizontal.png');
  console.log('Companion receives minimal broker status without chart snapshots or automatic Start.');
  await page.goto(BASE+'/popup.html?restored');
  await page.waitForFunction(()=>document.getElementById('screen-main')?.classList.contains('active'),{timeout:15000});
@@ -86,6 +88,16 @@ const assert=require('node:assert/strict');
  assert.equal(await page.locator('#screen-main .kaos-session-strip').isVisible(),true);
  assert.ok((await page.locator('#screen-main .kaos-session-strip').boundingBox()).y<120);
  assert.ok((await page.locator('#screen-main .kaos-session-strip').textContent()).includes('BOT STOPPED'));
+ const accountBox=await page.locator('#screen-main .k14-acct').boundingBox();
+ const tradesBox=await page.locator('#screen-main .k14-trades').boundingBox();
+ assert.ok(tradesBox.y>=accountBox.y+accountBox.height,'Account and trades cards must not overlap');
+ assert.ok(accountBox.height>200,'Account card must retain room for status and statistics');
+ const toolbarBox=await page.locator('#screen-main .kaos-banner-toolbar').boundingBox();
+ const startBox=await page.locator('#start-btn').boundingBox();
+ assert.ok(startBox.y>=toolbarBox.y+toolbarBox.height,'Start must not overlap the settings');
+ assert.ok(await page.locator('#kaos-strategy-box').isVisible());
+
+
  if(process.env.KAOS_CAPTURE_DIR){await page.setViewportSize({width:430,height:800});await page.screenshot({path:process.env.KAOS_CAPTURE_DIR+'/extension-dashboard.png'});await page.setViewportSize({width:1280,height:900});}
  assert.ok(!(await page.evaluate(()=>window.testMessages)).some(m=>m.type==='START_BOT'));
  await page.evaluate(()=>{window.fixtureDemo=true;terminalData.accountIsDemo=true;});

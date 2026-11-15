@@ -27,3 +27,19 @@ original hosting files are not established by these tests.
 No hosting changes are made by committing this correction. Review the recovered
 website before a further installation; do not repeat the previous deployment
 command simply to inspect it.
+
+## Owner-confirmed homepage reference
+
+The owner subsequently confirmed the homepage in
+`tradingwithkaos.com_2.2.0_EXACT_TARGET_COMPLETE_WEBSITE.zip` as the intended
+homepage and bot design reference. The earlier gold branch alone did not recover
+that hero. The approved `kaos-home-target.png` is now bundled with the React
+homepage, with labeled navigation hotspots and separate readable mobile links.
+Artwork figures are identified as illustrative. Current membership plans, login
+and research tools are preserved; the archive's older backend and plan prices
+are not installed.
+
+Extension 1.7.24 uses the reference's Viking brand, black panels and gold controls.
+The owner confirmed keeping the compact broker companion without internal
+charts. No screenshot performance numbers are inserted into live
+account statistics, and no order or authorization logic changes in this pass.

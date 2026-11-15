@@ -26,12 +26,14 @@
         bar.appendChild(nav);
         if(workspace.closest('#screen-main')){
           const note=document.createElement('section');note.className='kaos-companion-summary';
-          const title=document.createElement('h1');title.textContent='Your trading command center';
+          const title=document.createElement('h1');title.textContent='Trading dashboard';
+          const brand=document.createElement('img');brand.src='assets/kaos-logo-horizontal.png';brand.alt='KAOS Trading — Trade With KAOS';brand.className='kaos-companion-brand';
+          const eyebrow=document.createElement('p');eyebrow.className='kaos-companion-eyebrow';eyebrow.textContent='POCKET OPTION · CONTROL DESK';
           const asset=document.createElement('p');asset.dataset.companionAsset='';asset.textContent='Select a market in Pocket Option';
           const hint=document.createElement('p');hint.dataset.companionGuidance='';hint.setAttribute('role','status');hint.textContent='Checking your broker connection…';
           const broker=document.createElement('button');broker.type='button';broker.textContent='Show Pocket Option';
           broker.addEventListener('click',async()=>{try{const tab=await getKAOSTargetTab();if(tab){await chrome.tabs.update(tab.id,{active:true});if(tab.windowId!=null)await chrome.windows.update(tab.windowId,{focused:true});}}catch(_){}});
-          note.append(title,asset,hint,broker);bar.after(note);
+          note.append(brand,eyebrow,title,asset,hint,broker);bar.after(note);
         }
       }
     });
