@@ -6,6 +6,7 @@ from db import db
 from commerce_providers import cipher, vault_ready, initialize_vault
 
 CATALOG = {
+ 'alphavantage': {'name':'Alpha Vantage','description':'Shared market news, cached for one hour. KAOS caps its requests at 20 per UTC day; your provider plan may impose additional limits.', 'fields':{'api_key':('API key','ALPHAVANTAGE_API_KEY')}},
  'reddit': {'name':'Reddit','description':'Read-only Reddit post search. Requires approved OAuth API access. Priority social source.', 'fields':{'client_id':('Client ID','REDDIT_CLIENT_ID'),'client_secret':('Client secret','REDDIT_CLIENT_SECRET'),'user_agent':('Identifying User-Agent','REDDIT_USER_AGENT')}},
  'x': {'name':'X','description':'Official recent-post search; your X API plan must permit this endpoint. Priority social source.', 'fields':{'bearer_token':('API bearer token','X_BEARER_TOKEN')}},
  'bluesky': {'name':'Bluesky','description':'Bounded cashtag samples. Public access is tried without credentials; a Bluesky app password enables authenticated search.', 'fields':{'identifier':('Account handle','BLUESKY_IDENTIFIER'),'app_password':('App password (not your main password)','BLUESKY_APP_PASSWORD')}},

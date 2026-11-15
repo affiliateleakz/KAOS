@@ -74,3 +74,16 @@ def test_validated_local_model_activation_expires_cache_without_enabling_orders(
  assert models.update_one.call_args.args[0]=={'_id':'crypto'}
  assert models.update_one.call_args.args[1]['$set']['state']=='active'
  assert scans.update_many.await_count==1
+
+
+def test_alpha_vantage_key_is_encrypted_and_write_only(monkeypatch):
+ store=SettingsStore();fake=SimpleNamespace(radar_provider_settings=store)
+ monkeypatch.setenv('KAOS_COMMERCE_VAULT_KEY',Fernet.generate_key().decode())
+ monkeypatch.setattr(radar_settings,'db',fake);monkeypatch.setattr(admin_api,'db',fake);monkeypatch.setattr(admin_api,'audit_log',AsyncMock())
+ async def run():
+  response=await admin_api.save('alphavantage',admin_api.ProviderInput(credentials={'api_key':'fixture-alpha-key'}),{'id':'owner'})
+  assert response['configured'] is True
+  assert 'fixture-alpha-key' not in str(response)
+  assert store.docs['alphavantage']['encrypted']['api_key']!='fixture-alpha-key'
+  assert (await radar_settings.settings('alphavantage'))['api_key']=='fixture-alpha-key'
+ asyncio.run(run())

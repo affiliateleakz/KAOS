@@ -20,8 +20,9 @@ class _RPCLogRedaction(logging.Filter):
   # httpx INFO logs include full URLs. RPC providers often put API keys in paths.
   if isinstance(record.args,tuple) and len(record.args)>1 and str(record.msg).startswith('HTTP Request:'):
    parsed=urlsplit(str(record.args[1]));host=(parsed.hostname or '').lower()
-   if any(host==root or host.endswith('.'+root) for root in RPC_ROOTS):
-    record.args=(record.args[0],f'{parsed.scheme}://{host}/[redacted-rpc-path]',*record.args[2:])
+   if host in ('www.alphavantage.co','alphavantage.co') or any(host==root or host.endswith('.'+root) for root in RPC_ROOTS):
+    marker='redacted-provider-path' if host in ('www.alphavantage.co','alphavantage.co') else 'redacted-rpc-path'
+    record.args=(record.args[0],f'{parsed.scheme}://{host}/[{marker}]',*record.args[2:])
   return True
 
 _http_logger=logging.getLogger('httpx')
@@ -200,6 +201,18 @@ class Sources:
    if item:rows.append(item)
   return rows[:12],len(data['data'][:25]),'Up to 25 posts from the configured authorized Page only'
  async def news(self,asset):
+  if self.settings.get('alphavantage',{}).get('enabled',True) and self.settings.get('alphavantage',{}).get('api_key'):
+   import alpha_vantage
+   from radar_news import normalize
+   try:
+    items=normalize(await alpha_vantage.news());rows=[];now=datetime.now(timezone.utc)
+    for row in items:
+     candidates={asset['symbol'],'CRYPTO:'+asset['symbol']}
+     if not candidates.intersection(row['tickers']):continue
+     item=observation(asset,'news','alphavantage',sha256(row['source_url'].encode()).hexdigest(),row['published_at'],row['title']+' '+row['summary'],row['source_url'],now)
+     if item:rows.append(item)
+    if rows:return rows,len(items),'Alpha Vantage cached headline sample; local KAOS analysis'
+   except SourceIssue:pass
   from routes_opportunity import _yahoo_headlines
   ticker=asset['symbol']+'-USD' if asset['asset_class']=='crypto' else asset['symbol']
   async with self.limit:

@@ -10,11 +10,15 @@ Radar scan. Bluesky could also treat newly indexed old posts as fresh mentions.
 
 ## Current workflow
 
-Use **Opportunity Radar → Scan sources + AI** with up to five `SYMBOL:class`
-entries. Example: `AAPL:stock, NVDA:stock, BTC:crypto, ETH:crypto`.
-Supported classes are stock, etf, option, crypto, dex, forex and future. Direct
-source coverage differs by adapter; other market categories can use recent
-observations from the separately deployed collectors.
+Radar now has five simple top tabs: **News**, **Social**, **AI Signal**,
+**Sentiment**, and **Bot Entries**. News opens first. Each tab shows only its own
+controls/content. Technical model/source details are collapsed. The older
+multi-source research workspace is no longer mounted on the member screen.
+
+Use News for headlines, Social for Reddit/X mention rankings, or choose one
+ticker and market in AI Signal. The analysis model still uses available data
+from all configured sources; its internal sources are not separate member setup
+steps. Owner configuration and training remain under Admin → Radar Sources & AI.
 
 The request gathers bounded source samples and recent saved evidence. A source
 failure is shown separately from a successful search with no matching results.
@@ -34,6 +38,7 @@ super-admin-only and scans require scanner entitlements.
 
 | Source | Configuration | Scope |
 |---|---|---|
+| Alpha Vantage | Admin write-only API key, or `ALPHAVANTAGE_API_KEY` | Market headlines cached globally per key for one hour, at most 20 KAOS requests per UTC day. Provider free-plan limits/access still apply. The same headlines can feed local KAOS analysis; third-party sentiment scores are not substituted for KAOS inference. |
 | Reddit (priority) | `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`, `REDDIT_USER_AGENT` | Official OAuth application access; up to 25 recent search results per ticker, exact symbol/cashtag matching. API approval and permissions must be valid. Not a full comments/firehose scan. |
 | X (priority) | `X_BEARER_TOKEN` | Official recent search; up to 10 cashtag posts per ticker, reposts excluded. Requires a plan entitled to recent search. |
 | Bluesky | Public access, or `BLUESKY_IDENTIFIER` and `BLUESKY_APP_PASSWORD` | Up to 50 search results; authenticated PDS/AppView supported. Actual post creation time takes precedence over indexing time. Public endpoint availability is not assumed. |
@@ -204,3 +209,20 @@ Reference reviewed: https://github.com/DarmorGamz/Tickermind. Its actual
 `LICENSE.txt` is MIT (the README license paragraph is inconsistent). No upstream
 code is copied. Its transformer/accelerate local-LLM stack is not installed on
 Asura shared hosting; KAOS uses its own bounded local sentiment/model pipeline.
+
+## Alpha Vantage key handling
+
+Save the key once under Admin → Radar Sources & AI → Alpha Vantage. It is
+Fernet-encrypted server-side and never returned in metadata or included in
+browser bundles, release ZIPs or Git source. Environment fallback is supported.
+A key supplied in conversation is not automatically configured on Asura: this
+workspace has no authenticated hosting/admin session. No real key is embedded
+in tests or examples. HTTP request logs redact Alpha Vantage query URLs.
+
+News is requested when its tab opens or Refresh news is pressed. A shared
+hourly cache and atomic lease prevent per-member request multiplication, and an
+atomic 20-request UTC-day budget reserves room below the standard free quota.
+Provider error/limit payloads (including HTTP 200 Information responses) are
+cached as failures rather than treated as empty successful feeds. Saved
+headlines can still be shown when the provider is unavailable. No stock price
+or longer-horizon AI model is claimed to come from this news-only integration.
