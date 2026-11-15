@@ -32,6 +32,8 @@ const assert=require('node:assert/strict');
  const snapshot=await page.evaluate(()=>fixtureRequest({type:'GET_TERMINAL_SNAPSHOT'}));
  assert.equal(snapshot.ok,true);assert.ok(snapshot.markets[0]?.candles.length>=25,JSON.stringify(snapshot.marketDataDiag));
  assert.ok(snapshot.markets[0].candles.length<=25,'No fabricated gap bars');
+ const status=await page.evaluate(()=>fixtureRequest({type:'GET_COMPANION_STATUS'}));
+ assert.equal(status.engineReady,true);assert.equal(status.running,false);assert.equal(status.markets,undefined);
  const after=await page.evaluate(()=>fixtureRequest({type:'GET_TERMINAL_SNAPSHOT'}));assert.equal(after.running,false);
  assert.deepEqual(errors,[]);console.log('Actual content engine returns fixture candles, preserves time gaps and remains stopped without an explicit Start.');
  await browser.close();

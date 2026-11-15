@@ -1,0 +1,34 @@
+/* Compact control surface. Broker data and strategy calculations stay in content.js. */
+html body.kaos-companion{min-width:0!important;width:100vw!important;max-width:100vw!important}
+html body.kaos-companion canvas{display:none!important}
+html body.kaos-companion #screen-chart,
+html body.kaos-companion :is(#kaos-dashboard-live,.kaos-chart-count-control,.kaos-nav-research,[data-kaos-view="charts"],[data-kaos-view="backtester"],[data-kaos-view="ai"],[data-kaos-view="performance"],#open-chart-btn,#open-chart-btn2,#kaos-opportunity-popup){display:none!important}
+html body.kaos-companion .kaos-app-nav{display:none!important}
+html body.kaos-companion :is(.kaos-live-head,.kaos-live-grid,.kaos-indicator-strip,.four-grid,#kaos-dashboard-multichart){display:none!important}
+html body.kaos-companion .kaos-session-strip [data-session-size]{background:#312611!important;border-color:#8a6b32!important;color:#e8c46f!important}
+html body.kaos-companion:is(.kaos-mini,.kaos-max,.kaos-mid,.kaos-fullpage) #screen-main.kaos-five-app .kaos-app-workspace.k14-workspace{margin:0!important;width:100%!important;min-width:0!important;max-width:none!important;overflow-y:auto!important;display:flex!important;flex-direction:column!important;gap:12px!important;padding:12px 12px 70px!important}
+html body.kaos-companion #screen-main .kaos-session-strip{order:-10;position:sticky!important;top:0!important;width:100%!important;flex-wrap:wrap!important;gap:8px!important;min-height:0!important}
+.kaos-companion-nav{display:flex;flex-wrap:wrap;gap:5px;flex-basis:100%;border-top:1px solid #514027;padding-top:9px}
+html body.kaos-companion .kaos-companion-nav button,.kaos-companion-nav a{margin:0!important;background:#211b10!important;color:#e8d8b2!important;border:1px solid #66502a!important;padding:8px!important;border-radius:5px;font:11px system-ui,sans-serif;text-decoration:none}
+.kaos-companion-summary{order:-9;border:1px solid #66502a;border-radius:9px;padding:14px;background:#17130d}
+.kaos-companion-summary h1{color:#e8c46f;font:700 20px Georgia,serif}
+.kaos-companion-summary p{color:#bdae92;font-size:12px;line-height:1.6;margin-top:7px}
+.kaos-companion-summary [data-companion-asset]{color:#f3ead8;font-weight:700}
+.kaos-companion-summary button{margin-top:10px;padding:8px 12px;border:1px solid #8a6b32;border-radius:5px;background:#302512;color:#e8c46f;cursor:pointer}
+html body.kaos-companion #screen-main:not(.view-dashboard) .kaos-companion-summary{display:none!important}
+html body.kaos-companion #screen-main.view-dashboard .k14-page-head{display:none!important}
+html body.kaos-companion #screen-main.view-dashboard .dashboard-top{display:contents!important}
+html body.kaos-companion #screen-main.view-dashboard .kaos-banner-toolbar{display:grid!important;grid-template-columns:1fr 1fr!important;gap:10px!important;width:100%!important;height:auto!important;min-height:0!important;margin:0!important}
+html body.kaos-companion #screen-main.view-dashboard .kaos-tb-field:first-child{display:none!important}
+html body.kaos-companion #screen-main.view-dashboard .kaos-tb-field{min-width:0!important;width:100%!important}
+html body.kaos-companion #screen-main.view-dashboard .kaos-tb-strategy{grid-column:1/-1!important}
+html body.kaos-companion #screen-main.view-dashboard .kaos-run-rail{display:block!important;position:static!important;width:100%!important;height:auto!important;margin:10px 0 0!important}
+html body.kaos-companion #screen-main.view-dashboard #start-btn{width:100%!important;max-width:none!important;height:48px!important}
+html body.kaos-companion #screen-main.view-dashboard .k14-rail{display:grid!important;grid-template-columns:minmax(0,1fr)!important;width:100%!important;min-width:0!important;gap:12px!important}
+html body.kaos-companion #screen-main.view-dashboard .k14-acct,html body.kaos-companion #screen-main.view-dashboard .k14-trades{width:100%!important;min-width:0!important;min-height:0!important;height:auto!important;max-height:none!important;overflow:visible!important;margin:0!important;position:static!important}
+html body.kaos-companion #screen-main.view-dashboard .k14-bottom-cards{display:none!important}
+html body.kaos-companion #screen-main.view-dashboard .k14-acct .status-bar{display:flex!important;flex-direction:column!important;align-items:flex-start!important;min-height:0!important;gap:7px!important}
+html body.kaos-companion #screen-main.view-dashboard .k14-acct .stats-row{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important}
+html body.kaos-companion #screen-main.view-dashboard .k14-acct .stat-card{min-height:64px!important;padding:10px 3px!important}
+html body.kaos-companion #screen-main.view-dashboard .k14-acct .stat-val{font-size:17px!important}
+html body.kaos-companion #screen-main .k14-footer{display:none!important}

@@ -11,10 +11,14 @@ function attachment(reply,authorized=true){
  return {calls,run:()=>context.attach(42)};
 }
 test('empty candle store is healthy when the real snapshot listener responds',async()=>{
- const c=attachment({ok:true,markets:[]});const result=await c.run();assert.equal(result.alreadyAttached,true);assert.deepEqual(c.calls,['GET_TERMINAL_SNAPSHOT']);
+ const c=attachment({ok:true,markets:[]});const result=await c.run();assert.equal(result.alreadyAttached,true);assert.deepEqual(c.calls,['GET_COMPANION_STATUS']);
+});
+test('companion engine readiness does not require chart snapshots',async()=>{
+ const c=attachment({ok:true,engineReady:true});assert.equal((await c.run()).alreadyAttached,true);
+ assert.deepEqual(c.calls,['GET_COMPANION_STATUS']);
 });
 test('early ping-only listener cannot masquerade as a working chart engine',async()=>{
- const c=attachment({ok:true});const result=await c.run();assert.equal(result.reloaded,true);assert.deepEqual(c.calls,['GET_TERMINAL_SNAPSHOT','RELOAD']);
+ const c=attachment({ok:true});const result=await c.run();assert.equal(result.reloaded,true);assert.deepEqual(c.calls,['GET_COMPANION_STATUS','RELOAD']);
 });
 test('unapproved attachment never reloads or probes the broker',async()=>{
  const c=attachment({ok:true,markets:[]},false);assert.equal((await c.run()).reason,'KAOS_AUTH_REQUIRED');assert.deepEqual(c.calls,[]);

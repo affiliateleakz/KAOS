@@ -228,7 +228,7 @@ console.info('[KAOS BUILD] V24.1.287-B21 · BB WINNER PRO (15s BB20/2) + ACTIVE 
 (function () {
   'use strict';
   const KAOS_AUDIT_READ_ONLY = false;
-  console.info('[KAOS BUILD] 1.7.21 · manual Start/Stop trading enabled');
+  console.info('[KAOS BUILD] 1.7.22 · manual Start/Stop trading enabled');
   if (window.__poatContent137) return;
   window.__poatContent137 = true;
 
@@ -11910,6 +11910,9 @@ try {
       } catch(e){sendResponse({ok:false,error:String(e&&e.message||e)});} return true;
     }
 
+    if(msg.type==='GET_COMPANION_STATUS'){
+      sendResponse({ok:true,engineReady:true,running:isRunning,asset:activeAsset||'',accountBalance:kaosPocketOptionBalance,accountIsDemo:kaosPocketOptionBalanceIsDemo});return false;
+    }
     if (msg.type === 'GET_C7B_CHART_SNAPSHOT' || msg.type === 'GET_TERMINAL_SNAPSHOT') {
       try {
         // 1.1.27: charts are read-only and must populate before START BOT.

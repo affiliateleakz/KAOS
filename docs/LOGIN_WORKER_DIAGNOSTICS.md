@@ -41,6 +41,20 @@ polls at 60 seconds instead of 6, skips hidden windows and prevents overlap. Loc
 chart/data messages are not hosting requests. These changes reduce known traffic;
 they do not establish or guarantee a cure for the production timeout.
 
+## Companion-only extension 1.7.22
+
+The owner subsequently requested removing extension chart displays. The popup now
+defaults to a compact broker companion with strategy/stake/expiry controls,
+Demo/Real status, Start/Stop, risk settings and trade history. Advanced website
+tools open separately. Broker market-data collection, candle validation and
+strategy/order calculations remain unchanged; no automatic Start was added.
+The retired renderer source/DOM is retained for compatibility and can be restored
+from Git, but its views and recurring render/snapshot paths are disabled in the
+companion build. A small `GET_COMPANION_STATUS` message supplies account/asset
+status every five seconds without serializing chart history. The worker's
+attachment readiness probe uses the same minimal receiver. Website chart access
+and the server's membership limits remain unchanged.
+
 The website now distinguishes server, network and timeout errors and gives
 login/bootstrap requests a 20-second client timeout without retrying passwords.
 No authentication bypass, role change, payment activation or live file overwrite

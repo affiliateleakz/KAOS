@@ -22,7 +22,7 @@ const assert=require('node:assert/strict');
     if(msg.type==='GET_BOT_STATE')reply={running:false};
     return dual(reply,cb);}},
    storage:{onChanged:{addListener(){}},local:{get:(keys,cb)=>dual(data,cb),set:(obj,cb)=>{Object.assign(data,obj);return dual(undefined,cb)},remove:(keys,cb)=>dual(undefined,cb)}},
-   tabs:{onUpdated:{addListener(){}},get:(id,cb)=>dual({id,url:'https://pocketoption.com/en/cabinet/demo-quick-high-low/'},cb),query:(opts,cb)=>dual([{id:42,url:'https://pocketoption.com/'}],cb),sendMessage:(id,msg,cb)=>{window.tabMessages.push(msg);if(msg.type==='GET_TERMINAL_SNAPSHOT'){
+   tabs:{onUpdated:{addListener(){}},get:(id,cb)=>dual({id,url:'https://pocketoption.com/en/cabinet/demo-quick-high-low/'},cb),query:(opts,cb)=>dual([{id:42,url:'https://pocketoption.com/'}],cb),sendMessage:(id,msg,cb)=>{window.tabMessages.push(msg);if(msg.type==='GET_COMPANION_STATUS')return dual({ok:true,engineReady:true,asset:'EURUSD',accountIsDemo:window.fixtureDemo??null,accountBalance:1000,running:false},cb);if(msg.type==='GET_TERMINAL_SNAPSHOT'){
       const candles=Array.from({length:30},(_,i)=>({ts:1700000000000+i*5000,open:1.1+i*.0001,high:1.101+i*.0001,low:1.099+i*.0001,close:1.1005+i*.0001}));
       return dual({ok:true,readOnly:true,accountIsDemo:window.fixtureDemo??null,markets:[{asset:'EURUSD',source:'TEST_FIXTURE',candles,ready:false,history:{canonical:30},ai:{},timeframes:{}}],allTrades:[],research:[],aiSummary:{},analytics:{}},cb);
      }return dual({ok:true},cb);} ,create:async()=>({id:42}),update:async()=>({id:42})},
@@ -51,22 +51,21 @@ const assert=require('node:assert/strict');
  const messages=await page.evaluate(()=>window.testMessages);
  assert.ok(messages.some(m=>m.type==='KAOS_CONNECT_PLATFORM'));
  assert.ok(!messages.some(m=>m.type==='START_BOT'));
- await page.waitForFunction(()=>window.tabMessages.filter(m=>m.type==='GET_TERMINAL_SNAPSHOT').length>=2);
- assert.ok(await page.locator('#kaos-dashboard-live canvas').count()>0);
- assert.equal(await page.evaluate(()=>terminalData?.markets?.[0]?.candles?.length),30);
- assert.ok((await page.locator('#terminal-four-grid .mc-name').first().textContent()).includes('EURUSD'));
- console.log('Dashboard received closed-candle fixture data and continued polling without opening Charts.');
- console.log('Actual popup reached charts after fresh sign-in and explicit broker selection, with no START_BOT message.');
+ await page.waitForFunction(()=>window.tabMessages.some(m=>m.type==='GET_COMPANION_STATUS'));
+ assert.equal(await page.locator('#kaos-dashboard-live').isVisible(),false);
+ assert.equal(await page.locator('#screen-chart').isVisible(),false);
+ assert.equal(await page.evaluate(()=>window.tabMessages.filter(m=>m.type==='GET_TERMINAL_SNAPSHOT').length),0);
+ assert.ok((await page.locator('[data-companion-asset]').textContent()).includes('EURUSD'));
+ console.log('Companion receives minimal broker status without chart snapshots or automatic Start.');
  await page.goto(BASE+'/popup.html?restored');
  await page.waitForFunction(()=>document.getElementById('screen-main')?.classList.contains('active'),{timeout:15000});
  assert.ok(!(await page.evaluate(()=>window.testMessages)).some(m=>m.type==='START_BOT'));
- console.log('Restored authorized session also reached charts.');
+ console.log('Restored authorized session reached the companion.');
  await page.waitForFunction(()=>window.__kaosChartSessionInitialized===true);
  const checksBefore=await page.evaluate(()=>window.testMessages.filter(m=>m.type==='KAOS_STARTUP').length);
  await page.evaluate(async()=>{await startFlow();await startFlow();});
  assert.equal(await page.evaluate(()=>window.testMessages.filter(m=>m.type==='KAOS_STARTUP').length),checksBefore);
  assert.equal(await page.locator('#screen-checking').isVisible(),false);
- await page.locator('#screen-main [data-session-size]').click();
  await page.waitForFunction(()=>document.body.classList.contains('kaos-mini'));
  await page.setViewportSize({width:430,height:800});
  assert.ok((await page.locator('#screen-main .kaos-app-workspace').boundingBox()).width<=430);
@@ -75,22 +74,19 @@ const assert=require('node:assert/strict');
  await page.setViewportSize({width:1280,height:900});
  await page.waitForFunction(()=>document.body.classList.contains('kaos-max'));
  await page.evaluate(()=>window.kaosRoute('dashboard'));
- const mainNav=page.locator('#screen-main .kaos-app-nav');
- assert.equal(await mainNav.getByRole('link').count(),7);
- for(const link of await mainNav.getByRole('link').all()){
-  assert.ok((await link.getAttribute('href')).startsWith('https://tradingwithkaos.com/dashboard/'));
-  assert.equal(await link.getAttribute('target'),'_blank');
- }
- for(const [view,label] of [['history','Trade History'],['risk','Risk Controls'],['settings','Settings'],['strategy','Strategies'],['dashboard','Dashboard']]){
+ await page.setViewportSize({width:430,height:800});
+ const mainNav=page.locator('#screen-main .kaos-companion-nav');
+ assert.equal(await mainNav.getByRole('link').getAttribute('href'),'https://tradingwithkaos.com/dashboard');
+ for(const [view,label] of [['history','Trades'],['risk','Risk'],['settings','Settings'],['strategy','Strategy'],['dashboard','Bot']]){
   await mainNav.getByRole('button',{name:label,exact:true}).click();
   await page.waitForFunction(view=>document.getElementById('screen-main').classList.contains('view-'+view),view);
  }
- await page.waitForFunction(()=>terminalData?.markets?.length>0);
+ await page.waitForFunction(()=>terminalData?.engineReady===true);
  assert.equal(await page.locator('#screen-main .kaos-session-strip').count(),1);
  assert.equal(await page.locator('#screen-main .kaos-session-strip').isVisible(),true);
  assert.ok((await page.locator('#screen-main .kaos-session-strip').boundingBox()).y<120);
  assert.ok((await page.locator('#screen-main .kaos-session-strip').textContent()).includes('BOT STOPPED'));
- if(process.env.KAOS_CAPTURE_DIR)await page.screenshot({path:process.env.KAOS_CAPTURE_DIR+'/extension-dashboard.png'});
+ if(process.env.KAOS_CAPTURE_DIR){await page.setViewportSize({width:430,height:800});await page.screenshot({path:process.env.KAOS_CAPTURE_DIR+'/extension-dashboard.png'});await page.setViewportSize({width:1280,height:900});}
  assert.ok(!(await page.evaluate(()=>window.testMessages)).some(m=>m.type==='START_BOT'));
  await page.evaluate(()=>{window.fixtureDemo=true;terminalData.accountIsDemo=true;});
  await page.locator('#screen-main [data-session-status=account]').filter({hasText:'DEMO ACCOUNT'}).waitFor();
@@ -105,9 +101,9 @@ const assert=require('node:assert/strict');
  await page.locator('[data-testid=kaos-menu-logout]').click();
  await page.getByTestId('kaos-login-email').waitFor();
  await page.waitForTimeout(150);
- const count=await page.evaluate(()=>window.tabMessages.filter(m=>m.type==='GET_TERMINAL_SNAPSHOT').length);
+ const count=await page.evaluate(()=>window.tabMessages.filter(m=>m.type==='GET_COMPANION_STATUS').length);
  await page.waitForTimeout(1250);
- assert.equal(await page.evaluate(()=>window.tabMessages.filter(m=>m.type==='GET_TERMINAL_SNAPSHOT').length),count);
+ assert.equal(await page.evaluate(()=>window.tabMessages.filter(m=>m.type==='GET_COMPANION_STATUS').length),count);
  assert.equal(await page.evaluate(()=>terminalData),null);
  assert.deepEqual(errors,[]); console.log('No popup JavaScript errors.');
  await browser.close();

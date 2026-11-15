@@ -3,6 +3,7 @@
    Local AI training is in-memory; explicit user export/import is the only AI persistence path. */
 const KAOS_NO_AUTO_SAMPLE_DOWNLOADS = true;
 const KAOS_AUDIT_READ_ONLY = false;
+const KAOS_COMPANION_ONLY = true;
 function KAOSV198IsAutoSampleDownload(opts) {
   const s = String(opts?.reason ?? opts?.source ?? opts?.kind ?? "").toLowerCase();
   return s.includes("sample") || s.includes("training") || s.includes("dataset") || s.includes("auto");
@@ -1532,7 +1533,19 @@ async function exportDebugCsv() {
 let terminalTimer=null,terminalData=null,kaosChartFeedGeneration=0,kaosChartRefreshBusy=false;
 function kaosStartChartFeed(){
  if(window.__kaosChartSessionAuthorized!==true || terminalTimer)return;
- terminalRefresh();terminalTimer=setInterval(terminalRefresh,1000);
+ const poll=KAOS_COMPANION_ONLY?kaosRefreshCompanionStatus:terminalRefresh;
+ poll();terminalTimer=setInterval(poll,KAOS_COMPANION_ONLY?5000:1000);
+}
+async function kaosRefreshCompanionStatus(){
+ if(window.__kaosChartSessionAuthorized!==true||kaosChartRefreshBusy)return;
+ kaosChartRefreshBusy=true;const generation=kaosChartFeedGeneration;
+ try{
+  const tab=await getKAOSTargetTab();if(!tab)return;
+  const r=await chrome.tabs.sendMessage(tab.id,{type:'GET_COMPANION_STATUS'});
+  if(window.__kaosChartSessionAuthorized!==true||generation!==kaosChartFeedGeneration||!r?.ok)return;
+  terminalData=r;kaosUpdateAccountBalance(r);
+  const asset=document.querySelector('[data-companion-asset]');if(asset)asset.textContent=r.asset||'Select a market in Pocket Option';
+ }catch(_){}finally{kaosChartRefreshBusy=false;}
 }
 function kaosStopChartFeed(){
  clearInterval(terminalTimer);terminalTimer=null;kaosChartFeedGeneration++;
@@ -1550,6 +1563,7 @@ document.querySelectorAll('.kaos-social').forEach(btn=>{const url=KAOS_SOCIAL_LI
 $('window-compact-btn')?.addEventListener('click',()=>KAOSSetWindowMode('bot'));
 $('window-max-btn')?.addEventListener('click',()=>KAOSSetWindowMode('charts'));
 async function terminalShow(){
+ if(KAOS_COMPANION_ONLY)return;
  document.body.classList.add('chart-mode');
  Object.values(screens).forEach(s=>{if(s)s.style.display='none';});
  const sc=$('screen-chart');if(sc){sc.classList.add('active');sc.style.display='flex';}
@@ -2135,6 +2149,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     qa('#screen-main .kaos-nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.kaosView===v));
   }
   function route(view){
+    if(KAOS_COMPANION_ONLY && TERMINAL_VIEWS[view]){chrome.tabs.create({url:"https://tradingwithkaos.com/dashboard/"+({charts:"trading",backtester:"backtests",ai:"kaos-ai",performance:"trading"}[view])});return;}
     // 1.6.34 canonical navigation: Trading is Dashboard; Advanced is Build Strategy.
     if(view==='trading') view='dashboard';
     if(view==='advanced') view='strategy';
@@ -2188,6 +2203,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     // Keep dashboard live chart visually tied to the real first multi-chart canvas.
     const mirror=document.getElementById('kaos-dashboard-canvas');
     const copyChart=()=>{
+      if(KAOS_COMPANION_ONLY)return;
       if(!mirror) return;
       const src=document.querySelector('#terminal-four-grid .mc-canvas');
       const ctx=mirror.getContext('2d');
@@ -2311,8 +2327,8 @@ if (document.readyState === 'loading') {
   }
 
   function initViewMode(){
-    let mode='max';
-    try{ mode=localStorage.getItem('kaosViewMode')||'max'; if(mode==='mid') mode='max'; }catch(_){}
+    let mode='mini';
+    try{ mode=KAOS_COMPANION_ONLY?'mini':localStorage.getItem('kaosViewMode')||'max'; if(mode==='mid') mode='max'; }catch(_){}
     if(kaosFullPage()){ document.body.classList.add('kaos-fullpage'); setViewMode('max',false); return; }
     setViewMode(mode);
   }
@@ -2942,6 +2958,7 @@ function kaos1627DashboardChartCount(){
 }
 
 function kaos1627SyncDashboardCharts(){
+ if(KAOS_COMPANION_ONLY)return;
   const n=kaos1627DashboardChartCount();
   const dash=document.querySelector('#screen-dashboard,.screen-dashboard,[data-page="dashboard"],[data-screen="dashboard"]');
   if(!dash)return;
@@ -3019,6 +3036,7 @@ function kaos1628SelectedCount(){
 }
 
 function kaos1628Dashboard(){
+ if(KAOS_COMPANION_ONLY)return;
   const dash=document.querySelector('#screen-dashboard,.screen-dashboard,[data-page="dashboard"],[data-screen="dashboard"]');
   if(!dash)return;
   const n=kaos1628SelectedCount();
@@ -3093,6 +3111,7 @@ setInterval(kaos1628Dashboard,1500);
    return document.getElementById('kaos-dashboard-live');
  }
  function build(){
+ if(KAOS_COMPANION_ONLY)return;
    const box=host();if(!box)return;
    const n=selectedCount();box.dataset.count=String(n);
    let grid=box.querySelector('.kaos-live-grid');
@@ -3112,6 +3131,7 @@ setInterval(kaos1628Dashboard,1500);
    paint();
  }
  function paint(){
+ if(KAOS_COMPANION_ONLY)return;
    const box=host(),grid=box?.querySelector('.kaos-live-grid');if(!grid)return;
    const srcs=[...document.querySelectorAll('#terminal-four-grid .market-chart')];
    [...grid.children].forEach((cell,i)=>{
@@ -3165,6 +3185,7 @@ setTimeout(kaos1631DashboardFlow,500);
 // KAOS 1.6.34 — size Live Market from its actual 1–4 chart grid so lower cards
 // can never overlap/cut off CH3 or CH4.
 function kaos1632ReserveDashboardHeight(){
+ if(KAOS_COMPANION_ONLY)return;
   const live=document.getElementById('kaos-dashboard-live');
   const grid=live?.querySelector('.kaos-live-grid');
   if(!live||!grid)return;

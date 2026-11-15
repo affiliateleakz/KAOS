@@ -313,7 +313,7 @@ async function kaosOpenSingleAppWindow(){
   for(const t of kaosTabs) try{await chrome.tabs.remove(t.id);}catch(_){}
 
   const w=await chrome.windows.create({
-    url:appUrl+'?kaosApp=1',type:'popup',focused:true,width:1280,height:900
+    url:appUrl+'?kaosApp=1',type:'popup',focused:true,width:430,height:800
   });
   return {ok:true,created:true,windowId:w.id};
   })();
@@ -627,11 +627,11 @@ async function kaosEnsurePoAttached(tabId, allowReload = true) {
   try{
     const pong=await new Promise(resolve=>{
       const timer=setTimeout(()=>resolve(null),2000);
-      chrome.tabs.sendMessage(tabId,{type:'GET_TERMINAL_SNAPSHOT'}).then(
+      chrome.tabs.sendMessage(tabId,{type:'GET_COMPANION_STATUS'}).then(
         response=>{clearTimeout(timer);resolve(response);},()=>{clearTimeout(timer);resolve(null);});
     });
     if(!kaosAuthorizedPo)return {ok:false,reason:'KAOS_AUTH_REQUIRED'};
-    if(pong?.ok&&Array.isArray(pong.markets)){kaosAttachedTabIds.add(tabId);return {ok:true,alreadyAttached:true};}
+    if(pong?.ok&&(pong.engineReady===true||Array.isArray(pong.markets))){kaosAttachedTabIds.add(tabId);return {ok:true,alreadyAttached:true};}
   }catch(_){}
   const now = Date.now(), last = kaosAttachAttemptAt.get(tabId) || 0;
   if(!kaosAuthorizedPo)return {ok:false,reason:'KAOS_AUTH_REQUIRED'};
