@@ -43,22 +43,3 @@ Extension 1.7.24 uses the reference's Viking brand, black panels and gold contro
 The owner confirmed keeping the compact broker companion without internal
 charts. No screenshot performance numbers are inserted into live
 account statistics, and no order or authorization logic changes in this pass.
-
-## Compact-companion homepage and broker roadmap
-
-The owner then chose to keep broker-native charts and update the homepage instead
-of bringing internal extension charts back. The current homepage therefore uses
-the existing Viking banner and an actual extension capture from browser fixtures,
-with current control descriptions in place of the old chart-filled bot artwork.
-The original target artwork remains in Git but is no longer the landing hero.
-
-The public broker section covers the union of the existing extension selector and
-connector roadmap: Pocket Option, Coinbase, Kraken, Interactive Brokers, Alpaca,
-OANDA, Tradier, tastytrade, Binance.US, Charles Schwab, and MetaTrader 4/5.
-Only Pocket Option is described as supported extension trading. Coinbase is
-labeled trading planned; remaining future trading connections are planned.
-Research or connection groundwork is not advertised as active bot execution.
-No new broker adapters or trading permissions are enabled by this website change.
-
-Browser checks verify all 11 descriptions, a single supported badge, the actual
-companion capture, links and mobile layout, plus the recovered member tools.

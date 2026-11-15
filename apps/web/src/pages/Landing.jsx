@@ -1,30 +1,225 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { CompanionHero, BrokerRoadmap } from "../components/CompanionHomepage";
 
-/* Viking homepage for the compact companion and full broker roadmap. */
+/* =====================================================================================
+   KAOS TRADING — one-page product site (2.2.0)
+   Top of page: owner-approved Viking artwork from the supplied 2.2.0 archive,
+   with accessible navigation hotspots. Figures in the artwork are illustrative.
+   Below it: real content sections the navigation scrolls to:
+   KAOS BOT, FEATURES, PRICING, RESULTS, FAQ + footer.
+   ===================================================================================== */
 
 const GOLD = "#f0c35d";
 const GOLD_DEEP = "#d4a94e";
 const GOLD_BORDER = "#6d5522";
 const GREEN = "#35d07f";
+const RED = "#ff5c5c";
 
-// Homepage examples describe controls, not additional in-extension chart views.
-function PreviewRows({rows}) {
- return <div style={{display:"grid",gap:9}}>{rows.map(([label,value])=><div key={label} style={{display:"flex",justifyContent:"space-between",gap:12,padding:"10px",border:"1px solid #3c3020",borderRadius:5,fontSize:12}}><span style={{color:"#b7ad92"}}>{label}</span><b style={{color:GOLD,textAlign:"right"}}>{value}</b></div>)}</div>;
+/* ---------------------------------------------------------------- helpers ---------- */
+
+const hotspots = [
+  // Top navigation bar (percentage coordinates of the 1536x1024 artwork)
+  { label: "Home",    left: 30.0, top: 1.0,  width: 5.3,  height: 5.4, href: "#top" },
+  { label: "KAOS Bot", left: 36.2, top: 1.0,  width: 7.3,  height: 5.4, href: "#kaos-bot" },
+  { label: "Features", left: 44.3, top: 1.0,  width: 7.1,  height: 5.4, href: "#features" },
+  { label: "Pricing",  left: 52.2, top: 1.0,  width: 6.6,  height: 5.4, href: "#pricing" },
+  { label: "Results",  left: 60.0, top: 1.0,  width: 6.5,  height: 5.4, href: "#results" },
+  { label: "FAQ",      left: 67.2, top: 1.0,  width: 5.0,  height: 5.4, href: "#faq" },
+  { label: "Login",    left: 76.7, top: 1.2,  width: 8.2,  height: 4.9, to: "/login" },
+  { label: "Get KAOS", left: 85.4, top: 1.2,  width: 11.0, height: 4.9, to: "/register" },
+  // Hero buttons
+  { label: "Get KAOS Trading Bot", left: 6.1,  top: 43.0, width: 24.5, height: 5.7, to: "/register" },
+  { label: "Watch Demo",           left: 31.8, top: 43.0, width: 16.6, height: 5.7, href: "#kaos-bot" },
+  // Bottom call to action on the artwork
+  { label: "Start Trading With KAOS", left: 80.6, top: 92.0, width: 17.2, height: 5.4, to: "/register" },
+];
+
+const hotspotStyle = (h) => ({
+  position: "absolute",
+  left: `${h.left}%`,
+  top: `${h.top}%`,
+  width: `${h.width}%`,
+  height: `${h.height}%`,
+  display: "block",
+});
+
+/* Deterministic sample series (same every render) */
+const CANDLES_A = [
+  [40, 55, 30, 50], [50, 62, 44, 58], [58, 60, 40, 46], [46, 70, 42, 66],
+  [66, 78, 60, 72], [72, 74, 52, 58], [58, 66, 50, 62], [62, 88, 58, 84],
+  [84, 90, 74, 78], [78, 86, 70, 84], [84, 96, 80, 92], [92, 100, 84, 96],
+];
+const CANDLES_B = [
+  [70, 74, 52, 56], [56, 64, 50, 60], [60, 68, 56, 64], [64, 66, 44, 50],
+  [50, 58, 44, 54], [54, 62, 48, 58], [58, 72, 56, 68], [68, 70, 58, 62],
+  [62, 78, 60, 74], [74, 80, 68, 76], [76, 88, 72, 84], [84, 92, 78, 88],
+];
+
+function CandleChart({ data = CANDLES_A, height = 120, w = 300 }) {
+  const min = Math.min(...data.map((c) => c[2]));
+  const max = Math.max(...data.map((c) => c[1]));
+  const span = max - min || 1;
+  const step = w / data.length;
+  const y = (v) => height - 8 - ((v - min) / span) * (height - 16);
+  return (
+    <svg viewBox={`0 0 ${w} ${height}`} style={{ width: "100%", height, display: "block" }} preserveAspectRatio="none" aria-hidden="true">
+      <line x1="0" y1={height * 0.55} x2={w} y2={height * 0.42} stroke="#3f6fae" strokeWidth="1.4" strokeDasharray="5 4" />
+      <line x1="0" y1={height * 0.7} x2={w} y2={height * 0.58} stroke={GOLD_DEEP} strokeWidth="1.4" strokeDasharray="2 4" />
+      {data.map((c, i) => {
+        const x = i * step + step / 2;
+        const up = c[3] >= c[0];
+        const col = up ? GREEN : RED;
+        const top = y(Math.max(c[0], c[3]));
+        const bot = y(Math.min(c[0], c[3]));
+        return (
+          <g key={i}>
+            <line x1={x} y1={y(c[1])} x2={x} y2={y(c[2])} stroke={col} strokeWidth="1.2" />
+            <rect x={x - step * 0.28} y={top} width={step * 0.56} height={Math.max(2, bot - top)} fill={col} rx="1" />
+          </g>
+        );
+      })}
+    </svg>
+  );
 }
+
+function MiniLine({ height = 70, rising = true }) {
+  const pts = rising
+    ? "0,58 20,52 40,55 60,40 80,45 100,32 120,37 140,24 160,29 180,16 200,20 220,10"
+    : "0,20 22,26 44,22 66,36 88,32 110,44 132,40 154,52 176,48 200,60";
+  const pts2 = rising
+    ? "0,40 25,44 50,36 75,42 100,30 125,36 150,26 175,32 200,24"
+    : "0,52 25,46 50,50 75,38 100,44 125,32 150,38 175,28 200,34";
+  return (
+    <svg viewBox="0 0 220 70" preserveAspectRatio="none" style={{ width: "100%", height, display: "block" }} aria-hidden="true">
+      <polyline points={pts} fill="none" stroke={GREEN} strokeWidth="2" />
+      <polyline points={pts2} fill="none" stroke={RED} strokeWidth="1.6" opacity="0.85" />
+    </svg>
+  );
+}
+
+
+function Toggle({ on = true }) {
+  return (
+    <span style={{
+      width: 34, height: 19, borderRadius: 999, display: "inline-flex", alignItems: "center",
+      justifyContent: on ? "flex-end" : "flex-start", padding: 2,
+      background: on ? "#12503a" : "#26231c", border: `1px solid ${on ? "#1f7a54" : "#3a362b"}`,
+      boxShadow: on ? "0 0 8px rgba(53,208,127,.45)" : "none", flexShrink: 0,
+    }}>
+      <span style={{ width: 13, height: 13, borderRadius: "50%", background: on ? GREEN : "#6b6553" }} />
+    </span>
+  );
+}
+
+const Kpi = ({ label, value, color = GOLD }) => (
+  <div style={{ flex: 1, background: "#0e0c08", border: "1px solid #2c2415", borderRadius: 8, padding: "8px 10px", minWidth: 0 }}>
+    <div style={{ fontSize: 9, letterSpacing: ".12em", color: "#8d8266", textTransform: "uppercase", whiteSpace: "nowrap" }}>{label}</div>
+    <div style={{ fontSize: 17, fontWeight: 700, color, lineHeight: 1.25, whiteSpace: "nowrap" }}>{value}</div>
+  </div>
+);
+
+/* ---------------------------------------------------------------- data ------------- */
 const SYSTEMS = [
- {name:"Broker companion",tag:"YOUR CHARTS STAY WITH YOUR BROKER",visual:<PreviewRows rows={[["Charts","Use your broker"],["Bot controls","Compact panel"],["Start / Stop","Your choice"]]}/>,text:"Keep the broker workspace you already know. KAOS runs beside it as a compact control panel rather than recreating charts inside the extension.",bullets:["Strategy, stake and expiration together","Account and connection status","Compact and expanded views"]},
- {name:"KAOS Strategy",tag:"RULES BEFORE EXECUTION",visual:<PreviewRows rows={[["Strategy","KAOS Strategy"],["Stake","Set by you"],["Expiration","Set by you"]]}/>,text:"Choose your strategy and review its settings before starting. Execution follows the selected strategy and the integration supported by your connected broker.",bullets:["Explicit Start and Stop controls","Review settings before a session","Broker-specific execution"]},
- {name:"Risk controls",tag:"SET YOUR BOUNDARIES",visual:<PreviewRows rows={[["Stake sizing","Configurable"],["Loss limits","Configurable"],["Cooldowns","Configurable"]]}/>,text:"Review stake sizing, loss limits, trade limits and cooldowns in the bot. Risk controls reduce exposure according to your settings; they do not guarantee against losses.",bullets:["Dedicated Risk settings","Clear Demo / Real account labeling","Check open positions at the broker"]},
- {name:"Research tools",tag:"IN YOUR WEBSITE DASHBOARD",visual:<PreviewRows rows={[["Heatmaps","Website workspace"],["News & research","Website workspace"],["AI execution","Validation required"]]}/>,text:"Use the KAOS website for heatmaps, news and research tools included in your membership. Keep the extension focused on bot controls. AI execution remains separately gated by validation.",bullets:["Membership-based research tools","Website dashboard alongside the bot","Research is separate from execution"]},
- {name:"Trade history",tag:"REVIEW YOUR SESSION",visual:<PreviewRows rows={[["Wins / losses","Session statistics"],["Recent trades","Bot activity"],["Broker account","Final confirmation"]]}/>,text:"Review recent bot trades and session statistics. Use the broker’s own orders and positions to verify execution and account outcomes.",bullets:["Recent trade activity","Session wins, losses and P/L","No published profitability claims"]},
+  {
+    name: "Dashboard", tag: "REAL-TIME TRADING CONTROL",
+    visual: (
+      <div>
+        <div style={{ display: "flex", gap: 6, marginBottom: 8, fontSize: 10, color: "#b7ad92" }}>
+          <span style={{ background: "#141109", border: "1px solid #2c2415", borderRadius: 6, padding: "3px 8px" }}>AUDUSD_otc</span>
+          <span style={{ background: "#141109", border: "1px solid #2c2415", borderRadius: 6, padding: "3px 8px" }}>30s</span>
+          <span style={{ marginLeft: "auto", color: GREEN }}>AUTO</span>
+        </div>
+        <CandleChart height={120} />
+        <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+          <Kpi label="Win Rate" value="—" />
+          <Kpi label="Trades" value="—" />
+          <Kpi label="P/L" value="—" />
+        </div>
+      </div>
+    ),
+    text: "Your mission control. Monitor live markets as they move, fire and manage trades without leaving the screen, and watch performance build in real time — session stats, open positions and account status in one place.",
+    bullets: ["Live market feed with candlestick charts", "One-click manual override while the bot runs", "Session, daily and lifetime performance at a glance"],
+  },
+  {
+    name: "KAOS Berserker", tag: "SIGNATURE STRATEGY",
+    visual: (
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {[["Timeframe", "30 Seconds"], ["Expiration", "30 Seconds"], ["Continuation Mode", true], ["Reversal Mode", true],
+          ["ZigZag 5 / 3 / 1", true], ["Supertrend 3 / 1.75", true], ["Parabolic SAR 0.02 / 0.20", true]].map(([k, v]) => (
+          <div key={k} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#0e0c08", border: "1px solid #2c2415", borderRadius: 7, padding: "7px 10px", fontSize: 12 }}>
+            <span style={{ color: "#cfc5a8" }}>{k}</span>
+            {typeof v === "string"
+              ? <span style={{ color: GOLD, fontWeight: 700, fontSize: 11 }}>{v}</span>
+              : <Toggle on={v} />}
+          </div>
+        ))}
+      </div>
+    ),
+    text: "The engine behind KAOS. Berserker reads market structure through ZigZag swings, Supertrend direction and Parabolic SAR to catch continuations and reversals on short expirations — the same confluence logic in STRATEGY and STRATEGY+AI modes.",
+    bullets: ["Continuation + reversal entry engines, independently toggleable", "Tunable indicator stack: ZigZag, Supertrend, Parabolic SAR", "Built for fast expirations on OTC and live pairs"],
+  },
+  {
+    name: "Multi-Chart", tag: "TRADE MULTIPLE MARKETS",
+    visual: (
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        {["AUDUSD_otc", "EURNZD_otc", "GBPUSD_otc", "BTCUSD_otc"].map((m, i) => (
+          <div key={m} style={{ background: "#0e0c08", border: "1px solid #2c2415", borderRadius: 8, padding: "6px 8px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9.5, color: "#b7ad92", marginBottom: 4 }}>
+              <span>{m}</span><span style={{ color: GOLD }}>30s</span>
+            </div>
+            <MiniLine rising={i % 2 === 0} height={58} />
+          </div>
+        ))}
+      </div>
+    ),
+    text: "Run up to four markets side by side and let the bot hunt setups on each of them simultaneously. Forex, crypto, indices and OTC pairs can be mixed freely — each channel keeps its own strategy settings and trade log.",
+    bullets: ["Forex · Crypto · Indices · OTC", "Independent per-market strategy channels", "Concurrent entries with per-channel risk limits"],
+  },
+  {
+    name: "KAOS AI", tag: "LEARN · ANALYZE · IMPROVE",
+    visual: (
+      <div>
+        <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+          <Kpi label="Trained Samples" value="—" />
+          <Kpi label="Accuracy" value="—" />
+          <Kpi label="Holdout" value="—" />
+        </div>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 64, marginBottom: 8 }}>
+          {[34, 46, 42, 60, 55, 70, 66, 81, 77, 95].map((h, i) => (
+            <span key={i} style={{ flex: 1, height: `${h}%`, background: `linear-gradient(180deg,${GREEN},${GREEN}55)`, borderRadius: 3 }} />
+          ))}
+        </div>
+        <div style={{ fontSize: 11, lineHeight: 1.9, color: "#cfc5a8" }}>
+          <div><b style={{ color: GREEN }}>Trade Win</b> — Added to model</div>
+          <div><b style={{ color: RED }}>Trade Loss</b> — Added to model</div>
+          <div><b style={{ color: GOLD }}>Pattern Match</b> — High probability setup</div>
+        </div>
+      </div>
+    ),
+    text: "A self-learning layer that studies every settled trade — wins and losses — and refines its pattern library continuously. Pro members get AI market analysis as advice only. AI-controlled trading (KAOS AI and Strategy + AI modes) stays locked for every plan until it passes independent validation.",
+    bullets: ["Learns from every settled trade, on your own account", "Out-of-sample holdout accuracy shown, not just training fit", "Export / Import AI data — your model, your data"],
+  },
+  {
+    name: "Performance", tag: "TRACK YOUR RESULTS",
+    visual: (
+      <div>
+        <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+          <Kpi label="Win Rate" value="—" />
+          <Kpi label="Total Trades" value="—" />
+          <Kpi label="P/L" value="—" />
+        </div>
+        <CandleChart data={CANDLES_B} height={92} />
+      </div>
+    ),
+    text: "Detailed statistics, full trade history and performance analytics. Every entry is timestamped and graded, so you always know exactly what the bot did, when, and why — with the numbers to back it up.",
+    bullets: ["Trade-by-trade history with stakes and outcomes", "Equity curve, streaks and best/worst trade tracking", "Export your stats any time — full transparency"],
+  },
 ];
 
 const FEATURES = [
-  { t: "Automated Execution", d: "Start the bot explicitly and manage its activity from the companion. Execution depends on the connected broker and your settings.", icon: "M13 2 4.5 13.5H11L9.5 22 19 10h-6.5L13 2Z" },
-  { t: "AI Learning Engine", d: "Research and learning tools support strategy review. AI execution is a separate capability that requires validation before activation.", icon: "M12 3a4 4 0 0 1 4 4c1.2.4 2 1.5 2 2.8 0 .5-.1 1-.4 1.4.9.6 1.4 1.6 1.4 2.8a3.3 3.3 0 0 1-3.3 3.3H14v3h-4v-3H8.3A3.3 3.3 0 0 1 5 14c0-1.2.5-2.2 1.4-2.8-.3-.4-.4-.9-.4-1.4C6 8.5 6.8 7.4 8 7a4 4 0 0 1 4-4Zm0 5v8" },
-  { t: "Broker Connections", d: "Explore every supported and planned connection. Each broker has its own integration status and execution requirements.", icon: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 0c2.5 2.5 3.8 5.7 3.8 9s-1.3 6.5-3.8 9m0-18C9.5 5.5 8.2 8.7 8.2 12s1.3 6.5 3.8 9M3.5 9h17m-17 6h17" },
+  { t: "Automated Execution", d: "KAOS watches the markets and executes 24/7 without emotion, hesitation or fatigue — the plan you set is the plan that trades.", icon: "M13 2 4.5 13.5H11L9.5 22 19 10h-6.5L13 2Z" },
+  { t: "AI Learning Engine", d: "Every settled trade feeds the model. KAOS AI constantly re-trains on real outcomes from your own account, not stale backtests.", icon: "M12 3a4 4 0 0 1 4 4c1.2.4 2 1.5 2 2.8 0 .5-.1 1-.4 1.4.9.6 1.4 1.6 1.4 2.8a3.3 3.3 0 0 1-3.3 3.3H14v3h-4v-3H8.3A3.3 3.3 0 0 1 5 14c0-1.2.5-2.2 1.4-2.8-.3-.4-.4-.9-.4-1.4C6 8.5 6.8 7.4 8 7a4 4 0 0 1 4-4Zm0 5v8" },
+  { t: "Multi-Market Ready", d: "Forex, crypto, indices and OTC — trade several markets at once with independent strategy channels per market.", icon: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 0c2.5 2.5 3.8 5.7 3.8 9s-1.3 6.5-3.8 9m0-18C9.5 5.5 8.2 8.7 8.2 12s1.3 6.5 3.8 9M3.5 9h17m-17 6h17" },
   { t: "Advanced Risk Management", d: "Stake sizing, daily loss caps, trade limits and cooldowns. Risk controls run alongside every strategy to protect your capital.", icon: "M12 3 5 6v5c0 4.4 3 8.5 7 10 4-1.5 7-5.6 7-10V6l-7-3Zm-2.5 9 2 2 4-4.5" },
   { t: "Cloud Sync", d: "Strategies and KAOS AI data live in your account cloud. Export, import and move your setup between devices without losing progress.", icon: "M7 18a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 8.5 4 4 0 0 1 17.5 18H7Zm5-5v6m0-6-2.5 2.5M12 13l2.5 2.5" },
   { t: "Trade History & Analytics", d: "A complete, timestamped log of every trade with stakes, outcomes and P/L — plus equity curves and streak analytics.", icon: "M4 5h16v14H4zM4 9h16M8 13h8m-8 3h5" },
@@ -33,12 +228,12 @@ const FEATURES = [
 const PLANS = [
   {
     id: "free", name: "Free", price: "$0", per: "/month", note: "Create an account · no card required",
-    features: ["KAOS Trading Bot", "KAOS Strategy mode (no AI trading)", "1 website chart", "Paper trading", "Community access", "Works on 1 device"],
+    features: ["KAOS Trading Bot", "KAOS Strategy mode (no AI trading)", "1 chart", "Paper trading", "Community access", "Works on 1 device"],
     cta: "JOIN FREE", best: false,
   },
   {
     id: "pro", name: "Pro", price: "$49", per: "/month", note: "Billed monthly · cancel any time",
-    features: ["KAOS Trading Bot", "KAOS Strategy mode", "Scanners & AI insights", "Up to 4 website charts", "Cloud Strategies", "Works on 3 devices"],
+    features: ["KAOS Trading Bot", "KAOS Strategy mode", "Scanners & AI insights", "Up to 4 charts", "Cloud Strategies", "Works on 3 devices"],
     cta: "GET PRO", best: false,
   },
   {
@@ -50,8 +245,8 @@ const PLANS = [
 
 
 const FAQS = [
-  { q: "What is the KAOS Trading Bot?", a: "KAOS is an automated trading command center for short-expiration markets. It combines strategy controls, risk settings and session status in a compact extension panel. Charts stay in the broker workspace; broader research tools live on the KAOS website." },
-  { q: "Which platform does KAOS work with?", a: "Pocket Option is the currently supported extension trading connection. Coinbase, Kraken, Interactive Brokers, Alpaca, OANDA, Tradier, tastytrade, Binance.US, Charles Schwab and MetaTrader 4/5 are also listed in the roadmap. Their status cards explain what is active and what is planned." },
+  { q: "What is the KAOS Trading Bot?", a: "KAOS is an automated trading command center for short-expiration markets. It combines the KAOS Berserker strategy engine, a self-learning AI layer, multi-market charts and full risk management in one place — you set the rules, KAOS executes them around the clock without emotion." },
+  { q: "Which platform does KAOS work with?", a: "KAOS works with Pocket Option. The bot trades on your own Pocket Option account — demo or real — exactly as you have it selected in Pocket Option. KAOS never moves your funds anywhere else." },
   { q: "How does KAOS AI learn?", a: "Every settled trade — win or loss — is added to the model, and KAOS AI re-trains continuously on those real outcomes. It also shows out-of-sample holdout accuracy so you can judge performance honestly, and you can export or import your AI data at any time. Your bot, your data." },
   { q: "Do I need trading experience?", a: "No. KAOS ships with the Berserker strategy pre-configured, so you can start with defaults, watch how it behaves and tune timeframe, expiration, indicators and risk limits as you get comfortable." },
   { q: "What do I get with membership?", a: "Membership unlocks the bot, cloud strategies and the community. All plans are billed monthly. Free gives you the KAOS bot in Strategy mode on 1 device, plus paper trading and the community — AI trading is not included. Pro adds the bot with KAOS Strategy mode, scanners and AI insights on 3 devices. Ultimate adds KAOS AI mode, Strategy + AI mode, Premium Tools and 5 devices." },
@@ -84,7 +279,7 @@ export default function Landing() {
 
   /* Sticky nav visibility + active section tracking */
   useEffect(() => {
-    const ids = ["brokers", "kaos-bot", "features", "pricing", "results", "faq"];
+    const ids = ["kaos-bot", "features", "pricing", "results", "faq"];
     const onScroll = () => {
       const hero = document.getElementById("kx-hero");
       const gate = hero ? hero.offsetTop + hero.offsetHeight * 0.75 : 400;
@@ -115,13 +310,18 @@ export default function Landing() {
   }, []);
 
   const navLinks = [
-    ["KAOS BOT", "kaos-bot"], ["BROKERS", "brokers"], ["FEATURES", "features"], ["PRICING", "pricing"], ["RESULTS", "results"], ["FAQ", "faq"],
+    ["KAOS BOT", "kaos-bot"], ["FEATURES", "features"], ["PRICING", "pricing"], ["RESULTS", "results"], ["FAQ", "faq"],
   ];
 
   return (
     <div id="top" style={{ background: "#020303", color: "#e8e2d4", margin: 0 }}>
       <style>{`
         html{scroll-behavior:smooth}
+        .k-hotspot:focus-visible{outline:2px solid ${GOLD};outline-offset:2px}
+        .kx-art-caption{font-size:11px;color:#b7ad92;padding:10px 20px;margin:0;line-height:1.6}
+        .kx-mobile-actions{display:none}
+        @media(max-width:700px){.kx-mobile-actions{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px}.kx-mobile-actions a{display:flex;align-items:center;justify-content:center;min-height:44px;padding:8px 16px;border:1px solid ${GOLD_BORDER};border-radius:6px;color:${GOLD}}}
+
         .kx-section{scroll-margin-top:74px}
         .kx-navlink{position:relative;padding:6px 2px;color:#d9d0b8;text-decoration:none;font-size:12.5px;letter-spacing:.14em;white-space:nowrap;transition:color .2s}
         .kx-navlink:hover{color:${GOLD}}
@@ -136,8 +336,33 @@ export default function Landing() {
         details summary::-webkit-details-marker{display:none}
       `}</style>
 
-      <CompanionHero mainRef={mainRef} />
-      <BrokerRoadmap />
+      {/* ============================ HERO — exact approved artwork ============================ */}
+      <main ref={mainRef} id="kx-hero" aria-label="KAOS Trading Bot" style={{ margin: 0, background: "#020303", position: "relative", lineHeight: 0 }}>
+        <h1 className="sr-only">KAOS TRADING BOT</h1>
+        <div style={{ position: "relative", width: "100%" }}>
+          <img
+            src="/kaos-home-target.png"
+            alt="KAOS Trading Bot — Trade With KAOS. Automated, intelligent, relentless: real market strategies, AI powered learning, multi-market support and risk management in one command center."
+            style={{ display: "block", width: "100%", height: "auto", userSelect: "none" }}
+            draggable={false}
+          />
+          <span id="systems" aria-hidden="true" style={{ position: "absolute", left: 0, top: "54%", width: 1, height: 1 }} />
+          <nav aria-label="Homepage navigation" style={{ position: "absolute", inset: 0, lineHeight: "normal" }}>
+            {hotspots.map((h) =>
+              h.to ? (
+                <Link key={h.label} to={h.to} aria-label={h.label} className="k-hotspot" style={hotspotStyle(h)} />
+              ) : (
+                <a key={h.label} href={h.href} aria-label={h.label} className="k-hotspot" style={hotspotStyle(h)} />
+              )
+            )}
+          </nav>
+        </div>
+      </main>
+
+      <p className="kx-art-caption">Interface artwork for illustration. Figures shown are examples, not verified trading results.</p>
+      <nav className="kx-mobile-actions" aria-label="Mobile homepage navigation">
+        <Link to="/login">Login</Link><Link to="/register">Get KAOS</Link><a href="#features">Features</a><a href="#pricing">Pricing</a>
+      </nav>
 
       {/* ============================ STICKY MINI-NAV ============================ */}
       <div
@@ -170,7 +395,7 @@ export default function Landing() {
       {/* ============================ KAOS BOT ============================ */}
       <section id="kaos-bot" className="kx-section" aria-labelledby="h-bot" style={{ padding: "86px 22px 70px", background: "linear-gradient(180deg,#020303,#070604 40%,#020303)" }}>
         <div style={{ maxWidth: 1280, margin: "0 auto" }}>
-          {sectionHead("The Command Center", "One Compact Bot. Your Broker’s Workspace.", "Bot controls in the extension. Charts at your broker. Research in your KAOS dashboard.")}
+          {sectionHead("The Command Center", "5 Powerful Systems. 1 Complete Trading Command Center.", "Everything KAOS does, in one place — from watching the market to learning from every single trade. Here is what each system does and why it matters.")}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 22 }}>
             {SYSTEMS.map((s, i) => (
               <article key={s.name} className="kx-card" style={{ ...cardStyle, padding: "22px 20px 24px", display: "flex", flexDirection: "column", gap: 14 }}>
@@ -194,7 +419,7 @@ export default function Landing() {
             ))}
           </div>
           <p style={{ textAlign: "center", color: "#6f6753", fontSize: 11.5, marginTop: 22 }}>
-            Control summaries describe the interface; they are not live account statistics.
+            Interface previews use sample data from the KAOS demo environment.
           </p>
         </div>
       </section>
@@ -250,7 +475,7 @@ export default function Landing() {
             ))}
           </div>
           <p style={{ textAlign: "center", color: "#6f6753", fontSize: 12, marginTop: 26, lineHeight: 1.7 }}>
-            Membership covers the KAOS license, cloud strategies and AI data sync. Broker availability varies by integration. Check the connection roadmap and review your account type and risk limits before trading.
+            Membership covers the KAOS license, cloud strategies and AI data sync. The bot trades on your own Pocket Option account — demo or real, your choice, always under your risk limits.
           </p>
         </div>
       </section>
@@ -269,7 +494,7 @@ export default function Landing() {
             </p>
           </div>
           <div style={{ marginTop: 24, border: `1px solid ${GOLD_BORDER}`, background: "#0d0a05", borderRadius: 12, padding: "16px 20px", fontSize: 12.5, lineHeight: 1.75, color: "#a99f86" }}>
-            <b style={{ color: GOLD }}>Performance disclaimer:</b> the interface preview uses test-session data, not live trades or results. Trading short-expiration contracts carries a substantial risk of loss. Past performance, real or simulated, is not indicative of future results. Never trade money you cannot afford to lose.
+            <b style={{ color: GOLD }}>Performance disclaimer:</b> charts on this page are illustrative layouts, not real trades or results. Trading short-expiration contracts carries a substantial risk of loss. Past performance, real or simulated, is not indicative of future results. Never trade money you cannot afford to lose.
           </div>
         </div>
       </section>
