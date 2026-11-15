@@ -12,7 +12,10 @@
 - `apps/api/requirements.txt` pinned `websockets==16.1.1`, which conflicts with `coinbase-advanced-py` (<14). Relaxed to `>=13,<14`.
 - REPAIRED's parity tests can't run because `kaos_berserker`/`berserker_fixtures` are missing.
 - `content.js` still hard-codes legacy strategy labels (`7B`/`KAOS_BERSERKER`). REPAIRED's FIXES.md says this was fixed in the other runtime.
-- Emergent platform dependencies: email proxy, Google OAuth, and the (now removed) analytics.
+- Emergent platform dependencies: the email proxy, and a legacy `POST /api/auth/google/session`
+  route. Google sign-in for the web no longer needs Emergent — `POST /api/auth/google/credential`
+  verifies a Google ID token directly; the old session route is now unused and should be deleted
+  once no deployed client calls it.
 - Pricing (founder decision 2026-10-18): monthly billing only — Free $0, Pro $49/mo, Ultimate $149/mo. Yearly is retired; legacy `monthly`/`yearly` plan ids map to Pro/Ultimate. Stripe prices are created at checkout from these amounts (no live Stripe change made).
 - Free tier (founder decision 2026-10-18): bot in STRATEGY mode on 1 device, no AI modes/scanners/premium tools. The extension license no longer requires a paid membership, but still requires a verified Pocket Option affiliate account and an unsuspended account. AI endpoints (`routes_ai`, FinBERT) still require an ACTIVE paid membership.
 - Recipient tier is the sponsor's tier when the payment is recorded; members who are not ACTIVE/TRIAL count as Free (10% L1 only).

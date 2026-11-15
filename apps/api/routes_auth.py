@@ -6,6 +6,7 @@ from datetime import datetime, timezone, timedelta
 
 import httpx
 from fastapi import APIRouter, Request, Response, HTTPException, Depends, BackgroundTasks
+from pydantic import BaseModel, Field
 
 from db import db, new_id, now, now_iso, clean
 from auth import (hash_password, verify_password, create_access_token, create_refresh_token,
@@ -24,6 +25,13 @@ EMAIL_FROM_NAME = os.environ.get("EMAIL_FROM_NAME") or "KAOS Trading"
 
 MAX_ATTEMPTS = 5
 LOCK_MINUTES = 15
+
+# Web client ID the Google Identity button renders with. Must match the token's audience.
+GOOGLE_CLIENT_ID = (os.environ.get("GOOGLE_CLIENT_ID") or "").strip()
+
+
+class GoogleCredentialReq(BaseModel):
+    credential: str = Field(min_length=20, max_length=8192)
 
 
 async def send_password_reset_email(to_email: str, token: str) -> bool:
@@ -249,6 +257,48 @@ async def google_session(request: Request, response: Response):
                                   "expires_at": now() + timedelta(days=7), "created_at": now_iso()})
     response.set_cookie("session_token", session_token, httponly=True, secure=True,
                         samesite="none", max_age=604800, path="/")
+    return _user_public(user)
+
+
+# ---- Google Identity Services (ID token) ----
+@router.post("/google/credential")
+async def google_credential(req: GoogleCredentialReq, response: Response):
+    """Sign in with the ID token Google Identity Services hands the browser.
+
+    Signature, issuer, expiry and audience are verified against Google's published
+    keys; nothing in the token is trusted before that check. Replaces the
+    Emergent-hosted session exchange for first-party Google sign-in.
+    """
+    if not GOOGLE_CLIENT_ID:
+        raise HTTPException(status_code=503, detail="Google sign-in is not configured")
+    try:
+        from google.auth.transport import requests as google_requests
+        from google.oauth2 import id_token as google_id_token
+        info = google_id_token.verify_oauth2_token(
+            req.credential, google_requests.Request(), GOOGLE_CLIENT_ID
+        )
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid Google credential")
+    email = (info.get("email") or "").lower()
+    if not email or not info.get("email_verified"):
+        raise HTTPException(status_code=401, detail="Google account email is not verified")
+    user = await db.users.find_one({"email": email})
+    if not user:
+        doc = await _new_user_doc(email, info.get("name") or email, None, None,
+                                  provider="google", google_id=info.get("sub"),
+                                  avatar=info.get("picture"), verified=True)
+        await db.users.insert_one(dict(doc))
+        user = doc
+    else:
+        if user.get("account_status", "active") != "active" or user.get("extension_access_revoked"):
+            raise HTTPException(status_code=403, detail="Account disabled")
+        await db.users.update_one({"id": user["id"]},
+                                  {"$set": {"google_id": info.get("sub"),
+                                            "avatar": user.get("avatar") or info.get("picture"),
+                                            "email_verified": True}})
+    tv = user.get("token_version", 0)
+    set_auth_cookies(response, create_access_token(user["id"], email, tv),
+                     create_refresh_token(user["id"], tv))
     return _user_public(user)
 
 

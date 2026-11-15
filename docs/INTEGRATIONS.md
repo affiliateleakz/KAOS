@@ -25,7 +25,7 @@ data, and `GET /api/health` returns `{"status":"ok","db":true}`.
 | `INTEGRATION_PROXY_URL` + `EMERGENT_EMAIL_KEY` | Emergent proxy (default `https://integrations.emergentagent.com`) | `routes_auth.py` | Password reset and email verification silently do nothing |
 | `EMAIL_FROM_NAME` | local | `routes_auth.py` | Defaults to `KAOS Trading` |
 | `OPENAI_API_KEY` | OpenAI | `routes_ai.py` | AI insights return a configuration error; strategy engine unaffected |
-| Google sign-in | **hard-coded** `demobackend.emergentagent.com` | `routes_auth.py:/google/session` | Google login is impossible to enable without Emergent; see §5 |
+| `GOOGLE_CLIENT_ID` | Google Cloud OAuth client | `routes_auth.py:/google/credential` | Endpoint returns 503; the web Google button cannot sign anyone in |
 
 ## 3. Market-data feeds (research and scanners)
 
@@ -45,7 +45,7 @@ Binance/DexScreener collectors post to `KAOS_API_BASE` and need nothing else.
 
 | Variable | Purpose | If missing |
 |---|---|---|
-| `KAOS_BROKER_VAULT_KEY` | Fernet key that encrypts stored Coinbase API secrets | Coinbase connect endpoints return 400 |
+| `KAOS_BROKER_VAULT_KEY` | Fernet key that encrypts stored Coinbase API secrets | `PUT /api/v1/broker-connections/coinbase` returns 503 before it ever contacts the broker; live Coinbase orders also return 503 |
 | `KAOS_BROKER_VAULT_PREVIOUS_KEYS` | Rotation-only decryption | Old ciphertext cannot be read |
 | `KAOS_COINBASE_LIVE_ORDERS` | Master flag for real orders | Must stay `false` until a kill switch and approval gate exist |
 | `KAOS_COLLECTOR_KEY` | Auth for collector → API ingest | Ingest endpoints reject |
@@ -57,13 +57,15 @@ no server credential for it, and the only Pocket Option secret in the tree is `P
 
 ## 5. Blocking third-party dependencies to replace
 
-1. **Google OAuth is hard-coded to Emergent.** `routes_auth.py` calls
-   `https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data` and accepts the
-   `session_token` it returns. That endpoint belongs to a demo environment, is not under
-   KAOS control, and cannot be pointed elsewhere by configuration. Google login therefore
-   works only while that third-party demo backend exists, and account data passes through it.
-   Replacing it with a KAOS-owned OAuth client (`GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`)
-   is a code change, not a settings change.
+1. **Emergent Google OAuth is still mounted, but is no longer required.** The web app posts
+   the Google Identity credential to `POST /api/auth/google/credential`, which verifies the
+   ID token against Google's published keys (signature, issuer, expiry, audience
+   `GOOGLE_CLIENT_ID`) and then issues KAOS cookies. That path needs no third party.
+   `POST /api/auth/google/session` still forwards an `X-Session-ID` to
+   `https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data` and trusts the
+   returned `session_token`; nothing in this repo calls it any more. Remove that route (and
+   the `session_token` branch in `auth.get_current_user`) once you have confirmed no deployed
+   client uses it — it accepts an identity asserted by a demo backend outside KAOS control.
 2. **Transactional email defaults to the Emergent proxy.** Overridable via
    `INTEGRATION_PROXY_URL`, which is why it is listed in §2 rather than here.
 3. **Stripe price objects are created on demand** (`stripe.Price.create` inside checkout).
