@@ -1,10 +1,8 @@
 import asyncio
 import copy
-import json
 from datetime import datetime,timezone,timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
-import httpx
 import pytest
 from fastapi import HTTPException
 from pymongo.errors import DuplicateKeyError
@@ -29,8 +27,9 @@ class Store:
 
 @pytest.fixture
 def db(monkeypatch):
- value=SimpleNamespace(kaos_radar_scans=Store(),kaos_radar_limits=Store(),kaos_intelligence=Store())
+ value=SimpleNamespace(kaos_radar_scans=Store(),kaos_radar_limits=Store(),kaos_intelligence=Store(),kaos_social_mentions=Store(),kaos_radar_models=Store())
  monkeypatch.setattr(radar,'db',value)
+ monkeypatch.setattr(radar,'analyze',AsyncMock(return_value={'state':'complete','model':'KAOS local fixture','report':{'assets':[]}}))
  async def config(provider):return {'enabled':True,'api_key':'','model':'fixture-model'}
  monkeypatch.setattr(radar.radar_settings,'settings',config)
  return value
@@ -48,7 +47,7 @@ def test_scan_caches_results_without_repeating_network_or_ai(monkeypatch,db):
  gather=AsyncMock(side_effect=lambda *args:copy.deepcopy(collected()));monkeypatch.setattr(radar,'collect',gather)
  async def run():
   first=await radar.scan(request(),{'id':'owner'});second=await radar.scan(request(),{'id':'owner'})
-  assert first['ai']['state']=='setup_required'
+  assert first['ai']['state']=='complete'
   assert second['cached'] is True and gather.await_count==1
   assert first['trade_execution_enabled'] is False
   assert first['evidence'][0]['provider']=='reddit' and len(db.kaos_intelligence.writes)==1
@@ -84,46 +83,13 @@ def test_failed_source_is_not_replaced_with_synthetic_evidence(monkeypatch,db):
  assert out['evidence']==[] and out['source_status'][0]['observations'] is None and not db.kaos_intelligence.writes
 
 
-def ai_fixture(monkeypatch,report):
- real=httpx.AsyncClient
- def handler(request):
-  assert request.url=='https://api.openai.com/v1/responses'
-  payload=json.loads(request.content)
-  assert 'secret-fixture-key' not in request.content.decode()
-  assert payload['max_output_tokens']==2600 and 'tools' not in payload
-  return httpx.Response(200,json={'status':'completed','output':[{'type':'message','content':[{'type':'output_text','text':json.dumps(report)}]}]})
- monkeypatch.setattr(radar.httpx,'AsyncClient',lambda **kwargs:real(transport=httpx.MockTransport(handler),**kwargs))
-
-def review(ref='known',symbol='AAPL',priority='medium'):
- return {'summary':'Review reported evidence and verify at source.','assets':[{'symbol':symbol,'asset_class':'stock','priority':priority,'explanation':'Public discussion is context, not confirmation.','evidence_ids':[ref] if ref else [],'limitations':['Only one source was available.']}],'coverage_gaps':['X was unavailable.']}
-
-def test_real_ai_response_requires_attributable_evidence_and_remains_non_executable(monkeypatch):
- ai_fixture(monkeypatch,review())
- evidence=[{**sample(),'id':'known'}]
- out=asyncio.run(radar.analyze([{'symbol':'AAPL','asset_class':'stock'}],evidence,[],{'api_key':'secret-fixture-key','model':'fixture-model'}))
- assert out['state']=='complete' and out['trade_execution_enabled'] is False
- assert out['report']['assets'][0]['evidence_ids']==['known']
-
-@pytest.mark.parametrize('report',[review('invented'),review('known','MSFT'),review('',priority='high')])
-def test_ai_cannot_invent_citations_assets_or_high_priority_without_evidence(monkeypatch,report):
- ai_fixture(monkeypatch,report)
- out=asyncio.run(radar.analyze([{'symbol':'AAPL','asset_class':'stock'}],[{**sample(),'id':'known'}],[],{'api_key':'secret-fixture-key','model':'fixture-model'}))
- assert out['state']=='unavailable'
-
-def test_no_model_or_evidence_never_generates_a_fake_ai_report():
- empty=asyncio.run(radar.analyze([],[],[],{'api_key':'','model':'fixture-model'}))
- assert empty['state']=='setup_required' and 'report' not in empty
- out=asyncio.run(radar.analyze([],[],[],{'api_key':'fixture','model':'fixture-model'}))
- assert out['state']=='no_evidence' and 'report' not in out
-
-
 def test_evidence_sampling_keeps_whales_insiders_and_government_among_social_volume():
     rows=[{**sample(),'id':str(i)} for i in range(100)]
     for source in ('onchain','insider','politician'):
         rows.append({**sample(),'source':source,'provider':source,'id':source})
-    output=radar.ai_input([{'symbol':'AAPL','asset_class':'stock'}],rows,[])
-    assert {'onchain','insider','politician'} <= {row['source'] for row in output['evidence']}
-    assert output['sampling']['available']==103
+    output=radar.balanced_evidence(rows,60)
+    assert {'onchain','insider','politician'} <= {row['source'] for row in output}
+    assert len(output)==60
 
 
 def test_social_filter_finds_evidence_that_general_recent_sample_would_omit(monkeypatch):

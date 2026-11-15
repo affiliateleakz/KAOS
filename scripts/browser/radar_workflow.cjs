@@ -5,10 +5,10 @@ const BASE=process.env.KAOS_WEB_PREVIEW_URL;
 (async()=>{
  const browser=await chromium.launch({executablePath:process.env.CHROME_BIN||undefined,headless:true,args:['--no-sandbox']});
  try{
- const context=await browser.newContext();let scanCalls=0,latest=null,vaultReady=false,savedKey=null,sourceQueries=[];
- const labels={reddit:'Reddit',x:'X',bluesky:'Bluesky',facebook:'Facebook Pages',sec:'SEC insider transactions',ethereum:'Ethereum large transfers',government:'Congressional disclosures',openai:'Radar AI analysis'};
- const fields={reddit:[['client_id','Client ID'],['client_secret','Client secret'],['user_agent','Identifying User-Agent']],x:[['bearer_token','API bearer token']],bluesky:[['identifier','Account handle'],['app_password','App password']],facebook:[['page_id','Authorized Page ID']],sec:[['user_agent','Organization and contact email']],ethereum:[['rpc_url','HTTPS RPC URL']],government:[['api_key','Quiver API key']],openai:[['api_key','OpenAI API key']]};
- const providers=()=>Object.entries(labels).map(([id,name])=>({id,name,enabled:true,description:'Fixture provider setup; no live request',configured:['reddit','bluesky','openai'].includes(id)||id==='x'&&!!savedKey,model:id==='openai'?'fixture-model':null,fields:fields[id].map(([name,label])=>({name,label,configured:false,secret:['bearer_token','api_key','app_password','client_secret'].includes(name)}))}));
+ const context=await browser.newContext();let scanCalls=0,latest=null,vaultReady=false,savedKey=null,sourceQueries=[],lastMarketAssets=null,socialCalls=0;
+ const labels={reddit:'Reddit',x:'X',bluesky:'Bluesky',facebook:'Facebook Pages',sec:'SEC insider transactions',ethereum:'Ethereum large transfers',government:'Congressional disclosures'};
+ const fields={reddit:[['client_id','Client ID'],['client_secret','Client secret'],['user_agent','Identifying User-Agent']],x:[['bearer_token','API bearer token']],bluesky:[['identifier','Account handle'],['app_password','App password']],facebook:[['page_id','Authorized Page ID']],sec:[['user_agent','Organization and contact email']],ethereum:[['rpc_url','HTTPS RPC URL']],government:[['api_key','Quiver API key']]};
+ const providers=()=>Object.entries(labels).map(([id,name])=>({id,name,enabled:true,description:'Fixture provider setup; no live request',configured:['reddit','bluesky'].includes(id)||id==='x'&&!!savedKey,fields:fields[id].map(([name,label])=>({name,label,configured:false,secret:['bearer_token','api_key','app_password','client_secret'].includes(name)}))}));
  const report=()=>({completed_at:'2026-11-15T12:00:00Z',coverage:'Selected public evidence samples',cached:false,
   source_status:[{provider:'reddit',asset:'AAPL',state:'collected',observations:1,inspected:25,scope:'25 public post results'},{provider:'x',asset:'AAPL',state:'access_denied',observations:null,message:'Provider rejected API access; check API permissions'},{provider:'ethereum',asset:'ETH',state:'collected',observations:1,inspected:150,scope:'One safe block, native ETH only'},{provider:'government',asset:'AAPL',state:'no_matches',observations:0,inspected:3,scope:'Recent disclosed Congress transactions'}],
   evidence:[{id:'reddit-ref',asset:'AAPL',asset_class:'stock',provider:'reddit',source:'social',summary:'Public Reddit AAPL discussion fixture.',source_url:'https://www.reddit.com/comments/fixture',published_at:'2026-11-15T11:00:00Z',observed_at:'2026-11-15T12:00:00Z'},{id:'eth-ref',asset:'ETH',asset_class:'crypto',provider:'ethereum',source:'onchain',summary:'Native ETH large-value transaction fixture; owner and direction unknown.',source_url:'https://etherscan.io/tx/fixture',published_at:'2026-11-15T11:00:00Z',observed_at:'2026-11-15T12:00:00Z'}],
@@ -20,13 +20,17 @@ const BASE=process.env.KAOS_WEB_PREVIEW_URL;
   if(path==='/api/notifications')return route.fulfill({json:[]});
   if(path==='/api/v1/trading/config')return route.fulfill({json:{entitlements:{tier:'ultimate',scanners:true}}});
   if(path==='/api/v1/intelligence/opportunities'){sourceQueries.push(url.searchParams.get('source_filter'));return route.fulfill({json:{results:[],scanned_observations:0}});}
-  if(path==='/api/v1/intelligence/signals/market')return route.fulfill({json:{signals:[{symbol:'BTC',direction:'WAIT',reason:'No confirmed trend breakout.',source:'Fixture candles'}],ai_status:'Technical baseline; not trained AI'}});
+  if(path==='/api/v1/intelligence/signals/market'){lastMarketAssets=req.postDataJSON().assets;return route.fulfill({json:{signals:[{symbol:'BTC',asset_class:'crypto',direction:'WAIT',reason:'No confirmed trend breakout.',model_state:'collecting',source:'KAOS local fixture',feature_values:{return_1:.01,return_4:.02,volume_ratio:1.5},sentiment:{sources:{news:{samples:1,score:.5,bullish:1,bearish:0,neutral:0},social:{samples:0,score:null,bullish:0,bearish:0,neutral:0}}}}],ai_status:'KAOS local model collecting evidence'}});}
+  if(path==='/api/v1/intelligence/sentiment/history')return route.fulfill({json:{history:[{observed_at:'2026-11-15T12:00:00Z',sentiment:{sources:{news:{score:.5},social:{score:null}}}}]}});
+  if(path==='/api/v1/intelligence/social/mentions'){socialCalls++;return route.fulfill({json:{rankings:[{symbol:'AAPL',asset_class:'stock',name:'Apple',mentions:3,reddit:2,x:1,unique_authors:3,sentiment:.3,bullish:2,bearish:1,neutral:0,posts:[{provider:'reddit',text:'AAPL discussion fixture from Reddit',source_url:'https://www.reddit.com/comments/fixture',published_at:'2026-11-15T12:00:00Z'}]}],source_status:[{provider:'reddit',state:'collected',inspected:100},{provider:'x',state:'collected',inspected:100}],completed_at:'2026-11-15T12:00:00Z',counting:'Distinct sampled posts',directory_scope:'Fixture US stocks'}});}
   if(path==='/api/v1/intelligence/signals/bot')return route.fulfill({json:{signals:[]}});
   if(path==='/api/v1/intelligence/scan/status')return route.fulfill({json:{providers:providers(),maximum_assets:5,cache_seconds:300}});
   if(path==='/api/v1/intelligence/scan/latest')return route.fulfill({json:{scan:latest}});
   if(path==='/api/v1/intelligence/scan'){
    scanCalls++;const data=req.postDataJSON();assert.deepEqual(data.assets,[{symbol:'AAPL',asset_class:'stock'},{symbol:'ETH',asset_class:'crypto'}]);assert.equal(data.include_ai,true);latest=report();return route.fulfill({json:latest});
   }
+  if(path==='/api/admin/radar/model/train')return route.fulfill({json:{state:'collecting'}});
+  if(path==='/api/admin/radar/model')return route.fulfill({json:{engine:'KAOS local',groups:[{group:'crypto',labeled_samples:0,active:null,candidate:null}]}});
   if(path==='/api/admin/radar/providers')return route.fulfill({json:{providers:providers(),vaultReady}});
   if(path==='/api/admin/radar/vault/initialize'){vaultReady=true;return route.fulfill({json:{vaultReady:true}});}
   if(path==='/api/admin/radar/providers/x'){savedKey=req.postDataJSON().credentials.bearer_token;return route.fulfill({json:{id:'x',configured:true}});}
@@ -36,11 +40,28 @@ const BASE=process.env.KAOS_WEB_PREVIEW_URL;
  await page.clock.install();
  await page.goto(BASE+'/dashboard/opportunities');await page.getByRole('heading',{name:'KAOS Opportunity Radar',exact:true}).waitFor();
  assert.equal(scanCalls,0,'Opening Radar must not silently start paid AI calls');
- await page.getByRole('button',{name:'Scan market setups',exact:true}).click();
+ await page.getByRole('button',{name:'Scan with KAOS AI',exact:true}).click();
  await page.getByText('No confirmed trend breakout.',{exact:true}).waitFor();
+ await page.getByRole('heading',{name:'Market Sentiment Monitoring',exact:true}).waitFor();
+ await page.getByText('Bullish 1 · Neutral 0 · Bearish 0',{exact:true}).waitFor();
+ assert.equal(await page.getByRole('link',{name:'OpenAI'}).count(),0);
+ await page.getByRole('button',{name:'Reddit & X · most mentioned',exact:true}).click();
+ await page.getByRole('button',{name:'Scan stock discussions',exact:true}).click();
+ await page.getByText('AAPL discussion fixture from Reddit',{exact:true}).waitFor();
+ await page.getByRole('link',{name:'Read original post ↗',exact:true}).waitFor();
+ const socialImmediate=page.waitForResponse(r=>r.url().endsWith('/api/v1/intelligence/social/mentions'));
+ await page.getByLabel('Monitor discussions every 5 minutes while visible',{exact:true}).check();await socialImmediate;
+ const socialAutomatic=page.waitForResponse(r=>r.url().endsWith('/api/v1/intelligence/social/mentions'));
+ await page.clock.fastForward(300010);await socialAutomatic;assert.equal(socialCalls,3);
+ await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+ await page.getByRole('button',{name:'Analyze AAPL with KAOS',exact:true}).click();
+ await page.getByText('No confirmed trend breakout.',{exact:true}).waitFor();
+ assert.deepEqual(lastMarketAssets,[{symbol:'AAPL',asset_class:'stock'}]);
+ await page.setViewportSize({width:1440,height:1000});
  await page.getByRole('button',{name:'Bot entries · seconds',exact:true}).click();
  await page.getByRole('button',{name:'Refresh bot entries',exact:true}).click();
  await page.getByText('No fresh bot entries.',{exact:false}).waitFor();
+ await page.clock.fastForward(300010);assert.equal(socialCalls,3,'Social monitoring stops after leaving its view');
  await page.getByRole('button',{name:'Open Advanced evidence & optional AI research',exact:true}).click();
  await page.getByLabel('Watchlist · up to 5 symbols',{exact:true}).fill('AAPL:stock, ETH:crypto');
  await page.getByRole('button',{name:'Scan sources + AI',exact:true}).click();
@@ -61,6 +82,9 @@ const BASE=process.env.KAOS_WEB_PREVIEW_URL;
  if(process.env.KAOS_CAPTURE_DIR)await page.screenshot({path:process.env.KAOS_CAPTURE_DIR+'/radar-upgrade.png'});
  await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
  await page.goto(BASE+'/admin/radar');await page.getByTestId('radar-source-settings').waitFor();
+ assert.ok(!(await page.locator('body').innerText()).includes('OpenAI API key'));
+ await page.getByRole('button',{name:'Train crypto model',exact:true}).click();
+ await page.getByRole('status').filter({hasText:'KAOS model: collecting'}).waitFor();
  const count=scanCalls;await page.clock.fastForward(300010);assert.equal(scanCalls,count,'Auto-scan interval must stop after leaving Radar');
  await page.getByRole('button',{name:'Initialize private vault',exact:true}).click();await page.getByRole('button',{name:'Verify private vault',exact:true}).waitFor();
  const input=page.getByLabel('X API bearer token',{exact:true});await input.fill('fixture-private-x-token');

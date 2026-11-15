@@ -37,7 +37,14 @@ def assess(candles, now):
     prior = rows[-21:-1]
     direction = ('BUY' if ema(9)>ema(21) and last[4]>max(r[2] for r in prior)
                  else 'SELL' if ema(9)<ema(21) and last[4]<min(r[1] for r in prior) else 'WAIT')
-    result = {**base, 'direction': direction, 'reason': 'Trend and closed-candle breakout agree.' if direction != 'WAIT' else 'No confirmed trend breakout.'}
+    avg_volume = sum(r[5] for r in rows[-21:-1])/20
+    high, low = max(r[2] for r in prior), min(r[1] for r in prior)
+    features = [last[4]/rows[-2][4]-1, last[4]/rows[-5][4]-1,
+                last[4]/rows[-21][4]-1, (ema(9)-ema(21))/last[4],
+                (last[4]-low)/max(high-low,1e-9),
+                min(20,last[5]/avg_volume) if avg_volume>0 else 0, atr/last[4]]
+    result = {**base, 'feature_vector':features,
+              'closed_history':[[r[0]+900,r[4]] for r in rows[-150:]], 'direction': direction, 'reason': 'Trend and closed-candle breakout agree.' if direction != 'WAIT' else 'No confirmed trend breakout.'}
     if direction != 'WAIT' and atr > 0:
         sign = 1 if direction == 'BUY' else -1
         result.update(reference_stop=last[4]-sign*1.5*atr, reference_target=last[4]+sign*3*atr)
@@ -81,8 +88,13 @@ async def market(asset):
 
 @router.post('/signals/market')
 async def market_signals(req: ScanInput, user=Depends(member)):
-    return {'signals':await asyncio.gather(*(market(a) for a in req.assets)), 'execution_enabled':False,
-            'ai_status':'Technical baseline. Optional cited AI research is available in Advanced evidence; no trained longer-horizon model is deployed.'}
+    from routes_radar import scan
+    report = await scan(req.model_copy(update={'include_ai':True}), user)
+    assets = report['ai'].get('report',{}).get('assets',[])
+    return {'signals':[{**row, 'reason':row['explanation'],
+                        'source':'KAOS local evidence model', 'method':'Learned multi-source evidence model; no external AI service'} for row in assets],
+            'execution_enabled':False, 'ai_status':report['ai'].get('report',{}).get('summary'),
+            'coverage_gaps':report['ai'].get('report',{}).get('coverage_gaps',[]), 'source_status':report['source_status'], 'cached':report['cached'], 'completed_at':report['completed_at']}
 
 
 @router.get('/signals/bot')
@@ -103,3 +115,18 @@ async def bot_signals(user=Depends(member)):
             continue
     return {'signals':signals,'provenance':'Extension-reported signals; not independently verified. Exact broker symbols retained.',
             'execution_enabled':False, 'maximum_age_seconds':45}
+
+
+@router.get('/sentiment/history')
+async def sentiment_history(symbol: str, asset_class: str = 'stock', user=Depends(member)):
+    from routes_radar import Asset
+    from pydantic import ValidationError
+    from fastapi import HTTPException
+    try:
+        asset = Asset(symbol=symbol,asset_class=asset_class)
+    except ValidationError:
+        raise HTTPException(422,'Invalid market symbol or asset class')
+    cutoff=(datetime.now(timezone.utc)-timedelta(days=7)).isoformat()
+    rows=await db.kaos_radar_sentiment.find({'symbol':asset.symbol,'asset_class':asset.asset_class,
+        'observed_at':{'$gte':cutoff}}, {'_id':0}).sort('observed_at',-1).limit(100).to_list(100)
+    return {'history':list(reversed(rows)),'sampled':True,'background_worker':False}

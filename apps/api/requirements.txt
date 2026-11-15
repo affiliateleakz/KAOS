@@ -134,3 +134,6 @@ zipp==4.1.0
 a2wsgi>=1.10.8,<2
 
 coinbase-advanced-py>=1.8,<2
+
+# Local, offline sentiment features; bundled lexicon, no model downloads.
+vaderSentiment==3.3.2

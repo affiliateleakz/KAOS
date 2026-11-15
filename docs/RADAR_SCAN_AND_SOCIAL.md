@@ -56,21 +56,63 @@ Official reference endpoints:
 - https://www.sec.gov/search-filings/edgar-application-programming-interfaces
 - https://api.quiverquant.com/datasets/congress-trades
 
-### AI
+### KAOS-owned AI and sentiment
 
-Configure the OpenAI API key and model in the admin panel, or set
-`OPENAI_API_KEY` and `KAOS_RADAR_MODEL` (default `gpt-4.1-mini`). One Responses API
-request reviews a balanced, bounded evidence sample, with no tools or browsing.
-The model must return structured results for the requested assets and cite known
-evidence IDs belonging to those assets. Unknown citations, missing assets,
-incomplete output or unsupported high priority fail validation. Missing model
-configuration is shown explicitly; raw source collection can still succeed.
+Radar makes **no OpenAI request** and no longer offers an OpenAI key/model in
+its provider settings. Historical encrypted OpenAI settings are ignored. The
+separate short-expiry broker AI is not repurposed for market opportunities.
 
-Evidence sampling is balanced across assets and source providers so frequent
-social posts do not crowd out less frequent insider, whale or government data.
-The UI reports how many observations were reviewed; the full collected evidence
-remains visible. Source content is untrusted input, not executable instructions.
-Research priority is not a probability or trading authorization.
+`kaos_radar_ai.py` is a local supervised logistic evidence model with a versioned
+22-feature schema: price returns, trend/range, relative volume/volatility, news
+and social sentiment/activity, insider and Congressional disclosure activity,
+whale activity, source coverage and fresh discovery mention counts/rank with separate Reddit/X availability flags. Available records must match the symbol and
+asset class, have valid availability timestamps, and be deduplicated. Missing
+feeds remain gaps, never invented directional observations.
+
+Text sentiment uses bundled **VADER 3.3.2**, running locally with no external AI
+service or runtime model download. It is English lexical sentiment rather than
+full article comprehension or a trained financial language model; sarcasm,
+financial vocabulary and multilingual sources can be misread. Model scores
+are not calibrated win probabilities. Model feature contributions are
+associations, not causal explanations.
+
+Scans save immutable evidence snapshots per asset/closed bar. Later actual
+closed candles label 45–60 minute forward moves; missing/session-gap candles
+cannot be bridged, and moves under 10 basis points are excluded from directional
+training. This threshold is not a fee/slippage model. Training requires at least
+120 non-overlapping labeled samples (80 training, 30 held-out, both directions),
+uses at most 2,000 recent rows, and purges outcomes crossing the chronological
+holdout split. Normalization is fitted on training rows only.
+
+**Admin → Radar Sources & AI** shows training progress, candidate metrics and
+separate stock/crypto train buttons. Training is manual, bounded, runs off the
+request event loop, and has a five-minute group cooldown. A candidate must pass
+historical gates (balanced directional accuracy >=55%, at least 15 strong-score
+signals with >=60% directional accuracy, both holdout classes represented)
+before the owner can activate it for research signals. These small-sample gates
+are initial screening, not evidence of profitability. Models expire after 30
+days and cannot be activated with stale/future training data. No order execution
+is enabled by training or activation. Untrained/unvalidated inputs yield WAIT.
+
+### Market Sentiment Monitoring
+
+The main Radar shows news/social bullish, bearish and neutral sample counts,
+mean VADER score, watchlist movers and relative volume. Raw sentiment does not
+itself produce a BUY/SELL; the separately validated KAOS model decides. Aggregate
+history has one point per asset/five-minute scan bucket, seven-day TTL retention
+and an authenticated last-100-points endpoint. Training snapshots have a 90-day
+TTL. No synthetic history or continuous background worker is introduced.
+
+Reference reviewed: https://github.com/gabotechs/market-monitor (MIT). Its Reddit
+and Twitter collectors also use VADER; its Docker/InfluxDB deployment, five-second
+quote polling and old dependencies are not copied into cPanel. KAOS uses its
+existing authenticated adapters, MongoDB and React UI. VADER's package includes
+its own license; no upstream Market Monitor source code is copied.
+
+Install the updated backend requirements before activating the new release.
+If VADER is omitted, Radar returns dependency-missing WAIT while unrelated login
+routes remain usable. Social platform API approval/keys are still needed for
+those data feeds. No software can bypass those access requirements.
 
 ## Bounds and hosting
 
@@ -112,28 +154,53 @@ are configured; run a hosting scan and inspect each returned source status.
 
 ## Signal dashboard: separate horizons
 
-Radar opens on **Market opportunities**, with a keyless Coinbase/Yahoo candle scan
-for up to five crypto, stock or ETF symbols. Closed 15-minute bars feed an EMA9/21
-and 20-bar breakout rule, with ATR reference stop/target levels and a 45-minute
-research horizon. This is a technical baseline, **not a trained AI forecast or a
-validated profitable strategy**. The existing cited AI evidence workspace is now
-lazy-loaded under Advanced evidence; paid AI/source calls never run on opening
-this dashboard. No automatic orders are placed.
+**Market opportunities** now invokes source collection and the local KAOS model,
+not the technical breakout rule alone. Coinbase/Yahoo closed 15-minute candles
+provide price/volume features for stock/ETF/crypto. Unsupported markets or stale,
+missing and gapped candles cannot produce an AI direction. Optional sources
+are configured once by the owner. Scans remain watchlist-bounded; this is not an
+all-internet/firehose scanner. Reference technical rules are not represented as
+trained AI. Model signals expire locally after 15 minutes and require a new scan.
 
-Missing, stale, malformed or incomplete recent bars produce WAIT. Free providers
-can refuse requests or delay data. Stocks require a complete recent 20-bar
-session, so early-session scans may wait. Five-minute shared Mongo caches and
-per-symbol 20-second leases limit repeated outbound work across members/workers.
+**Bot entries** remains independent: only the signed-in user's recorded
+SIGNAL_GENERATED entries, exact broker/OTC identifiers, explicit 30s/45s expiry,
+and no simulated/future/expired records. Extension versions without uploaded
+signals show an empty state. This is not a new short-expiry prediction service.
 
-**Bot entries** reads only the signed-in user's recorded SIGNAL_GENERATED entries,
-retains exact platform/OTC identifiers, and excludes simulated, future, expired or
-unknown-expiry records. Only explicit 30s/45s expiries are accepted. Entries expire
-in the browser too. These are extension-reported, not independently verified;
-extension versions that do not upload signals will show an empty state. Opening
-a broker chart does not itself guarantee telemetry. This view is not a new
-seconds-long prediction service or an instruction to chase an existing entry.
+## Reddit & X stock discussion discovery
 
-A separate trained longer-horizon AI model is not deployed by this change. The
-broker model cannot be applied to 15-minute stock/crypto candles without new
-training and chronological validation. Social, whale and delayed disclosure
-sources remain optional research context rather than mandatory signal gates.
+Use **Opportunity Radar → Reddit & X · most mentioned → Scan stock discussions**.
+This discovers symbols from feeds rather than looping over a preselected stock
+watchlist. The owner configures authorized Reddit/X access once. Counts represent
+distinct posts per ticker, not word repetitions; source IDs are deduplicated.
+Posts outside the last 24 hours or in the future are excluded. Unique authors are
+platform accounts, not verified people. Failed sources display Unavailable rather
+than zero. Reposts are excluded on X; quotes, bots and promotional posts may remain.
+
+The Reddit scope is one latest-100 combined feed from r/stocks, r/wallstreetbets
+and r/investing, no comments. X is one latest-100 English recent financial-term
+query (`stock OR stocks OR shares OR earnings OR #stocks`, excluding retweets).
+These samples can span much less than 24 hours. Rankings are not total market or
+platform-wide activity, and the two platforms' search scopes differ.
+
+Tickers are matched against NASDAQ Trader's daily US-listed symbol directories,
+which are cached for 24 hours. Explicit cashtags and recognized uppercase symbols
+are counted once per post; common ambiguous words are excluded unless tagged.
+Company names without symbols, non-US/OTC listings, sarcasm and ambiguous symbols
+are limitations. If the directory fails, a clearly labeled small KAOS fallback
+list is used; it is not presented as complete-market discovery.
+
+The view offers separate Reddit/X ranking filters, up to four source posts per
+platform/ticker, source links, local sentiment and **Analyze SYMBOL with KAOS**.
+Fresh cached discovery counts and linked posts also feed the local KAOS model;
+no extra social requests are triggered for that reuse. Stale or absent discovery
+is masked as missing. A high mention count alone never triggers an order.
+
+Scans have a shared five-minute Mongo cache, a per-configuration atomic lease,
+25-second total budget and bounded requests. Optional five-minute monitoring
+runs only while its view is open and visible. There is no always-on worker.
+
+Reference reviewed: https://github.com/DarmorGamz/Tickermind. Its actual
+`LICENSE.txt` is MIT (the README license paragraph is inconsistent). No upstream
+code is copied. Its transformer/accelerate local-LLM stack is not installed on
+Asura shared hosting; KAOS uses its own bounded local sentiment/model pipeline.
