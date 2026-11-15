@@ -15,7 +15,7 @@ import radar_settings
 
 router=APIRouter(prefix='/api/v1/intelligence',tags=['research-scan'])
 KINDS=Literal['stock','etf','option','crypto','dex','forex','future']
-PROVIDERS=Literal['reddit','x','news','bluesky','facebook','market','sec','ethereum','government']
+PROVIDERS=Literal['news','market','sec','ethereum','government']
 class Asset(BaseModel):
  model_config=ConfigDict(extra='forbid')
  symbol:str=Field(pattern=r'^[A-Za-z][A-Za-z0-9.]{0,11}$')
@@ -26,11 +26,11 @@ class Asset(BaseModel):
 class ScanInput(BaseModel):
  model_config=ConfigDict(extra='forbid')
  assets:list[Asset]=Field(min_length=1,max_length=5)
- sources:list[PROVIDERS]=Field(default_factory=lambda:list(LABELS),min_length=1,max_length=9)
+ sources:list[PROVIDERS]=Field(default_factory=lambda:[p for p in LABELS if p not in ('reddit','x','bluesky','facebook')],min_length=1,max_length=9)
  include_ai:bool=True
 @router.get('/scan/status')
 async def scan_status(user=Depends(member)):
- providers=[await radar_settings.public_settings(p) for p in radar_settings.CATALOG]
+ providers=[await radar_settings.public_settings(p) for p in radar_settings.VISIBLE_PROVIDERS]
  return {'providers':[{k:v for k,v in p.items() if k!='fields'} for p in providers],
          'ai_engine':'KAOS Radar local evidence model','external_ai_service':False,'maximum_assets':5,'cache_seconds':300,'automatic_background_worker':False,
          'coverage':'Selected watchlist and connected source samples, plus recent stored collector observations',
@@ -79,13 +79,13 @@ async def collect(assets,sources,settings):
 async def scan(request:ScanInput,user=Depends(member)):
  assets=list({(a.symbol,a.asset_class):a.model_dump() for a in request.assets}.values());sources=list(dict.fromkeys(request.sources))
  if len({a['symbol'] for a in assets})!=len(assets):raise HTTPException(422,'Use each symbol once per scan')
- settings=dict(zip(radar_settings.CATALOG,await asyncio.gather(*(radar_settings.settings(p) for p in radar_settings.CATALOG))))
- context=[]
+ settings=dict(zip(radar_settings.VISIBLE_PROVIDERS,await asyncio.gather(*(radar_settings.settings(p) for p in radar_settings.VISIBLE_PROVIDERS))))
+ context=[];trending=None
  if request.include_ai:
-  social_key=sha256(json.dumps({p:settings[p] for p in ('reddit','x')},sort_keys=True).encode()).hexdigest()
-  social=await db.kaos_social_mentions.find_one({'_id':social_key})
+  from radar_trending import snapshot
+  trending=await snapshot()
   models=await asyncio.gather(*(db.kaos_radar_models.find_one({'_id':group,'state':'active'}) for group in ('stock','crypto')))
-  context=[social.get('checked') if social else None,[(model or {}).get('version') for model in models]]
+  context=[trending.get('fetched_at'),trending.get('state'),trending.get('stale'),[(model or {}).get('version') for model in models]]
  version=sha256(json.dumps([settings,context],sort_keys=True).encode()).hexdigest()+SCHEMA
  key=sha256(json.dumps([user['id'],assets,sources,request.include_ai,version],sort_keys=True).encode()).hexdigest()
  now=datetime.now(timezone.utc);stamp=now.isoformat()
@@ -124,7 +124,7 @@ async def scan(request:ScanInput,user=Depends(member)):
    normalized['id']=evidence_id(normalized);normalized['provider']=str(row.get('provider',row['source']))[:40]
    valid.setdefault(normalized['id'],normalized)
   evidence=balanced_evidence(sorted(valid.values(),key=lambda r:r['published_at'],reverse=True),120)
-  ai=await analyze(assets,evidence,results,settings) if request.include_ai else {'state':'not_requested','message':'AI analysis was not requested'}
+  ai=await analyze(assets,evidence,results,settings,trending) if request.include_ai else {'state':'not_requested','message':'AI analysis was not requested'}
   report={'analysis_engine':'kaos-local-v1','assets':assets,'completed_at':datetime.now(timezone.utc).isoformat(),'source_status':results,'evidence':evidence,'ai':ai,'cached':False,
           'coverage':'Selected watchlist/source samples and recent stored collector observations','research_only':True,'trade_execution_enabled':False}
   await db.kaos_radar_scans.update_one({'_id':key},{'$set':{'result':report,'lease_until':stamp,'expires_at':(datetime.now(timezone.utc)+timedelta(minutes=5)).isoformat()}})

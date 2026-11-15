@@ -10,12 +10,12 @@ Radar scan. Bluesky could also treat newly indexed old posts as fresh mentions.
 
 ## Current workflow
 
-Radar now has five simple top tabs: **News**, **Social**, **AI Signal**,
+Radar now has five simple top tabs: **News**, **Trending**, **AI Signal**,
 **Sentiment**, and **Bot Entries**. News opens first. Each tab shows only its own
 controls/content. Technical model/source details are collapsed. The older
 multi-source research workspace is no longer mounted on the member screen.
 
-Use News for headlines, Social for Reddit/X mention rankings, or choose one
+Use News for headlines, Trending for keyless ApeWisdom stock-mention rankings, or choose one
 ticker and market in AI Signal. The analysis model still uses available data
 from all configured sources; its internal sources are not separate member setup
 steps. Owner configuration and training remain under Admin → Radar Sources & AI.
@@ -39,10 +39,6 @@ super-admin-only and scans require scanner entitlements.
 | Source | Configuration | Scope |
 |---|---|---|
 | Alpha Vantage | Admin write-only API key, or `ALPHAVANTAGE_API_KEY` | Market headlines cached globally per key for one hour, at most 20 KAOS requests per UTC day. Provider free-plan limits/access still apply. The same headlines can feed local KAOS analysis; third-party sentiment scores are not substituted for KAOS inference. |
-| Reddit (priority) | `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`, `REDDIT_USER_AGENT` | Official OAuth application access; up to 25 recent search results per ticker, exact symbol/cashtag matching. API approval and permissions must be valid. Not a full comments/firehose scan. |
-| X (priority) | `X_BEARER_TOKEN` | Official recent search; up to 10 cashtag posts per ticker, reposts excluded. Requires a plan entitled to recent search. |
-| Bluesky | Public access, or `BLUESKY_IDENTIFIER` and `BLUESKY_APP_PASSWORD` | Up to 50 search results; authenticated PDS/AppView supported. Actual post creation time takes precedence over indexing time. Public endpoint availability is not assumed. |
-| Facebook | `FACEBOOK_PAGE_ID`, `FACEBOOK_PAGE_ACCESS_TOKEN`, `FACEBOOK_GRAPH_VERSION` | Up to 25 posts from the authorized Page, reused across the scan watchlist. No claim to search all personal Facebook posts. |
 | News | Existing keyless headline feed | Ticker headlines; actual source/discovery times retained. No full article scraping. |
 | Market snapshot | Existing Coinbase public ticker / Yahoo chart metadata | One quote snapshot for supported stock/ETF/crypto tickers. Not a full technical chart strategy scan. |
 | Insider transactions | `SEC_USER_AGENT` including organization/contact email | SEC ticker-to-CIK lookup, submissions and latest recent Form 4 primary XML. Only reported non-derivative P/S are parsed, retaining transaction/disclosure timing. |
@@ -54,10 +50,6 @@ Encrypted saved settings take precedence. No subscriptions are purchased, no
 accounts are opened and no broker orders or transfers are sent by these adapters.
 
 Official reference endpoints:
-- https://developers.reddit.com/ / https://www.reddit.com/dev/api/
-- https://docs.x.com/x-api/posts/recent-search
-- https://docs.bsky.app/docs/api/app-bsky-feed-search-posts
-- https://developers.facebook.com/docs/pages-api/posts/
 - https://www.sec.gov/search-filings/edgar-application-programming-interfaces
 - https://api.quiverquant.com/datasets/congress-trades
 
@@ -68,9 +60,9 @@ its provider settings. Historical encrypted OpenAI settings are ignored. The
 separate short-expiry broker AI is not repurposed for market opportunities.
 
 `kaos_radar_ai.py` is a local supervised logistic evidence model with a versioned
-22-feature schema: price returns, trend/range, relative volume/volatility, news
+23-feature schema: price returns, trend/range, relative volume/volatility, news
 and social sentiment/activity, insider and Congressional disclosure activity,
-whale activity, source coverage and fresh discovery mention counts/rank with separate Reddit/X availability flags. Available records must match the symbol and
+whale activity, source coverage and aggregate mention counts/rank with explicit provider and comparison availability flags. Available records must match the symbol and
 asset class, have valid availability timestamps, and be deduplicated. Missing
 feeds remain gaps, never invented directional observations.
 
@@ -172,44 +164,6 @@ SIGNAL_GENERATED entries, exact broker/OTC identifiers, explicit 30s/45s expiry,
 and no simulated/future/expired records. Extension versions without uploaded
 signals show an empty state. This is not a new short-expiry prediction service.
 
-## Reddit & X stock discussion discovery
-
-Use **Opportunity Radar → Reddit & X · most mentioned → Scan stock discussions**.
-This discovers symbols from feeds rather than looping over a preselected stock
-watchlist. The owner configures authorized Reddit/X access once. Counts represent
-distinct posts per ticker, not word repetitions; source IDs are deduplicated.
-Posts outside the last 24 hours or in the future are excluded. Unique authors are
-platform accounts, not verified people. Failed sources display Unavailable rather
-than zero. Reposts are excluded on X; quotes, bots and promotional posts may remain.
-
-The Reddit scope is one latest-100 combined feed from r/stocks, r/wallstreetbets
-and r/investing, no comments. X is one latest-100 English recent financial-term
-query (`stock OR stocks OR shares OR earnings OR #stocks`, excluding retweets).
-These samples can span much less than 24 hours. Rankings are not total market or
-platform-wide activity, and the two platforms' search scopes differ.
-
-Tickers are matched against NASDAQ Trader's daily US-listed symbol directories,
-which are cached for 24 hours. Explicit cashtags and recognized uppercase symbols
-are counted once per post; common ambiguous words are excluded unless tagged.
-Company names without symbols, non-US/OTC listings, sarcasm and ambiguous symbols
-are limitations. If the directory fails, a clearly labeled small KAOS fallback
-list is used; it is not presented as complete-market discovery.
-
-The view offers separate Reddit/X ranking filters, up to four source posts per
-platform/ticker, source links, local sentiment and **Analyze SYMBOL with KAOS**.
-Fresh cached discovery counts and linked posts also feed the local KAOS model;
-no extra social requests are triggered for that reuse. Stale or absent discovery
-is masked as missing. A high mention count alone never triggers an order.
-
-Scans have a shared five-minute Mongo cache, a per-configuration atomic lease,
-25-second total budget and bounded requests. Optional five-minute monitoring
-runs only while its view is open and visible. There is no always-on worker.
-
-Reference reviewed: https://github.com/DarmorGamz/Tickermind. Its actual
-`LICENSE.txt` is MIT (the README license paragraph is inconsistent). No upstream
-code is copied. Its transformer/accelerate local-LLM stack is not installed on
-Asura shared hosting; KAOS uses its own bounded local sentiment/model pipeline.
-
 ## Alpha Vantage key handling
 
 Save the key once under Admin → Radar Sources & AI → Alpha Vantage. It is
@@ -226,3 +180,36 @@ Provider error/limit payloads (including HTTP 200 Information responses) are
 cached as failures rather than treated as empty successful feeds. Saved
 headlines can still be shown when the provider is unavailable. No stock price
 or longer-horizon AI model is claimed to come from this news-only integration.
+
+## Current replacement: Trending Stocks via ApeWisdom
+
+The direct Reddit/X scanner, individual-post view and member Social tab have
+been removed. `/social/mentions` now returns 410 to old clients. Direct-social
+providers are omitted from default scans and owner setup listings; existing
+encrypted settings are retained without being required. The retired scanner's
+frontend/backend files are removed, not just hidden behind a failing key prompt.
+
+The replacement **Trending** tab uses ApeWisdom's documented public endpoint:
+https://apewisdom.io/api/v1.0/filter/all-stocks/page/1
+It requires no Reddit/X API credentials. One shared Mongo cache lasts 30 minutes;
+an atomic lease prevents duplicate upstream refreshes, and errors are cached for
+five minutes. Failures may display a clearly marked saved snapshot up to one
+day old. Stale rankings never feed the KAOS model. The public endpoint was
+verified returning HTTP 200 and 100 rows during development; uptime is external.
+
+ApeWisdom reports aggregated mentions/upvotes and previous-day rank/count
+snapshots for selected Reddit stock communities. This filter excludes its
+separate crypto/4chan feeds. It does not provide X coverage, individual posts,
+post sentiment or a provider update timestamp. UI timestamps explicitly mean
+fetch time. Missing comparisons display an em dash, not a fabricated zero.
+
+KAOS receives six separate attention features: mention level, log change,
+inverse rank, upvote activity, comparison availability and ranking availability.
+A stock absent from the top 100 is missing coverage, not zero mentions. Counts
+are never converted into bullish/bearish text sentiment. The model schema is
+now `kaos-radar-vader-trending-v1`; older direct-social models cannot be reused
+and need fresh training/validation. No trading authority changes.
+
+Provider documentation: https://apewisdom.io/api/
+Methodology/coverage: https://apewisdom.io/methodology/
+No paid alternative service or subscription is enabled.

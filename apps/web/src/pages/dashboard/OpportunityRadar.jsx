@@ -1,9 +1,9 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {api,errMsg} from '../../lib/api';
-import StockMentions from './StockMentions';
+import TrendingStocks from './TrendingStocks';
 import MarketSentiment from './MarketSentiment';
 import RadarNews from './RadarNews';
-const tabs=[['news','News'],['social','Social'],['ai','AI Signal'],['sentiment','Sentiment'],['bot','Bot Entries']];
+const tabs=[['news','News'],['trending','Trending'],['ai','AI Signal'],['sentiment','Sentiment'],['bot','Bot Entries']];
 export default function OpportunityRadar(){
  const [tab,setTab]=useState('news'),[symbol,setSymbol]=useState('AAPL'),[kind,setKind]=useState('stock');
  const [data,setData]=useState(null),[bot,setBot]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
@@ -22,7 +22,7 @@ export default function OpportunityRadar(){
  return <div className="space-y-5"><h1 className="font-heading text-3xl text-[#e8c46f]">KAOS Radar</h1>
  <nav aria-label="Radar sections" className="flex gap-1 overflow-x-auto border-b border-[#61502e]">{tabs.map(([id,label])=><button key={id} aria-current={tab===id?'page':undefined} onClick={()=>{setTab(id);setError('');}} className={'shrink-0 border-b-2 px-4 py-3 text-sm '+(tab===id?'border-[#d4af37] text-[#e8c46f]':'border-transparent text-slate-400')}>{label}</button>)}</nav>
  {tab==='news'&&<RadarNews/>}
- {tab==='social'&&<StockMentions onAnalyze={(ticker,asset_class)=>{setSymbol(ticker);setKind(asset_class);setTab('ai');analyze(ticker,asset_class);}}/>}
+ {tab==='trending'&&<TrendingStocks onAnalyze={(ticker,asset_class)=>{setSymbol(ticker);setKind(asset_class);setTab('ai');analyze(ticker,asset_class);}}/>}
  {tab==='sentiment'&&<><div className="flex flex-wrap gap-3"><input aria-label="Sentiment ticker" value={symbol} onChange={e=>setSymbol(e.target.value)} className="min-w-0 rounded border border-[#61502e] bg-black/20 p-3"/><button disabled={busy} onClick={()=>analyze()} className="rounded bg-[#d4af37] px-5 py-3 font-semibold text-black">{busy?'Analyzing…':'Check sentiment'}</button></div>{error&&<p role="alert">{error}</p>}<MarketSentiment reports={data?.signals||[]} completedAt={data?.completed_at}/></>}
  {(tab==='ai'||tab==='bot')&&<section className="space-y-4"><div className="flex flex-wrap items-center gap-3">{tab==='ai'?<><input aria-label="Signal ticker" placeholder="Ticker, e.g. AAPL" value={symbol} onChange={e=>setSymbol(e.target.value)} className="min-w-0 rounded border border-[#61502e] bg-black/20 p-3"/><select aria-label="Signal market" value={kind} onChange={e=>setKind(e.target.value)} className="rounded border border-[#61502e] bg-[#0a0d0b] p-3"><option value="stock">Stock</option><option value="etf">ETF</option><option value="crypto">Crypto</option></select><button disabled={busy} onClick={()=>analyze()} className="rounded bg-[#d4af37] px-5 py-3 font-semibold text-black">{busy?'Analyzing…':'Analyze'}</button><span className="text-xs text-slate-400">45–60 minute outlook</span></>:<><p className="text-sm text-slate-400">Recent entries from your connected extension. These expire in seconds.</p><button disabled={busy} onClick={refreshBot} className="rounded bg-[#d4af37] px-5 py-3 font-semibold text-black">{busy?'Refreshing…':'Refresh entries'}</button></>}</div>
  {error&&<p role="alert">{error}</p>}

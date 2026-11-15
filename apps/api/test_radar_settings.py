@@ -9,7 +9,7 @@ import radar_settings
 import routes_radar_admin as admin_api
 import routes_radar
 import routes_opportunity
-import radar_mentions  # register the discovery route for access checks
+import radar_trending  # registers keyless trending and the retired endpoint
 
 class SettingsStore:
  def __init__(self):self.docs={}

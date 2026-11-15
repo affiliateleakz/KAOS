@@ -16,6 +16,9 @@ CATALOG = {
  'government': {'name':'Congressional disclosures','description':'Quiver historical Congress trades for selected stock tickers. Requires an API plan permitted for your use; transaction and report dates are retained.', 'fields':{'api_key':('Quiver API key','QUIVER_API_KEY')}},
 }
 
+# Retain encrypted legacy settings without advertising unavailable direct-social setup.
+VISIBLE_PROVIDERS=tuple(p for p in CATALOG if p not in ('reddit','x','bluesky','facebook'))
+
 async def settings(provider):
  if provider not in CATALOG: raise HTTPException(404,'Unknown research provider')
  doc=await db.radar_provider_settings.find_one({'_id':provider}) or {}

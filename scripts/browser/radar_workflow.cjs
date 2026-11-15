@@ -22,7 +22,8 @@ const BASE=process.env.KAOS_WEB_PREVIEW_URL;
   if(path==='/api/v1/intelligence/opportunities'){sourceQueries.push(url.searchParams.get('source_filter'));return route.fulfill({json:{results:[],scanned_observations:0}});}
   if(path==='/api/v1/intelligence/signals/market'){lastMarketAssets=req.postDataJSON().assets;return route.fulfill({json:{signals:[{symbol:'BTC',asset_class:'crypto',direction:'WAIT',reason:'No confirmed trend breakout.',model_state:'collecting',source:'KAOS local fixture',feature_values:{return_1:.01,return_4:.02,volume_ratio:1.5},sentiment:{sources:{news:{samples:1,score:.5,bullish:1,bearish:0,neutral:0},social:{samples:0,score:null,bullish:0,bearish:0,neutral:0}}}}],ai_status:'KAOS local model collecting evidence'}});}
   if(path==='/api/v1/intelligence/sentiment/history')return route.fulfill({json:{history:[{observed_at:'2026-11-15T12:00:00Z',sentiment:{sources:{news:{score:.5},social:{score:null}}}}]}});
-  if(path==='/api/v1/intelligence/social/mentions'){socialCalls++;return route.fulfill({json:{rankings:[{symbol:'AAPL',asset_class:'stock',name:'Apple',mentions:3,reddit:2,x:1,unique_authors:3,sentiment:.3,bullish:2,bearish:1,neutral:0,posts:[{provider:'reddit',text:'AAPL discussion fixture from Reddit',source_url:'https://www.reddit.com/comments/fixture',published_at:'2026-11-15T12:00:00Z'}]}],source_status:[{provider:'reddit',state:'collected',inspected:100},{provider:'x',state:'collected',inspected:100}],completed_at:'2026-11-15T12:00:00Z',counting:'Distinct sampled posts',directory_scope:'Fixture US stocks'}});}
+  if(path==='/api/v1/intelligence/trending/stocks')return route.fulfill({json:{state:'complete',provider:'ApeWisdom',rankings:[{symbol:'AAPL',name:'Apple',mentions:42,rank:1,previous_mentions:30,mention_change:12,upvotes:100}],fetched_at:'2026-11-15T12:00:00Z',stale:false}});
+  if(path==='/api/v1/intelligence/social/mentions')throw Error('Retired social scanner must never be called');
   if(path==='/api/v1/intelligence/signals/bot')return route.fulfill({json:{signals:[]}});
   if(path==='/api/v1/intelligence/news/feed')return route.fulfill({json:{state:'complete',articles:[{title:'Market headline fixture',summary:'Latest stock news',source:'Alpha Vantage',source_url:'https://example.com/news',published_at:'2026-11-15T12:00:00Z',tickers:['AAPL']}]}});
   if(path==='/api/v1/intelligence/scan/status')return route.fulfill({json:{providers:providers(),maximum_assets:5,cache_seconds:300}});
@@ -34,20 +35,20 @@ const BASE=process.env.KAOS_WEB_PREVIEW_URL;
   if(path==='/api/admin/radar/model')return route.fulfill({json:{engine:'KAOS local',groups:[{group:'crypto',labeled_samples:0,active:null,candidate:null}]}});
   if(path==='/api/admin/radar/providers')return route.fulfill({json:{providers:providers(),vaultReady}});
   if(path==='/api/admin/radar/vault/initialize'){vaultReady=true;return route.fulfill({json:{vaultReady:true}});}
-  if(path==='/api/admin/radar/providers/x'){savedKey=req.postDataJSON().credentials.bearer_token;return route.fulfill({json:{id:'x',configured:true}});}
+  if(path==='/api/admin/radar/providers/alphavantage'){savedKey=req.postDataJSON().credentials.api_key;return route.fulfill({json:{id:'alphavantage',configured:true}});}
   return route.fulfill({status:404,json:{detail:'No fixture'}});
  });
  const page=await context.newPage({viewport:{width:1440,height:1000}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.clock.install();
  await page.goto(BASE+'/dashboard/opportunities');await page.getByRole('heading',{name:'KAOS Radar',exact:true}).waitFor();
  const nav=page.getByRole('navigation',{name:'Radar sections'});
- assert.deepEqual(await nav.getByRole('button').allTextContents(),['News','Social','AI Signal','Sentiment','Bot Entries']);
+ assert.deepEqual(await nav.getByRole('button').allTextContents(),['News','Trending','AI Signal','Sentiment','Bot Entries']);
  await page.getByRole('heading',{name:'Market headline fixture',exact:true}).waitFor();
  assert.equal(await page.getByLabel('Signal ticker',{exact:true}).count(),0,'News must not include unrelated AI controls');
- await nav.getByRole('button',{name:'Social',exact:true}).click();
- await page.getByRole('button',{name:'Scan stock discussions',exact:true}).click();
- await page.getByText('AAPL discussion fixture from Reddit',{exact:true}).waitFor();
- await page.getByRole('link',{name:'Read original post ↗',exact:true}).waitFor();
+ await nav.getByRole('button',{name:'Trending',exact:true}).click();
+ await page.getByRole('cell',{name:'42',exact:true}).waitFor();
+ await page.getByText('No API key needed.',{exact:false}).waitFor();
+ await page.getByRole('link',{name:'Source: ApeWisdom ↗',exact:true}).waitFor();
  await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
  await page.getByRole('button',{name:'Analyze AAPL with KAOS',exact:true}).click();
  await page.getByText('KAOS is learning from collected evidence.',{exact:false}).waitFor();
@@ -71,11 +72,12 @@ const BASE=process.env.KAOS_WEB_PREVIEW_URL;
  await page.getByRole('status').filter({hasText:'KAOS model: collecting'}).waitFor();
  const count=scanCalls;await page.clock.fastForward(300010);assert.equal(scanCalls,count,'Auto-scan interval must stop after leaving Radar');
  await page.getByRole('button',{name:'Initialize private vault',exact:true}).click();await page.getByRole('button',{name:'Verify private vault',exact:true}).waitFor();
- const input=page.getByLabel('X API bearer token',{exact:true});await input.fill('fixture-private-x-token');
- await page.getByRole('button',{name:'Save X',exact:true}).click();await page.getByRole('status').filter({hasText:'X settings saved'}).waitFor();
- assert.equal(savedKey,'fixture-private-x-token');assert.equal(await input.inputValue(),'');assert.ok(!(await page.locator('body').innerText()).includes('fixture-private-x-token'));
+ assert.equal(await page.getByLabel('X API bearer token',{exact:true}).count(),0);
+ const input=page.getByLabel('Alpha Vantage API key',{exact:true});await input.fill('fixture-private-alpha-token');
+ await page.getByRole('button',{name:'Save Alpha Vantage',exact:true}).click();await page.getByRole('status').filter({hasText:'Alpha Vantage settings saved'}).waitFor();
+ assert.equal(savedKey,'fixture-private-alpha-token');assert.equal(await input.inputValue(),'');assert.ok(!(await page.locator('body').innerText()).includes('fixture-private-alpha-token'));
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
  assert.deepEqual(errors,[]);
- console.log('Simple Radar: five top tabs, news default, isolated views, social-to-AI flow, collapsed model details, mobile layout and owner settings passed.');
+ console.log('Simple Radar: five top tabs, news default, isolated views, keyless trending-to-AI flow, collapsed model details, mobile layout and owner settings passed.');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exit(1)});

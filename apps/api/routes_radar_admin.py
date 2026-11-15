@@ -14,7 +14,7 @@ class ProviderInput(BaseModel):
 
 @router.get('/providers')
 async def providers(admin=Depends(owner)):
- return {'vaultReady':settings.vault_ready(),'providers':[await settings.public_settings(p) for p in settings.CATALOG]}
+ return {'vaultReady':settings.vault_ready(),'providers':[await settings.public_settings(p) for p in settings.VISIBLE_PROVIDERS]}
 
 @router.post('/vault/initialize')
 async def initialize(admin=Depends(owner)):

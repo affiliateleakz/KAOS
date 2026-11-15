@@ -7,6 +7,7 @@ import pytest
 from fastapi import HTTPException
 from pymongo.errors import DuplicateKeyError
 import routes_radar as radar
+import radar_trending
 
 class Cursor:
  def __init__(self,rows):self.rows=rows
@@ -29,6 +30,7 @@ class Store:
 def db(monkeypatch):
  value=SimpleNamespace(kaos_radar_scans=Store(),kaos_radar_limits=Store(),kaos_intelligence=Store(),kaos_social_mentions=Store(),kaos_radar_models=Store())
  monkeypatch.setattr(radar,'db',value)
+ monkeypatch.setattr(radar_trending,'snapshot',AsyncMock(return_value={'state':'complete','fetched_at':'fixture','rankings':[]}))
  monkeypatch.setattr(radar,'analyze',AsyncMock(return_value={'state':'complete','model':'KAOS local fixture','report':{'assets':[]}}))
  async def config(provider):return {'enabled':True,'api_key':'','model':'fixture-model'}
  monkeypatch.setattr(radar.radar_settings,'settings',config)
@@ -41,7 +43,7 @@ def sample():
          'summary':'Public AAPL earnings discussion','source_url':'https://www.reddit.com/comments/fixture'}
 
 def collected():return [{'provider':'reddit','asset':'AAPL','asset_class':'stock','state':'collected','observations':1,'records':[sample()]}]
-def request():return radar.ScanInput(assets=[{'symbol':'AAPL','asset_class':'stock'}],sources=['reddit'])
+def request():return radar.ScanInput(assets=[{'symbol':'AAPL','asset_class':'stock'}],sources=['news'])
 
 def test_scan_caches_results_without_repeating_network_or_ai(monkeypatch,db):
  gather=AsyncMock(side_effect=lambda *args:copy.deepcopy(collected()));monkeypatch.setattr(radar,'collect',gather)
@@ -67,7 +69,7 @@ def test_distinct_watchlists_cannot_bypass_user_cooldown(monkeypatch,db):
  monkeypatch.setattr(radar,'collect',AsyncMock(side_effect=lambda *args:copy.deepcopy(collected())))
  async def run():
   await radar.scan(request(),{'id':'owner'})
-  other=radar.ScanInput(assets=[{'symbol':'BTC','asset_class':'crypto'}],sources=['reddit'])
+  other=radar.ScanInput(assets=[{'symbol':'BTC','asset_class':'crypto'}],sources=['news'])
   with pytest.raises(HTTPException) as error:await radar.scan(other,{'id':'owner'})
   assert error.value.status_code==429
  asyncio.run(run())

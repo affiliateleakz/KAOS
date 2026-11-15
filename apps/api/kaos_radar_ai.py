@@ -6,7 +6,6 @@ Snapshots retain information availability times; labels use later closed candles
 """
 import asyncio
 import math
-import json
 import re
 from datetime import datetime, timezone, timedelta
 from hashlib import sha256
@@ -15,13 +14,13 @@ from kaos_opportunity import utc
 
 from radar_sentiment import analyzer, text_score, summarize
 
-SCHEMA = 'kaos-radar-vader-mentions-v1'
+SCHEMA = 'kaos-radar-vader-trending-v1'
 HORIZON = 2700
 FEATURES = ('return_1', 'return_4', 'return_20', 'trend', 'range_position',
             'volume_ratio', 'atr_fraction', 'news_tone', 'news_count',
             'social_tone', 'social_count', 'insider_balance',
             'government_balance', 'insider_count', 'government_count', 'whale_count', 'source_coverage',
-            'reddit_mentions', 'x_mentions', 'mention_rank', 'reddit_available', 'x_available')
+            'trending_mentions', 'trending_change', 'trending_rank', 'trending_upvotes', 'trending_comparison_available', 'trending_available')
 
 def evidence_features(evidence, symbol, kind, now):
     analyzer()
@@ -125,26 +124,24 @@ def train(rows):
 async def assessment(asset, market, evidence, now=None, discovery=None):
     now = now or datetime.now(timezone.utc)
     symbol, kind = asset['symbol'], asset['asset_class']
-    discovery_values=[0.0]*5
-    extras=[]
+    discovery_values=[0.0]*6
+    attention=None
     if discovery and kind in ('stock','etf'):
         try:
-            collected=utc(discovery['completed_at'])
-            if not timedelta(0)<=now-collected<=timedelta(minutes=15):raise ValueError('Stale discovery')
-            available={r['provider']:float(r.get('state')=='collected') for r in discovery.get('source_status',[])}
-            discovery_values[-2:]=[available.get('reddit',0.0),available.get('x',0.0)]
-            for index,row in enumerate(discovery.get('rankings',[])):
+            collected=utc(discovery['fetched_at'])
+            if discovery.get('state')!='complete' or discovery.get('stale') or not timedelta(0)<=now-collected<=timedelta(hours=1):raise ValueError('Unavailable rankings')
+            for row in discovery.get('rankings',[]):
                 if row['symbol']!=symbol:continue
-                discovery_values=[math.log1p(row['reddit']),math.log1p(row['x']),1/(index+1),available.get('reddit',0.0),available.get('x',0.0)]
-                for post in row.get('posts',[]):
-                    extras.append({'asset':symbol,'asset_class':kind,'source':'social',
-                        'id':sha256(post['source_url'].encode()).hexdigest()[:20],
-                        'published_at':post['published_at'],'observed_at':collected.isoformat(),
-                        'summary':post['text'],'source_url':post['source_url']})
-        except (ValueError,KeyError,TypeError):
-            discovery_values=[0.0]*5;extras=[]
+                previous=row.get('previous_mentions')
+                change=math.log1p(row['mentions'])-math.log1p(previous) if previous is not None else 0.0
+                discovery_values=[math.log1p(row['mentions']),change,1/row['rank'],math.log1p(row.get('upvotes') or 0),float(previous is not None),1.0]
+                attention={'source':'ApeWisdom','summary':f"Provider reports {row['mentions']} stock mentions, rank {row['rank']}. This measures attention, not sentiment.",
+                           'source_url':'https://apewisdom.io/','published_at':None}
+                break
+        except (ValueError,KeyError,TypeError,ZeroDivisionError):
+            discovery_values=[0.0]*6;attention=None
     try:
-        context, cited = evidence_features(evidence+extras,symbol,kind,now)
+        context, cited = evidence_features(evidence,symbol,kind,now)
     except ImportError:
         return {'symbol':symbol,'asset_class':kind,'direction':'WAIT','priority':'low',
                 'model_state':'dependency_missing','explanation':'Install the updated backend requirements to enable local sentiment.',
@@ -157,6 +154,7 @@ async def assessment(asset, market, evidence, now=None, discovery=None):
               'limitations':['English lexical sentiment can misread financial language, sarcasm, multilingual text or complex events.',
                              'Labels compare future closes with the last observed close, not broker execution prices; fees and slippage are not modeled.'],
               'explanation':'Collecting evidence and future outcomes for the KAOS Radar model.', 'model_state':'collecting'}
+    if attention:result['supporting_sources'].append(attention)
     result['sentiment'] = summarize(cited)
     result['evidence_count'] = len(cited)
     technical = market.get('feature_vector')
@@ -232,22 +230,20 @@ async def ensure_indexes():
     _indexes_ready=True
 
 
-async def analyze(assets,evidence,source_status,settings=None):
+async def analyze(assets,evidence,source_status,settings=None,discovery=None):
     await ensure_indexes()
     # Import here to avoid router/model import cycles.
     from radar_signals import market
     from types import SimpleNamespace
     markets = await asyncio.gather(*(market(SimpleNamespace(**asset)) for asset in assets))
     stamp=datetime.now(timezone.utc)
-    query={'checked':{'$gte':stamp.timestamp()-900}}
-    if settings is not None:
-        query['_id']=sha256(json.dumps({p:settings[p] for p in ('reddit','x')},sort_keys=True).encode()).hexdigest()
-    cached=await db.kaos_social_mentions.find_one(query,sort=[('checked',-1)])
-    discovery=cached.get('report') if cached else None
+    if discovery is None:
+        from radar_trending import snapshot
+        discovery=await snapshot()
     reports = await asyncio.gather(*(assessment(asset,quote,evidence,stamp,discovery) for asset,quote in zip(assets,markets)))
     gaps = sorted({f"{row.get('provider')}: {row.get('state')}" for row in source_status
                    if row.get('state') not in ('collected','no_matches','not_applicable')})
-    if not discovery:gaps.append('Market-wide discussion discovery has not been scanned recently; per-ticker social evidence is used when available.')
+    if discovery.get('state')!='complete' or discovery.get('stale'):gaps.append('ApeWisdom rankings are unavailable; no mention totals are assumed.')
     return {'state':'complete','model':'KAOS Radar · local evidence model',
             'report':{'summary':'KAOS combines available evidence locally. Untrained, stale or unvalidated models return WAIT. No OpenAI service is used.',
                       'assets':reports,'coverage_gaps':gaps},

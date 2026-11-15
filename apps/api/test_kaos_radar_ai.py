@@ -113,6 +113,8 @@ def test_stale_or_missing_market_never_collects_or_predicts(monkeypatch):
 def test_analysis_never_calls_an_external_ai_service(monkeypatch):
     import radar_signals
     import httpx
+    import radar_trending
+    monkeypatch.setattr(radar_trending,'snapshot',AsyncMock(return_value={'state':'unavailable'}))
     monkeypatch.setattr(ai,'ensure_indexes',AsyncMock())
     monkeypatch.setattr(ai,'db',SimpleNamespace(kaos_radar_sentiment=Samples(),kaos_social_mentions=SimpleNamespace(find_one=AsyncMock(return_value=None))))
     monkeypatch.setattr(radar_signals,'market',AsyncMock(return_value={}))
@@ -151,13 +153,13 @@ def test_recent_discussion_counts_feed_the_native_model_with_missing_source_flag
     samples=Samples()
     monkeypatch.setattr(ai,'db',SimpleNamespace(kaos_radar_sentiment=Samples(),kaos_radar_samples=samples,
         kaos_radar_models=SimpleNamespace(find_one=AsyncMock(return_value=None))))
-    discovery={'completed_at':now.isoformat(),'source_status':[{'provider':'reddit','state':'collected'}, {'provider':'x','state':'access_denied'}],
-               'rankings':[{'symbol':'AAPL','reddit':10,'x':0,'posts':[]}]}
+    discovery={'state':'complete','fetched_at':now.isoformat(),'stale':False,
+               'rankings':[{'symbol':'AAPL','mentions':10,'previous_mentions':5,'rank':2,'upvotes':100}]}
     out=asyncio.run(ai.assessment({'symbol':'AAPL','asset_class':'stock'},quote(now),[],now,discovery))
-    assert out['feature_values']['reddit_mentions']>0
-    assert out['feature_values']['reddit_available']==1
-    assert out['feature_values']['x_available']==0
+    assert out['feature_values']['trending_mentions']>0
+    assert out['feature_values']['trending_available']==1
+    assert out['sentiment']['sources']['social']['score'] is None
     assert out['direction']=='WAIT'
-    stale={**discovery,'completed_at':(now-timedelta(hours=1)).isoformat()}
-    out=asyncio.run(ai.assessment({'symbol':'AAPL','asset_class':'stock'},quote(now),[],now,stale))
-    assert out['feature_values']['reddit_available']==0
+    for missing in ({**discovery,'fetched_at':(now-timedelta(hours=2)).isoformat()}, {**discovery,'rankings':[]}, {**discovery,'stale':True}):
+        out=asyncio.run(ai.assessment({'symbol':'AAPL','asset_class':'stock'},quote(now),[],now,missing))
+        assert out['feature_values']['trending_available']==0
