@@ -22,7 +22,7 @@ const assert=require('node:assert/strict');
     if(msg.type==='GET_BOT_STATE')reply={running:false};
     return dual(reply,cb);}},
    storage:{onChanged:{addListener(){}},local:{get:(keys,cb)=>dual(data,cb),set:(obj,cb)=>{Object.assign(data,obj);return dual(undefined,cb)},remove:(keys,cb)=>dual(undefined,cb)}},
-   tabs:{onUpdated:{addListener(){}},get:(id,cb)=>dual({id,url:'https://pocketoption.com/en/cabinet/demo-quick-high-low/'},cb),query:(opts,cb)=>dual([{id:42,url:'https://pocketoption.com/'}],cb),sendMessage:(id,msg,cb)=>{window.tabMessages.push(msg);if(msg.type==='GET_COMPANION_STATUS')return dual({ok:true,engineReady:true,asset:'EURUSD',accountIsDemo:window.fixtureDemo??null,accountBalance:1000,running:false},cb);if(msg.type==='GET_TERMINAL_SNAPSHOT'){
+   tabs:{onUpdated:{addListener(){}},get:(id,cb)=>dual({id,url:'https://pocketoption.com/en/cabinet/demo-quick-high-low/'},cb),query:(opts,cb)=>dual([{id:42,url:'https://pocketoption.com/'}],cb),sendMessage:(id,msg,cb)=>{window.tabMessages.push(msg);if(msg.type==='GET_COMPANION_STATUS'&&window.fixtureDisconnected)return Promise.reject(Error('Broker unavailable'));if(msg.type==='GET_COMPANION_STATUS')return dual({ok:true,engineReady:true,asset:'EURUSD',accountIsDemo:window.fixtureDemo??null,accountBalance:1000,running:false},cb);if(msg.type==='GET_TERMINAL_SNAPSHOT'){
       const candles=Array.from({length:30},(_,i)=>({ts:1700000000000+i*5000,open:1.1+i*.0001,high:1.101+i*.0001,low:1.099+i*.0001,close:1.1005+i*.0001}));
       return dual({ok:true,readOnly:true,accountIsDemo:window.fixtureDemo??null,markets:[{asset:'EURUSD',source:'TEST_FIXTURE',candles,ready:false,history:{canonical:30},ai:{},timeframes:{}}],allTrades:[],research:[],aiSummary:{},analytics:{}},cb);
      }return dual({ok:true},cb);} ,create:async()=>({id:42}),update:async()=>({id:42})},
@@ -96,6 +96,17 @@ const assert=require('node:assert/strict');
  await page.locator('#screen-main [data-session-stop]').click();
  assert.equal(await page.evaluate(()=>state.running),false);
  assert.ok((await page.evaluate(()=>window.testMessages)).some(m=>m.type==='STOP_BOT'));
+ await page.evaluate(async()=>{window.fixtureDisconnected=true;await kaosRefreshCompanionStatus();});
+ await page.locator('#screen-main [data-session-status=connection]').filter({hasText:'Broker connection unconfirmed'}).waitFor();
+ await page.locator('#screen-main [data-session-status=account]').filter({hasText:'Account type unconfirmed'}).waitFor();
+ assert.equal(await page.locator('[data-companion-asset]').textContent(),'No current market confirmed');
+ assert.ok((await page.locator('[data-companion-guidance]').textContent()).includes('bot may still be running'));
+ await page.evaluate(async()=>{window.fixtureDisconnected=false;await kaosRefreshCompanionStatus();});
+ await page.locator('#screen-main [data-session-status=connection]').filter({hasText:'Broker responding'}).waitFor();
+ assert.equal(await mainNav.locator('[aria-current=page]').textContent(),'Bot');
+ await page.evaluate(()=>{kaosStopChartFeed();terminalData={engineReady:true,asset:'EURUSD',accountIsDemo:false};kaosCompanionStatusAt=Date.now()-16000;});
+ await page.locator('#screen-main [data-session-status=connection]').filter({hasText:'Broker connection unconfirmed'}).waitFor();
+ await page.locator('#screen-main [data-session-status=account]').filter({hasText:'Account type unconfirmed'}).waitFor();
  console.log('Gold login, accessible labels, website links, primary navigation, account status and Stop passed.');
  await page.locator('[data-testid=kaos-pill-menu]').click();
  await page.locator('[data-testid=kaos-menu-logout]').click();

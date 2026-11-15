@@ -32,3 +32,12 @@ html body.kaos-companion #screen-main.view-dashboard .k14-acct .stats-row{displa
 html body.kaos-companion #screen-main.view-dashboard .k14-acct .stat-card{min-height:64px!important;padding:10px 3px!important}
 html body.kaos-companion #screen-main.view-dashboard .k14-acct .stat-val{font-size:17px!important}
 html body.kaos-companion #screen-main .k14-footer{display:none!important}
+
+/* Command center hierarchy and keyboard navigation. */
+html body.kaos-companion .kaos-companion-summary{background:linear-gradient(135deg,#241c10,#110f0b);border-top:3px solid #e8c46f;padding:18px}
+html body.kaos-companion .kaos-companion-summary h1{margin:0;font-size:22px;line-height:1.25}
+html body.kaos-companion [data-companion-asset]{font-size:18px;letter-spacing:.03em}
+html body.kaos-companion [data-companion-guidance]{border-top:1px solid #514027;padding-top:12px;min-height:48px}
+html body.kaos-companion .kaos-companion-nav [aria-current="page"]{background:#e8c46f!important;color:#17130d!important;border-color:#e8c46f!important;font-weight:700}
+html body.kaos-companion :is(button,a,select,input):focus-visible{outline:2px solid #f2d888!important;outline-offset:3px}
+html body.kaos-companion [data-session-status]{font-size:11px;line-height:1.5}

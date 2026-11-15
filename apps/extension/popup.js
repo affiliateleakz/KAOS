@@ -1530,7 +1530,7 @@ async function exportDebugCsv() {
 // B32.7 — INTERACTIVE MULTI-TF + STRUCTURED TRADE REPLAY TERMINAL
 // Monitoring + research only. KAOS Berserker remains execution authority.
 // ════════════════════════════════════════════════════════════
-let terminalTimer=null,terminalData=null,kaosChartFeedGeneration=0,kaosChartRefreshBusy=false;
+let terminalTimer=null,terminalData=null,kaosCompanionStatusAt=0,kaosChartFeedGeneration=0,kaosChartRefreshBusy=false;
 function kaosStartChartFeed(){
  if(window.__kaosChartSessionAuthorized!==true || terminalTimer)return;
  const poll=KAOS_COMPANION_ONLY?kaosRefreshCompanionStatus:terminalRefresh;
@@ -1540,16 +1540,17 @@ async function kaosRefreshCompanionStatus(){
  if(window.__kaosChartSessionAuthorized!==true||kaosChartRefreshBusy)return;
  kaosChartRefreshBusy=true;const generation=kaosChartFeedGeneration;
  try{
-  const tab=await getKAOSTargetTab();if(!tab)return;
+  const tab=await getKAOSTargetTab();if(!tab){terminalData=null;kaosCompanionStatusAt=0;return;}
   const r=await chrome.tabs.sendMessage(tab.id,{type:'GET_COMPANION_STATUS'});
-  if(window.__kaosChartSessionAuthorized!==true||generation!==kaosChartFeedGeneration||!r?.ok)return;
-  terminalData=r;kaosUpdateAccountBalance(r);
+  if(window.__kaosChartSessionAuthorized!==true||generation!==kaosChartFeedGeneration)return;
+  if(!r?.ok){terminalData=null;kaosCompanionStatusAt=0;return;}
+  kaosCompanionStatusAt=Date.now();terminalData=r;kaosUpdateAccountBalance(r);
   const asset=document.querySelector('[data-companion-asset]');if(asset)asset.textContent=r.asset||'Select a market in Pocket Option';
- }catch(_){}finally{kaosChartRefreshBusy=false;}
+ }catch(_){if(generation===kaosChartFeedGeneration){terminalData=null;kaosCompanionStatusAt=0;}}finally{kaosChartRefreshBusy=false;}
 }
 function kaosStopChartFeed(){
  clearInterval(terminalTimer);terminalTimer=null;kaosChartFeedGeneration++;
- terminalData=null;kaosFallbackSnap=null;kaosLiveChartOk=false;
+ terminalData=null;kaosCompanionStatusAt=0;kaosFallbackSnap=null;kaosLiveChartOk=false;
 }
 const terminalTradeHits=Array.from({length:4},()=>[]);
 const terminalView=Array.from({length:4},()=>({visibleBars:80,pan:0,tf:5,drag:false,lastX:0,dragCarry:0,crossX:null,crossY:null}));

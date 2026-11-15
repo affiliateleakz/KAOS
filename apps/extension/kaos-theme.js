@@ -26,9 +26,9 @@
         bar.appendChild(nav);
         if(workspace.closest('#screen-main')){
           const note=document.createElement('section');note.className='kaos-companion-summary';
-          const title=document.createElement('h1');title.textContent='KAOS · Broker companion';
+          const title=document.createElement('h1');title.textContent='Your trading command center';
           const asset=document.createElement('p');asset.dataset.companionAsset='';asset.textContent='Select a market in Pocket Option';
-          const hint=document.createElement('p');hint.textContent='Use your broker’s charts. Manage the bot, stake and risk here.';
+          const hint=document.createElement('p');hint.dataset.companionGuidance='';hint.setAttribute('role','status');hint.textContent='Checking your broker connection…';
           const broker=document.createElement('button');broker.type='button';broker.textContent='Show Pocket Option';
           broker.addEventListener('click',async()=>{try{const tab=await getKAOSTargetTab();if(tab){await chrome.tabs.update(tab.id,{active:true});if(tab.windowId!=null)await chrome.windows.update(tab.windowId,{focused:true});}}catch(_){}});
           note.append(title,asset,hint,broker);bar.after(note);
@@ -38,13 +38,21 @@
     function update() {
       const authorized = window.__kaosChartSessionAuthorized === true;
       const running = typeof state !== 'undefined' && state.running === true;
-      const demo = authorized && typeof terminalData !== 'undefined' ? terminalData?.accountIsDemo : null;
+      const fresh = authorized && typeof terminalData !== 'undefined' && terminalData?.engineReady === true && typeof kaosCompanionStatusAt !== 'undefined' && Date.now()-kaosCompanionStatusAt < 15000;
+      const demo = fresh ? terminalData.accountIsDemo : null;
+      const connection = !authorized ? 'Broker not connected' : fresh ? 'Broker responding' : 'Broker connection unconfirmed';
       if(document.body.classList.contains('kaos-companion')){
         const asset=document.querySelector('[data-companion-asset]');
-        if(asset)asset.textContent=authorized&&typeof terminalData!=='undefined'&&terminalData?.asset?terminalData.asset:'Select a market in Pocket Option';
+        if(asset)asset.textContent=fresh&&terminalData.asset?terminalData.asset:'No current market confirmed';
+        const hint=document.querySelector('[data-companion-guidance]');
+        if(hint)hint.textContent=!fresh?'Open Pocket Option and check that you are signed in. Broker status is unavailable; the bot may still be running.':demo===null?'Confirm Demo or Real in Pocket Option before starting.':running?'Bot is running. Use Stop bot to request a stop; check open positions in Pocket Option.':!terminalData.asset?'Select a market in Pocket Option, then review your strategy and risk settings.':demo===false?'Real account selected. Review your stake and risk limits before you choose Start KAOS.':'Demo account selected. Review your strategy and risk limits, then choose Start KAOS.';
+        document.querySelectorAll('[data-companion-view]').forEach(button=>{
+          const active=button.closest('#screen-main')?.classList.contains('view-'+button.dataset.companionView);
+          if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');
+        });
       }
       document.querySelectorAll('.kaos-session-strip').forEach(bar => {
-        bar.querySelector('[data-session-status=connection]').textContent = authorized ? 'Broker connected' : 'Broker not connected';
+        bar.querySelector('[data-session-status=connection]').textContent = connection;
         const account = bar.querySelector('[data-session-status=account]');
         account.textContent = demo === true ? 'DEMO ACCOUNT' : demo === false ? 'REAL ACCOUNT' : 'Account type unconfirmed';
         account.dataset.real = String(demo === false);
