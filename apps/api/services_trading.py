@@ -93,6 +93,17 @@ FREE_ENTITLEMENTS = {
 
 async def get_entitlements(user: dict) -> dict:
     from device_policy import device_entitlements
+    # Server-stored super-admin role carries the full feature tier without a
+    # paid subscription. This never changes billing records or AI validation.
+    if (user.get("role") == "super_admin"
+            and user.get("account_status", "active") not in ("suspended", "banned")
+            and not user.get("extension_access_revoked")):
+        return device_entitlements(user, await apply_ai_execution_lock({
+            "botAccess": True, "modes": list(TRADING_MODES), "connectors": ["pocket_option"],
+            "scanners": True, "aiInsights": True, "cloudStrategies": True,
+            "community": True, "premiumTools": True, "chartLimit": 4,
+            "deviceLimit": None, "tier": "ultimate", "roleGranted": True,
+        }))
     return device_entitlements(user, await _membership_entitlements(user))
 
 

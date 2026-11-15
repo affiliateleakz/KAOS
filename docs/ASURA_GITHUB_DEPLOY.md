@@ -309,3 +309,15 @@ plain message to keep the broker tab open and retry Connect. Attachment is saved
 only after the receiver is ready. No hosting update or trading-logic change is
 required. Tests cover concurrent/recent reloads, receiver readiness, bounded
 timeout and logout cancellation. No real broker orders were submitted.
+
+### Super-admin feature tier
+
+Active server-stored `super_admin` accounts with non-revoked access receive the
+Ultimate feature tier, four charts, scanners, premium tools and unlimited devices
+without purchasing a subscription. This grants capabilities without changing
+Stripe/subscription records. Ordinary admins keep their plan feature tier and
+existing unlimited-device capability. Suspensions, bans, revoked access and the
+independent AI-execution validation lock are not bypassed. The website and
+extension use the same `get_entitlements` policy. Deploy the updated
+`apps/api/services_trading.py` to the backend, restart the Python app and refresh
+the signed-in website/extension to retrieve the corrected entitlements.

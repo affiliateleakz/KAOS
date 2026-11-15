@@ -16,7 +16,7 @@ def test_admin_device_entitlements_are_explicitly_unlimited(role):
     ent = asyncio.run(trading.get_entitlements(user))
     assert ent['devicesUnlimited'] is True
     assert ent['deviceLimit'] is None
-    assert ent['chartLimit'] == 1  # Device capability does not upgrade other plan features.
+    assert ent['chartLimit'] == (4 if role == 'super_admin' else 1)  # Super-admin also has the owner feature tier.
 
 
 @pytest.mark.parametrize('role', ['user', 'moderator', 'owner', None])
