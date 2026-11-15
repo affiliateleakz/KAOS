@@ -11,7 +11,10 @@ import services_trading as trading
 
 
 @pytest.mark.parametrize('role', ['admin', 'super_admin'])
-def test_admin_device_entitlements_are_explicitly_unlimited(role):
+def test_admin_device_entitlements_are_explicitly_unlimited(role, monkeypatch):
+    # Device-policy unit test: do not bind the shared Motor client to the
+    # temporary asyncio.run loop while reading the independent AI setting.
+    monkeypatch.setattr(trading, 'apply_ai_execution_lock', AsyncMock(side_effect=lambda ent: ent))
     user = {'role': role}
     ent = asyncio.run(trading.get_entitlements(user))
     assert ent['devicesUnlimited'] is True
