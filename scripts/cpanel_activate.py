@@ -42,7 +42,9 @@ async def login_validation_only(request, call_next):
     ) or (
         request.method == "POST" and re.fullmatch(r"/api/admin/devices/[^/]+/revoke", path)
     )
-    allowed_write = allowed_write or bool(device_revoke)
+    commerce_setup = request.method in ("PUT", "POST") and bool(re.fullmatch(r"/api/admin/commerce/providers/(stripe|paypal|nowpayments)(/test)?", path))
+    commerce_setup = commerce_setup or (request.method == "POST" and path == "/api/admin/commerce/vault/initialize")
+    allowed_write = allowed_write or bool(device_revoke) or commerce_setup
     pricing_read = path in ("/api/billing/plans", "/api/billing/availability") and request.method in ("GET", "HEAD", "OPTIONS")
     if ((path.startswith("/api/billing") and not pricing_read) or
             (request.method not in ("GET", "HEAD", "OPTIONS") and not allowed_write)):

@@ -21,6 +21,7 @@ import routes_finbert
 import routes_opportunity
 import routes_disclosures
 import routes_crypto_scanner
+import routes_commerce_admin
 import routes_affiliate_connect
 import routes_stock_heatmap
 import routes_ai_outcomes
@@ -83,6 +84,7 @@ app.include_router(routes_disclosures.router)
 app.include_router(routes_crypto_scanner.router)
 app.include_router(routes_stock_heatmap.router)
 app.include_router(routes_affiliate_connect.router)
+app.include_router(routes_commerce_admin.router)
 app.include_router(routes_ai_outcomes.router)
 app.include_router(routes_owner_candles.router)
 app.include_router(routes_paper.router)

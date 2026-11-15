@@ -1,0 +1,43 @@
+import React,{useEffect,useState} from 'react';
+import {api,errMsg} from '../../lib/api';
+
+const button='rounded-md border border-[#8a6b32] px-4 py-2 text-sm font-semibold text-[#e8c46f] disabled:opacity-50';
+function ProviderCard({provider,vaultReady,onChanged}){
+ const [form,setForm]=useState(provider),[secrets,setSecrets]=useState({}),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState('');
+ useEffect(()=>{setForm(provider);setSecrets({});},[provider]);
+ async function save(){setBusy(true);setError('');setMessage('');try{await api.put(`/api/admin/commerce/providers/${provider.id}`,{mode:form.mode,paymentsSelected:form.paymentsSelected,payoutsSelected:form.payoutsSelected,cryptoAsset:form.cryptoAsset,credentials:secrets});setSecrets({});setMessage('Settings saved. Run a connection check next. No payments or payouts were enabled.');await onChanged();}catch(e){setError(errMsg(e));}finally{setBusy(false);}}
+ async function check(){setBusy(true);setError('');setMessage('');try{const {data}=await api.post(`/api/admin/commerce/providers/${provider.id}/test`);setMessage(data.message);await onChanged();}catch(e){setError(errMsg(e));await onChanged();}finally{setBusy(false);}}
+ return <section className="rounded-xl border border-[#514027] bg-[#12100d] p-5 sm:p-7" data-testid={`provider-${provider.id}`}>
+  <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-2xl font-semibold text-[#efd28a]">{provider.name}</h2><span className="rounded border border-amber-700/50 px-3 py-1 text-xs text-amber-200">Setup only · not live</span></div>
+  <p className="mt-3 text-sm text-[#c4b89f]">{provider.description}</p>
+  <a href={provider.dashboard} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block text-sm text-[#e8c46f] underline">Open {provider.name} dashboard ↗</a>
+  <div className="my-5 grid gap-4 sm:grid-cols-2">
+   <label className="text-sm">Environment<select aria-label={`${provider.name} environment`} value={form.mode} onChange={e=>setForm({...form,mode:e.target.value})} className="mt-2 block w-full rounded border border-[#66502a] bg-black p-3"><option value="sandbox">Sandbox / test</option><option value="live">Live credentials</option></select></label>
+   {provider.id==='nowpayments'&&<label className="text-sm">Preferred crypto asset/network<select aria-label="Crypto asset and network" value={form.cryptoAsset} onChange={e=>setForm({...form,cryptoAsset:e.target.value})} className="mt-2 block w-full rounded border border-[#66502a] bg-black p-3">{[['btc','Bitcoin'],['eth','Ethereum'],['usdttrc20','USDT · Tron / TRC20'],['usdterc20','USDT · Ethereum / ERC20'],['usdtbsc','USDT · BNB Smart Chain'],['usdc','USDC · verify provider network before launch']].map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>}
+  </div>
+  <div className="mb-5 flex flex-wrap gap-5 text-sm"><label><input type="checkbox" checked={form.paymentsSelected} onChange={e=>setForm({...form,paymentsSelected:e.target.checked})}/> Select for membership payments</label><label><input type="checkbox" checked={form.payoutsSelected} onChange={e=>setForm({...form,payoutsSelected:e.target.checked})}/> Select for affiliate payouts</label></div>
+  <p className="mb-5 text-xs text-[#b5a487]">Selections record your preferred methods. They do not activate checkout, release commission holds, send payouts or convert funds.</p>
+  <div className="grid gap-4 lg:grid-cols-2">{provider.fields.map(field=><label key={field.name} className="min-w-0 text-sm">{field.label}<span className="ml-2 text-xs text-[#b5a487]">{field.configured?`Configured · ${field.source}`:'Not configured'}</span><input aria-label={`${provider.name} ${field.label}`} type="password" autoComplete="new-password" disabled={!vaultReady} value={secrets[field.name]||''} onChange={e=>setSecrets({...secrets,[field.name]:e.target.value})} placeholder={field.configured?'Leave blank to keep stored credential':'Paste credential here'} className="mt-2 block w-full rounded border border-[#66502a] bg-black p-3 text-white disabled:opacity-40"/><span className="mt-1 block break-all font-mono text-[10px] text-[#aa9a80]">Hosting alternative: {field.environmentVariable}</span></label>)}</div>
+  <p className="mt-4 text-xs text-[#b5a487]">Credentials are write-only and encrypted with the separate commerce vault key. Saved values are never returned to this page. Do not enter wallet seed phrases or private keys.</p>
+  {provider.lastCheck&&<p className="mt-4 text-xs text-[#b5a487]">Last API check: {provider.lastCheck.mode} · {provider.lastCheck.checkedAt} · {provider.lastCheck.message}</p>}
+  {message&&<p role="status" className="mt-4 rounded border border-[#8a6b32] p-3 text-sm text-[#efd28a]">{message}</p>}
+  {error&&<p role="alert" className="mt-4 text-sm text-red-300">{error}</p>}
+  <p className="mt-3 text-xs text-[#b5a487]">Save changes before checking. The API check uses saved credentials and the saved environment.</p>
+  <div className="mt-5 flex flex-wrap gap-3"><button className={button} disabled={busy} onClick={save}>{busy?'Working…':'Save setup'}</button><button className={button} disabled={busy||Object.values(secrets).some(Boolean)||form.mode!==provider.mode||form.paymentsSelected!==provider.paymentsSelected||form.payoutsSelected!==provider.payoutsSelected||form.cryptoAsset!==provider.cryptoAsset} onClick={check}>Check API connection</button></div>
+ </section>;
+}
+
+export default function CommerceSetup(){
+ const [data,setData]=useState(null),[error,setError]=useState('');
+ async function load(){try{const r=await api.get('/api/admin/commerce/providers');setData(r.data);setError('');}catch(e){setError(errMsg(e));}}
+ async function initialize(){try{await api.post('/api/admin/commerce/vault/initialize');await load();}catch(e){setError(errMsg(e));}}
+ useEffect(()=>{load();},[]);
+ return <div className="mx-auto max-w-6xl space-y-6" data-testid="commerce-setup">
+  <header><p className="text-xs tracking-[.18em] text-[#d4af37]">SUPER ADMIN · COMMERCE</p><h1 className="mt-3 text-3xl font-semibold">Payments & payout setup</h1><p className="mt-3 max-w-3xl text-sm leading-relaxed text-[#c4b89f]">Configure Stripe, PayPal and crypto through NOWPayments. Use sandbox credentials first. API checks authenticate or read account data; they never create a charge, invoice, withdrawal or transfer.</p></header>
+  {error&&<div role="alert" className="rounded border border-red-800 p-4"><p>{error}</p><button onClick={load} className={`${button} mt-3`}>Retry</button></div>}
+  {!data&&!error&&<p role="status">Loading provider setup…</p>}
+  {data&&!data.vaultReady&&<section className="rounded-lg border border-amber-700/50 p-5 text-sm text-amber-200"><h2 className="font-semibold">Initialize your secure credential vault</h2><p className="mt-2">Create a dedicated encryption key in a private server folder outside your website. Existing keys are never replaced. Include the private key file in your secure hosting backup; losing or changing it makes stored credentials unreadable. Do not reuse the broker vault key. You can alternatively configure <code>KAOS_COMMERCE_VAULT_KEY</code> in hosting settings.</p><button onClick={initialize} className={`${button} mt-4`}>Initialize secure vault</button></section>}
+  {data&&<p className="rounded-lg border border-[#514027] p-4 text-sm text-[#c4b89f]">{data.activationNote}</p>}
+  {data?.providers.map(provider=><ProviderCard key={provider.id} provider={provider} vaultReady={data.vaultReady} onChanged={load}/>)}
+ </div>;
+}

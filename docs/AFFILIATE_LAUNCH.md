@@ -1,5 +1,45 @@
 # KAOS membership upgrades and affiliate launch
 
+## Admin provider setup
+
+Super admins now have **Admin → Payments & Payouts** at `/admin/commerce`.
+It contains Stripe, PayPal and NOWPayments setup cards, sandbox/live selection,
+membership-payment and affiliate-payout preferences, write-only credential fields,
+and API checks. NOWPayments includes an explicit crypto asset/network preference;
+confirm current provider support and destination networks before launch.
+
+Click **Initialize secure vault** once. It creates a dedicated Fernet key in
+`~/.kaos/commerce.key`, outside the public site, with a 0700 directory and 0600
+file. It never overwrites an existing key. Include this private key in a secure
+hosting backup. The alternative is a dedicated `KAOS_COMMERCE_VAULT_KEY` in hosting
+environment settings. That environment key takes precedence; do not change it or
+switch key sources without a credential migration. The compromised broker vault
+key is never used. The key and decrypted credentials are never returned to the
+browser; audit events record field names, not values. Blank credential inputs
+preserve existing values. Stored credentials take precedence over corresponding
+hosting variables for these provider checks and admin-configured Stripe onboarding.
+
+Provider checks are limited to Stripe's account read, PayPal's OAuth token grant,
+and NOWPayments' balance read on fixed sandbox/live hosts. Tokens and balance
+data are not returned or saved. These do not verify every product capability,
+webhook, recipient, supported network, payout permission or available funding.
+No charge, invoice, cryptocurrency transfer or payout is initiated.
+
+Selecting Stripe for affiliate payouts permits member Connect onboarding using
+the saved key/environment. It does not permit transfers. Stripe test/live profiles
+are separated; an unlabeled legacy profile requires review before live use.
+PayPal Payouts approval, NOWPayments payout authorization and funding must be
+completed with the respective provider. No wallet seed/private key is requested.
+
+**Live money movement is still disabled.** This release adds configuration and
+connection checks, not PayPal/NOWPayments checkout/transfer execution adapters.
+Payment checkout, signed webhook handling for new providers, transaction-safe
+commission reservations, refunds, funded payout release and reconciliation still
+need completion before a financial launch. The admin screen deliberately says
+“setup only” rather than representing stored credentials as a live service.
+The legacy commerce readiness script still reports the hosting checkout/journal
+requirements; saving preferences does not satisfy or bypass those requirements.
+
 ## What this release changes
 
 Restricted scanner, disclosure, heatmap, AI-insight and cloud-strategy pages show

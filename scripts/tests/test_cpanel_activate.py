@@ -72,6 +72,15 @@ def test_validation_wrapper_blocks_orders_and_billing(monkeypatch, tmp_path):
     @app.post('/api/affiliate/connect/onboarding')
     def connect_onboarding():
         return {'ok': True}
+    @app.put('/api/admin/commerce/providers/{provider}')
+    def commerce_preferences(provider: str):
+        return {'provider': provider}
+    @app.post('/api/admin/commerce/providers/{provider}/test')
+    def commerce_connection_check(provider: str):
+        return {'provider': provider}
+    @app.post('/api/admin/commerce/vault/initialize')
+    def commerce_vault():
+        return {'vaultReady': True}
     @app.delete('/api/v1/devices/device-1')
     def revoke_member_device():
         return {'revoked': True}
@@ -112,6 +121,12 @@ def test_validation_wrapper_blocks_orders_and_billing(monkeypatch, tmp_path):
     assert client.post('/api/affiliate/activate').status_code == 200
     assert client.post('/api/affiliate/connect/onboarding').status_code == 200
     assert client.post('/api/affiliate/connect/transfer').status_code == 503
+    for provider in ('stripe', 'paypal', 'nowpayments'):
+        assert client.put('/api/admin/commerce/providers/' + provider).status_code == 200
+        assert client.post('/api/admin/commerce/providers/' + provider + '/test').status_code == 200
+    assert client.post('/api/admin/commerce/vault/initialize').status_code == 200
+    assert client.post('/api/admin/commerce/providers/paypal/transfer').status_code == 503
+    assert client.put('/api/admin/commerce/providers/unknown').status_code == 503
     assert client.delete('/api/v1/devices/device-1').status_code == 200
     assert client.post('/api/admin/devices/device-1/revoke').status_code == 200
     assert client.post('/api/admin/users/user-1/revoke-all-devices').status_code == 503

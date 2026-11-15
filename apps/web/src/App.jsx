@@ -24,6 +24,7 @@ import BrokerConnections from "./pages/dashboard/BrokerConnections";
 import PaperTrading from "./pages/dashboard/PaperTrading";
 import {AIPage} from "./pages/dashboard/AffiliateAI";
 import AffiliatePage from "./pages/dashboard/AffiliateHub";
+import CommerceSetup from "./pages/admin/CommerceSetup";
 import AdminLayout from "./pages/admin/AdminLayout";
 import * as AP from "./pages/admin/pages";
 import { TradingOps, Connectors } from "./pages/admin/TradingOps";
@@ -92,6 +93,7 @@ function AppRouter() {
         <Route path="trading-ops" element={<TradingOps />} />
         <Route path="kaos-ai" element={<AICenter />} />
         <Route path="affiliates" element={<Affiliates />} />
+        <Route path="commerce" element={<Protected role="super_admin"><CommerceSetup /></Protected>} />
         <Route path="connectors" element={<Connectors />} />
         <Route path="users" element={<AP.Users />} />
         <Route path="subscriptions" element={<AP.Subscriptions />} />

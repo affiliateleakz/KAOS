@@ -41,6 +41,7 @@ def test_stripe_connect_requires_explicit_configuration(monkeypatch):
 
 
 def test_onboarding_reuses_existing_account_and_never_transfers(monkeypatch):
+    monkeypatch.setattr(connect.commerce_providers,'document',AsyncMock(return_value={}))
     monkeypatch.setattr(connect,'active_affiliate',AsyncMock(return_value={'_id':'a','code':'CODE','stripeConnectAccountId':'acct_fixture'}))
     monkeypatch.setattr(connect,'get_program',AsyncMock(return_value={'enabled':True}))
     monkeypatch.setattr(connect,'connect_key',lambda:'fixture-test-key')
