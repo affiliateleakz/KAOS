@@ -114,6 +114,7 @@ def test_validation_wrapper_blocks_orders_and_billing(monkeypatch, tmp_path):
     monkeypatch.setenv('STRIPE_WEBHOOK_SECRET', 'test-value')
     scope = {'__file__': str(tmp_path / 'passenger_wsgi.py')}
     exec(compile(activation.WRAPPER, 'passenger_wsgi.py', 'exec'), scope)
+    scope['_get_app']()
     import os
     assert os.environ['KAOS_COINBASE_LIVE_ORDERS'] == 'disabled'
     assert os.environ['STRIPE_SECRET_KEY'] == ''
@@ -180,7 +181,14 @@ assert os.waitstatus_to_exitcode(status) == 0, status
 ''')
     result = subprocess.run([sys.executable, str(script), str(wrapper)], capture_output=True, timeout=15)
     assert result.returncode == 0, result.stderr.decode()
-    eager = activation.WRAPPER.split('# Create the event-loop thread')[0] + 'application = ASGIMiddleware(app)\n'
-    wrapper.write_text(eager)
+    # Simulate a native fork without Python callbacks while the parent owns the
+    # adapter lock. The PID check must run before acquiring that inherited lock.
+    callback_free = activation.WRAPPER.replace('if hasattr(os, "register_at_fork"):', 'if False:')
+    wrapper.write_text(callback_free)
+    script.write_text(script.read_text().replace('pid = os.fork()', 'scope["_adapter_lock"].acquire()\npid = os.fork()'))
+    fixed = subprocess.run([sys.executable, str(script), str(wrapper)], capture_output=True, timeout=15)
+    assert fixed.returncode == 0, fixed.stderr.decode()
+    unsafe = callback_free.replace('    if _process_pid != pid:\n        _after_fork()\n', '')
+    wrapper.write_text(unsafe)
     old = subprocess.run([sys.executable, str(script), str(wrapper)], capture_output=True, timeout=15)
-    assert old.returncode != 0, 'Regression fixture should reproduce the inherited-thread hang'
+    assert old.returncode != 0, 'Regression fixture must reproduce the inherited-lock hang'

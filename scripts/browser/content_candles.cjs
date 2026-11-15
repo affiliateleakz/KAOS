@@ -13,7 +13,7 @@ const assert=require('node:assert/strict');
   const data={};window.fixtureListeners=[];window.fixtureWorkerMessages=[];
   const dual=(value,cb)=>{if(cb)queueMicrotask(()=>cb(value));return Promise.resolve(value)};
   window.chrome={runtime:{getURL:p=>location.origin+'/'+p,getManifest:()=>({version:'1.7.16'}),onMessage:{addListener:cb=>window.fixtureListeners.push(cb)},
-   sendMessage:(msg,cb)=>{window.fixtureWorkerMessages.push(msg);return dual(msg.type==='KAOS_STARTUP'?{ok:true,state:{step:'DASHBOARD',license:{authorized:true},entitlements:{chartLimit:1}}}:{ok:true},cb);}},
+   sendMessage:(msg,cb)=>{window.fixtureWorkerMessages.push(msg);return dual((msg.type==='KAOS_STARTUP'||msg.type==='KAOS_SESSION_STATUS')?{ok:true,state:{step:'DASHBOARD',license:{authorized:true},entitlements:{chartLimit:1}}}:{ok:true},cb);}},
    storage:{onChanged:{addListener(){}},local:{get:(keys,cb)=>dual(data,cb),set:(obj,cb)=>{Object.assign(data,obj);return dual(undefined,cb);},remove:(keys,cb)=>dual(undefined,cb)}}};
   window.fixtureRequest=msg=>new Promise((resolve,reject)=>{
    const timer=setTimeout(()=>reject(Error('No core receiver')),3000);let answered=false;

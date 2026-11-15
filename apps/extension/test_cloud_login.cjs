@@ -64,3 +64,21 @@ test('startup carries the exact registration refusal into the blocked screen', a
   assert.equal(state.step, 'BLOCKED');
   assert.equal(state.detail, 'Device limit reached (1)');
 });
+test('periodic session check validates the server license without device writes or optional config requests',async()=>{
+ const c=cloud([{status:200,body:{accessToken:'access'}},
+  {status:200,body:{license:{authorized:true},entitlements:{chartLimit:4},user:{id:'u1'}}}]);
+ await c.api.login('member@example.com','secret');
+ const result=await c.api.sessionStatus();
+ assert.equal(result.status,'CONNECTED');assert.equal(c.calls.length,2);
+ assert.ok(c.calls[1].url.endsWith('/extension/me'));assert.equal(c.calls[1].opts.method,'GET');
+});
+test('periodic check preserves revoked-device denial and does not retry registration',async()=>{
+ const c=cloud([{status:200,body:{accessToken:'access'}},{status:403,body:{detail:'Device access revoked'}}]);
+ await c.api.login('member@example.com','secret');const result=await c.api.sessionStatus();
+ assert.equal(result.step,'BLOCKED');assert.equal(result.detail,'Device access revoked');assert.equal(c.calls.length,2);
+});
+test('periodic server failure is offline rather than an expired password session',async()=>{
+ const c=cloud([{status:200,body:{accessToken:'access'}},{status:503,body:{detail:'Temporarily unavailable'}}]);
+ await c.api.login('member@example.com','secret');const result=await c.api.sessionStatus();
+ assert.equal(result.step,'OFFLINE');assert.equal(result.httpStatus,503);
+});

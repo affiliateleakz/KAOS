@@ -2445,7 +2445,10 @@ if (document.readyState === 'loading') {
     return (dot && dot.classList.contains('active')) || /CONNECT|LIVE|READY|RUN/.test(t);
   }
 
+  let serverHealthBusy=false;
   async function pingServer() {
+    if(serverHealthBusy)return null;
+    serverHealthBusy=true;
     try {
       const hr = await chrome.runtime.sendMessage({ type:'KAOS_HEALTH' });
       const h = hr && hr.health;
@@ -2458,7 +2461,7 @@ if (document.readyState === 'loading') {
     } catch (_) {
       setPill('k14-pill-server','off','OFFLINE');
       return null;
-    }
+    } finally {serverHealthBusy=false;}
   }
 
   function refreshPills() {
@@ -2560,7 +2563,7 @@ if (document.readyState === 'loading') {
     refreshPills(); refreshCards();
     setInterval(refreshPills, 1500);
     setInterval(refreshCards, 1500);
-    setInterval(pingServer, 6000); pingServer();
+    setInterval(()=>{if(!document.hidden)pingServer();}, 60000); pingServer();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();

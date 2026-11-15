@@ -16,7 +16,7 @@ const assert=require('node:assert/strict');
    sendMessage:(msg,cb)=>{window.testMessages.push(msg);let reply={ok:true};
     if(msg.type==='KAOS_LOGIN'){signedIn=true;reply={ok:true,state:currentState()};}
     if(msg.type==='KAOS_LOGOUT'){signedIn=false;chosen=false;reply={ok:true};}
-    if(msg.type==='KAOS_STARTUP')reply={ok:true,state:currentState()};
+    if((msg.type==='KAOS_STARTUP'||msg.type==='KAOS_SESSION_STATUS'))reply={ok:true,state:currentState()};
     if(msg.type==='KAOS_CONNECT_PLATFORM'){chosen=true;reply={ok:true,state:currentState(),tabId:42};}
     if(msg.type==='KAOS_GET_PLATFORMS')reply={ok:true,platforms:[{id:'pocketoption',name:'Pocket Option',status:'SUPPORTED'}]};
     if(msg.type==='GET_BOT_STATE')reply={running:false};

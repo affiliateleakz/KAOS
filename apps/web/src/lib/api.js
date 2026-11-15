@@ -20,5 +20,10 @@ export function formatApiErrorDetail(detail) {
 }
 
 export function errMsg(e) {
-  return formatApiErrorDetail(e?.response?.data?.detail) || e?.message || "Error";
+  const detail=e?.response?.data?.detail;
+  if(detail!=null)return formatApiErrorDetail(detail);
+  if(e?.code==='ECONNABORTED'||e?.code==='ETIMEDOUT')return 'The KAOS server took too long to respond. It may be overloaded. Please try again later.';
+  if(e?.response?.status>=500)return `KAOS server error (${e.response.status}). Please try again later.`;
+  if(e?.code==='ERR_NETWORK')return 'Cannot reach the KAOS API. Check your connection or try again later.';
+  return e?.message || formatApiErrorDetail(null);
 }

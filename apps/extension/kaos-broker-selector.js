@@ -4,7 +4,7 @@ const $=id=>document.getElementById(id);
 const brokerURLs={pocketoption:'https://pocketoption.com/',coinbase:'https://advanced.coinbase.com/',kraken:'https://www.kraken.com/',ibkr:'https://www.interactivebrokers.com/',alpaca:'https://alpaca.markets/',oanda:'https://www.oanda.com/',tradier:'https://tradier.com/',tastytrade:'https://tastytrade.com/',binanceus:'https://www.binance.us/',schwab:'https://www.schwab.com/'};
 let authenticated=false,selected=null,checking=false,connecting=false,chooserOpen=false;
 const send=msg=>new Promise(resolve=>chrome.runtime.sendMessage(msg,r=>{void chrome.runtime.lastError;resolve(r||{ok:false});}));
-async function cloudState(){const r=await send({type:'KAOS_STARTUP'});return r?.state||{};}
+async function cloudState(){const r=await send({type:authenticated?'KAOS_SESSION_STATUS':'KAOS_STARTUP'});return r?.state||{};}
 function brokerScreen(){return $('kaos-broker-overlay');}
 function show(error){if(authenticated){brokerScreen()?.classList.add('visible');chooserOpen=true;if(error)message(error);}}
 function hide(){brokerScreen()?.classList.remove('visible');chooserOpen=false;}

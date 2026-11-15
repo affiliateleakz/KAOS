@@ -26,42 +26,48 @@ os.environ["STRIPE_SECRET_KEY"] = ""
 os.environ["STRIPE_WEBHOOK_SECRET"] = ""
 for path in (ROOT / "apps/api", ROOT / "packages/kaos-core"):
     sys.path.insert(0, str(path))
-from server import app
+def _get_app():
+    from server import app
 
-# First activation supports sign-in/device validation, not payments or orders.
-@app.middleware("http")
-async def login_validation_only(request, call_next):
-    path = request.url.path
-    auth = path.startswith(("/api/auth/", "/api/v1/auth/"))
-    allowed_write = auth or path in (
-        "/api/v1/devices/register", "/api/v1/extension/google/access-token",
-        "/api/affiliate/activate", "/api/affiliate/connect/onboarding")
-    # These handlers still enforce the authenticated owner/admin authority.
-    device_revoke = (
-        request.method == "DELETE" and re.fullmatch(r"/api/v1/devices/[^/]+", path)
-    ) or (
-        request.method == "POST" and re.fullmatch(r"/api/admin/devices/[^/]+/revoke", path)
-    )
-    commerce_setup = request.method in ("PUT", "POST") and bool(re.fullmatch(r"/api/admin/commerce/providers/(stripe|paypal|nowpayments)(/test)?", path))
-    commerce_setup = commerce_setup or (request.method == "POST" and path == "/api/admin/commerce/vault/initialize")
-    allowed_write = allowed_write or bool(device_revoke) or commerce_setup
-    pricing_read = path in ("/api/billing/plans", "/api/billing/availability", "/api/billing/memberships") and request.method in ("GET", "HEAD", "OPTIONS")
-    if ((path.startswith("/api/billing") and not pricing_read) or
-            (request.method not in ("GET", "HEAD", "OPTIONS") and not allowed_write)):
-        return JSONResponse({"detail": "Login validation mode: this operation is disabled"}, status_code=503)
-    return await call_next(request)
+    if not getattr(app.state, 'kaos_validation_policy_installed', False):
+        # First activation supports sign-in/device validation, not payments or orders.
+        @app.middleware("http")
+        async def login_validation_only(request, call_next):
+            path = request.url.path
+            auth = path.startswith(("/api/auth/", "/api/v1/auth/"))
+            allowed_write = auth or path in (
+                "/api/v1/devices/register", "/api/v1/extension/google/access-token",
+                "/api/affiliate/activate", "/api/affiliate/connect/onboarding")
+            # These handlers still enforce the authenticated owner/admin authority.
+            device_revoke = (
+                request.method == "DELETE" and re.fullmatch(r"/api/v1/devices/[^/]+", path)
+            ) or (
+                request.method == "POST" and re.fullmatch(r"/api/admin/devices/[^/]+/revoke", path)
+            )
+            commerce_setup = request.method in ("PUT", "POST") and bool(re.fullmatch(r"/api/admin/commerce/providers/(stripe|paypal|nowpayments)(/test)?", path))
+            commerce_setup = commerce_setup or (request.method == "POST" and path == "/api/admin/commerce/vault/initialize")
+            allowed_write = allowed_write or bool(device_revoke) or commerce_setup
+            pricing_read = path in ("/api/billing/plans", "/api/billing/availability", "/api/billing/memberships") and request.method in ("GET", "HEAD", "OPTIONS")
+            if ((path.startswith("/api/billing") and not pricing_read) or
+                    (request.method not in ("GET", "HEAD", "OPTIONS") and not allowed_write)):
+                return JSONResponse({"detail": "Login validation mode: this operation is disabled"}, status_code=503)
+            return await call_next(request)
+        app.state.kaos_validation_policy_installed = True
+    return app
 
 # Create the event-loop thread inside the serving worker, not a preloaded parent.
 import threading
 _adapter = None
 _adapter_pid = None
+_process_pid = os.getpid()
 _adapter_lock = threading.Lock()
 
 def _after_fork():
-    global _adapter, _adapter_pid, _adapter_lock
+    global _adapter, _adapter_pid, _adapter_lock, _process_pid
     _adapter = None
     _adapter_pid = None
     _adapter_lock = threading.Lock()
+    _process_pid = os.getpid()
 
 if hasattr(os, "register_at_fork"):
     os.register_at_fork(after_in_child=_after_fork)
@@ -69,9 +75,12 @@ if hasattr(os, "register_at_fork"):
 def application(environ, start_response):
     global _adapter, _adapter_pid
     pid = os.getpid()
+    # Native host forks need not invoke Python at-fork callbacks. Reset before locking.
+    if _process_pid != pid:
+        _after_fork()
     with _adapter_lock:
         if _adapter is None or _adapter_pid != pid:
-            _adapter = ASGIMiddleware(app)
+            _adapter = ASGIMiddleware(_get_app())
             _adapter_pid = pid
         adapter = _adapter
     return adapter(environ, start_response)

@@ -854,6 +854,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     try {
       switch (msg.type) {
         case 'KAOS_HEALTH': sendResponse({ ok:true, health:await self.KaosCloud.health() }); break;
+        case 'KAOS_SESSION_STATUS': sendResponse({ok:true,state:await self.KaosCloud.sessionStatus()}); break;
         case 'KAOS_STARTUP': sendResponse({ ok: true, state: await self.KaosCloud.startup() }); break;
         case 'KAOS_LOGIN': {
           await self.KaosCloud.login(msg.email, msg.password);

@@ -16,19 +16,23 @@ for path in (API_ROOT, CORE_ROOT):
     sys.path.insert(0, str(path))
 
 from a2wsgi import ASGIMiddleware
-from server import app
+def _get_app():
+    from server import app
+    return app
 
 # Create the event-loop thread inside the serving worker, not a preloaded parent.
 import threading
 _adapter = None
 _adapter_pid = None
+_process_pid = os.getpid()
 _adapter_lock = threading.Lock()
 
 def _after_fork():
-    global _adapter, _adapter_pid, _adapter_lock
+    global _adapter, _adapter_pid, _adapter_lock, _process_pid
     _adapter = None
     _adapter_pid = None
     _adapter_lock = threading.Lock()
+    _process_pid = os.getpid()
 
 if hasattr(os, "register_at_fork"):
     os.register_at_fork(after_in_child=_after_fork)
@@ -36,9 +40,12 @@ if hasattr(os, "register_at_fork"):
 def application(environ, start_response):
     global _adapter, _adapter_pid
     pid = os.getpid()
+    # Native host forks need not invoke Python at-fork callbacks. Reset before locking.
+    if _process_pid != pid:
+        _after_fork()
     with _adapter_lock:
         if _adapter is None or _adapter_pid != pid:
-            _adapter = ASGIMiddleware(app)
+            _adapter = ASGIMiddleware(_get_app())
             _adapter_pid = pid
         adapter = _adapter
     return adapter(environ, start_response)

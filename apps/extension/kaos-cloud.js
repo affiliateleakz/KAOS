@@ -192,7 +192,7 @@
 
   async function me() {
     var res = await authFetch('/extension/me', { method: 'GET' });
-    if (!res.ok) { var e = new Error('me failed'); e.kind = 'API_ERROR'; throw e; }
+    if (!res.ok) { var failed=await res.json().catch(function(){return {};}); var e = new Error(typeof failed.detail==='string'?failed.detail.slice(0,240):'Session check failed'); e.kind = res.status===403?'DEVICE_NOT_AUTHORIZED':'API_ERROR'; e.httpStatus=res.status; throw e; }
     return res.json();
   }
 
@@ -249,12 +249,13 @@
 
   // Full startup orchestration:
   // OPEN → LOGIN/restore → membership → entitlement → device → platform selection → dashboard.
-  async function startup() {
+  async function startup(lightweight) {
     var t = await getTokens();
     if (!t.accessToken && !t.refreshToken) return { step: 'LOGIN', status: 'LOGGED_OUT' };
     // Register first: server license lookup requires a device associated with this member.
     // Device registration is server-authoritative and refuses revoked or over-limit IDs.
     var device = null;
+    if (!lightweight) {
     try { device = await registerDevice(); }
     catch (e) {
       if (e.kind === 'SESSION_EXPIRED') return { step: 'LOGIN', status: 'SESSION_EXPIRED' };
@@ -266,9 +267,12 @@
     if (!device || !device.id || device.revoked)
       return { step: 'BLOCKED', status: 'DEVICE_REGISTRATION_FAILED',
                detail: 'Device registration returned an invalid or revoked device' };
+    }
     var info;
     try { info = await me(); }
     catch (e) {
+      if(e.kind==='DEVICE_NOT_AUTHORIZED')return {step:'BLOCKED',status:'DEVICE_NOT_AUTHORIZED',detail:e.message};
+      if(e.kind==='API_ERROR')return {step:'OFFLINE',status:'OFFLINE',detail:e.message,httpStatus:e.httpStatus};
       if (e.kind === 'OFFLINE') {
         var hs=await health();
         if (hs && hs.ok) {
@@ -290,9 +294,11 @@
     // Membership/auth/device establish cloud connectivity. Optional config/release
     // endpoints must never downgrade a valid session to OFFLINE.
     var cfg = null, rel = null;
+    if (!lightweight) {
     try { cfg = await botConfig(); } catch (e) { cfg = { optionalError: String(e && e.message || e) }; }
     if (cfg && typeof cfg.collectiveLearningConsent === 'boolean') await sset(kv(CONSENT, cfg.collectiveLearningConsent));
     try { rel = await release(); } catch (e) { rel = { optionalError: String(e && e.message || e) }; }
+    }
     await sset(kv(STATE, 'CONNECTED'));
     var base = { status: 'CONNECTED', user: info.user, license: info.license, entitlements: info.entitlements,
                  platform: plat.platform, remember: plat.remember, config: cfg, release: rel, device: device };
@@ -304,7 +310,7 @@
   }
 
   root.KaosCloud = {
-    login: login, googleLogin: googleLogin, logout: logout, me: me, startup: startup, registerDevice: registerDevice,
+    login: login, googleLogin: googleLogin, logout: logout, me: me, startup: startup, sessionStatus: function(){return startup(true);}, registerDevice: registerDevice,
     botConfig: botConfig, release: release, platforms: platforms, setConsent: setConsent, getConsent: getConsent,
     predict: predict, selectPlatform: selectPlatform, switchPlatform: switchPlatform, getPlatform: getPlatform,
     getTokens: getTokens, setApiHost: setApiHost, apiHost: apiHost, apiBase: apiBase,
