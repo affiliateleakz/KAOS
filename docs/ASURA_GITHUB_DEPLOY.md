@@ -264,3 +264,14 @@ dependency upgrade. Review environment rollback separately from file activation.
 Authentication session revocation, payments readiness and recovery remain open
 release blockers described in the report. Do not enable live trading/payments
 or merge the draft PR as part of installing the chart fix.
+
+### Extension 1.7.17: owner-approved trading
+
+The owner subsequently approved enabling trading in the extension. Version
+1.7.17 restores the Start button and disables the four temporary audit-only
+execution blocks. Broker authorization and explicit Start/Stop remain required;
+sign-in and chart monitoring do not start trading. It operates on the connected
+broker account, including a real account if that is selected in Pocket Option.
+Update the existing unpacked extension folder and Reload; no hosting rebuild is
+needed for this extension-only change. Backend/payment restrictions and the
+audit's unresolved findings remain unchanged. No real orders were used in tests.

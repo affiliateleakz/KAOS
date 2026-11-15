@@ -6,7 +6,7 @@
 //  Now: all close events while started are forwarded unconditionally.
 // ═══════════════════════════════════════════════════════════════
 (() => {
-  const KAOS_AUDIT_READ_ONLY = true;
+  const KAOS_AUDIT_READ_ONLY = false;
   if (window.__poatBridge440) return;
   window.__poatBridge440 = true;
 

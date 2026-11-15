@@ -27,6 +27,23 @@ test('audit build rejects Start Bot before any state or browser write',()=>{
  let response;listener({type:'START_BOT',tabId:42},{},r=>response=r);
  assert.equal(response.ok,false);assert.match(response.error,/disabled/);assert.equal(botState.running,false);assert.deepEqual(writes,[]);
 });
+test('trading release enables all four execution layers but retains explicit Start',()=>{
+ for(const file of ['popup.js','background.js','content.js','po-bridge.js']){
+  assert.match(fs.readFileSync(__dirname+'/'+file,'utf8'),/const KAOS_AUDIT_READ_ONLY = false;/);
+ }
+ assert.match(fs.readFileSync(__dirname+'/popup.js','utf8'),/▶ START KAOS/);
+});
+for(const authorized of [false,true])test('Start Bot requires broker authorization: '+authorized,()=>{
+ const begin=source.indexOf('chrome.runtime.onMessage.addListener('),end=source.indexOf('\nconst KAOS_PO_PATTERNS',begin);
+ let listener;const botState={running:false},writes=[];
+ const context={KAOS_AUDIT_READ_ONLY:false,kaosAuthorizedPo:authorized,botState,setTimeout(){},appendAiAudit(){},
+  chrome:{runtime:{onMessage:{addListener:cb=>listener=cb}},storage:{local:{set:()=>writes.push('storage')}},
+   tabs:{update:async()=>{},reload:()=>writes.push('reload')}}};
+ vm.runInNewContext(source.slice(begin,end),context);
+ let response;listener({type:'START_BOT',tabId:42},{},r=>response=r);
+ assert.equal(response.ok,authorized);assert.equal(botState.running,authorized);
+ assert.deepEqual(writes,authorized?['storage','reload']:[]);
+});
 test('chart healing delegates to the worker and never directly injects page scripts',async()=>{
  const popup=fs.readFileSync(__dirname+'/popup.js','utf8'),start=popup.indexOf('async function kaosHealPoTab('),end=popup.indexOf('\nfunction kaosRenderEmptyChartState',start);
  const calls=[],context={window:{__kaosChartSessionAuthorized:true},chrome:{runtime:{sendMessage:async msg=>{calls.push(msg);return {ok:true,alreadyAttached:true};}},
@@ -34,7 +51,7 @@ test('chart healing delegates to the worker and never directly injects page scri
  vm.runInNewContext('let kaosHealBusy=false,kaosHealStamp=0,kaosHealNote="";'+popup.slice(start,end)+';globalThis.heal=kaosHealPoTab;',context);
  assert.equal(await context.heal({id:42}),true);assert.equal(calls[0].type,'KAOS_PO_ENSURE_ATTACH');assert.equal(calls[0].tabId,42);
 });
-test('MAIN-world audit bridge rejects start and order commands while preserving manual WebSocket sends',()=>{
+for(const readOnly of [true,false])test('MAIN-world bridge Start/Stop and order gating, read-only='+readOnly,()=>{
  const messages=[],posted=[],frames=[];
  class Socket {constructor(){this.readyState=1;}addEventListener(){}send(data){frames.push(data);}}
  Object.assign(Socket,{CONNECTING:0,OPEN:1,CLOSING:2,CLOSED:3});
@@ -44,12 +61,15 @@ test('MAIN-world audit bridge rejects start and order commands while preserving 
   addEventListener:(type,cb)=>{if(type==='message')messages.push(cb);},postMessage:msg=>posted.push(msg),
   getComputedStyle:()=>({display:'block',visibility:'visible',opacity:'1'})};
  context.window=context;vm.createContext(context);
- vm.runInContext(fs.readFileSync(__dirname+'/po-bridge.js','utf8'),context);
+ // Retain coverage of the optional read-only switch, independent of release default.
+ vm.runInContext(fs.readFileSync(__dirname+'/po-bridge.js','utf8').replace('const KAOS_AUDIT_READ_ONLY = false;', 'const KAOS_AUDIT_READ_ONLY = '+readOnly+';'),context);
  vm.runInContext("globalThis.auditCommands=[{_poatCmd:true,type:'START'},{_poatCmd:true,type:'PLACE_TRADE',asset:'EURUSD',dir:'BUY',amount:10}];",context);
+ if(!readOnly)vm.runInContext("auditCommands=[{_poatCmd:true,type:'PLACE_TRADE'},{_poatCmd:true,type:'START'},{_poatCmd:true,type:'STOP'},{_poatCmd:true,type:'PLACE_TRADE'}];",context);
  // Use the context's window identity, as actual same-window MessageEvents do.
  context.callbacks=messages;
  vm.runInContext('for(const data of auditCommands)for(const cb of callbacks)cb({source:window,data});',context);
- assert.equal(posted.filter(m=>m.type==='TRADE_ERROR'&&/disabled/.test(m.reason)).length,2);
+ assert.equal(posted.filter(m=>m.type==='TRADE_ERROR'&&(readOnly?/disabled/:/not started/).test(m.reason)).length,2);
+ if(!readOnly)assert.ok(posted.some(m=>m.type==='BRIDGE_READY'));
  const manual='42["openOrder",{"asset":"EURUSD","amount":5}]';
  const ws=vm.runInContext('new WebSocket("wss://example.invalid")',context);ws.send(manual);
  assert.deepEqual(frames,[manual]);

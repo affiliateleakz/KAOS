@@ -2,7 +2,7 @@
 /* KAOS v19.8 — no automatic sample downloads/popups.
    Local AI training is in-memory; explicit user export/import is the only AI persistence path. */
 const KAOS_NO_AUTO_SAMPLE_DOWNLOADS = true;
-const KAOS_AUDIT_READ_ONLY = true;
+const KAOS_AUDIT_READ_ONLY = false;
 function KAOSV198IsAutoSampleDownload(opts) {
   const s = String(opts?.reason ?? opts?.source ?? opts?.kind ?? "").toLowerCase();
   return s.includes("sample") || s.includes("training") || s.includes("dataset") || s.includes("auto");
@@ -920,8 +920,8 @@ function stopBot() {
 function setRunningUI(running) {
   const btn = $('start-btn');
   btn.className   = 'kaos-start-btn ' + (running ? 'stop-state' : 'start-state');
-  btn.textContent = running ? '■ STOP' : 'CHART AUDIT · TRADING DISABLED';
-  if (!running) btn.title = 'Chart monitoring is available; order execution awaits separate approval';
+  btn.textContent = running ? '■ STOP' : (KAOS_AUDIT_READ_ONLY ? 'CHART AUDIT · TRADING DISABLED' : '▶ START KAOS');
+  btn.title = running ? 'Stop the bot' : (KAOS_AUDIT_READ_ONLY ? 'Trading disabled in this build' : 'Start trading on the connected broker account');
   $('edit-hint').style.display = running ? 'block' : 'none';
 
   // Lock all inputs while running

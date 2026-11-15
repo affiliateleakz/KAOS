@@ -3,7 +3,7 @@ let kaosExpiryStorageQueue = Promise.resolve();
 // KAOS cloud clients are loaded alongside the existing bot worker (broker execution untouched).
 importScripts('kaos-sync-client.js', 'kaos-learning-client.js', 'kaos-cloud.js');
 
-const KAOS_AUDIT_READ_ONLY = true;
+const KAOS_AUDIT_READ_ONLY = false;
 let botState = { running: false, tabId: null, config: null };
 
 // ── Automatic XGBoost trainer bridge ─────────────────────────────

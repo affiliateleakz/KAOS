@@ -227,8 +227,8 @@ console.info('[KAOS BUILD] V24.1.287-B21 · BB WINNER PRO (15s BB20/2) + ACTIVE 
 //// ═══════════════════════════════════════════════════════════════
 (function () {
   'use strict';
-  const KAOS_AUDIT_READ_ONLY = true;
-  console.info('[KAOS BUILD] 1.7.16 · read-only chart audit · order execution disabled');
+  const KAOS_AUDIT_READ_ONLY = false;
+  console.info('[KAOS BUILD] 1.7.17 · manual Start/Stop trading enabled');
   if (window.__poatContent137) return;
   window.__poatContent137 = true;
 

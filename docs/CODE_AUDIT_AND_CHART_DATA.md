@@ -1,5 +1,14 @@
 # Code audit and chart-data repair
 
+**Subsequent extension release 1.7.17:** the owner explicitly requested enabling
+extension trading after this audit. The four extension read-only switches are now
+off and the manual Start/Stop interface is restored. This does not resolve the
+open findings below, validate strategy profitability, or enable website/backend
+trading or payments. The read-only statements in this report describe 1.7.16.
+Regression fixtures verify authorized Start, unauthorized denial, stopped-order
+rejection and absence of automatic Start during login/chart navigation. No real
+broker orders were submitted by these tests.
+
 Scope: development branch `chatgpt/deepscan-critical-repairs-20261018`, starting at
 `7f053d4a1eeb53b6a3cb9833f2e7e1a24d0de0ae`, for issue #55 / draft PR #54.
 This is a repository-wide automated sweep plus focused review of authentication,
