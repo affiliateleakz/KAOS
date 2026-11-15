@@ -14,7 +14,10 @@ def setup(tmp_path):
     repo.mkdir(parents=True)
     for name in ('scripts/cpanel_prepare.sh', 'scripts/build_cpanel_packages.py',
                  'deploy/cpanel/passenger_wsgi.py', 'deploy/cpanel/frontend.htaccess',
-                 'services/collectors/gdelt_news.py', 'services/collectors/collector_common.py'):
+                 'services/collectors/gdelt_news.py', 'services/collectors/collector_common.py',
+                 'services/collectors/bluesky_social.py', 'services/collectors/bluesky_search.py',
+                 'services/collectors/sec_edgar_filings.py', 'services/collectors/sec_insider_transactions.py',
+                 'services/collectors/ethereum_whales.py'):
         dest = repo / name
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / name, dest)

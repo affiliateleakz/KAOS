@@ -26,7 +26,7 @@ export function createBubbles(items, {width=1000,height=620,valueKey='market_cap
    if(score>bestScore){bestScore=score;best={x,y};}
    if(score>=0)break;
   }
-  node.x=best.x;node.y=best.y;node.vx=(rand()-.5)*0.7;node.vy=(rand()-.5)*0.7;placed.push(node);
+  node.x=best.x;node.y=best.y;node.vx=(rand()-.5)*0.7;node.vy=(rand()-.5)*0.7;node.phase=rand()*Math.PI*2;placed.push(node);
  }
  for(let i=0;i<45;i++)stepBubbles(nodes,width,height,0,null);
  return nodes;
@@ -54,6 +54,11 @@ export function stepBubbles(nodes,width,height,delta=1,drag=null){
   const left=n.r+2,right=width-n.r-2,top=n.r+2,bottom=height-n.r-2;
   if(n.x<left){n.x=left;n.vx=Math.abs(n.vx);}if(n.x>right){n.x=right;n.vx=-Math.abs(n.vx);}
   if(n.y<top){n.y=top;n.vy=Math.abs(n.vy);}if(n.y>bottom){n.y=bottom;n.vy=-Math.abs(n.vy);}
+  // Gentle energy keeps the field drifting after collisions dissipate momentum.
+  if(dt>0&&drag?.id!==n.id){
+   n.phase=(n.phase||0)+.009*dt;n.vx+=Math.cos(n.phase)*.003*dt;n.vy+=Math.sin(n.phase)*.003*dt;
+   if(Math.hypot(n.vx,n.vy)<.14){n.vx=Math.cos(n.phase)*.18;n.vy=Math.sin(n.phase)*.18;}
+  }
   n.vx=clamp(n.vx,-.8,.8);n.vy=clamp(n.vy,-.8,.8);
  }
  return nodes;

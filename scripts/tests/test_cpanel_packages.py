@@ -34,7 +34,7 @@ def test_release_layout_and_secret_exclusions(tmp_path, monkeypatch):
         archive.extractall(extracted)
         subprocess.run([sys.executable, '-I', '-c',
                         'import sys; sys.path.insert(0, sys.argv[1]); '
-                        'import gdelt_news; assert gdelt_news.SYMBOL_RE.fullmatch("AAPL")',
+                        'import gdelt_news, bluesky_search, sec_insider_transactions, ethereum_whales; assert gdelt_news.SYMBOL_RE.fullmatch("AAPL")',
                         str(extracted / 'apps/api/_news_collectors')], check=True)
     with ZipFile(packager.DIST / 'kaos-cpanel-website.zip') as archive:
         assert set(archive.namelist()) == {'index.html', 'privacy.html', '.htaccess'}

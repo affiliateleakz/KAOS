@@ -69,6 +69,9 @@ def main():
         (API, "apps/api"),
         (COLLECTORS / "gdelt_news.py", "apps/api/_news_collectors/gdelt_news.py"),
         (COLLECTORS / "collector_common.py", "apps/api/_news_collectors/collector_common.py"),
+        *[(COLLECTORS / name, "apps/api/_news_collectors/" + name) for name in (
+            "bluesky_social.py", "bluesky_search.py", "sec_edgar_filings.py",
+            "sec_insider_transactions.py", "ethereum_whales.py")],
         (CORE, "packages/kaos-core"),
     ])
 

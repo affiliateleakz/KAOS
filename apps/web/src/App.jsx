@@ -6,6 +6,7 @@ import AuthCallback from "./components/AuthCallback";
 import {MembershipProvider, FeatureGate} from "./components/MembershipAccess";
 
 import Landing from "./pages/Landing";
+import RadarSources from "./pages/admin/RadarSources";
 import Privacy from "./pages/Privacy";
 import { Login, Register, ForgotPassword, ResetPassword } from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
@@ -96,6 +97,7 @@ function AppRouter() {
         <Route path="trading-ops" element={<TradingOps />} />
         <Route path="kaos-ai" element={<AICenter />} />
         <Route path="affiliates" element={<Affiliates />} />
+        <Route path="radar" element={<Protected role="super_admin"><RadarSources /></Protected>} />
         <Route path="commerce" element={<Protected role="super_admin"><CommerceSetup /></Protected>} />
         <Route path="connectors" element={<Connectors />} />
         <Route path="users" element={<AP.Users />} />

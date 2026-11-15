@@ -2,6 +2,13 @@ import {describe,it,expect} from 'vitest';
 import {createBubbles,stepBubbles} from './bubblePhysics';
 const rows=Array.from({length:100},(_,i)=>({symbol:'C'+i,market_cap:i===0?1e12:(100-i)*1e7,change_24h:(i%2?-1:1)*(i+1)/10}));
 describe('interactive bubble field',()=>{
+ it('restarts drifting from rest instead of settling permanently',()=>{
+  const nodes=[{id:'resting',x:100,y:100,r:15,vx:0,vy:0}];
+  for(let i=0;i<1800;i++)stepBubbles(nodes,500,360,1);
+  expect(Math.hypot(nodes[0].vx,nodes[0].vy)).toBeGreaterThan(.1);
+  const x=nodes[0].x,y=nodes[0].y;for(let i=0;i<30;i++)stepBubbles(nodes,500,360,1);
+  expect(Math.hypot(nodes[0].x-x,nodes[0].y-y)).toBeGreaterThan(1);
+ });
  it('keeps the full 100-coin universe bounded at mobile and desktop sizes',()=>{
   for(const [width,height] of [[300,360],[1000,620]]){
    const nodes=createBubbles(rows,{width,height});

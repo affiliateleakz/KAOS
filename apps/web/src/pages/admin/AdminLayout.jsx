@@ -13,6 +13,7 @@ const NAV = [
   ["kaos-ai", "KAOS AI", Activity],
   ["affiliates", "Affiliates", BadgeCheck],
   ["commerce", "Payments & Payouts", CreditCard],
+  ["radar", "Radar Sources & AI", Activity],
   ["connectors", "Connectors", Plug],
   ["users", "Users", Users],
   ["subscriptions", "Subscriptions", CreditCard],
@@ -46,7 +47,7 @@ export default function AdminLayout() {
         </div>
       </div>
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-3">
-        {NAV.filter(([path])=>path!=="commerce" || user?.role==="super_admin").map(([path, label, Icon]) => (
+        {NAV.filter(([path])=>!["commerce","radar"].includes(path) || user?.role==="super_admin").map(([path, label, Icon]) => (
           <NavLink key={path} to={`/admin/${path}`} end={path === ""} onClick={onNavigate} data-testid={`${onNavigate ? "mobile-" : ""}admin-nav-${path || "dashboard"}`}
             className={({ isActive }) => `flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${isActive ? "bg-red-500/10 text-red-300" : "text-slate-400 hover:bg-[#111111] hover:text-white"}`}>
             <Icon className="h-4 w-4" />{label}

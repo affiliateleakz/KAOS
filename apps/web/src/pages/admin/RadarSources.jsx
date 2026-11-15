@@ -1,0 +1,20 @@
+import React,{useEffect,useState} from 'react';
+import {Link} from 'react-router-dom';
+import {api,errMsg} from '../../lib/api';
+export default function RadarSources(){
+ const [data,setData]=useState(null),[values,setValues]=useState({}),[enabled,setEnabled]=useState({}),[models,setModels]=useState({}),[notice,setNotice]=useState(''),[busy,setBusy]=useState(null);
+ const load=async()=>{try{const r=await api.get('/api/admin/radar/providers');setData(r.data);}catch(e){setNotice(errMsg(e));}};
+ useEffect(()=>{load();},[]);
+ const initialize=async()=>{setBusy('vault');try{await api.post('/api/admin/radar/vault/initialize');await load();setNotice('Private server vault is ready. Existing encryption keys were preserved.');}catch(e){setNotice(errMsg(e));}finally{setBusy(null);}};
+ const save=async source=>{setBusy(source.id);try{await api.put('/api/admin/radar/providers/'+source.id,{enabled:enabled[source.id]??source.enabled,model:models[source.id]||source.model||'gpt-4.1-mini',credentials:values[source.id]||{}});setValues(old=>({...old,[source.id]:{}}));await load();setNotice(source.name+' settings saved. Run a Radar scan to verify actual provider access.');}catch(e){setNotice(errMsg(e));}finally{setBusy(null);}};
+ return <section className="space-y-5" data-testid="radar-source-settings"><header><h1 className="font-heading text-2xl text-[#e8c46f]">Radar Sources & AI</h1><p className="mt-2 max-w-4xl text-sm leading-7 text-slate-400">Connect Reddit and X first, then Bluesky, an authorized Facebook Page, Ethereum RPC, insider filings and Congressional data. Keys stay encrypted on the server and are never returned. Provider API access, quotas and any subscription remain with your provider account.</p></header>
+  <div className="flex flex-wrap items-center gap-3"><button onClick={initialize} disabled={busy!==null} className="rounded border border-[#8b6b32] px-4 py-2 text-sm text-[#e8c46f]">{data?.vaultReady?'Verify private vault':'Initialize private vault'}</button><Link to="/dashboard/opportunities" className="text-sm text-[#e8c46f] underline">Open Opportunity Radar</Link></div>
+  {notice&&<p role="status" className="rounded border border-[#61502e] p-3 text-sm text-amber-200">{notice}</p>}
+  <div className="grid gap-4 lg:grid-cols-2">{data?.providers.map(source=><article key={source.id} className="card-surface space-y-4 p-5"><header><h2 className="font-heading text-lg text-[#e8c46f]">{source.name}</h2><p className="mt-2 text-xs leading-6 text-slate-400">{source.description}</p><p className="mt-2 text-xs text-amber-200">{source.configured?'Configured · not yet a verified collection result':'Setup required'}</p></header>
+   <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={enabled[source.id]??source.enabled} onChange={e=>setEnabled(old=>({...old,[source.id]:e.target.checked}))}/>Enable {source.name}</label>
+   {source.fields.map(field=><label key={field.name} className="block text-xs text-slate-300">{field.label}<input type={field.secret?"password":"text"} autoComplete={field.secret?"new-password":"off"} disabled={busy!==null} maxLength={8192} aria-label={source.name+' '+field.label} value={values[source.id]?.[field.name]||''} onChange={e=>setValues(old=>({...old,[source.id]:{...old[source.id],[field.name]:e.target.value}}))} placeholder={field.configured?'Configured · blank keeps existing value':'Enter value'} className="mt-2 block w-full rounded border border-[#61502e] bg-[#0a0d0b] p-3 text-sm"/></label>)}
+   {source.id==='openai'&&<label className="block text-xs text-slate-300">AI model<input aria-label="Radar AI model" value={models[source.id]??source.model} onChange={e=>setModels(old=>({...old,[source.id]:e.target.value}))} className="mt-2 block w-full rounded border border-[#61502e] p-3 text-sm"/></label>}
+   <button onClick={()=>save(source)} disabled={busy!==null} className="rounded border border-[#8b6b32] px-4 py-2 text-sm text-[#e8c46f] disabled:opacity-50">Save {source.name}</button>
+  </article>)}</div>
+ </section>;
+}

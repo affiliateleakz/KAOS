@@ -73,7 +73,7 @@ def observe_accounts(feed_map, symbols, now=None):
             uri = post.get('uri')
             href = _url(author.get('handle', handle), uri)
             if not isinstance(text, str) or not href: continue
-            at = post.get('indexedAt') or rec.get('createdAt')
+            at = rec.get('createdAt') or post.get('indexedAt')
             try: published = utc(at)
             except (ValueError, TypeError, AttributeError): continue
             if not timedelta(seconds=0) <= now - published <= timedelta(hours=1):

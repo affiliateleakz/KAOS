@@ -12,7 +12,7 @@ SOURCE_AGE_MINUTES = {
 
 def provider(event_id):
     value = str(event_id or '').split(':', 1)[0].lower()
-    return value if value in {'alpaca', 'tradier', 'binance-spot', 'dexscreener', 'gdelt', 'sec', 'sec-form4-txn', 'eth-mainnet', 'sec13f', 'bsky-social', 'bsky-search', 'option-volume-rise'} else 'other'
+    return value if value in {'alpaca', 'tradier', 'binance-spot', 'dexscreener', 'gdelt', 'sec', 'sec-form4-txn', 'eth-mainnet', 'sec13f', 'bsky-social', 'bsky-search', 'option-volume-rise', 'reddit', 'x', 'bluesky', 'facebook', 'news', 'market', 'sec', 'ethereum', 'government', 'yahoo-news'} else 'other'
 
 
 def summarize_health(records, now=None, max_records=5000):

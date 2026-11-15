@@ -51,6 +51,7 @@ const BASE=process.env.KAOS_WEB_PREVIEW_URL;
  assert.equal(marketCalls,1);assert.equal(pairCalls,1,'UI controls must not refetch provider data');
  await page.reload();await page.waitForFunction(()=>document.querySelectorAll('[data-bubble-id]').length===36);
  await page.getByRole('button',{name:/Watchlist only/}).click();assert.equal(await nodes.count(),1,'Watchlist should survive reload');
+ await map.scrollIntoViewIfNeeded();const single=await nodes.first().getAttribute('transform');await page.waitForTimeout(300);assert.notEqual(await nodes.first().getAttribute('transform'),single,'A single filtered bubble should keep drifting');
  await page.getByRole('button',{name:/Show all coins/}).click();
  await page.getByLabel('Coin range').selectOption('20');assert.equal(await nodes.count(),20);
  await page.emulateMedia({reducedMotion:'reduce'});await page.waitForFunction(()=>document.querySelector('[aria-label="Animate bubbles"]').getAttribute('aria-pressed')==='false');assert.equal(await map.getByRole('button',{name:'Animate bubbles'}).getAttribute('aria-pressed'),'false');

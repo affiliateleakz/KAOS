@@ -39,7 +39,7 @@ def summarize_search(symbol, posts, *, now=None):
         if not URI.fullmatch(uri): continue
         body = record.get('text')
         if not isinstance(body, str) or symbol not in {t.upper() for t in CASHTAG.findall(body)}: continue
-        try: ts = utc(post.get('indexedAt') or record.get('createdAt'))
+        try: ts = utc(record.get('createdAt') or post.get('indexedAt'))
         except (ValueError, TypeError, AttributeError): continue
         if not timedelta(0) <= now-ts <= timedelta(hours=2): continue
         author_id = author.get('did') or author.get('handle')

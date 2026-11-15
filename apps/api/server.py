@@ -19,6 +19,8 @@ import seed
 import routes_coinbase
 import routes_finbert
 import routes_opportunity
+import routes_radar
+import routes_radar_admin
 import routes_disclosures
 import routes_crypto_scanner
 import routes_commerce_admin
@@ -80,6 +82,8 @@ for mod in (routes_auth, routes_strategies, routes_community, routes_billing,
 app.include_router(routes_coinbase.router)
 app.include_router(routes_finbert.router)
 app.include_router(routes_opportunity.router)
+app.include_router(routes_radar.router)
+app.include_router(routes_radar_admin.router)
 app.include_router(routes_disclosures.router)
 app.include_router(routes_crypto_scanner.router)
 app.include_router(routes_stock_heatmap.router)

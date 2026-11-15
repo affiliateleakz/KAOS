@@ -32,11 +32,11 @@ export default function BubbleMap({items=[],valueKey="market_cap",changeKey="cha
   let frame=null,last=0,onScreen=true,disposed=false;
   const stop=()=>{if(frame!==null)cancelAnimationFrame(frame);frame=null;last=0;};
   const tick=time=>{
-   frame=null;if(disposed||document.hidden||!onScreen||!motion||nodes.length<2)return;
+   frame=null;if(disposed||document.hidden||!onScreen||!motion||nodes.length<1)return;
    if(!last||time-last>=32){stepBubbles(nodes,dimensions.width,dimensions.height,last?(time-last)/16.67:1,drag.current);paint();last=time;}
    frame=requestAnimationFrame(tick);
   };
-  const resume=()=>{if(disposed)return;stop();if(motion&&!document.hidden&&onScreen&&nodes.length>1)frame=requestAnimationFrame(tick);};
+  const resume=()=>{if(disposed)return;stop();if(motion&&!document.hidden&&onScreen&&nodes.length>0)frame=requestAnimationFrame(tick);};
   document.addEventListener('visibilitychange',resume);
   const observer=new IntersectionObserver(entries=>{onScreen=entries[0]?.isIntersecting!==false;resume();});
   if(host.current)observer.observe(host.current);resume();

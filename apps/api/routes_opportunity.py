@@ -157,9 +157,11 @@ async def _yahoo_headlines(ticker,ticker_time):
     return out
 
 @router.get('/opportunities')
-async def opportunities(asset_class: str | None=None,limit:int=Query(30,ge=1,le=100),user=Depends(member)):
+async def opportunities(asset_class: str | None=None,limit:int=Query(30,ge=1,le=100),user=Depends(member),source_filter: str | None=None):
     if asset_class and asset_class not in SUPPORTED: raise HTTPException(422,'Unsupported asset class')
+    if source_filter and source_filter not in SOURCES: raise HTTPException(422,'Unsupported evidence source')
     query={'asset_class':asset_class} if asset_class else {}
+    if source_filter: query['source']=source_filter
     # Only bounded recent observations, not the entire historical collection.
     from datetime import timedelta
     cutoff=(datetime.now(timezone.utc)-timedelta(days=7)).isoformat()
