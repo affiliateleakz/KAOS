@@ -208,3 +208,16 @@ def test_headlines_use_cache_without_network(monkeypatch):
     assert out["cached"] is True
     assert out["count"] == 1
     assert out["headlines"][0]["title"] == "Cached headline"
+
+
+def test_bubble_periods_preserve_zero_and_do_not_invent_missing_returns():
+    row = crypto._coin_row({"symbol": "btc", "current_price": 1,
+                            "price_change_percentage_24h_in_currency": 0,
+                            "price_change_percentage_24h": 5,
+                            "price_change_percentage_30d_in_currency": -12.5,
+                            "price_change_percentage_1y_in_currency": 25.0})
+    assert row["change_24h"] == 0
+    assert row["change_30d"] == -12.5
+    assert row["change_1y"] == 25.0
+    assert row["change_1h"] is None
+    assert row["change_7d"] is None

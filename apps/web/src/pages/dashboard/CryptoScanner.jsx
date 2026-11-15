@@ -1,6 +1,10 @@
-import React,{useEffect,useState} from "react";
+import React,{useEffect,useMemo,useState} from "react";
 import {api,errMsg} from "../../lib/api";
 import BubbleMap from "../../components/BubbleMap";
+import {bubbleId,finite} from "../../lib/bubblePhysics";
+
+const TIMEFRAMES=[["change_1h","1h"],["change_24h","24h"],["change_7d","7d"],["change_30d","30d"],["change_1y","1y"]];
+const WATCHLIST_KEY="kaos.crypto.watchlist.v1";
 
 const money=n=>n==null?"—":new Intl.NumberFormat("en-US",{notation:"compact",maximumFractionDigits:2}).format(n);
 const percent=n=>n==null?"—":(n>=0?"+":"")+n.toFixed(2)+"%";
@@ -15,9 +19,20 @@ export default function CryptoScanner(){
  // Market-wide bubble map is keyless (CoinGecko, then Coinbase) and served from a short cache.
  const [market,setMarket]=useState(null),[marketError,setMarketError]=useState(""),[marketLoading,setMarketLoading]=useState(false);
  const [timeframe,setTimeframe]=useState("change_24h");
+ const [bubbleSearch,setBubbleSearch]=useState(""),[sizeBy,setSizeBy]=useState("performance"),[coinCount,setCoinCount]=useState(100),[watchOnly,setWatchOnly]=useState(false);
+ const [favorites,setFavorites]=useState(()=>{try{const value=JSON.parse(localStorage.getItem(WATCHLIST_KEY)||"[]");return Array.isArray(value)?value.filter(v=>typeof v==='string').slice(0,100):[];}catch{return [];}});
+ const [watchNotice,setWatchNotice]=useState("");
+ const toggleFavorite=id=>{const next=favorites.includes(id)?favorites.filter(value=>value!==id):[...favorites,id].slice(-100);try{localStorage.setItem(WATCHLIST_KEY,JSON.stringify(next));setWatchNotice("");}catch{setWatchNotice("Watchlist works for this session; browser storage is unavailable.");}setFavorites(next);};
+ const marketCoins=market?.coins||[];
+ const watchKey=watchOnly?favorites.join("|"):"";
+ const bubbleCoins=useMemo(()=>marketCoins.slice(0,coinCount).filter(coin=>(!watchOnly||favorites.includes(bubbleId(coin)))&&(!bubbleSearch||`${coin.symbol} ${coin.name}`.toLowerCase().includes(bubbleSearch.trim().toLowerCase()))),[market?.coins,coinCount,watchOnly,watchKey,bubbleSearch]);
+ const periodLabel=TIMEFRAMES.find(([key])=>key===timeframe)?.[1]||'24h';
+ const bubbleValueKey=sizeBy==='volume_24h'?'volume_24h':'market_cap';
+ const bubbleMetric=sizeBy==='volume_24h'?'24h volume':'Market cap';
+
  const loadMarket=async()=>{
   setMarketLoading(true);setMarketError("");
-  try{const r=await api.get("/api/v1/crypto/market?limit=60");setMarket(r.data)}
+  try{const r=await api.get("/api/v1/crypto/market?limit=100");setMarket(r.data)}
   catch(e){setMarketError(errMsg(e)||"Crypto market data unavailable")}
   finally{setMarketLoading(false)}
  };
@@ -36,23 +51,35 @@ export default function CryptoScanner(){
  const ordered=[...pairs].sort((a,b)=>(b[sort]??-Infinity)-(a[sort]??-Infinity));
  return <div className="space-y-5" data-testid="kaos-crypto-scanner">
   <div><h1 className="font-heading text-2xl font-bold">KAOS Crypto Scanner & Heat Map</h1>
-   <p className="text-sm text-slate-400">Market-wide bubbles sized by market cap and coloured by gain or loss, plus DEX pair search. No API key needed for either view.</p></div>
+   <p className="text-sm text-slate-400">Explore floating, draggable market bubbles. Compare performance, market cap or volume, open coin details and save a browser watchlist.</p></div>
   <div className="rounded border border-amber-600/40 p-3 text-xs text-amber-200">Discovery only. A token can have fake volume, concentrated liquidity, malicious contracts or manipulated prices. Heat map colours reflect reported price change, not an AI buy or sell recommendation.</div>
   <section className="card-surface p-4" data-testid="crypto-bubble-heatmap">
    <div className="flex flex-wrap items-center justify-between gap-3">
     <div><h2 className="font-heading text-lg font-semibold">Crypto market bubbles</h2>
-     <p className="text-xs text-slate-400">{market?`${market.count} coins · ${market.provider} · bubble size = ${market.weighting.replace("_"," ")}`:"Loading the market-wide bubble map…"}</p></div>
+     <p className="text-xs text-slate-400">{market?`${market.count} coins · ${market.provider} · bubble size = ${sizeBy==="performance"?"absolute "+periodLabel+" change":bubbleMetric.toLowerCase()}`:"Loading the market-wide bubble map…"}</p></div>
     <div className="flex flex-wrap items-center gap-1" role="group" aria-label="Bubble timeframe">
-     {[["change_1h","1h"],["change_24h","24h"],["change_7d","7d"]].map(([key,label])=>
-      <button key={key} onClick={()=>setTimeframe(key)} aria-pressed={timeframe===key}
-       className={`rounded border px-3 py-1.5 text-xs ${timeframe===key?"border-[#D4AF37] bg-[#D4AF37]/10 text-[#D4AF37]":"border-[#3a3a3a] text-slate-300"}`}>{label}</button>)}
+     {TIMEFRAMES.map(([key,label])=>
+      <button key={key} onClick={()=>setTimeframe(key)} aria-pressed={timeframe===key} disabled={!marketCoins.some(coin=>finite(coin[key]))} title={marketCoins.some(coin=>finite(coin[key]))?label:"This period is unavailable from the current feed"}
+       className={`rounded border px-3 py-1.5 text-xs disabled:opacity-35 ${timeframe===key?"border-[#D4AF37] bg-[#D4AF37]/10 text-[#D4AF37]":"border-[#3a3a3a] text-slate-300"}`}>{label}</button>)}
      <button onClick={loadMarket} disabled={marketLoading} className="rounded border border-[#3a3a3a] px-3 py-1.5 text-xs text-slate-300 disabled:opacity-50">{marketLoading?"Refreshing…":"Refresh"}</button>
     </div>
    </div>
    {marketError&&<p role="alert" className="mt-2 text-sm text-red-400">{marketError}</p>}
    {market&&market.failures?.length?<p className="mt-2 text-xs text-amber-300">Primary feed unavailable ({market.failures.join(", ")}); using a secondary free feed.</p>:null}
-   {market&&<div className="mt-3"><BubbleMap items={market.coins} valueKey={market.weighting==="market_cap"?"market_cap":"volume_24h"} changeKey={timeframe}
-     label={market.weighting==="market_cap"?"Market cap":"24h volume"} emptyText="The market snapshot came back empty."/></div>}
+   <div className="kaos-bubble-search">
+    <label>Search coins<input type="search" value={bubbleSearch} onChange={event=>setBubbleSearch(event.target.value)} placeholder="Symbol or coin name"/></label>
+    <label>Bubble size<select aria-label="Bubble size" value={sizeBy} onChange={event=>setSizeBy(event.target.value)}><option value="performance">Performance</option><option value="market_cap">Market cap</option><option value="volume_24h">24h volume</option></select></label>
+    <label>Coin range<select aria-label="Coin range" value={coinCount} onChange={event=>setCoinCount(Number(event.target.value))}>{[20,40,60,100].map(count=><option key={count} value={count}>Top {count}</option>)}</select></label>
+    <button type="button" aria-pressed={watchOnly} onClick={()=>setWatchOnly(value=>!value)}>{watchOnly?'Show all coins':'Watchlist only'} ({favorites.length})</button>
+   </div>
+   {watchNotice&&<p role="status" className="mt-2 text-xs text-amber-300">{watchNotice}</p>}
+   {market?.as_of&&<p className="mt-2 text-xs text-slate-500">Snapshot: {new Date(market.as_of).toLocaleString()} · {market.cached?"Cached market data":"Latest fetched snapshot"}</p>}
+   {market&&sizeBy!=="performance"&&!marketCoins.some(coin=>finite(coin[bubbleValueKey])&&coin[bubbleValueKey]>0)&&<p className="mt-2 text-xs text-amber-300">This feed does not provide {bubbleMetric.toLowerCase()}. Choose performance or another available size metric.</p>}
+   {market?.stale&&<p role="status" className="mt-2 text-xs text-amber-300">Showing a cached snapshot because the provider is unavailable. Refresh to check again.</p>}
+   {market&&!marketCoins.some(coin=>finite(coin[timeframe]))&&<p className="mt-2 text-xs text-amber-300">The current feed does not provide {periodLabel} changes. Missing values are shown in grey; choose an available period.</p>}
+   {market&&<div className="mt-3"><BubbleMap items={bubbleCoins} valueKey={bubbleValueKey} changeKey={timeframe}
+     sizing={sizeBy==='performance'?'performance':'value'} periodLabel={periodLabel} favorites={favorites} onToggleFavorite={toggleFavorite}
+     label={bubbleMetric} emptyText={watchOnly?"No watchlist coins match this range and search. Select a coin and add it to your watchlist.":"No coins match this range and search."}/></div>}
    {market&&<p className="mt-2 text-[11px] text-slate-500">Free data, no key: CoinGecko public market endpoint, falling back to Coinbase Exchange public stats. Aggregated third-party prices can be delayed or wrong; verify on an exchange before acting.</p>}
   </section>
   <h2 className="pt-2 font-heading text-lg font-semibold">Token & DEX pair search</h2>

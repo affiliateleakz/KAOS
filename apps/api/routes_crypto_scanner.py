@@ -4,6 +4,7 @@ import os
 import re
 import time
 from math import isfinite
+from datetime import datetime, timezone
 from urllib.parse import quote
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -64,8 +65,10 @@ def _coin_row(raw):
             "market_cap":numeric(raw.get("market_cap")),
             "volume_24h":numeric(raw.get("total_volume")),
             "change_1h":numeric(raw.get("price_change_percentage_1h_in_currency")),
-            "change_24h":numeric(raw.get("price_change_percentage_24h_in_currency") or raw.get("price_change_percentage_24h")),
+            "change_24h":numeric(raw.get("price_change_percentage_24h_in_currency") if raw.get("price_change_percentage_24h_in_currency") is not None else raw.get("price_change_percentage_24h")),
             "change_7d":numeric(raw.get("price_change_percentage_7d_in_currency")),
+            "change_30d":numeric(raw.get("price_change_percentage_30d_in_currency")),
+            "change_1y":numeric(raw.get("price_change_percentage_1y_in_currency")),
             "image":raw.get("image") if isinstance(raw.get("image"),str) and raw["image"].startswith("https://") else None,
             "url":"https://www.coingecko.com/en/coins/"+quote(str(raw.get("id") or ""),safe=""),
             "source":"CoinGecko"}
@@ -73,7 +76,7 @@ def _coin_row(raw):
 
 async def _coingecko_market(limit):
     params={"vs_currency":"usd","order":"market_cap_desc","per_page":limit,"page":1,
-            "price_change_percentage":"1h,24h,7d","sparkline":"false"}
+            "price_change_percentage":"1h,24h,7d,30d,1y","sparkline":"false"}
     async with httpx.AsyncClient(timeout=15,follow_redirects=False) as client:
         response=await client.get(COINGECKO+"/coins/markets",params=params,
                                   headers={"Accept":"application/json","User-Agent":"KAOSTrading-Research/1.0"})
@@ -98,7 +101,7 @@ async def _coinbase_market(limit, semaphore):
         if last is None or open_ in (None,0): return None
         return {"symbol":symbol,"name":symbol,"price_usd":last,"market_cap":None,
                 "volume_24h":(volume*last) if volume is not None else None,
-                "change_1h":None,"change_7d":None,
+                "change_1h":None,"change_7d":None,"change_30d":None,"change_1y":None,
                 "change_24h":round(100*(last-open_)/open_,3),
                 "image":None,"url":f"https://www.coinbase.com/price/{symbol.lower()}","source":"Coinbase"}
     async with httpx.AsyncClient(timeout=15,follow_redirects=False,
@@ -134,7 +137,8 @@ async def crypto_market(limit:int=Query(60,ge=10,le=100),user=Depends(require_sc
     payload={"coins":rows[:limit],"count":min(len(rows),limit),"provider":provider,
              "weighting":"market_cap" if provider.startswith("CoinGecko") else "24h_volume",
              "failures":failures,"research_only":True,"trade_execution_enabled":False,
-             "warning":"Bubble size is a liquidity or market-cap measure, not a recommendation. Prices can be manipulated."}
+             "as_of":datetime.now(timezone.utc).isoformat(),
+             "warning":"Bubbles visualize reported market metrics and returns, not trading recommendations. Prices can be manipulated."}
     _MARKET_CACHE.update(at=now,payload=payload,provider=provider)
     return {**payload,"cached":False}
 
