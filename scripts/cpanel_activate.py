@@ -45,7 +45,7 @@ async def login_validation_only(request, call_next):
     commerce_setup = request.method in ("PUT", "POST") and bool(re.fullmatch(r"/api/admin/commerce/providers/(stripe|paypal|nowpayments)(/test)?", path))
     commerce_setup = commerce_setup or (request.method == "POST" and path == "/api/admin/commerce/vault/initialize")
     allowed_write = allowed_write or bool(device_revoke) or commerce_setup
-    pricing_read = path in ("/api/billing/plans", "/api/billing/availability") and request.method in ("GET", "HEAD", "OPTIONS")
+    pricing_read = path in ("/api/billing/plans", "/api/billing/availability", "/api/billing/memberships") and request.method in ("GET", "HEAD", "OPTIONS")
     if ((path.startswith("/api/billing") and not pricing_read) or
             (request.method not in ("GET", "HEAD", "OPTIONS") and not allowed_write)):
         return JSONResponse({"detail": "Login validation mode: this operation is disabled"}, status_code=503)

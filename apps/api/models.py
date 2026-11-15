@@ -8,6 +8,7 @@ class RegisterReq(BaseModel):
     name: str = Field(min_length=1)
     username: Optional[str] = None
     refCode: Optional[str] = None
+    planId: Optional[str] = Field(default=None, max_length=64)
 
 
 class LoginReq(BaseModel):

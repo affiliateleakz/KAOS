@@ -1,5 +1,34 @@
 # KAOS membership upgrades and affiliate launch
 
+## Membership-first registration
+
+`/register` and `/memberships` now show a public comparison before account
+creation. The catalog uses current server-configured plans/prices/features and
+the commission engine's tier rates. Cards explain chart/device counts, tool
+access, AI validation limits and affiliate levels; payout and checkout availability
+are stated explicitly. Free remains a clear no-card option.
+
+Choosing a card opens `/register/account?plan=...`, carrying referral and campaign
+parameters. Missing/invalid plan choices return to the comparison. The account
+form shows the selected membership and a Change membership link. Email and Google
+signup preserve the choice and referral for newly created accounts. Existing
+Google accounts are not downgraded or assigned a new referrer.
+
+The server validates current paid-plan IDs and stores `requested_membership_plan`
+separately from active subscription fields. Selecting a plan never grants paid
+access or charges a card. Free signup goes to the dashboard; paid preferences go
+to Subscription with the chosen card highlighted. Checkout still requires an
+explicit action and confirmed payment. If payment is unavailable or not completed,
+the account retains Free access and can upgrade later. This registration route
+does not force the old Pocket Option referral-verification onboarding sequence.
+
+The catalog endpoint is read-only and does not expose Stripe lookup keys or
+private configuration. The hosting wrapper permits that read while preserving
+its existing payment restrictions. Legacy API clients may omit a plan and get a
+Free account. Referral capture runs on both signup steps and deduplicates a
+code/campaign within the browser tab session; the existing attribution limits
+described below still apply.
+
 ## Admin provider setup
 
 Super admins now have **Admin → Payments & Payouts** at `/admin/commerce`.

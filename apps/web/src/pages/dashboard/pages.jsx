@@ -1,6 +1,6 @@
 import { deviceDate } from "../../lib/deviceDate";
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { api, errMsg } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { StatusBadge } from "../../components/Brand";
@@ -297,6 +297,8 @@ export function Following() {
 // ---------- Subscription ----------
 export function Subscription() {
   const { user } = useAuth();
+  const [search]=useSearchParams();
+  const selectedPlan=search.get('plan')||user?.requested_membership_plan;
   const [plans, setPlans] = useState([]);
   const [billing,setBilling]=useState(null),[planError,setPlanError]=useState('');
   useEffect(() => {
@@ -309,6 +311,7 @@ export function Subscription() {
   return (
     <div>
       <H>Subscription & Billing</H>
+      {selectedPlan&&selectedPlan!=='free'&&plans.some(p=>p.id===selectedPlan)&&<p className="mb-5 rounded border border-[#8a6b32] p-4 text-sm text-[#e8c46f]">Your selected membership: <strong>{plans.find(p=>p.id===selectedPlan).name}</strong>. This is a preference; paid access starts only after confirmed payment. You can choose another plan below.</p>}
       {planError&&<p role="alert" className="mb-4 text-amber-200">{planError}</p>}
       {billing&&!billing.checkoutEnabled&&<p role="status" className="mb-5 rounded border border-[#8a6b32] p-4 text-sm text-[#e8c46f]">Compare memberships below. Online checkout is not available yet; no payment will be taken here.</p>}
       <div className="card-surface mb-6 flex items-center justify-between p-5">
@@ -320,11 +323,11 @@ export function Subscription() {
       </div>
       <div className="grid gap-6 md:grid-cols-2">
         {plans.map((p) => (
-          <div key={p.id} className="card-surface p-6">
+          <div key={p.id} className={`card-surface p-6 ${selectedPlan===p.id?'ring-2 ring-[#d4af37]':''}`}>
             <h3 className="font-heading text-xl font-semibold">{p.name}</h3>
             <div className="mt-2 font-mono text-3xl font-bold text-[#D4AF37]">${(p.amount / 100).toFixed(0)}<span className="text-base text-slate-500">/{p.interval}</span></div>
             <ul className="mt-4 space-y-2 text-sm text-slate-300">{(p.features || []).map((f) => <li key={f}>• {f}</li>)}</ul>
-            <Button data-testid={`subscribe-${p.id}`} disabled={!billing?.checkoutEnabled} onClick={() => checkout(p.lookup_key)} className="mt-6 w-full bg-[#d4af37] text-black font-semibold">{billing?.checkoutEnabled?`Choose ${p.name}`:'Checkout not available yet'}</Button>
+            <Button data-testid={`subscribe-${p.id}`} disabled={!billing?.checkoutEnabled} onClick={() => checkout(p.lookup_key)} className="mt-6 w-full bg-[#d4af37] text-black font-semibold">{billing?.checkoutEnabled?(selectedPlan===p.id?`Continue with ${p.name}`:`Choose ${p.name}`):'Checkout not available yet'}</Button>
           </div>
         ))}
       </div>

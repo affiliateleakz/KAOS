@@ -9,6 +9,7 @@ import Landing from "./pages/Landing";
 import Privacy from "./pages/Privacy";
 import { Login, Register, ForgotPassword, ResetPassword } from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
+import Memberships from "./pages/Memberships";
 import CommunityDetail from "./pages/CommunityDetail";
 import SharePage from "./pages/SharePage";
 import Profile from "./pages/Profile";
@@ -52,7 +53,9 @@ function AppRouter() {
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/privacy/" element={<Privacy />} />
       <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      <Route path="/register" element={<Memberships />} />
+      <Route path="/memberships" element={<Memberships />} />
+      <Route path="/register/account" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/community/:id" element={<CommunityDetail />} />

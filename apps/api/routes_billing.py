@@ -6,6 +6,7 @@ from db import db, new_id, now, now_iso, clean
 from auth import get_current_user
 from services import get_setting, set_setting, audit_log
 from models import CheckoutReq
+from services_trading import FREE_ENTITLEMENTS
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +52,27 @@ async def get_plans():
 @router.get("/plans")
 async def list_plans():
     return await get_plans()
+
+
+@router.get('/memberships')
+async def membership_catalog():
+    from kaos.memberships import RATES
+    plans = [{'id': 'free', 'name': 'Free', 'amount': 0, 'currency': 'usd',
+              'interval': None, 'tier': 'free', 'entitlements': dict(FREE_ENTITLEMENTS)}]
+    allowed = ('botAccess', 'chartLimit', 'deviceLimit', 'community', 'scanners', 'aiInsights',
+               'cloudStrategies', 'premiumTools', 'modes')
+    for plan in await get_plans():
+        if plan.get('enabled', True) is not True or plan.get('id') == 'free': continue
+        tier = plan.get('tier', 'pro')
+        plans.append({'id': plan['id'], 'name': plan['name'], 'amount': plan['amount'],
+            'currency': plan.get('currency', 'usd'), 'interval': plan.get('interval', 'month'),
+            'tier': tier if tier in RATES else 'pro',
+            'entitlements': {key: value for key, value in (plan.get('entitlements') or {}).items() if key in allowed}})
+    affiliate = await get_setting('affiliate_program', {'enabled': True})
+    return {'plans': plans, 'affiliateRates': {tier: list(rates) for tier, rates in RATES.items()},
+            'affiliateEnrollmentEnabled': affiliate.get('enabled') is True, 'payoutsEnabled': False,
+            'aiExecutionValidated': await get_setting('ai_execution_validated', False) is True,
+            **await billing_availability()}
 
 
 @router.post("/checkout")

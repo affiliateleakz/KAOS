@@ -58,7 +58,7 @@ PUBLIC_ACCOUNT_FIELDS = frozenset({
     "id", "email", "name", "username", "role", "avatar", "bio",
     "email_verified", "auth_provider", "account_status", "onboarding_step",
     "affiliate_status", "affiliate_ref", "membership_status", "membership_plan",
-    "membership_expires_at", "is_demo", "created_at", "updated_at",
+    "membership_expires_at", "is_demo", "created_at", "updated_at", "requested_membership_plan",
 })
 
 def _user_public(user: dict) -> dict:
@@ -99,16 +99,28 @@ async def _new_user_doc(email, name, username=None, password=None, provider="pas
     }
 
 
+async def requested_plan(plan_id):
+    if plan_id is None or plan_id == 'free': return 'free'
+    if not isinstance(plan_id, str) or len(plan_id) > 64:
+        raise HTTPException(400, 'Choose a valid membership')
+    from routes_billing import get_plans
+    if not any(plan.get('id') == plan_id and plan.get('enabled', True) is True for plan in await get_plans()):
+        raise HTTPException(400, 'This membership is unavailable. Choose a current plan.')
+    return plan_id
+
+
 @router.post("/register")
 async def register(req: RegisterReq, response: Response):
     email = req.email.lower()
     if await db.users.find_one({"email": email}):
         raise HTTPException(status_code=400, detail="Email already registered")
+    selected_plan = await requested_plan(req.planId)
     doc = await _new_user_doc(email, req.name, req.username, req.password)
     # demo-mode email verification token returned in-app
     vtoken = gen_token()
     doc["verify_token"] = vtoken
     doc["referredByCode"] = (req.refCode or None)  # affiliate attribution (server-persisted)
+    doc['requested_membership_plan'] = selected_plan  # Preference only; no paid access before verified payment.
     await db.users.insert_one(dict(doc))
     at = create_access_token(doc["id"], email, 0)
     rt = create_refresh_token(doc["id"], 0)
@@ -235,7 +247,7 @@ async def reset_password(req: ResetReq):
 # ---- Direct Google Identity Services credential sign-in ----
 # This route is distinct from the legacy Emergent OAuth session integration.
 # Audience must come from the server configuration, never from the caller.
-async def _google_signin_identity(data: dict) -> dict:
+async def _google_signin_identity(data: dict, registration: dict = None) -> dict:
     email = str(data.get("email") or "").lower().strip()
     google_id = str(data.get("sub") or "").strip()
     if not email or not google_id or data.get("email_verified") not in (True, "true", "True"):
@@ -255,6 +267,9 @@ async def _google_signin_identity(data: dict) -> dict:
         doc = await _new_user_doc(email, data.get("name") or email, None, None,
                                   provider="google", google_id=google_id,
                                   avatar=data.get("picture"), verified=True)
+        if registration:
+            doc['requested_membership_plan'] = registration['planId']
+            doc['referredByCode'] = registration.get('refCode')
         await db.users.insert_one(dict(doc))
         user = doc
     return user
@@ -283,7 +298,14 @@ async def google_credential(request: Request, response: Response):
         raise HTTPException(status_code=401, detail="Invalid Google credential") from exc
     if claims.get("iss") not in ("accounts.google.com", "https://accounts.google.com"):
         raise HTTPException(status_code=401, detail="Invalid Google issuer")
-    user = await _google_signin_identity(claims)
+    registration = None
+    if body.get('planId') is not None:
+        plan_id = await requested_plan(body.get('planId'))
+        ref = body.get('refCode')
+        if ref is not None and (not isinstance(ref, str) or len(ref) > 128):
+            raise HTTPException(400, 'Invalid referral code')
+        registration = {'planId': plan_id, 'refCode': ref}
+    user = await _google_signin_identity(claims, registration) if registration else await _google_signin_identity(claims)
     tv = user.get("token_version", 0)
     set_auth_cookies(response, create_access_token(user["id"], user["email"], tv),
                      create_refresh_token(user["id"], tv))

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import {planPrice} from './Memberships';
+import {useReferralCapture} from '../lib/useReferralCapture';
 import { api, errMsg } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { Brand } from "../components/Brand";
@@ -36,7 +38,7 @@ function Shell({ title, subtitle, children }) {
   );
 }
 
-function GoogleButton() {
+function GoogleButton({planId,refCode}={}) {
   const nav = useNavigate();
   const { setUser } = useAuth();
   const [err, setErr] = useState("");
@@ -50,9 +52,9 @@ function GoogleButton() {
         callback: async ({ credential }) => {
           try {
             setErr("");
-            const { data } = await api.post("/api/auth/google/credential", { credential });
+            const { data } = await api.post("/api/auth/google/credential", { credential, ...(planId?{planId,refCode}: {}) });
             setUser(data);
-            nav(["moderator", "admin", "super_admin"].includes(data?.role) ? "/admin" : "/dashboard");
+            nav(planId ? (planId==='free'?'/dashboard':'/dashboard/subscription?plan='+encodeURIComponent(planId)) : ["moderator", "admin", "super_admin"].includes(data?.role) ? "/admin" : "/dashboard");
           } catch (e) { setErr(errMsg(e)); }
         }
       });
@@ -71,7 +73,7 @@ function GoogleButton() {
     script.addEventListener("error", onError);
     script.addEventListener("load", render);
     return () => { script?.removeEventListener("load", render); script?.removeEventListener("error", onError); };
-  }, [clientId, nav, setUser]);
+  }, [clientId, nav, setUser, planId, refCode]);
 
   return <div className="mt-3"><div id="kaos-google-button" data-testid="google-login-button" className="flex justify-center" />{err && <p className="mt-2 text-sm text-[#C62828]">{err}</p>}</div>;
 }
@@ -116,32 +118,32 @@ export function Register() {
   const nav = useNavigate();
   const { register } = useAuth();
   const [sp] = useSearchParams();
+  useReferralCapture(sp);
+  const planId=sp.get('plan');
+  const [catalog,setCatalog]=useState(null),[catalogError,setCatalogError]=useState('');
+  const selectionQuery=new URLSearchParams(sp);selectionQuery.delete('plan');
+  const selectionUrl='/register'+(selectionQuery.size?'?'+selectionQuery.toString():'');
+  const selected=catalog?.plans?.find(plan=>plan.id===planId);
+  async function loadMembership(){setCatalogError('');try{const r=await api.get('/api/billing/memberships');setCatalog(r.data);}catch{setCatalogError('Cannot load your selected membership. Please retry.');}}
+  useEffect(()=>{if(planId)loadMembership();},[planId]);
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [err, setErr] = useState(""); const [busy, setBusy] = useState(false);
-  useEffect(() => {
-    const r = sp.get("ref");
-    if (!r) return;
-    try { localStorage.setItem("kaos_ref", r); } catch {}
-    try {
-      const campaign = sp.get("utm_source") || "signup";
-      const key = "kaos-ref-click:" + r + ":" + campaign;
-      if (sessionStorage.getItem(key)) return;
-      sessionStorage.setItem(key, "1");
-      api.get("/api/aff/track", {params:{ref:r,campaign}}).catch(()=>{});
-    } catch {}
-  }, [sp]);
   const submit = async (e) => {
     e.preventDefault(); setErr(""); setBusy(true);
     try {
       let refCode; try { refCode = sp.get("ref") || localStorage.getItem("kaos_ref") || undefined; } catch (e3) { refCode = sp.get("ref") || undefined; }
-      const data = await register({ ...form, refCode });
+      const data = await register({ ...form, refCode, planId:selected.id });
       if (data.verificationToken) sessionStorage.setItem("verifyToken", data.verificationToken);
-      toast.success("Account created! Let's get you onboarded.");
-      nav("/onboarding");
+      toast.success(selected.id==='free'?'Your free account is ready.':'Account created. Review your selected membership to continue.');
+      nav(selected.id==='free'?'/dashboard':'/dashboard/subscription?plan='+encodeURIComponent(selected.id));
     } catch (e2) { setErr(errMsg(e2)); } finally { setBusy(false); }
   };
+  if(!planId || (catalog&&!selected))return <Navigate to={selectionUrl} replace/>;
+  if(!selected)return <Shell title="Your membership" subtitle="Confirming the current plan details."><p role={catalogError?'alert':'status'}>{catalogError||'Loading membership…'}</p>{catalogError&&<button onClick={loadMembership} className="mt-4 text-[#e8c46f] underline">Retry membership</button>}<Link to={selectionUrl} className="mt-4 block text-[#e8c46f]">Back to membership choices</Link></Shell>;
+  let referral=sp.get('ref');try{referral=referral||localStorage.getItem('kaos_ref')||undefined;}catch{}
   return (
-    <Shell title="Become a member" subtitle="Create your account to unlock the extension.">
+    <Shell title="Create your account" subtitle="Step 2 · Your membership choice is saved with your account.">
+      <section className="mb-6 rounded-lg border border-[#8a6b32] bg-[#d4af37]/5 p-4" data-testid="registration-plan-summary"><h2 className="font-semibold text-[#e8c46f]">{selected.name} · {planPrice(selected)}{selected.interval?' / '+selected.interval:''}</h2><p className="mt-2 text-xs text-[#c4b89f]">{selected.id==='free'?'No card required.':'No charge at signup. Paid features require a confirmed payment.'}</p><Link to={selectionUrl} className="mt-3 inline-block text-sm text-[#e8c46f] underline">Change membership</Link></section>
       <form onSubmit={submit} className="space-y-4">
         <div><Label className="label-mono">Full name</Label>
           <Input data-testid="register-name-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required className="kaos-auth-input mt-2" /></div>
@@ -153,7 +155,7 @@ export function Register() {
         {err && <p data-testid="register-error" className="text-sm text-[#C62828]">{err}</p>}
         <Button data-testid="register-submit-button" disabled={busy} className="kaos-auth-submit w-full font-semibold">{busy ? "Creating…" : "Create Account"}</Button>
       </form>
-      <GoogleButton />
+      <GoogleButton planId={selected.id} refCode={referral}/>
       <p className="mt-4 text-center text-sm text-slate-400">Already a member? <Link to="/login" className="text-[#D4AF37] hover:underline">Sign in</Link></p>
     </Shell>
   );

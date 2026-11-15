@@ -99,6 +99,9 @@ def test_validation_wrapper_blocks_orders_and_billing(monkeypatch, tmp_path):
     @app.get('/api/billing/plans')
     def plans():
         return []
+    @app.get('/api/billing/memberships')
+    def memberships():
+        return {'plans': []}
     @app.get('/api')
     def health():
         return {'ok': True}
@@ -134,6 +137,8 @@ def test_validation_wrapper_blocks_orders_and_billing(monkeypatch, tmp_path):
     assert client.post('/api/trading/execute').status_code == 503
     assert client.get('/api/billing/status').status_code == 503
     assert client.get('/api/billing/plans').status_code == 200
+    assert client.get('/api/billing/memberships').status_code == 200
+    assert client.post('/api/billing/memberships').status_code == 503
     assert client.post('/api/billing/plans').status_code == 503
 
 
