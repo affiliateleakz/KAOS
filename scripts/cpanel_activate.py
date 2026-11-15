@@ -34,7 +34,8 @@ async def login_validation_only(request, call_next):
     path = request.url.path
     auth = path.startswith(("/api/auth/", "/api/v1/auth/"))
     allowed_write = auth or path in (
-        "/api/v1/devices/register", "/api/v1/extension/google/access-token")
+        "/api/v1/devices/register", "/api/v1/extension/google/access-token",
+        "/api/affiliate/activate", "/api/affiliate/connect/onboarding")
     # These handlers still enforce the authenticated owner/admin authority.
     device_revoke = (
         request.method == "DELETE" and re.fullmatch(r"/api/v1/devices/[^/]+", path)
@@ -42,7 +43,8 @@ async def login_validation_only(request, call_next):
         request.method == "POST" and re.fullmatch(r"/api/admin/devices/[^/]+/revoke", path)
     )
     allowed_write = allowed_write or bool(device_revoke)
-    if (path.startswith("/api/billing") or
+    pricing_read = path in ("/api/billing/plans", "/api/billing/availability") and request.method in ("GET", "HEAD", "OPTIONS")
+    if ((path.startswith("/api/billing") and not pricing_read) or
             (request.method not in ("GET", "HEAD", "OPTIONS") and not allowed_write)):
         return JSONResponse({"detail": "Login validation mode: this operation is disabled"}, status_code=503)
     return await call_next(request)

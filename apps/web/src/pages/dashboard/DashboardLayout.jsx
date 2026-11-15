@@ -2,10 +2,11 @@ import React, { useEffect, useState } from "react";
 import { Outlet, NavLink, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { api } from "../../lib/api";
+import {useMembership, FEATURE_ROUTES} from "../../components/MembershipAccess";
 import { Brand, RiskBar } from "../../components/Brand";
 import {
   LayoutGrid, Boxes, Users, Activity, FileCode, LineChart, Bookmark, UserPlus,
-  CreditCard, MonitorSmartphone, Download, Settings, LifeBuoy, Bell, LogOut, Shield, Bot, Menu, X, FlaskConical,
+  LockKeyhole, CreditCard, MonitorSmartphone, Download, Settings, LifeBuoy, Bell, LogOut, Shield, Bot, Menu, X, FlaskConical,
 } from "lucide-react";
 
 const NAV = [
@@ -35,6 +36,7 @@ const NAV = [
 
 export default function DashboardLayout() {
   const { user, logout } = useAuth();
+  const access = useMembership();
   const nav = useNavigate();
   const [notifs, setNotifs] = useState([]);
   const [open, setOpen] = useState(false);
@@ -63,6 +65,7 @@ export default function DashboardLayout() {
             data-testid={`${onNavigate ? "mobile-" : ""}nav-${label.toLowerCase().replace(/ /g, "-")}-link`}
             className={({ isActive }) => `flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${isActive ? "bg-[#2F8CFF]/10 text-[#2F8CFF]" : "text-slate-400 hover:bg-[#111111] hover:text-white"}`}>
             <Icon className="h-4 w-4" />{label}
+            {access?.entitlements && FEATURE_ROUTES[path] && access.entitlements[FEATURE_ROUTES[path].key] !== true && <LockKeyhole aria-label="Membership upgrade available" className="ml-auto h-3 w-3 shrink-0 text-[#d4af37]" />}
           </NavLink>
         ))}
       </nav>

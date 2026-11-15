@@ -35,7 +35,7 @@
   document.addEventListener('kaos-cloud-state-changed', function (event) {
     var detail = event.detail || {};
     ready = verified(detail.state);
-    if (!ready) { attached = false; connecting = false; generation++; window.__kaosChartSessionAuthorized = false; if(typeof kaosStopChartFeed === 'function')kaosStopChartFeed(); return; }
+    if (!ready) { attached = false; connecting = false; generation++; window.__kaosChartSessionInitialized = false; window.__kaosChartSessionAuthorized = false; if(typeof kaosStopChartFeed === 'function')kaosStopChartFeed(); return; }
     if (detail.brokerAttached) attached = true;
     connect();
   });

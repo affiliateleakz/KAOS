@@ -1,5 +1,6 @@
 import React, {useCallback,useEffect,useState} from "react";
 import {api} from "../../lib/api";
+import {UpgradeContent} from "../../components/MembershipAccess";
 
 // Four isolated chart configurations. This view does not place trades.
 const DEFAULTS=[
@@ -65,6 +66,7 @@ export default function FourChartTerminal({entitlements}){
   <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-semibold">KAOS Multi-Chart Terminal</h2><p className="text-xs text-slate-400">Independent chart settings (press Save chart to sync) · current source supports 1m, 5m and 15m Coinbase public candles only. Other feeds are unavailable. No real orders.</p></div>
    <label className="text-sm">Charts <select value={Math.min(count,maxCharts)} onChange={e=>setCount(Number(e.target.value))} className="ml-2 rounded bg-[#222] p-2">{Array.from({length:maxCharts},(_,i)=><option key={i} value={i+1}>{i+1}</option>)}</select></label>
   </div>
+  {maxCharts<4 && <UpgradeContent compact title="a four-chart workspace" description="Compare up to four chart configurations side by side while keeping the controls for each chart separate."/>}
   {message && <p role="status" className="text-xs text-slate-400">{message}</p>}
   <div className="grid gap-3 lg:grid-cols-2">{configs.slice(0,Math.min(count,maxCharts)).map((cfg,i)=><Tile key={i} index={i} config={cfg} onChange={v=>change(i,v)} onSave={save}/>)}</div>
  </section>;

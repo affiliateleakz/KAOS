@@ -313,7 +313,7 @@ async function kaosOpenSingleAppWindow(){
   for(const t of kaosTabs) try{await chrome.tabs.remove(t.id);}catch(_){}
 
   const w=await chrome.windows.create({
-    url:appUrl,type:'popup',focused:true,width:1280,height:900
+    url:appUrl+'?kaosApp=1',type:'popup',focused:true,width:1280,height:900
   });
   return {ok:true,created:true,windowId:w.id};
   })();
@@ -758,9 +758,22 @@ chrome.runtime.onMessage.addListener((msg,sender,sendResponse)=>{
   if(!msg || msg.type!=='KAOS_RESIZE_APP') return;
   (async()=>{
     try{
-      const dims = msg.mode==='mini' ? {width:520,height:720} : {width:1500,height:940};
-      const win = await chrome.windows.getCurrent();
-      await chrome.windows.update(win.id,Object.assign({focused:true},dims));
+      // A service worker's getCurrent() can be the broker window. Only resize
+      // the verified extension sender's popup window, never Pocket Option.
+      if (!String(sender.url||sender.tab?.url||'').startsWith(chrome.runtime.getURL('popup.html'))) throw Error('Open KAOS in its app window');
+      const windowId=sender.tab?.windowId ?? msg.windowId;
+      if(!Number.isInteger(windowId))throw Error('KAOS app window is unavailable');
+      const win = await chrome.windows.get(windowId);
+      if(win.type!=='popup')throw Error('KAOS companion requires an app window');
+      const ownTabs=await chrome.tabs.query({windowId});
+      if(!ownTabs.some(tab=>String(tab.url||'').startsWith(chrome.runtime.getURL('popup.html'))))throw Error('Not a KAOS app window');
+      const saved = await chrome.storage.local.get(['KAOSTargetWindowId']);
+      let broker = null;
+      if(saved.KAOSTargetWindowId && saved.KAOSTargetWindowId!==win.id)try{broker=await chrome.windows.get(saved.KAOSTargetWindowId);}catch(_){}
+      const width=msg.mode==='mini'?430:1280, height=msg.mode==='mini'?Math.min(800,Math.max(500,broker?.height||720)):900;
+      const dims={state:'normal',width,height,focused:true};
+      if(msg.mode==='mini'&&broker){dims.left=Math.max(broker.left||0,(broker.left||0)+(broker.width||width)-width);dims.top=broker.top||0;}
+      await chrome.windows.update(win.id,dims);
       if(msg.mode==='max') await kaosKeepPocketOptionActive(true);
       sendResponse({ok:true});
     }catch(e){ sendResponse({ok:false,error:String(e&&e.message||e)}); }

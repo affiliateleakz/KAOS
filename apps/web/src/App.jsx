@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-route
 import { Toaster } from "sonner";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import AuthCallback from "./components/AuthCallback";
+import {MembershipProvider, FeatureGate} from "./components/MembershipAccess";
 
 import Landing from "./pages/Landing";
 import Privacy from "./pages/Privacy";
@@ -21,7 +22,8 @@ import CryptoScanner from "./pages/dashboard/CryptoScanner";
 import StockHeatmap from "./pages/dashboard/StockHeatmap";
 import BrokerConnections from "./pages/dashboard/BrokerConnections";
 import PaperTrading from "./pages/dashboard/PaperTrading";
-import { AffiliatePage, AIPage } from "./pages/dashboard/AffiliateAI";
+import {AIPage} from "./pages/dashboard/AffiliateAI";
+import AffiliatePage from "./pages/dashboard/AffiliateHub";
 import AdminLayout from "./pages/admin/AdminLayout";
 import * as AP from "./pages/admin/pages";
 import { TradingOps, Connectors } from "./pages/admin/TradingOps";
@@ -60,18 +62,18 @@ function AppRouter() {
 
       <Route path="/onboarding" element={<Protected><Onboarding /></Protected>} />
 
-      <Route path="/dashboard" element={<Protected><DashboardLayout /></Protected>}>
+      <Route path="/dashboard" element={<Protected><MembershipProvider><DashboardLayout /></MembershipProvider></Protected>}>
         <Route index element={<DP.Overview />} />
         <Route path="trading" element={<Trading />} />
-        <Route path="opportunities" element={<OpportunityRadar />} />
-        <Route path="public-trades" element={<PublicTradesScanner />} />
-        <Route path="crypto-scanner" element={<CryptoScanner />} />
-        <Route path="stock-heatmap" element={<StockHeatmap />} />
+        <Route path="opportunities" element={<FeatureGate route="opportunities"><OpportunityRadar /></FeatureGate>} />
+        <Route path="public-trades" element={<FeatureGate route="public-trades"><PublicTradesScanner /></FeatureGate>} />
+        <Route path="crypto-scanner" element={<FeatureGate route="crypto-scanner"><CryptoScanner /></FeatureGate>} />
+        <Route path="stock-heatmap" element={<FeatureGate route="stock-heatmap"><StockHeatmap /></FeatureGate>} />
         <Route path="brokers" element={<BrokerConnections />} />
         <Route path="paper" element={<PaperTrading />} />
-        <Route path="kaos-ai" element={<AIPage />} />
+        <Route path="kaos-ai" element={<FeatureGate route="kaos-ai"><AIPage /></FeatureGate>} />
         <Route path="affiliate" element={<AffiliatePage />} />
-        <Route path="strategies" element={<DP.MyStrategies />} />
+        <Route path="strategies" element={<FeatureGate route="strategies"><DP.MyStrategies /></FeatureGate>} />
         <Route path="community" element={<DP.CommunityFeed />} />
         <Route path="indicators" element={<DP.Indicators />} />
         <Route path="scripts" element={<DP.Scripts />} />

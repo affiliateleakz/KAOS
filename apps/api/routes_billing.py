@@ -13,6 +13,12 @@ router = APIRouter(prefix="/api/billing", tags=["billing"])
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY") or None
 WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 
+
+@router.get('/availability')
+async def billing_availability():
+    key = os.environ.get('STRIPE_SECRET_KEY', '')
+    return {'checkoutEnabled': key.startswith(('sk_live_', 'sk_test_')), 'mode': 'live' if key.startswith('sk_live_') else 'test' if key.startswith('sk_test_') else 'unconfigured'}
+
 # Monthly billing only. Free is the tier of every account without a paid plan (not sold via checkout).
 DEFAULT_PLANS = [
     {"id": "pro", "name": "Pro", "lookup_key": "membership_pro_monthly", "amount": 4900,

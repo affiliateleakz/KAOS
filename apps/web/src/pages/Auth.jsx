@@ -118,7 +118,18 @@ export function Register() {
   const [sp] = useSearchParams();
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [err, setErr] = useState(""); const [busy, setBusy] = useState(false);
-  useEffect(() => { const r = sp.get("ref"); if (r) { try { localStorage.setItem("kaos_ref", r); } catch (e) {} } }, [sp]);
+  useEffect(() => {
+    const r = sp.get("ref");
+    if (!r) return;
+    try { localStorage.setItem("kaos_ref", r); } catch {}
+    try {
+      const campaign = sp.get("utm_source") || "signup";
+      const key = "kaos-ref-click:" + r + ":" + campaign;
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, "1");
+      api.get("/api/aff/track", {params:{ref:r,campaign}}).catch(()=>{});
+    } catch {}
+  }, [sp]);
   const submit = async (e) => {
     e.preventDefault(); setErr(""); setBusy(true);
     try {

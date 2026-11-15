@@ -6,7 +6,12 @@ from db import db, new_id, now, now_iso, clean
 from auth import get_current_user, require_role
 from services import get_setting, set_setting, audit_log
 import re
+import hashlib
+import os
+from urllib.parse import urlsplit, urlencode
 import services_affiliate_ledger as ledger
+from kaos.memberships import RATES
+from kaos.affiliate_ledger import DEFAULT_HOLD_DAYS
 
 aff = APIRouter(prefix="/api/affiliate", tags=["affiliate"])
 aff_admin = APIRouter(prefix="/api/admin", tags=["affiliate-admin"])
@@ -25,13 +30,36 @@ async def get_program():
 
 
 def _code(user):
-    return (user.get("username") or user.get("id"))[:16].upper()
+    return 'KAOS-' + hashlib.sha256(user['id'].encode()).hexdigest()[:16].upper()
+
+
+def referral_link(code):
+    configured = urlsplit(os.getenv('FRONTEND_URL', 'https://tradingwithkaos.com'))
+    origin = (f'https://{configured.netloc}' if configured.scheme == 'https' and configured.hostname
+              and not configured.username and not configured.password else 'https://tradingwithkaos.com')
+    return f'{origin}/register?{urlencode({"ref": code})}'
+
+
+@aff.get('/program')
+async def member_program(user: dict = Depends(get_current_user)):
+    program = await get_program()
+    return {'enrollmentEnabled': program.get('enabled') is True,
+            'payoutsEnabled': False, 'holdDays': DEFAULT_HOLD_DAYS,
+            'rates': {tier: list(rates) for tier, rates in RATES.items()},
+            'tier': await ledger.member_tier(user),
+            'qualifyingPayments': ['initial', 'renewal']}
 
 
 @aff.post("/activate")
 async def activate(user: dict = Depends(get_current_user)):
+    if user.get('account_status', 'active') in ('suspended', 'banned'):
+        raise HTTPException(403, 'Account access is restricted')
+    if (await get_program()).get('enabled') is not True:
+        raise HTTPException(503, 'Affiliate enrollment is currently paused')
     acc = await db.affiliate_accounts.find_one({"userId": user["id"]})
     if acc:
+        if acc.get('status') != 'active':
+            raise HTTPException(403, 'Affiliate account is not active; contact support')
         return clean(acc)
     doc = {"id": new_id("affacc"), "userId": user["id"], "code": _code(user),
            "status": "active", "createdAt": now_iso()}
@@ -45,7 +73,6 @@ async def overview(request: Request, user: dict = Depends(get_current_user)):
     if not acc:
         return {"active": False}
     code = acc["code"]
-    origin = request.headers.get("origin") or "https://TradeWithKAOS.com"
     comms = await db.commissions.find({"affiliateUserId": user["id"]}, {"_id": 0}).sort("createdAt", -1).to_list(200)
 
     def sum_status(s):
@@ -57,7 +84,7 @@ async def overview(request: Request, user: dict = Depends(get_current_user)):
     signups = len(refs)
     paying = len([r for r in refs if r.get("converted")])
     return {
-        "active": True, "code": code, "referralLink": f"{origin}/?ref={code}",
+        "active": acc.get('status') == 'active', "code": code, "referralLink": referral_link(code),
         "clicks": clicks, "signups": signups, "payingReferrals": paying,
         "conversionRate": round((paying / clicks) * 100, 2) if clicks else 0,
         "shareFunnel": {"shares": shares_created, "clicks": share_clicks, "signups": signups,

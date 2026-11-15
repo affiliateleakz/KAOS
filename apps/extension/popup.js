@@ -178,16 +178,17 @@ $('open-po-link').addEventListener('click', async (e) => {
 $('support-btn').addEventListener('click',    () => chrome.tabs.create({ url: SUPPORT_URL }));
 $('nv-support-btn').addEventListener('click', () => chrome.tabs.create({ url: SUPPORT_URL }));
 $('recheck-btn').addEventListener('click', () => {
+  window.__kaosChartSessionInitialized = false;
   chrome.storage.local.remove(['traderId', 'verified', 'verifiedAt']);
   startFlow();
 });
 
 // ════════════════════════════════════════════════════════════
-//  VERIFICATION FLOW — BYPASS BUILD (authorized pentest PoC)
-//  Drop-in replacement for the startFlow/detect/show* section
+//  SERVER-AUTHORIZED MEMBERSHIP AND BROKER VERIFICATION
 // ════════════════════════════════════════════════════════════
 
 async function startFlow() {
+  if(window.__kaosChartSessionInitialized && window.__kaosChartSessionAuthorized===true){kaosStartChartFeed();return;}
   if (window.__kaosStartFlowRunning) return;
   window.__kaosStartFlowRunning = true;
   try {
@@ -218,6 +219,7 @@ async function startFlow() {
     }
     state.traderId = traderId;
     state.verified = true; // KAOS membership verified by server above; PO trader ID detected from page.
+    window.__kaosChartSessionInitialized = true;
     showVerified(traderId);
   } finally {window.__kaosStartFlowRunning = false;}
 }
@@ -2292,8 +2294,8 @@ if (document.readyState === 'loading') {
     document.body.classList.remove('kaos-mini','kaos-mid','kaos-max');
     document.body.classList.add('kaos-'+mode);
     try{
-      if(location.protocol==='chrome-extension:' && /(?:^|[?&])kaosApp=1(?:&|$)/.test(location.search)){
-        chrome.runtime.sendMessage({type:'KAOS_RESIZE_APP',mode:mode}).catch(()=>{});
+      if(location.protocol==='chrome-extension:'){
+        chrome.windows.getCurrent().then(win=>chrome.runtime.sendMessage({type:'KAOS_RESIZE_APP',mode:mode,windowId:win.id})).catch(()=>{});
       }
     }catch(_){}
     qa('.kaos-view-btn').forEach(b=>b.classList.toggle('active',b.dataset.kaosMode===mode));
@@ -2850,7 +2852,7 @@ async function kaos1619SetView(mode){
   if(v!=='max') return;
   try{
     const w=await chrome.windows.getCurrent();
-    if(w && w.id) await chrome.windows.update(w.id,{state:'maximized',focused:true});
+    if(w && w.id && w.type==='popup') await chrome.windows.update(w.id,{state:'maximized',focused:true});
   }catch(_){}
 }
 document.addEventListener('click',(e)=>{

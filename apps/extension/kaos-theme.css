@@ -55,3 +55,8 @@ html body #kaos-broker-overlay h2{color:#e8c46f!important}
 
 html body #screen-main.kaos-five-app #kaos-page-title{display:none!important}
 html body #screen-main.kaos-five-app .kaos-session-strip{grid-column:1/-1!important;grid-row:1!important;align-self:start!important;margin:0!important}
+html body.kaos-mini .kaos-app-nav{display:none!important}
+html body.kaos-mini :is(#screen-main,#screen-chart){width:100%!important;max-width:100%!important}
+html body.kaos-mini .kaos-app-workspace{width:100%!important;min-width:0!important;margin:0!important;grid-template-columns:minmax(0,1fr)!important;overflow-y:auto!important}
+html body.kaos-mini .kaos-session-strip{flex-wrap:wrap!important;font-size:10px!important;gap:6px!important}
+html body.kaos-mini .kaos-session-strip button{padding:7px!important;margin-left:0}

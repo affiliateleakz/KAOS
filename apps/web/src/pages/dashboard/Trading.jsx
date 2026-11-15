@@ -404,7 +404,7 @@ export default function Trading() {
                 </div>
                 <div className="mt-3 font-heading font-semibold">{M.label}</div>
                 <p className="mt-1 text-sm text-slate-400">{M.desc}</p>
-                {!allowed && <p className="mt-2 text-xs text-slate-500">Upgrade to unlock</p>}
+                {!allowed && <p className="mt-2 text-xs text-slate-500">{m!=="STRATEGY" ? "Ultimate access and validated AI execution are required. Upgrading alone does not enable trading." : "This mode is not available for your account."}</p>}
               </button>
             );
           })}

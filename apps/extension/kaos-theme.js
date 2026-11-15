@@ -8,6 +8,11 @@
       for (const key of ['connection', 'account', 'bot']) {
         const item = document.createElement('span'); item.dataset.sessionStatus = key; bar.appendChild(item);
       }
+      const size = document.createElement('button');size.type='button';size.dataset.sessionSize='';
+      size.addEventListener('click',()=>{
+        const mode=document.body.classList.contains('kaos-mini')?'max':'mini';
+        document.querySelector('.kaos-view-btn[data-kaos-mode="'+mode+'"]')?.click();
+      });bar.appendChild(size);
       const stop = document.createElement('button'); stop.type = 'button'; stop.textContent = 'Stop bot';
       stop.dataset.sessionStop = ''; stop.addEventListener('click', () => { if (typeof stopBot === 'function') stopBot(); });
       bar.appendChild(stop); workspace.prepend(bar);
@@ -23,6 +28,7 @@
         account.dataset.real = String(demo === false);
         bar.querySelector('[data-session-status=bot]').textContent = running ? 'BOT RUNNING' : 'BOT STOPPED';
         const stop = bar.querySelector('[data-session-stop]'); stop.disabled = !running;
+        bar.querySelector('[data-session-size]').textContent=document.body.classList.contains('kaos-mini')?'Expand':'Compact beside broker';
       });
       document.querySelectorAll('.kaos-nav-btn[data-kaos-view]').forEach(button => {
         const screen = button.closest('.screen');

@@ -66,6 +66,12 @@ def test_validation_wrapper_blocks_orders_and_billing(monkeypatch, tmp_path):
     @app.post('/api/v1/devices/register')
     def device():
         return {'ok': True}
+    @app.post('/api/affiliate/activate')
+    def affiliate_enrollment():
+        return {'ok': True}
+    @app.post('/api/affiliate/connect/onboarding')
+    def connect_onboarding():
+        return {'ok': True}
     @app.delete('/api/v1/devices/device-1')
     def revoke_member_device():
         return {'revoked': True}
@@ -81,6 +87,9 @@ def test_validation_wrapper_blocks_orders_and_billing(monkeypatch, tmp_path):
     @app.get('/api/billing/status')
     def billing():
         pytest.fail('Billing handler must never be called')
+    @app.get('/api/billing/plans')
+    def plans():
+        return []
     @app.get('/api')
     def health():
         return {'ok': True}
@@ -100,12 +109,17 @@ def test_validation_wrapper_blocks_orders_and_billing(monkeypatch, tmp_path):
     assert client.get('/api').status_code == 200
     assert client.post('/api/v1/auth/login').status_code == 200
     assert client.post('/api/v1/devices/register').status_code == 200
+    assert client.post('/api/affiliate/activate').status_code == 200
+    assert client.post('/api/affiliate/connect/onboarding').status_code == 200
+    assert client.post('/api/affiliate/connect/transfer').status_code == 503
     assert client.delete('/api/v1/devices/device-1').status_code == 200
     assert client.post('/api/admin/devices/device-1/revoke').status_code == 200
     assert client.post('/api/admin/users/user-1/revoke-all-devices').status_code == 503
     assert client.delete('/api/v1/devices/device-1/extra').status_code == 503
     assert client.post('/api/trading/execute').status_code == 503
     assert client.get('/api/billing/status').status_code == 503
+    assert client.get('/api/billing/plans').status_code == 200
+    assert client.post('/api/billing/plans').status_code == 503
 
 
 def test_wsgi_adapter_survives_preloaded_parent_fork(tmp_path):

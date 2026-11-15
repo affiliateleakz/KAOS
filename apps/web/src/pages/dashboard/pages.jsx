@@ -298,17 +298,23 @@ export function Following() {
 export function Subscription() {
   const { user } = useAuth();
   const [plans, setPlans] = useState([]);
-  useEffect(() => { api.get("/api/billing/plans").then((r) => setPlans(r.data)).catch(() => {}); }, []);
+  const [billing,setBilling]=useState(null),[planError,setPlanError]=useState('');
+  useEffect(() => {
+    api.get("/api/billing/plans").then(r=>setPlans(r.data)).catch(()=>setPlanError('Membership details are unavailable. Please try again later.'));
+    api.get("/api/billing/availability").then(r=>setBilling(r.data)).catch(()=>setBilling({checkoutEnabled:false}));
+  }, []);
   const checkout = async (lookup_key) => { try { const { data } = await api.post("/api/billing/checkout", { lookup_key, origin_url: window.location.origin }); window.location.href = data.checkout_url; } catch (e) { toast.error(errMsg(e)); } };
   const portal = async () => { try { const { data } = await api.post("/api/billing/portal", { lookup_key: "x", origin_url: window.location.origin }); window.location.href = data.url; } catch (e) { toast.error(errMsg(e)); } };
   const cancel = async () => { try { await api.post("/api/billing/cancel"); toast.success("Subscription canceled"); } catch (e) { toast.error(errMsg(e)); } };
   return (
     <div>
       <H>Subscription & Billing</H>
+      {planError&&<p role="alert" className="mb-4 text-amber-200">{planError}</p>}
+      {billing&&!billing.checkoutEnabled&&<p role="status" className="mb-5 rounded border border-[#8a6b32] p-4 text-sm text-[#e8c46f]">Compare memberships below. Online checkout is not available yet; no payment will be taken here.</p>}
       <div className="card-surface mb-6 flex items-center justify-between p-5">
         <div><div className="label-mono">Current status</div><div className="mt-2"><StatusBadge value={user?.membership_status} /></div></div>
         <div className="flex gap-2">
-          <Button data-testid="billing-portal-button" onClick={portal} variant="outline" className="border-[#3A3A3A] bg-transparent text-white"><CreditCard className="mr-2 h-4 w-4" />Manage billing</Button>
+          <Button data-testid="billing-portal-button" disabled={!billing?.checkoutEnabled} onClick={portal} variant="outline" className="border-[#3A3A3A] bg-transparent text-white"><CreditCard className="mr-2 h-4 w-4" />Manage billing</Button>
           {user?.membership_status === "ACTIVE" && <Button data-testid="cancel-subscription-button" onClick={cancel} variant="outline" className="border-[#C62828]/30 bg-transparent text-[#C62828]">Cancel</Button>}
         </div>
       </div>
@@ -318,11 +324,11 @@ export function Subscription() {
             <h3 className="font-heading text-xl font-semibold">{p.name}</h3>
             <div className="mt-2 font-mono text-3xl font-bold text-[#D4AF37]">${(p.amount / 100).toFixed(0)}<span className="text-base text-slate-500">/{p.interval}</span></div>
             <ul className="mt-4 space-y-2 text-sm text-slate-300">{(p.features || []).map((f) => <li key={f}>• {f}</li>)}</ul>
-            <Button data-testid={`subscribe-${p.id}`} onClick={() => checkout(p.lookup_key)} className="mt-6 w-full bg-[#22C55E] text-black font-semibold">Choose {p.name}</Button>
+            <Button data-testid={`subscribe-${p.id}`} disabled={!billing?.checkoutEnabled} onClick={() => checkout(p.lookup_key)} className="mt-6 w-full bg-[#d4af37] text-black font-semibold">{billing?.checkoutEnabled?`Choose ${p.name}`:'Checkout not available yet'}</Button>
           </div>
         ))}
       </div>
-      <p className="mt-4 text-xs text-slate-500">Stripe test mode. Card 4242 4242 4242 4242, any future expiry & CVC.</p>
+      <p className="mt-4 text-xs text-slate-500">{billing?.mode==='test'?'Stripe test mode: no live membership payment.':'Membership payments are handled through Stripe when checkout is available.'} AI execution remains subject to independent validation.</p>
     </div>
   );
 }
