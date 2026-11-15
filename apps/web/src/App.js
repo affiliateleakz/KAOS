@@ -27,6 +27,7 @@ import * as AP from "./pages/admin/pages";
 import { TradingOps, Connectors } from "./pages/admin/TradingOps";
 import { AICenter, Affiliates } from "./pages/admin/AICenter";
 import ExtensionSimulator from "./pages/admin/ExtensionSimulator";
+import ApiKeys from "./pages/admin/ApiKeys";
 
 function Protected({ children, role }) {
   const { user, loading } = useAuth();
@@ -98,6 +99,7 @@ function AppRouter() {
         <Route path="strategies" element={<AP.AdminStrategies />} />
         <Route path="moderation" element={<AP.Moderation />} />
         <Route path="extension" element={<AP.ExtensionReleases />} />
+        <Route path="api-keys" element={<ApiKeys />} />
         <Route path="settings" element={<AP.Settings />} />
         <Route path="audit" element={<AP.Audit />} />
         <Route path="extension-test" element={<ExtensionSimulator />} />

@@ -13,11 +13,33 @@ def test_missing_close_does_not_fabricate_percentage():
     v=stocks.parse_snapshot("AAPL",{"dailyBar":{"c":110},"prevDailyBar":{}})
     assert v["change_pct"] is None
 
-def test_alpaca_configuration_required(monkeypatch):
+def test_alpaca_only_mode_requires_credentials(monkeypatch):
     monkeypatch.delenv("APCA_API_KEY_ID",raising=False)
     monkeypatch.delenv("APCA_API_SECRET_KEY",raising=False)
+    monkeypatch.setenv("KAOS_STOCK_HEATMAP_FALLBACK","alpaca")
     with pytest.raises(HTTPException) as err:
-        asyncio.run(stocks.heatmap(user={"id":"member"}))
+        stocks.provider_mode()
+    assert err.value.status_code==503
+
+def test_fallback_disabled_requires_credentials(monkeypatch):
+    monkeypatch.delenv("APCA_API_KEY_ID",raising=False)
+    monkeypatch.delenv("APCA_API_SECRET_KEY",raising=False)
+    monkeypatch.setenv("KAOS_STOCK_HEATMAP_FALLBACK","off")
+    with pytest.raises(HTTPException) as err:
+        stocks.provider_mode()
+    assert err.value.status_code==503
+
+def test_default_mode_uses_keyless_source_without_alpaca(monkeypatch):
+    monkeypatch.delenv("APCA_API_KEY_ID",raising=False)
+    monkeypatch.delenv("APCA_API_SECRET_KEY",raising=False)
+    monkeypatch.delenv("KAOS_STOCK_HEATMAP_FALLBACK",raising=False)
+    assert stocks.provider_mode()=="auto"
+
+
+def test_rejects_unknown_mode(monkeypatch):
+    monkeypatch.setenv("KAOS_STOCK_HEATMAP_FALLBACK","nonsense")
+    with pytest.raises(HTTPException) as err:
+        stocks.provider_mode()
     assert err.value.status_code==503
 
 def test_entitlement_required(monkeypatch):

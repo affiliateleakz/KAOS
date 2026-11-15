@@ -4,7 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import { Brand } from "../../components/Brand";
 import {
   Shield, LayoutGrid, Users, CreditCard, MonitorSmartphone, BadgeCheck, Boxes,
-  Flag, Chrome, Settings, ScrollText, TerminalSquare, ArrowLeft, Activity, Plug, Menu, X,
+  Flag, Chrome, Settings, ScrollText, TerminalSquare, ArrowLeft, Activity, Plug, Menu, X, KeyRound,
 } from "lucide-react";
 
 const NAV = [
@@ -20,6 +20,7 @@ const NAV = [
   ["strategies", "Strategies", Boxes],
   ["moderation", "Moderation", Flag],
   ["extension", "Extension Releases", Chrome],
+  ["api-keys", "API Keys", KeyRound],
   ["settings", "Settings", Settings],
   ["audit", "Audit Log", ScrollText],
   ["extension-test", "API Simulator", TerminalSquare],
@@ -28,6 +29,9 @@ const NAV = [
 export default function AdminLayout() {
   const { user } = useAuth();
   const [mobileNav, setMobileNav] = useState(false);
+  // Only admins see the credential vault; moderators keep the rest of the portal.
+  const canManageKeys = ["admin", "super_admin"].includes(user?.role);
+  const nav = canManageKeys ? NAV : NAV.filter(([path]) => path !== "api-keys");
 
   const renderSidebar = (onNavigate) => (
     <>
@@ -45,7 +49,7 @@ export default function AdminLayout() {
         </div>
       </div>
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-3">
-        {NAV.map(([path, label, Icon]) => (
+        {nav.map(([path, label, Icon]) => (
           <NavLink key={path} to={`/admin/${path}`} end={path === ""} onClick={onNavigate} data-testid={`${onNavigate ? "mobile-" : ""}admin-nav-${path || "dashboard"}`}
             className={({ isActive }) => `flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${isActive ? "bg-red-500/10 text-red-300" : "text-slate-400 hover:bg-[#111111] hover:text-white"}`}>
             <Icon className="h-4 w-4" />{label}

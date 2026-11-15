@@ -3,6 +3,7 @@
 Never invent trades. A separate authorized collector imports parsed disclosures.
 Respect SEC fair-access limits and identify your application in User-Agent.
 """
+import asyncio
 import os
 from urllib.parse import urlparse
 import httpx
@@ -32,13 +33,21 @@ async def collect_issuer_form4(cik: int, *, max_filings=15, client=None):
             form=recent["form"][i]
             if form not in ("4","4/A"):continue
             acc=recent["accessionNumber"][i]
-            filename=recent["primaryDocument"][i]
-            if not filename.lower().endswith(".xml") or "/" in filename or ".." in filename:
+            # submissions.json frequently reports values such as "xslF345X06/form4.xml".
+            # That path is the browser-rendered HTML copy; the machine-readable XML is
+            # served from the filing root under the same file name.
+            filename=(recent["primaryDocument"][i] or "").rsplit("/",1)[-1]
+            if not filename.lower().endswith(".xml") or filename.startswith(".") or ".." in filename:
                 continue
             if not (acc.replace("-","").isdigit() and len(acc.replace("-",""))==18):continue
             link=f"https://www.sec.gov/Archives/edgar/data/{cik}/{acc.replace('-','')}/{filename}"
             if urlparse(link).hostname not in SEC_HOSTS:continue
-            response=await client.get(link,headers=headers)
+            # SEC fair access allows 10 requests/second; stay well under it.
+            await asyncio.sleep(0.12)
+            try:
+                response=await client.get(link,headers=headers)
+            except httpx.HTTPError:
+                continue
             response.raise_for_status()
             try: rows=parse_form4(response.text)
             except ValueError:continue

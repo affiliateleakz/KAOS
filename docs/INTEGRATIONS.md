@@ -3,6 +3,28 @@
 Everything below was read out of the code, not from a design document. Each row states
 the environment variable, the code that consumes it, and the behaviour when it is unset.
 
+## 0. You can skip the shell: Admin → API Keys
+
+Open `/admin/api-keys` as an admin. Every integration below is listed there with what it
+powers, the site to get the credential from, whether there is a free tier, a live
+"Test connection" button, and an encrypted input. Saving writes to
+`kaos_integration_secrets`, encrypts with `KAOS_INTEGRATION_VAULT_KEY` (falling back to
+`KAOS_BROKER_VAULT_KEY`, then to a key derived from `JWT_SECRET`), and applies the value
+to the running process immediately — no redeploy, no restart. Values entered there take
+precedence over the same variable in `.env`; removing one restores the `.env` value.
+
+Environment variables still work exactly as before, so both paths are valid. The panel is
+just the one that does not require shell access.
+
+The three scanners also have a **no-key** path, so they are useful before anything is
+configured:
+
+| Page | No-key source | Notes |
+|---|---|---|
+| Crypto Scanner & Heat Map | DEX Screener public API for pair search; CoinGecko public API for the bubble map (Coinbase Exchange public stats as fallback) | Pair search runs automatically on page load. Bubble data covers the top 10–100 assets by market cap with 1h/24h/7d changes, cached server-side for 90s because CoinGecko's free tier allows only a few requests per minute; if CoinGecko is rate limited the map falls back to Coinbase majors sized by 24h dollar volume. |
+| Stock Heat Map | Yahoo Finance public quote endpoint | Used automatically while Alpaca is unconfigured (`KAOS_STOCK_HEATMAP_FALLBACK=auto`). Grid and bubble views use the same snapshot. Unofficial, rate limited, not licensed for redistribution — add Alpaca for production. |
+| Political & Wall Street Trades | SEC EDGAR + Google News RSS | Free; SEC only needs the User-Agent (app name + email) from Admin → API Keys. "Load latest SEC filings" imports real Form 4 insider transactions. The headline panel uses Google News' public RSS index (politics / Wall Street / markets), cached five minutes, and only keeps links on recognised news hosts. Congressional (House/Senate) rows additionally need the compliance switch in the same panel. |
+
 ## 1. Required for the application to boot at all
 
 | Variable | Consumed by | If missing |
@@ -40,6 +62,11 @@ data, and `GET /api/health` returns `{"status":"ok","db":true}`.
 
 Crypto candles currently come from Coinbase's public ticker endpoint, which needs no key.
 Binance/DexScreener collectors post to `KAOS_API_BASE` and need nothing else.
+
+The crypto bubble map and the political/Wall Street headline strip are keyless by design:
+CoinGecko `/coins/markets` (cached 90s), Coinbase `/products/{SYM}-USD/stats` as fallback, and
+Google News RSS (cached 5 min). They are research/discovery surfaces, not licensed market data,
+so a paid feed can replace them later without changing the pages.
 
 ## 4. Execution and broker connectivity
 

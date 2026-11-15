@@ -11,8 +11,26 @@ const INFO={
 export default function PublicTradesScanner(){
  const [source,setSource]=useState(""),[ticker,setTicker]=useState(""),[data,setData]=useState(null);
  const [error,setError]=useState(""),[loading,setLoading]=useState(false);
+ const [syncing,setSyncing]=useState(false),[syncNote,setSyncNote]=useState("");
  const [cik,setCik]=useState(""),[changes,setChanges]=useState(null),[comparisonError,setComparisonError]=useState("");
+ const [topic,setTopic]=useState("politics"),[headlines,setHeadlines]=useState(null),[headlineError,setHeadlineError]=useState(""),[headlineBusy,setHeadlineBusy]=useState(false);
+ const loadHeadlines=async(nextTopic=topic)=>{
+  setHeadlineBusy(true);setHeadlineError("");
+  try{const r=await api.get(`/api/v1/disclosures/headlines?topic=${nextTopic}`);setHeadlines(r.data)}
+  catch(e){setHeadlines(null);setHeadlineError(errMsg(e)||"Free headline feed unavailable")}
+  finally{setHeadlineBusy(false)}
+ };
+ useEffect(()=>{loadHeadlines("politics")},[]);
  const viewChanges=async()=>{setComparisonError("");setChanges(null);try{const r=await api.get("/api/v1/disclosures/institutional-changes?cik="+encodeURIComponent(cik));setChanges(r.data)}catch(e){setComparisonError(errMsg(e)||"Cannot load institutional holdings comparison")}};
+ const syncSec=async()=>{
+  if(!ticker.trim()){setError("Type a ticker above first, e.g. AAPL");return}
+  setSyncing(true);setError("");setSyncNote("");
+  try{const r=await api.post("/api/v1/disclosures/sync-sec?ticker="+encodeURIComponent(ticker.trim().toUpperCase()));
+   setSyncNote(`SEC EDGAR: examined ${r.data.filings_examined} filing(s), imported ${r.data.transactions_imported} insider transaction(s) for CIK ${r.data.issuer_cik}.`);
+   await load();
+  }catch(e){setError(errMsg(e)||"SEC sync failed")}
+  finally{setSyncing(false)}
+ };
  const load=async()=>{
   setLoading(true);setError("");
   try{const params=new URLSearchParams({limit:"100"});if(source)params.set("source",source);if(ticker.trim())params.set("ticker",ticker.trim().toUpperCase());
@@ -31,7 +49,9 @@ export default function PublicTradesScanner(){
    <label className="text-sm">Disclosure category<select value={source} onChange={e=>setSource(e.target.value)} className="mt-1 block rounded border border-[#444] bg-[#151515] p-2">{SOURCE.map(([id,label])=><option value={id} key={id}>{label}</option>)}</select></label>
    <label className="text-sm">Ticker<input value={ticker} onChange={e=>setTicker(e.target.value.toUpperCase().slice(0,24))} placeholder="e.g. AAPL" className="mt-1 block rounded border border-[#444] bg-[#151515] p-2" /></label>
    <button type="button" onClick={load} disabled={loading} className="rounded bg-[#D4AF37] px-4 py-2 font-semibold text-black disabled:opacity-50">{loading?"Loading…":"Search disclosures"}</button>
+   <button type="button" onClick={syncSec} disabled={syncing} className="rounded border border-[#555] px-4 py-2 text-sm disabled:opacity-50" title="Pulls the latest SEC Form 4 insider filings for this ticker. Free SEC data, no API key.">{syncing?"Fetching from SEC…":"Load latest SEC filings"}</button>
   </div>
+  {syncNote&&<p className="text-xs text-emerald-400">{syncNote}</p>}
   {source&&<p className="text-xs text-slate-400">{INFO[source]}</p>}
   <section className="rounded border border-[#333] p-3 space-y-2">
    <h2 className="font-semibold">Institutional 13F Position Changes</h2>
@@ -45,6 +65,24 @@ export default function PublicTradesScanner(){
    </>}
   </section>
   {error&&<p role="alert" className="text-sm text-red-400">{error}</p>}
+  <section className="rounded border border-[#333] p-3 space-y-2" data-testid="free-political-headlines">
+   <div className="flex flex-wrap items-center justify-between gap-2">
+    <h2 className="font-semibold">Free political & Wall Street headlines</h2>
+    <span className="rounded border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">No key · free public feed</span>
+   </div>
+   <p className="text-xs text-slate-400">Public news index, cached for five minutes. Headlines are research leads, not verified filings or trade signals.</p>
+   <div className="flex flex-wrap gap-1" role="group" aria-label="Headline topic">
+    {[["politics","Congress & politics"],["wallstreet","Wall Street & insiders"],["markets","Markets"]].map(([key,label])=>
+     <button key={key} onClick={()=>{setTopic(key);loadHeadlines(key)}} aria-pressed={topic===key}
+      className={`rounded border px-3 py-1.5 text-xs ${topic===key?"border-[#D4AF37] bg-[#D4AF37]/10 text-[#D4AF37]":"border-[#3a3a3a] text-slate-300"}`}>{label}</button>)}
+    <button onClick={()=>loadHeadlines()} disabled={headlineBusy} className="rounded border border-[#3a3a3a] px-3 py-1.5 text-xs text-slate-300 disabled:opacity-50">{headlineBusy?"Loading…":"Refresh"}</button>
+   </div>
+   {headlineError&&<p role="alert" className="text-sm text-red-400">{headlineError}</p>}
+   {headlines?.headlines?.length?<ul className="divide-y divide-[#222]">{headlines.headlines.map((h,i)=>
+    <li key={h.url+i} className="py-2 text-sm"><a href={h.url} target="_blank" rel="noopener noreferrer" className="text-slate-200 hover:text-[#D4AF37] underline decoration-[#333]">{h.title}</a>
+     <div className="text-[11px] text-slate-500">{h.publisher}{h.published_at?` · ${h.published_at}`:""} · via {headlines.provider}</div></li>)}</ul>:
+    (headlines&&!headlines.headlines?.length&&!headlineError?<p className="text-xs text-slate-400">The feed returned no articles right now.</p>:null)}
+  </section>
   {data&&<section className="rounded border border-[#333] p-3"><h2 className="mb-3 font-semibold">Disclosed activity · {data.count} records</h2>
     {!data.records?.length?<p className="py-8 text-center text-slate-400">No verified disclosures in the KAOS database for this filter. Data collection must be configured; this does not imply nobody traded.</p>:<div className="overflow-x-auto"><table className="w-full min-w-[900px] text-left text-xs">
      <thead><tr className="border-b border-[#333] text-slate-400">{["Filer","Source","Asset","Type","Transaction date","Filed","Disclosed range","Official filing"].map(h=><th key={h} className="p-2">{h}</th>)}</tr></thead>

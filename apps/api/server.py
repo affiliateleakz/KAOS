@@ -30,6 +30,8 @@ import routes_broker_connections
 import routes_research_replay
 import routes_chart_settings
 import routes_free_apis
+import routes_admin_integrations
+import integration_config
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -90,6 +92,7 @@ app.include_router(routes_research_replay.router)
 app.include_router(routes_chart_settings.router)
 app.include_router(routes_chart_settings.candles_router)
 app.include_router(routes_free_apis.router)
+app.include_router(routes_admin_integrations.router)
 
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
 app.add_middleware(
@@ -109,7 +112,8 @@ async def startup():
     await seed.seed_admin()
     await seed.seed_demo()
     await seed.write_credentials()
-    logger.info("Startup complete: indexes, admin, demo data seeded.")
+    applied = await integration_config.apply_to_env()
+    logger.info("Startup complete: indexes, admin, demo data seeded; %s stored API value(s) applied.", applied)
 
 
 @app.on_event("shutdown")
