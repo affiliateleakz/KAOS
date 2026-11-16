@@ -1,0 +1,36 @@
+{
+  "archive_sha256": "b47526f23972c2f80312ce1ac2020798fc359b92fe3dfb7e4123f6e199131957",
+  "runner_sha256": "8c175eb33f3d8a7afc404266b4132e2be543ffdfffeda1865924ab060eea7daf",
+  "plan_sha256": "aefa5710f3beaa5d18f32213d70765b6fdd5880616f5b178f53ce7296a02e771",
+  "quality": {
+    "raw_bars": 145341,
+    "close_marker_4000": 116137,
+    "close_marker_0": 25911,
+    "flat_bars": 4719,
+    "close_marker_5000": 3266,
+    "conflicting_timestamps": 0,
+    "gaps": 135,
+    "close_marker_2000": 13,
+    "close_marker_3000": 7,
+    "close_marker_1000": 7,
+    "markets": 30,
+    "segments": 165,
+    "valid_bars": 145341,
+    "recorded_trade_audit": {
+      "records": 1000,
+      "reported_loss": 510,
+      "broker_flagged": 789,
+      "price_outcome_mismatch": 506,
+      "reported_win": 480,
+      "price_outcome_agrees": 494,
+      "not_broker_flagged": 211,
+      "reported_draw": 10
+    }
+  },
+  "eligible_feature_rows": 119689,
+  "development_start": "2026-09-27T02:22:40+00:00",
+  "validation_start": "2026-10-05T07:23:55+00:00",
+  "final_start": "2026-10-05T18:10:50+00:00",
+  "end": "2026-10-06T04:57:40.001000+00:00",
+  "execution_approved": false
+}

@@ -1,0 +1,22 @@
+{
+  "literal_close_markers": {
+    "trades": 0,
+    "wins": 0,
+    "losses": 0,
+    "ties": 0,
+    "win_rate": null,
+    "pnl_at_80pct": 0,
+    "live_approved": false
+  },
+  "next_candle_confirmed": {
+    "trades": 374,
+    "wins": 185,
+    "losses": 182,
+    "ties": 7,
+    "win_rate": 0.5040871934604905,
+    "pnl_at_80pct": -34,
+    "live_approved": false
+  },
+  "parity_checks": 18,
+  "period": "validation only; no final holdout evaluation"
+}
