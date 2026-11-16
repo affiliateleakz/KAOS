@@ -53,7 +53,15 @@ def _get_app():
                 path.startswith("/api/community/posts") or
                 bool(re.fullmatch(r"/api/users/[^/]+/follow", path)) or
                 bool(re.fullmatch(r"/api/admin/reports/[^/]+/action", path)))
-            allowed_write = allowed_write or bool(device_revoke) or commerce_setup or radar_setup or community_write
+            # Plan configuration is not payment activation. The handler retains admin auth and validation.
+            membership_setup = False
+            if request.method == "POST" and path == "/api/admin/settings":
+                try:
+                    payload = await request.json()
+                    membership_setup = isinstance(payload, dict) and payload.get("key") == "plans"
+                except ValueError:
+                    pass
+            allowed_write = allowed_write or bool(device_revoke) or commerce_setup or radar_setup or community_write or membership_setup
             pricing_read = path in ("/api/billing/plans", "/api/billing/availability", "/api/billing/memberships") and request.method in ("GET", "HEAD", "OPTIONS")
             if ((path.startswith("/api/billing") and not pricing_read) or
                     (request.method not in ("GET", "HEAD", "OPTIONS") and not allowed_write)):

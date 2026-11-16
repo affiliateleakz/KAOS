@@ -324,3 +324,11 @@ independent AI-execution validation lock are not bypassed. The website and
 extension use the same `get_entitlements` policy. Deploy the updated
 `apps/api/services_trading.py` to the backend, restart the Python app and refresh
 the signed-in website/extension to retrieve the corrected entitlements.
+
+### Current membership setup after the homepage release
+
+The approved three-card Viking hero uses current extension and website captures. The public membership catalog supplies pricing, feature comparisons and affiliate examples; there is no public hardcoded paid price override.
+
+After activation and a cPanel Python restart, use Admin → Platform Settings → Membership Plans. If retired plans or old limits remain, select **Use current KAOS plans**, review Free $0 / Pro $49 monthly / Ultimate $149 monthly and the allowances, then **Save Plans**. Loading defaults alone does not save. Already configured custom prices should be retained unless intentionally changed.
+
+The validation adapter allows only the `plans` key at `POST /api/admin/settings`; the underlying handler still requires an authenticated admin and validates plan amounts. This makes Save Plans work on cPanel while other settings writes, real payment processing and live-order restrictions remain unchanged. No database migration or automatic billing activation occurs.

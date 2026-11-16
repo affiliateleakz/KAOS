@@ -22,6 +22,7 @@ const BASE=process.env.KAOS_WEB_PREVIEW_URL;
  });
  await page.goto(BASE+'/');
  await page.getByRole('heading',{name:'KAOS TRADING BOT',exact:true}).waitFor();
+ assert.ok((await page.locator('meta[name=description]').getAttribute('content')).includes('Free, Pro and Ultimate'));
  const artwork=page.locator('.kh-reference-art');
  await artwork.evaluate(img=>img.decode());
  assert.equal(await artwork.getAttribute('src'),'/kaos-approved-hero.png');
@@ -55,6 +56,10 @@ const BASE=process.env.KAOS_WEB_PREVIEW_URL;
  await page.getByLabel('Your affiliate tier',{exact:true}).selectOption('ultimate');
  await page.getByLabel('Level 2 paid referrals',{exact:true}).fill('1');
  await page.getByTestId('homepage-commission-total').getByText('$74.25',{exact:false}).waitFor();
+ await page.getByText('How do I trade four broker charts?',{exact:true}).click();
+ await page.locator('details').filter({has:page.getByText('How do I trade four broker charts?',{exact:true})}).getByText(/In the extension’s Bot menu choose 4 Charts/).waitFor();
+ await page.getByText('Are affiliate payouts active?',{exact:true}).click();
+ await page.locator('details').filter({has:page.getByText('Are affiliate payouts active?',{exact:true})}).getByText(/Cash payouts are not live yet/).waitFor();
  for(const tab of await page.getByRole('tab').all()){await tab.click();await page.locator('#product-preview-panel img').scrollIntoViewIfNeeded();await page.locator('#product-preview-panel img').evaluate(img=>img.decode());}
  await page.evaluate(()=>scrollTo(0,0));
  if(process.env.KAOS_CAPTURE_DIR)await page.screenshot({path:process.env.KAOS_CAPTURE_DIR+'/approved-homepage.png'});

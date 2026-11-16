@@ -129,6 +129,14 @@ def test_validation_wrapper_blocks_orders_and_billing(monkeypatch, tmp_path):
     @app.post('/api/admin/users/user-1/revoke-all-devices')
     def revoke_all():
         pytest.fail('Mass account changes must remain blocked')
+    from fastapi import Request, HTTPException
+    @app.post('/api/admin/settings')
+    async def membership_settings(request: Request):
+        if request.headers.get('x-test-admin') != 'yes':
+            raise HTTPException(status_code=403, detail='Admin required')
+        payload = await request.json()
+        assert payload['key'] == 'plans'
+        return payload
     @app.post('/api/trading/execute')
     def order():
         pytest.fail('Trading handler must never be called')
@@ -198,6 +206,14 @@ def test_validation_wrapper_blocks_orders_and_billing(monkeypatch, tmp_path):
     assert client.post('/api/admin/devices/device-1/revoke').status_code == 200
     assert client.post('/api/admin/users/user-1/revoke-all-devices').status_code == 503
     assert client.delete('/api/v1/devices/device-1/extra').status_code == 503
+    plan_payload = {'key': 'plans', 'value': {'value': [{'id': 'pro', 'amount': 4900}]}}
+    assert client.post('/api/admin/settings', json=plan_payload).status_code == 403
+    saved = client.post('/api/admin/settings', json=plan_payload, headers={'x-test-admin': 'yes'})
+    assert saved.status_code == 200
+    assert saved.json() == plan_payload  # Middleware must preserve the request body for the handler.
+    assert client.post('/api/admin/settings', json={'key': 'ai_execution_validated', 'value': True}, headers={'x-test-admin': 'yes'}).status_code == 503
+    assert client.post('/api/admin/settings', content='not JSON', headers={'content-type': 'application/json'}).status_code == 503
+    assert client.post('/api/admin/settings', json=[]).status_code == 503
     assert client.post('/api/trading/execute').status_code == 503
     assert client.get('/api/billing/status').status_code == 503
     assert client.get('/api/billing/plans').status_code == 200
