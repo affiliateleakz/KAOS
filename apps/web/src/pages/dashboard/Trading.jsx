@@ -392,7 +392,7 @@ export default function Trading() {
       <FourChartTerminal entitlements={ent} />
       <div className="mb-6"><TrendPauseBacktest /></div>
       <div className="mb-6 rounded-lg border border-[#D4AF37]/20 bg-[#D4AF37]/5 p-3 text-xs text-[#D4AF37]">
-        The real KAOS Strategy (Berserker · Reversal/Runner/Breakout) runs server-side and returns live decisions when the extension streams market candles. KAOS AI serves live inference once a trained model is deployed. Broker execution happens only inside the extension — no live trades occur on this page.
+        The real KAOS Strategy runs server-side and returns live decisions when the extension streams market candles. KAOS AI serves live inference once a trained model is deployed. Broker execution happens only inside the extension — no live trades occur on this page.
       </div>
 
       <SyncHealth sync={sync} expired={syncExpired} onRefresh={loadSync} />

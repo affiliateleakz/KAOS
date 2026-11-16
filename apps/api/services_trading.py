@@ -28,10 +28,10 @@ async def apply_ai_execution_lock(ent: dict) -> dict:
     modes = [m for m in (ent.get("modes") or []) if m not in AI_EXECUTION_MODES]
     return {**ent, "modes": modes, "aiExecutionLocked": True}
 
-# Default KAOS Berserker metadata (owner-configurable via admin). This is DISPLAY METADATA only;
+# Default KAOS Strategy metadata (owner-configurable via admin). This is DISPLAY METADATA only;
 # the tested execution logic lives in kaos_berserker.py / candidate7b_strategy.js (see STRATEGY_ENGINE.md).
 DEFAULT_OFFICIAL_STRATEGY = {
-    "name": "KAOS Berserker",
+    "name": "KAOS Strategy",
     "type": "OFFICIAL",
     "version": "C9.0",
     "locked": True,
@@ -75,7 +75,10 @@ DEFAULT_ENTITLEMENTS = {
 
 
 async def get_official_strategy():
-    return await get_setting("official_strategy", DEFAULT_OFFICIAL_STRATEGY)
+    metadata = await get_setting("official_strategy", DEFAULT_OFFICIAL_STRATEGY)
+    if metadata.get("name") in {"KAOS Berserker", "Berserker", "Candidate 7B", "candidate"}:
+        return {**metadata, "name": "KAOS Strategy"}
+    return metadata
 
 
 async def get_trading_config():
@@ -134,7 +137,7 @@ def _engine_label(cfg: dict, key: str) -> str:
 
 
 async def kaos_strategy_predict(asset: str, platform: str, context: dict) -> dict:
-    """Real deterministic KAOS Berserker (Candidate 7B) strategy — execution authority.
+    """Real deterministic KAOS Strategy — execution authority.
 
     When candle rows are supplied (context.candles / context.rows), the ported three-engine
     strategy runs and returns a REAL, non-simulated decision. Without market data it falls back

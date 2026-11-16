@@ -57,6 +57,7 @@ async def list_plans():
 @router.get('/memberships')
 async def membership_catalog():
     from kaos.memberships import RATES
+    from kaos.affiliate_ledger import DEFAULT_HOLD_DAYS
     plans = [{'id': 'free', 'name': 'Free', 'amount': 0, 'currency': 'usd',
               'interval': None, 'tier': 'free', 'entitlements': dict(FREE_ENTITLEMENTS)}]
     allowed = ('botAccess', 'chartLimit', 'deviceLimit', 'community', 'scanners', 'aiInsights',
@@ -70,7 +71,7 @@ async def membership_catalog():
             'entitlements': {key: value for key, value in (plan.get('entitlements') or {}).items() if key in allowed}})
     affiliate = await get_setting('affiliate_program', {'enabled': True})
     return {'plans': plans, 'affiliateRates': {tier: list(rates) for tier, rates in RATES.items()},
-            'affiliateEnrollmentEnabled': affiliate.get('enabled') is True, 'payoutsEnabled': False,
+            'affiliateEnrollmentEnabled': affiliate.get('enabled') is True, 'payoutsEnabled': False, 'affiliateHoldDays': DEFAULT_HOLD_DAYS,
             'aiExecutionValidated': await get_setting('ai_execution_validated', False) is True,
             **await billing_availability()}
 

@@ -73,7 +73,7 @@ async def seed_demo():
                                             "recurring": True, "attributionWindowDays": 30, "holdDays": 30, "minPayout": 50, "perPlan": {}})
     # Multi-strategy library (official metadata boundaries; real logic migrates from bot source)
     KAOS_STRATS = [
-        ("KAOS Berserker", "Signature deterministic strategy: established directional move -> exactly two counter-trend pullback candles -> continuation confirmation -> next-candle entry.",
+        ("KAOS Strategy", "Signature deterministic strategy: established directional move -> exactly two counter-trend pullback candles -> continuation confirmation -> next-candle entry.",
          {"signalCandleSeconds": 5, "expiration": "45s", "indicators": ["EMA 9", "EMA 21", "ATR"], "pullbackCandles": 2, "confirmation": "continuation/reclaim"}),
         ("False Breakout", "Fade failed breakouts back into range.", {}),
         ("Trend Following", "Enter with the prevailing trend.", {}),
@@ -99,7 +99,7 @@ async def seed_demo():
     # Built-in protected strategy metadata
     await db.strategies.insert_one({
         "id": new_id("strat"), "ownerUserId": alice["id"], "ownerUsername": "system",
-        "name": "Candidate 7B", "description": "Protected built-in momentum strategy shipped with the extension.",
+        "name": "KAOS Strategy", "description": "Protected built-in momentum strategy shipped with the extension.",
         "version": 3, "type": "BUILT_IN", "editable": False, "locked": True, "visibility": "PUBLIC",
         "engineType": "signal", "signalTimeframe": "1m", "expiry": "5m",
         "indicators": [{"name": "EMA"}, {"name": "RSI"}], "indicatorSettings": {}, "rules": [], "parameters": {},

@@ -32,7 +32,7 @@ export default function Memberships(){
       <p className="text-xs uppercase tracking-widest text-[#b5a487]">{plan.id==='free'?'Start exploring':plan.interval==='year'?'Annual membership':plan.interval==='month'?'Monthly membership':'Paid membership'}</p><h2 className="mt-3 text-3xl font-semibold text-[#e8c46f]">{plan.name}</h2>
       <p className="mt-5 text-4xl font-semibold">{planPrice(plan)}{plan.interval&&<span className="text-sm font-normal text-[#b5a487]"> / {plan.interval}</span>}</p>
       <p className="mt-3 text-sm text-[#c4b89f]">{Math.min(4,Number(ent.chartLimit)||1)} chart{Number(ent.chartLimit)>1?'s':''} · {Number(ent.deviceLimit)||1} device{Number(ent.deviceLimit)>1?'s':''}</p>
-      <p className="mt-2 text-xs text-[#b5a487]">Chart limits apply to the KAOS website workspace. The extension uses your broker’s native charts.</p>
+      <p className="mt-2 text-xs text-[#b5a487]">Chart allowance applies to broker chart slots. The extension uses your broker’s native charts.</p>
       <ul className="my-6 space-y-3 text-sm">{features.map(([label,enabled])=><li key={label} className={enabled?'text-[#dfd1b5]':'text-[#8e8270]'}><span aria-hidden="true" className="mr-2">{enabled?'✓':'—'}</span>{label}{!enabled&&<span className="sr-only"> — not included</span>}</li>)}
        {(ent.modes||[]).includes('AI')&&<li className="text-[#c4b89f]">AI-mode eligibility · {catalog.aiExecutionValidated?'subject to account access':'execution validation pending'}</li>}
       </ul>
