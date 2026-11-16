@@ -4,7 +4,7 @@
 to this existing item. Do not create a different listing or register OAuth for
 the previous unpacked ID `pnbakkallmfhliciobnamffmhclkgofb`.
 
-Google sign-in is retained in extension **1.7.26**. The code now checks backend
+Google sign-in is retained in extension **1.7.27**. The code now checks backend
 configuration before opening Chrome OAuth, requires the official item ID,
 checks that the server/manifest OAuth clients match, bounds network requests,
 refreshes an invalid Chrome token once, and identifies hosting HTML challenges.
@@ -43,14 +43,15 @@ Send Asura support:
    experience; complete any Google-required consent/verification work.
 4. Deploy the matching backend (including GET
    `/api/v1/extension/google/config`) only when the owner authorizes installation.
-5. For an unpacked test build, obtain **this item's public key** from the Chrome
-   Web Store dashboard and add it as the manifest `key` in the local build. Verify
-   `chrome://extensions` shows the exact item ID above. A public key is not a
-   private signing key. Uploaded updates to the existing listing keep its ID.
+5. Extension 1.7.27 includes the owner-provided manifest public key. Its SHA-256
+   identity was verified against this exact store item. Unpacked installations
+   must show `gbobopmnjgeeegniphckfpalhnebapjm` in `chrome://extensions`. A public
+   key is not a private signing key; no private signing material is included.
 
-The public store-download endpoint returned 404 during this investigation, so
-no listing public key was recovered or invented. Google Cloud and hosting
-configuration have not been changed by this work.
+The public store-download endpoint returned 404 during the original investigation.
+The owner subsequently supplied the listing public key, which is now verified
+and included in the manifest. Google Cloud and hosting configuration have not
+been changed by this work.
 
 ## Before resubmitting
 

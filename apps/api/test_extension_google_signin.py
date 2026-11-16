@@ -19,6 +19,7 @@ def test_public_google_configuration_exposes_only_public_client_and_store_id(mon
 
 @pytest.mark.parametrize('matching',[True,False])
 def test_google_exchange_verifies_client_and_identity_before_issuing_kaos_tokens(monkeypatch,matching):
+    monkeypatch.setenv('JWT_SECRET','fixture-google-exchange-test-only-signing-key')
     monkeypatch.setenv('KAOS_GOOGLE_EXTENSION_CLIENT_ID','fixture-client')
     urls=[]
     async def get(self,url,**kwargs):
