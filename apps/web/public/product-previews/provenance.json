@@ -4,6 +4,8 @@
   "botVersion": "1.7.30",
   "views": [
     "bot",
+    "bot-controls",
+    "strategy",
     "radar",
     "heatmap",
     "community",
