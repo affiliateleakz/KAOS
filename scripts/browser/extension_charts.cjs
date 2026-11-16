@@ -22,7 +22,7 @@ const assert=require('node:assert/strict');
     if(msg.type==='GET_BOT_STATE')reply={running:false};
     return dual(reply,cb);}},
    storage:{onChanged:{addListener(){}},local:{get:(keys,cb)=>dual(data,cb),set:(obj,cb)=>{Object.assign(data,obj);return dual(undefined,cb)},remove:(keys,cb)=>dual(undefined,cb)}},
-   tabs:{onUpdated:{addListener(){}},get:(id,cb)=>dual({id,url:'https://pocketoption.com/en/cabinet/demo-quick-high-low/'},cb),query:(opts,cb)=>dual([{id:42,url:'https://pocketoption.com/'}],cb),sendMessage:(id,msg,cb)=>{window.tabMessages.push(msg);if(msg.type==='GET_COMPANION_STATUS'&&window.fixtureDisconnected)return Promise.reject(Error('Broker unavailable'));if(msg.type==='GET_COMPANION_STATUS')return dual({ok:true,engineReady:true,asset:'EURUSD',accountIsDemo:window.fixtureDemo??null,accountBalance:1000,running:false},cb);if(msg.type==='GET_TERMINAL_SNAPSHOT'){
+   tabs:{onUpdated:{addListener(){}},get:(id,cb)=>dual({id,url:'https://pocketoption.com/en/cabinet/demo-quick-high-low/'},cb),query:(opts,cb)=>dual([{id:42,url:'https://pocketoption.com/'}],cb),sendMessage:(id,msg,cb)=>{window.tabMessages.push(msg);if(msg.type==='GET_COMPANION_STATUS'&&window.fixtureDisconnected)return Promise.reject(Error('Broker unavailable'));if(msg.type==='GET_COMPANION_STATUS')return dual({ok:true,engineReady:true,asset:'EURUSD',markets:[{asset:'EURUSD'},{asset:'GBPUSD'},{asset:'USDJPY'},{asset:'AUDUSD'}],accountIsDemo:window.fixtureDemo??null,accountBalance:1000,running:false},cb);if(msg.type==='GET_TERMINAL_SNAPSHOT'){
       const candles=Array.from({length:30},(_,i)=>({ts:1700000000000+i*5000,open:1.1+i*.0001,high:1.101+i*.0001,low:1.099+i*.0001,close:1.1005+i*.0001}));
       return dual({ok:true,readOnly:true,accountIsDemo:window.fixtureDemo??null,markets:[{asset:'EURUSD',source:'TEST_FIXTURE',candles,ready:false,history:{canonical:30},ai:{},timeframes:{}}],allTrades:[],research:[],aiSummary:{},analytics:{}},cb);
      }return dual({ok:true},cb);} ,create:async()=>({id:42}),update:async()=>({id:42})},
@@ -57,6 +57,19 @@ const assert=require('node:assert/strict');
  assert.equal(await page.evaluate(()=>window.tabMessages.filter(m=>m.type==='GET_TERMINAL_SNAPSHOT').length),0);
  assert.ok((await page.locator('[data-companion-asset]').textContent()).includes('EURUSD'));
  assert.ok(await page.getByRole('heading',{name:'Trading dashboard',exact:true}).isVisible());
+ const chartCount=page.getByRole('combobox',{name:'How many charts do you want to trade',exact:true});
+ assert.ok(await chartCount.isVisible(),'Broker chart count belongs on the main Bot tab');
+ assert.equal(await chartCount.locator('option[value="4"]').isDisabled(),true,'One-chart plan must not unlock four');
+ await page.evaluate(()=>kaosApplyChartLimit({chartLimit:4}));
+ await chartCount.selectOption('4');
+ const selectedConfig=await page.evaluate(()=>getStrategyBuilderStartConfig());
+ assert.equal(selectedConfig.chartCount,4);assert.equal(selectedConfig.strategySlots.length,4);
+ assert.deepEqual(selectedConfig.strategySlots.map(row=>row.asset),['EURUSD','GBPUSD','USDJPY','AUDUSD']);
+ await page.getByRole('button',{name:'SHOW POCKET OPTION',exact:true}).click();
+ assert.equal(await page.locator('#screen-chart').isVisible(),false,'Broker focus must not reopen internal charts');
+ assert.equal(await page.evaluate(()=>chrome.storage.local.get(['kaosChartCount']).then(r=>r.kaosChartCount)),4);
+ await page.evaluate(()=>kaosApplyChartLimit({chartLimit:1}));
+ assert.equal(await chartCount.inputValue(),'1','Plan downgrade clamps the selection');
  assert.equal(await page.locator('.kaos-companion-brand').getAttribute('src'),'assets/kaos-logo-horizontal.png');
 
  assert.equal(await page.locator('#debug-fold').count(),1);
@@ -131,7 +144,14 @@ const assert=require('node:assert/strict');
  await page.evaluate(()=>{kaosStopChartFeed();terminalData={engineReady:true,asset:'EURUSD',accountIsDemo:false};kaosCompanionStatusAt=Date.now()-16000;});
  await page.locator('#screen-main [data-session-status=connection]').filter({hasText:'Broker connection unconfirmed'}).waitFor();
  await page.locator('#screen-main [data-session-status=account]').filter({hasText:'Account type unconfirmed'}).waitFor();
- console.log('Gold login, accessible labels, website links, primary navigation, account status and Stop passed.');
+ await page.evaluate(()=>{kaosApplyChartLimit({chartLimit:4});kaosApplyChartCount(4);});
+ const startedBefore=await page.evaluate(()=>window.testMessages.filter(m=>m.type==='START_BOT').length);
+ await page.locator('#start-btn').click();
+ await page.waitForFunction(n=>window.testMessages.filter(m=>m.type==='START_BOT').length>n,startedBefore);
+ const start=await page.evaluate(()=>window.testMessages.filter(m=>m.type==='START_BOT').at(-1));
+ assert.equal(start.chartCount,4);assert.equal(start.multiAsset,true);assert.equal(start.strategySlots.length,4);
+ await page.evaluate(()=>stopBot());
+ console.log('Gold login, four-chart Bot selection, plan limits, explicit Start payload, broker focus, account status and Stop passed.');
  await page.locator('[data-testid=kaos-pill-menu]').click();
  await page.locator('[data-testid=kaos-menu-logout]').click();
  await page.getByTestId('kaos-login-email').waitFor();

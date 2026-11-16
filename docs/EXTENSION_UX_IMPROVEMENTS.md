@@ -32,3 +32,16 @@ account labeling and Stop. These fixtures do not connect to a broker or place or
 
 The website remains a separate scope decision. Hosting installation, real broker
 verification and trading performance are not established by these fixture tests.
+
+### 1.7.29 — broker chart count on the Bot menu
+
+The compact Bot tab exposes the existing 1–4 chart selector in the gold theme.
+Only the server-provided chart allowance enables options; unknown plans default
+to one chart. Selection persists and applies to the next explicit Start, whose
+payload now sets multi-market mode from the selected companion count. The broker
+scanner also caps its visible-market list to both that count and the plan limit.
+This never starts the bot on selection or expands membership permissions.
+
+“Show Pocket Option” focuses the broker tab instead of opening KAOS chart
+canvases. The lightweight companion status includes only visible market names
+for per-slot strategy binding, not candle arrays. Charts remain on the broker.

@@ -10523,7 +10523,9 @@ const t3MinConsensus = aiLearning ? 1 : 3;
     // V121: the four visible chart panels are the complete multi-market allow-list.
     // This intentionally ignores off-screen favorites so all active markets can warm
     // continuously and no chart needs to be rotated or switched.
-    return [...new Set(visibleGridAssets())].filter(Boolean).slice(0,4);
+    const count=botConfig?.chartCount==null?4:Number(botConfig.chartCount);
+    const limit=Number.isInteger(count)&&count>0?Math.min(4,kaosChartLimit,count):1;
+    return [...new Set(visibleGridAssets())].filter(Boolean).slice(0,limit);
   }
 
   function getActiveAssets() {
@@ -11911,7 +11913,7 @@ try {
     }
 
     if(msg.type==='GET_COMPANION_STATUS'){
-      sendResponse({ok:true,engineReady:true,running:isRunning,asset:activeAsset||'',accountBalance:kaosPocketOptionBalance,accountIsDemo:kaosPocketOptionBalanceIsDemo});return false;
+      sendResponse({ok:true,engineReady:true,running:isRunning,asset:activeAsset||'',markets:[...new Set(visibleGridAssets())].filter(Boolean).slice(0,4).map(asset=>({asset})),accountBalance:kaosPocketOptionBalance,accountIsDemo:kaosPocketOptionBalanceIsDemo});return false;
     }
     if (msg.type === 'GET_C7B_CHART_SNAPSHOT' || msg.type === 'GET_TERMINAL_SNAPSHOT') {
       try {

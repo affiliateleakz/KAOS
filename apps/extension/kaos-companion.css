@@ -2,7 +2,7 @@
 html body.kaos-companion{min-width:0!important;width:100vw!important;max-width:100vw!important}
 html body.kaos-companion canvas{display:none!important}
 html body.kaos-companion #screen-chart,
-html body.kaos-companion :is(#kaos-dashboard-live,.kaos-chart-count-control,.kaos-nav-research,[data-kaos-view="charts"],[data-kaos-view="backtester"],[data-kaos-view="ai"],[data-kaos-view="performance"],#open-chart-btn,#open-chart-btn2,#kaos-opportunity-popup){display:none!important}
+html body.kaos-companion :is(#kaos-dashboard-live,.kaos-nav-research,[data-kaos-view="charts"],[data-kaos-view="backtester"],[data-kaos-view="ai"],[data-kaos-view="performance"],#open-chart-btn,#open-chart-btn2,#kaos-opportunity-popup){display:none!important}
 html body.kaos-companion .kaos-app-nav{display:none!important}
 html body.kaos-companion :is(.kaos-live-head,.kaos-live-grid,.kaos-indicator-strip,.four-grid,#kaos-dashboard-multichart){display:none!important}
 html body.kaos-companion .kaos-session-strip [data-session-size]{background:#312611!important;border-color:#8a6b32!important;color:#e8c46f!important}
@@ -76,3 +76,10 @@ html body.kaos-companion #screen-main:not(.view-dashboard) #debug-fold{display:n
 html body.kaos-companion #debug-fold>summary{min-height:44px;display:flex;align-items:center;padding:12px;color:#e8c46f;line-height:1.5}
 html body.kaos-companion #debug-fold .fold-body{padding:10px;min-width:0;overflow-wrap:anywhere}
 html body.kaos-companion #debug-fold .dbg-panel{padding:0;background:transparent!important;min-width:0}
+
+/* Broker chart selection belongs to the main Bot menu; no internal canvases. */
+html body.kaos-companion #screen-main.view-dashboard .kaos-chart-count-control{display:grid!important;grid-template-columns:minmax(0,1fr) 130px!important;gap:10px!important;min-width:0!important;width:100%!important;box-sizing:border-box!important;background:#0a100e!important;border-color:#71582a!important}
+html body.kaos-companion #screen-main:not(.view-dashboard) .kaos-chart-count-control{display:none!important}
+html body.kaos-companion .kaos-chart-count-control .kcc-copy{min-width:0!important}
+html body.kaos-companion #kaos-open-selected-charts{grid-column:1/-1!important;width:100%!important;background:#211b10!important;border-color:#8a6b32!important;color:#e8c46f!important}
+@media(max-width:480px){html body.kaos-companion #screen-main.view-dashboard .kaos-chart-count-control{grid-template-columns:minmax(0,1fr)!important}}

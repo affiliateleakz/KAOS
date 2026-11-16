@@ -894,7 +894,7 @@ function startBot() {
     chrome.runtime.sendMessage({
       type: 'START_BOT',
       strategy, timeframe, amount,
-      multiAsset: multiAssetOn, // only trade 4 markets when the popup multi toggle is checked
+      multiAsset: KAOS_COMPANION_ONLY ? kaosChartCount > 1 : multiAssetOn, // Selected count applies only on explicit Start
       martingale: martOn, multiplier: mult, maxSteps: steps, martDir, martMode,
       softSteps:  parseInt(($('soft-steps')||{value:'6'}).value)   || 6,
       antiMult:   parseFloat(($('anti-mult')||{value:'2'}).value)  || 2,
@@ -1722,8 +1722,13 @@ function kaosApplyChartLimit(ent){
    o.textContent=o.value+(o.value==='1'?' Chart':' Charts')+(over?' (not in your plan)':'');
  });
  if(kaosChartCount>kaosChartLimit)kaosApplyChartCount(kaosChartLimit,true);
+ else kaosUpdateChartCountStatus();
 }
 
+function kaosUpdateChartCountStatus(){
+ const status=document.getElementById('kaos-chart-count-status');
+ if(status)status.textContent=kaosChartCount+' selected · plan supports '+kaosChartLimit+'. Open the matching broker charts in Pocket Option. Applies on next Start.';
+}
 function kaosApplyChartCount(count,persist=true){
  count=Math.max(1,Math.min(4,kaosChartLimit,Number(count)||1));
  kaosChartCount=count;
@@ -1736,6 +1741,7 @@ function kaosApplyChartCount(count,persist=true){
  });
  const sel=document.getElementById('kaos-chart-count');
  if(sel)sel.value=String(count);
+ kaosUpdateChartCountStatus();
  if(persist)chrome.storage.local.set({kaosChartCount,terminalSelectedCharts});
  if(typeof terminalRenderChartSelection==='function')terminalRenderChartSelection();
 }
@@ -1744,7 +1750,16 @@ function kaosInitChartCount(){
  chrome.storage.onChanged.addListener((c,area)=>{if(area==='local'&&c.kaosEntitlements)kaosApplyChartLimit(c.kaosEntitlements.newValue);});
  const sel=document.getElementById('kaos-chart-count');
  if(sel)sel.addEventListener('change',e=>kaosApplyChartCount(e.target.value,true));
- document.getElementById('kaos-open-selected-charts')?.addEventListener('click',()=>{
+ const control=document.querySelector('#screen-main .kaos-chart-count-control');
+ const rail=document.querySelector('#screen-main .kaos-run-rail');
+ if(KAOS_COMPANION_ONLY&&control&&rail)rail.before(control);
+ const openCharts=document.getElementById('kaos-open-selected-charts');
+ if(openCharts&&KAOS_COMPANION_ONLY)openCharts.textContent='SHOW POCKET OPTION';
+ openCharts?.addEventListener('click',async()=>{
+   if(KAOS_COMPANION_ONLY){
+     try{const tab=await getKAOSTargetTab();if(tab){await chrome.tabs.update(tab.id,{active:true});if(tab.windowId!=null)await chrome.windows.update(tab.windowId,{focused:true});}else setStatus('idle','Open Pocket Option to select broker charts.');}catch(_){setStatus('idle','Could not focus Pocket Option. Open your broker tab.');}
+     return;
+   }
    if(typeof window.kaosRoute==='function')window.kaosRoute('charts');
    else document.querySelector('[data-kaos-view="charts"]')?.click();
  });

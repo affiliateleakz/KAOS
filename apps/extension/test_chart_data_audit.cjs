@@ -95,3 +95,13 @@ for(const readOnly of [true,false])test('MAIN-world bridge Start/Stop and order 
  const ws=vm.runInContext('new WebSocket("wss://example.invalid")',context);ws.send(manual);
  assert.deepEqual(frames,[manual]);
 });
+
+for(const [requested,plan,expected] of [[1,4,1],[2,4,2],[3,4,3],[4,4,4],[4,1,1],[4,2,2],[null,4,4],['invalid',4,1],[2.5,4,1]]) {
+ test('broker scan count respects selected count '+requested+' and plan '+plan,()=>{
+  const content=fs.readFileSync(__dirname+'/content.js','utf8');
+  const begin=content.indexOf('  function multiScanAssets()'),end=content.indexOf('  function getActiveAssets()',begin);
+  const context={botConfig:requested===null?{}:{chartCount:requested},kaosChartLimit:plan,visibleGridAssets:()=>['EURUSD','GBPUSD','USDJPY','AUDUSD','EURUSD']};
+  vm.runInNewContext(content.slice(begin,end)+';globalThis.assets=multiScanAssets;',context);
+  assert.equal(context.assets().length,expected);
+ });
+}
