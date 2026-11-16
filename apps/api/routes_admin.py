@@ -78,7 +78,7 @@ async def admin_dashboard(admin: dict = Depends(admin_dep)):
         return m / 12.0 if interval == "year" else m
 
     default_month = next((p for p in plans if p.get("interval") == "month"),
-                         (plans[0] if plans else {"id": "pro", "name": "Pro", "amount": 4900, "interval": "month"}))
+                         (plans[0] if plans else {"id": "pro", "name": "Pro", "amount": 2995, "interval": "month"}))
     member_plan_counts = {}
     async for u in db.users.find({"membership_status": {"$in": ["ACTIVE", "TRIAL"]}}, {"membership_plan": 1}):
         pid = u.get("membership_plan") or default_month["id"]

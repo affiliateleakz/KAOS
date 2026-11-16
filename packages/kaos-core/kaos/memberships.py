@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 from decimal import Decimal, ROUND_HALF_UP
 RATES={'free':(10,0,0),'pro':(30,15,0),'ultimate':(50,25,5)}
-PRICES={'free':Decimal('0'),'pro':Decimal('49'),'ultimate':Decimal('149')}
+PRICES={'free':Decimal('0'),'pro':Decimal('29.95'),'ultimate':Decimal('99.95')}
 PERMISSIONS={'free':{'strategy'},'pro':{'strategy','scanners','ai_insights'},'ultimate':{'strategy','scanners','ai_insights','ai_execution'}}
 @dataclass(frozen=True)
 class Affiliate:

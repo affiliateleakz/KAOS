@@ -329,6 +329,6 @@ the signed-in website/extension to retrieve the corrected entitlements.
 
 The approved three-card Viking hero uses current extension and website captures. The public membership catalog supplies pricing, feature comparisons and affiliate examples; there is no public hardcoded paid price override.
 
-After activation and a cPanel Python restart, use Admin → Platform Settings → Membership Plans. If retired plans or old limits remain, select **Use current KAOS plans**, review Free $0 / Pro $49 monthly / Ultimate $149 monthly and the allowances, then **Save Plans**. Loading defaults alone does not save. Already configured custom prices should be retained unless intentionally changed.
+After activation and a cPanel Python restart, use Admin → Platform Settings → Membership Plans. If retired plans or old limits remain, select **Use current KAOS plans**, review Free $0 / Pro $29.95 monthly or $299.95 yearly / Ultimate $99.95 monthly or $995.95 yearly and the allowances, then **Save Plans**. Loading defaults alone does not save. Already configured custom prices should be retained unless intentionally changed.
 
 The validation adapter allows only the `plans` key at `POST /api/admin/settings`; the underlying handler still requires an authenticated admin and validates plan amounts. This makes Save Plans work on cPanel while other settings writes, real payment processing and live-order restrictions remain unchanged. No database migration or automatic billing activation occurs.

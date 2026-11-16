@@ -1,3 +1,6 @@
+import BillingPeriodToggle from '../components/BillingPeriodToggle';
+import {plansForInterval,recommendedMonthly} from '../lib/billingPlans';
+import {planPrice} from './Memberships';
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, errMsg } from "../lib/api";
@@ -21,6 +24,8 @@ export default function Onboarding() {
   const [step, setStep] = useState(2);
   const [affCfg, setAffCfg] = useState(null);
   const [plans, setPlans] = useState([]);
+  const [period,setPeriod]=useState('month');
+  useEffect(()=>{const chosen=plans.find(p=>p.id===user?.requested_membership_plan);if(chosen)setPeriod(chosen.interval||'month');},[plans,user?.requested_membership_plan]);
   const [poUid, setPoUid] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -128,11 +133,13 @@ export default function Onboarding() {
           {step === 5 && (
             <div>
               <h3 className="font-heading text-lg font-semibold">Choose your membership</h3>
+              <BillingPeriodToggle value={period} onChange={setPeriod} plans={plans}/>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                {plans.map((p) => (
+                {plansForInterval(plans,period).map((p) => (
                   <div key={p.id} className="card-surface p-5">
+                    {recommendedMonthly(p)&&<p className="kaos-plan-recommended">Recommended · Ultimate monthly</p>}
                     <div className="font-heading font-semibold">{p.name}</div>
-                    <div className="mt-1 font-mono text-2xl text-[#D4AF37]">${(p.amount / 100).toFixed(0)}<span className="text-sm text-slate-500">/{p.interval}</span></div>
+                    <div className="mt-1 font-mono text-2xl text-[#D4AF37]">{planPrice(p)}<span className="text-sm text-slate-500">/{p.interval}</span></div>
                     <Button data-testid={`onboarding-select-plan-${p.id}`} onClick={() => checkout(p.lookup_key)} disabled={busy} className="mt-4 w-full bg-[#22C55E] text-black font-semibold">Select</Button>
                   </div>
                 ))}

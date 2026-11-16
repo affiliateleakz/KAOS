@@ -1,4 +1,5 @@
 import logging
+from copy import deepcopy
 import os
 import stripe
 from fastapi import APIRouter, HTTPException, Depends, Request
@@ -20,21 +21,29 @@ async def billing_availability():
     key = os.environ.get('STRIPE_SECRET_KEY', '')
     return {'checkoutEnabled': key.startswith(('sk_live_', 'sk_test_')), 'mode': 'live' if key.startswith('sk_live_') else 'test' if key.startswith('sk_test_') else 'unconfigured'}
 
-# Monthly billing only. Free is the tier of every account without a paid plan (not sold via checkout).
+# Paid tiers offer monthly and annual billing. Free is not sold through checkout.
 DEFAULT_PLANS = [
-    {"id": "pro", "name": "Pro", "lookup_key": "membership_pro_monthly", "amount": 4900,
+    {"id": "pro", "name": "Pro", "lookup_key": "membership_pro_monthly", "amount": 2995,
      "currency": "usd", "interval": "month", "deviceLimit": 3, "tier": "pro",
-     "features": ["KAOS Trading Bot", "KAOS Strategy mode", "Scanners", "AI insights", "Cloud Strategies", "Community", "3 Devices"],
+     "features": ["KAOS Trading Bot", "KAOS Strategy mode", "Scanners", "AI insights", "Cloud Strategies", "Community", "Up to 4 broker chart slots", "3 Devices"],
      "entitlements": {"botAccess": True, "modes": ["STRATEGY"], "connectors": ["pocket_option"], "scanners": True,
                       "aiInsights": True, "cloudStrategies": True, "community": True, "premiumTools": False, "deviceLimit": 3,
                       "chartLimit": 4}},
-    {"id": "ultimate", "name": "Ultimate", "lookup_key": "membership_ultimate_monthly", "amount": 14900,
-     "currency": "usd", "interval": "month", "deviceLimit": 5, "tier": "ultimate",
-     "features": ["Everything in Pro", "KAOS AI mode", "Strategy + AI mode", "Premium Tools", "5 Devices"],
+    {"id": "ultimate", "name": "Ultimate", "lookup_key": "membership_ultimate_monthly", "amount": 9995,
+     "currency": "usd", "interval": "month", "deviceLimit": 5, "tier": "ultimate", "recommended": True,
+     "features": ["Everything in Pro", "AI / Strategy + AI eligibility (after independent validation)", "Premium Tools", "Up to 4 broker chart slots", "5 Devices"],
      "entitlements": {"botAccess": True, "modes": ["STRATEGY", "AI", "STRATEGY_AI"], "connectors": ["pocket_option"],
                       "scanners": True, "aiInsights": True, "cloudStrategies": True, "community": True,
                       "premiumTools": True, "deviceLimit": 5, "chartLimit": 4}},
 ]
+# Annual variants have stable IDs and the same tools as their monthly tier.
+for _monthly, _annual_amount in zip(list(DEFAULT_PLANS), (29995, 99595)):
+    _annual = deepcopy(_monthly)
+    _annual.update(id=_monthly["id"] + "_yearly", amount=_annual_amount, interval="year",
+                   lookup_key="membership_" + _monthly["tier"] + "_yearly", recommended=False)
+    DEFAULT_PLANS.append(_annual)
+del _monthly, _annual, _annual_amount
+
 # Members who subscribed under the retired plan ids keep working.
 LEGACY_PLAN_IDS = {"monthly": "pro", "yearly": "ultimate"}
 
@@ -68,6 +77,7 @@ async def membership_catalog():
         plans.append({'id': plan['id'], 'name': plan['name'], 'amount': plan['amount'],
             'currency': plan.get('currency', 'usd'), 'interval': plan.get('interval', 'month'),
             'tier': tier if tier in RATES else 'pro',
+            'recommended': plan.get('recommended', tier == 'ultimate' and plan.get('interval', 'month') == 'month') is True,
             'entitlements': {key: value for key, value in (plan.get('entitlements') or {}).items() if key in allowed}})
     affiliate = await get_setting('affiliate_program', {'enabled': True})
     return {'plans': plans, 'affiliateRates': {tier: list(rates) for tier, rates in RATES.items()},

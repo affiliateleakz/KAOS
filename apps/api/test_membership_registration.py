@@ -17,7 +17,7 @@ def registration(monkeypatch):
     return users
 
 
-@pytest.mark.parametrize('plan_id',['free','pro','ultimate',None])
+@pytest.mark.parametrize('plan_id',['free','pro','ultimate','pro_yearly','ultimate_yearly',None])
 def test_signup_remembers_choice_and_referral_without_granting_paid_access(registration,plan_id):
     result=asyncio.run(auth.register(RegisterReq(email='new@example.com',name='New member',password='fixture-password',refCode='KAOS-REF',planId=plan_id),Response()))
     doc=registration.insert_one.call_args.args[0]

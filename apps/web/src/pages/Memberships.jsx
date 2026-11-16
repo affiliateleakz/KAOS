@@ -1,3 +1,6 @@
+import BillingPeriodToggle from '../components/BillingPeriodToggle';
+import {plansForInterval,annualSaving,recommendedMonthly} from '../lib/billingPlans';
+import {commissionMoney} from '../lib/affiliatePreview';
 import React,{useEffect,useState} from 'react';
 import {Link,useSearchParams} from 'react-router-dom';
 import {Brand} from '../components/Brand';
@@ -6,6 +9,7 @@ import {useReferralCapture} from '../lib/useReferralCapture';
 
 export function registrationLink(planId, search){
  const query=new URLSearchParams(search);query.set('plan',planId);
+ if(planId.endsWith('_yearly'))query.set('billing','year');else query.delete('billing');
  return '/register/account?'+query.toString();
 }
 export function planPrice(plan){
@@ -14,7 +18,9 @@ export function planPrice(plan){
  catch{return `${plan.amount/100} ${plan.currency}`;}
 }
 export default function Memberships(){
- const [sp]=useSearchParams(),[catalog,setCatalog]=useState(null),[error,setError]=useState('');
+ const [sp]=useSearchParams();
+ const [period,setPeriod]=useState(sp.get('billing')==='year'?'year':'month');
+ const [catalog,setCatalog]=useState(null),[error,setError]=useState('');
  useReferralCapture(sp);
  async function load(){setError('');try{const {data}=await api.get('/api/billing/memberships');if(!Array.isArray(data.plans)||!data.plans.length)throw Error('Unavailable');setCatalog(data);}catch{setError('We couldn’t load the current memberships. Please retry before choosing a plan.');}}
  useEffect(()=>{load();},[]);
@@ -25,12 +31,16 @@ export default function Memberships(){
    {error&&<section role="alert" className="rounded-lg border border-amber-700/50 p-5"><p>{error}</p><button onClick={load} className="mt-4 rounded border border-[#8a6b32] px-5 py-3 text-[#e8c46f]">Retry memberships</button></section>}
    {!catalog&&!error&&<p role="status">Loading current membership options…</p>}
    {catalog&&<>
-    <section className="grid items-stretch gap-5 lg:grid-cols-3" aria-label="Membership options">{catalog.plans.map(plan=>{
+    <BillingPeriodToggle value={period} onChange={setPeriod} plans={catalog.plans}/>
+    <section className="grid items-stretch gap-5 lg:grid-cols-3" aria-label="Membership options">{plansForInterval(catalog.plans,period).map(plan=>{
+     const saving=annualSaving(plan,catalog.plans);
      const ent=plan.entitlements||{},rates=catalog.affiliateRates?.[plan.tier]||[0,0,0];
      const features=[['KAOS Strategy bot',ent.botAccess],['Community access',ent.community],['Market scanners & heatmaps',ent.scanners],['AI insights',ent.aiInsights],['Cloud strategies',ent.cloudStrategies],['Premium tools',ent.premiumTools]];
      return <article key={plan.id} className="flex min-w-0 flex-col rounded-xl border border-[#66502a] bg-[#12100d] p-6" data-testid={`membership-card-${plan.id}`}>
+      {recommendedMonthly(plan)&&<p className="kaos-plan-recommended">Recommended · Ultimate monthly</p>}
       <p className="text-xs uppercase tracking-widest text-[#b5a487]">{plan.id==='free'?'Start exploring':plan.interval==='year'?'Annual membership':plan.interval==='month'?'Monthly membership':'Paid membership'}</p><h2 className="mt-3 text-3xl font-semibold text-[#e8c46f]">{plan.name}</h2>
       <p className="mt-5 text-4xl font-semibold">{planPrice(plan)}{plan.interval&&<span className="text-sm font-normal text-[#b5a487]"> / {plan.interval}</span>}</p>
+      {saving&&<p className="kaos-annual-saving">Save {commissionMoney(saving.cents,saving.currency)} per year compared with monthly billing.</p>}
       <p className="mt-3 text-sm text-[#c4b89f]">{Math.min(4,Number(ent.chartLimit)||1)} chart{Number(ent.chartLimit)>1?'s':''} · {Number(ent.deviceLimit)||1} device{Number(ent.deviceLimit)>1?'s':''}</p>
       <p className="mt-2 text-xs text-[#b5a487]">Chart allowance applies to broker chart slots. The extension uses your broker’s native charts.</p>
       <ul className="my-6 space-y-3 text-sm">{features.map(([label,enabled])=><li key={label} className={enabled?'text-[#dfd1b5]':'text-[#8e8270]'}><span aria-hidden="true" className="mr-2">{enabled?'✓':'—'}</span>{label}{!enabled&&<span className="sr-only"> — not included</span>}</li>)}

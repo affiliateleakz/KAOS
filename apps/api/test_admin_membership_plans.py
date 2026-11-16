@@ -17,8 +17,8 @@ def test_settings_include_free_and_current_plan_defaults_without_replacing_saved
     assert result['plans'][0]['amount'] == 5900
     assert result['freePlan']['amount'] == 0
     assert result['freePlan']['entitlements']['chartLimit'] == 1
-    assert [p['amount'] for p in result['planDefaults']] == [4900, 14900]
-    assert [p['entitlements']['chartLimit'] for p in result['planDefaults']] == [4, 4]
+    assert [p['amount'] for p in result['planDefaults']] == [2995, 9995, 29995, 99595]
+    assert [p['entitlements']['chartLimit'] for p in result['planDefaults']] == [4, 4, 4, 4]
     assert result['affiliateRates']['ultimate'] == [50, 25, 5]
 
 

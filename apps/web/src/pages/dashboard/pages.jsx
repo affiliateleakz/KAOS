@@ -1,3 +1,7 @@
+import BillingPeriodToggle from '../../components/BillingPeriodToggle';
+import {plansForInterval,annualSaving,recommendedMonthly} from '../../lib/billingPlans';
+import {planPrice} from '../Memberships';
+import {commissionMoney} from '../../lib/affiliatePreview';
 import CommunityHub from './CommunityHub';
 import { deviceDate } from "../../lib/deviceDate";
 import React, { useEffect, useState } from "react";
@@ -274,12 +278,14 @@ export function Subscription() {
   const { user } = useAuth();
   const [search]=useSearchParams();
   const selectedPlan=search.get('plan')||user?.requested_membership_plan;
+  const [period,setPeriod]=useState(selectedPlan?.endsWith('_yearly')?'year':'month');
   const [plans, setPlans] = useState([]);
   const [billing,setBilling]=useState(null),[planError,setPlanError]=useState('');
   useEffect(() => {
     api.get("/api/billing/plans").then(r=>setPlans(r.data)).catch(()=>setPlanError('Membership details are unavailable. Please try again later.'));
     api.get("/api/billing/availability").then(r=>setBilling(r.data)).catch(()=>setBilling({checkoutEnabled:false}));
   }, []);
+  useEffect(()=>{const chosen=plans.find(p=>p.id===selectedPlan);if(chosen)setPeriod(chosen.interval||'month');},[plans,selectedPlan]);
   const checkout = async (lookup_key) => { try { const { data } = await api.post("/api/billing/checkout", { lookup_key, origin_url: window.location.origin }); window.location.href = data.checkout_url; } catch (e) { toast.error(errMsg(e)); } };
   const portal = async () => { try { const { data } = await api.post("/api/billing/portal", { lookup_key: "x", origin_url: window.location.origin }); window.location.href = data.url; } catch (e) { toast.error(errMsg(e)); } };
   const cancel = async () => { try { await api.post("/api/billing/cancel"); toast.success("Subscription canceled"); } catch (e) { toast.error(errMsg(e)); } };
@@ -296,11 +302,14 @@ export function Subscription() {
           {user?.membership_status === "ACTIVE" && <Button data-testid="cancel-subscription-button" onClick={cancel} variant="outline" className="border-[#C62828]/30 bg-transparent text-[#C62828]">Cancel</Button>}
         </div>
       </div>
+      <BillingPeriodToggle value={period} onChange={setPeriod} plans={plans}/>
       <div className="grid gap-6 md:grid-cols-2">
-        {plans.map((p) => (
+        {plansForInterval(plans,period).map((p) => (
           <div key={p.id} className={`card-surface p-6 ${selectedPlan===p.id?'ring-2 ring-[#d4af37]':''}`}>
+            {recommendedMonthly(p)&&<p className="kaos-plan-recommended">Recommended · Ultimate monthly</p>}
             <h3 className="font-heading text-xl font-semibold">{p.name}</h3>
-            <div className="mt-2 font-mono text-3xl font-bold text-[#D4AF37]">${(p.amount / 100).toFixed(0)}<span className="text-base text-slate-500">/{p.interval}</span></div>
+            <div className="mt-2 font-mono text-3xl font-bold text-[#D4AF37]">{planPrice(p)}<span className="text-base text-slate-500">/{p.interval}</span></div>
+            {annualSaving(p,plans)&&<p className="kaos-annual-saving">Save {commissionMoney(annualSaving(p,plans).cents,p.currency)} per year compared with monthly billing.</p>}
             <ul className="mt-4 space-y-2 text-sm text-slate-300">{(p.features || []).map((f) => <li key={f}>• {f}</li>)}</ul>
             <Button data-testid={`subscribe-${p.id}`} disabled={!billing?.checkoutEnabled} onClick={() => checkout(p.lookup_key)} className="mt-6 w-full bg-[#d4af37] text-black font-semibold">{billing?.checkoutEnabled?(selectedPlan===p.id?`Continue with ${p.name}`:`Choose ${p.name}`):'Checkout not available yet'}</Button>
           </div>
