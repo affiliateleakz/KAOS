@@ -10,7 +10,7 @@ if(!BASE)throw Error('Run through scripts/browser/run.cjs');
  await page.route('**/api/**',route=>{
   const request=route.request(),path=new URL(request.url()).pathname;
   if(path==='/api/auth/me')return route.fulfill({json:{id:'owner-fixture',role:'super_admin'}});
-  if(path==='/api/admin/commerce/providers')return route.fulfill({json:{vaultReady:vault,providers,activationNote:'Setup only. Money movement is disabled.'}});
+  if(path==='/api/admin/commerce/providers')return route.fulfill({json:{stripeReadiness:{mode:'test',configurationReady:true,checkoutEnabled:false,note:'Login-validation hosting blocks billing and webhook delivery.'},vaultReady:vault,providers,activationNote:'Setup only. Money movement is disabled.'}});
   if(path==='/api/admin/commerce/vault/initialize'){vault=true;return route.fulfill({json:{vaultReady:true}});}
   if(path==='/api/admin/commerce/providers/stripe'&&request.method()==='PUT'){assert.deepEqual(request.postDataJSON().credentials,{});return route.fulfill({json:providers[0]});}
   if(path==='/api/admin/commerce/providers/paypal'&&request.method()==='PUT'){
@@ -22,6 +22,7 @@ if(!BASE)throw Error('Run through scripts/browser/run.cjs');
  });
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(BASE+'/admin/commerce');await page.getByTestId('provider-paypal').waitFor();
+ assert.ok((await page.getByTestId('stripe-readiness').textContent()).includes('Checkout: disabled'));
  assert.equal(await page.getByLabel('PayPal Client secret',{exact:true}).getAttribute('type'),'password');
  assert.equal(await page.getByLabel('PayPal Client secret',{exact:true}).isDisabled(),true);
  await page.getByRole('button',{name:'Initialize secure vault'}).click();

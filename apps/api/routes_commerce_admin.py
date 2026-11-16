@@ -27,7 +27,8 @@ class ProviderSettings(BaseModel):
 
 @router.get('/providers')
 async def get_providers(admin=Depends(owner)):
-    return {'vaultReady': providers.vault_ready(), 'providers': [await providers.public_provider(p) for p in providers.CATALOG],
+    from stripe_runtime import availability
+    return {'stripeReadiness': await availability(), 'vaultReady': providers.vault_ready(), 'providers': [await providers.public_provider(p) for p in providers.CATALOG],
         'activationNote': 'Settings and connection checks do not enable checkout or transfer funds. Live adapters and financial launch checks remain required.'}
 
 

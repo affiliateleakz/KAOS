@@ -59,7 +59,7 @@ def test_public_catalog_uses_current_prices_rates_and_omits_private_fields(monke
            {**billing.DEFAULT_PLANS[1],'enabled':False}]
     monkeypatch.setattr(billing,'get_plans',AsyncMock(return_value=plans))
     monkeypatch.setattr(billing,'get_setting',AsyncMock(side_effect=lambda key,default=None:default))
-    monkeypatch.delenv('STRIPE_SECRET_KEY',raising=False)
+    monkeypatch.setattr(billing,'availability',AsyncMock(return_value={'checkoutEnabled':False,'mode':'unconfigured'}))
     data=asyncio.run(billing.membership_catalog())
     assert [p['id'] for p in data['plans']]==['free','pro']
     assert data['plans'][1]['amount']==5900

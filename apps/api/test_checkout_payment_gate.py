@@ -14,7 +14,7 @@ import routes_billing as billing
     ('checkout.session.async_payment_succeeded', 'paid', 'complete', True),
 ])
 def test_membership_requires_paid_complete_checkout(monkeypatch, kind, paid, status, activates):
-    monkeypatch.setattr(billing, 'WEBHOOK_SECRET', 'fixture-only')
+    monkeypatch.setattr(billing, 'active_configuration', AsyncMock(return_value={'secret':'fixture-only','key':'fixture-only'}))
     events = SimpleNamespace(insert_one=AsyncMock(), update_one=AsyncMock(return_value=SimpleNamespace(modified_count=1)))
     monkeypatch.setattr(billing, 'db', SimpleNamespace(webhook_events=events))
     event = {'id': 'event-test', 'type': kind, 'data': {'object': {

@@ -22,6 +22,7 @@ from starlette.responses import JSONResponse
 ROOT = Path(__file__).resolve().parent
 load_dotenv(ROOT / ".env", override=False)
 os.environ["KAOS_COINBASE_LIVE_ORDERS"] = "disabled"
+os.environ["KAOS_LOGIN_VALIDATION_MODE"] = "true"
 os.environ["STRIPE_SECRET_KEY"] = ""
 os.environ["STRIPE_WEBHOOK_SECRET"] = ""
 for path in (ROOT / "apps/api", ROOT / "packages/kaos-core"):

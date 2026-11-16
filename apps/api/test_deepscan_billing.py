@@ -22,6 +22,7 @@ def test_cancel_failed_stripe_call_does_not_mark_member_canceled(monkeypatch):
         pass
     def fail(*args, **kwargs):
         raise StripeFailure("failed")
+    monkeypatch.setattr(api,"active_configuration",AsyncMock(return_value={"key":"fixture-only"}))
     update=AsyncMock()
     monkeypatch.setattr(api.stripe.Subscription,"modify",fail)
     monkeypatch.setattr(api,"db",SimpleNamespace(users=SimpleNamespace(update_one=update)))

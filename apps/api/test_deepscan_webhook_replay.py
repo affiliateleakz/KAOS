@@ -16,7 +16,7 @@ def run(coro):
     return asyncio.run(coro)
 
 def setup(monkeypatch, existing, claim_result=1):
-    monkeypatch.setattr(billing, "WEBHOOK_SECRET", "test_secret")
+    monkeypatch.setattr(billing, "active_configuration", AsyncMock(return_value={"secret":"test_secret","key":"fixture-only"}))
     event={"id":"evt_123","type":"unknown.test","data":{"object":{}}}
     monkeypatch.setattr(billing.stripe.Webhook,"construct_event",lambda *args:event)
     def duplicate(*args,**kwargs):
@@ -48,7 +48,7 @@ def test_stale_event_replay_claims_and_completes(monkeypatch):
     assert events.update_one.await_args_list[-1].args[1]["$set"]["state"]=="completed"
 
 def test_new_webhook_claim_must_succeed_before_processing(monkeypatch):
-    monkeypatch.setattr(billing, "WEBHOOK_SECRET", "test_secret")
+    monkeypatch.setattr(billing, "active_configuration", AsyncMock(return_value={"secret":"test_secret","key":"fixture-only"}))
     monkeypatch.setattr(billing.stripe.Webhook, "construct_event",
                         lambda *args: {"id":"evt_new","type":"unknown.test","data":{"object":{}}})
     events=SimpleNamespace(insert_one=AsyncMock(),

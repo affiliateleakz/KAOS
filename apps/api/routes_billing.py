@@ -8,18 +8,16 @@ from auth import get_current_user
 from services import get_setting, set_setting, audit_log
 from models import CheckoutReq
 from services_trading import FREE_ENTITLEMENTS
+from stripe_runtime import active_configuration, availability
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/billing", tags=["billing"])
-stripe.api_key = os.environ.get("STRIPE_SECRET_KEY") or None
-WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 
 
 @router.get('/availability')
 async def billing_availability():
-    key = os.environ.get('STRIPE_SECRET_KEY', '')
-    return {'checkoutEnabled': key.startswith(('sk_live_', 'sk_test_')), 'mode': 'live' if key.startswith('sk_live_') else 'test' if key.startswith('sk_test_') else 'unconfigured'}
+    return await availability()
 
 # Paid tiers offer monthly and annual billing. Free is not sold through checkout.
 DEFAULT_PLANS = [
@@ -88,21 +86,22 @@ async def membership_catalog():
 
 @router.post("/checkout")
 async def checkout(req: CheckoutReq, user: dict = Depends(get_current_user)):
+    config = await active_configuration()
     plans = await get_plans()
     plan = next((p for p in plans if p["lookup_key"] == req.lookup_key), None)
     if not plan:
         raise HTTPException(status_code=400, detail="Unknown plan")
     customer_id = user.get("stripe_customer_id")
     if not customer_id:
-        cust = stripe.Customer.create(email=user["email"], name=user.get("name"),
+        cust = stripe.Customer.create(api_key=config['key'], email=user["email"], name=user.get("name"),
                                       metadata={"user_id": user["id"]})
         customer_id = cust.id
         await db.users.update_one({"id": user["id"]}, {"$set": {"stripe_customer_id": customer_id}})
-    price = stripe.Price.create(unit_amount=plan["amount"], currency=plan["currency"],
+    price = stripe.Price.create(api_key=config['key'], unit_amount=plan["amount"], currency=plan["currency"],
                                 recurring={"interval": plan["interval"]},
                                 product_data={"name": f"Trading Platform {plan['name']}"})
     session = stripe.checkout.Session.create(
-        mode="subscription", customer=customer_id,
+        api_key=config["key"], mode="subscription", customer=customer_id,
         line_items=[{"price": price.id, "quantity": 1}],
         success_url=f"{os.environ['FRONTEND_URL'].rstrip('/')}/payment/success?session_id={{CHECKOUT_SESSION_ID}}",
         cancel_url=f"{os.environ['FRONTEND_URL'].rstrip('/')}/payment/cancel",
@@ -122,7 +121,8 @@ async def status(session_id: str, user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Not found")
     if rec.get("state") not in ("active", "completed"):
         try:
-            s = stripe.checkout.Session.retrieve(session_id)
+            config = await active_configuration()
+            s = stripe.checkout.Session.retrieve(session_id, api_key=config["key"])
             if (s.payment_status == "paid" and s.status == "complete"
                     and s.get("customer") == rec.get("stripe_customer_id")
                     and s.get("metadata", {}).get("user_id") == user["id"]):
@@ -159,19 +159,21 @@ async def _activate(user_id, plan_id, customer, subscription, session_id):
 
 @router.post("/portal")
 async def billing_portal(req: CheckoutReq, user: dict = Depends(get_current_user)):
+    config = await active_configuration()
     if not user.get("stripe_customer_id"):
         raise HTTPException(status_code=400, detail="No billing account")
-    session = stripe.billing_portal.Session.create(customer=user["stripe_customer_id"],
+    session = stripe.billing_portal.Session.create(api_key=config["key"], customer=user["stripe_customer_id"],
                                                     return_url=f"{os.environ['FRONTEND_URL'].rstrip('/')}/dashboard/subscription")
     return {"url": session.url}
 
 
 @router.post("/cancel")
 async def cancel(user: dict = Depends(get_current_user)):
+    config = await active_configuration()
     sub_id = user.get("stripe_subscription_id")
     if sub_id:
         try:
-            stripe.Subscription.modify(sub_id, cancel_at_period_end=True)
+            stripe.Subscription.modify(sub_id, cancel_at_period_end=True, api_key=config["key"])
         except stripe.error.StripeError as exc:
             raise HTTPException(status_code=502, detail="Stripe cancellation failed") from exc
     await db.users.update_one({"id": user["id"]}, {"$set": {"cancel_at_period_end": bool(sub_id), "updated_at": now_iso()}})
@@ -184,12 +186,11 @@ webhook_router = APIRouter(tags=["billing"])
 
 @webhook_router.post("/api/stripe/webhook")
 async def stripe_webhook(request: Request):
-    if not WEBHOOK_SECRET:
-        raise HTTPException(status_code=503, detail="Stripe webhook not configured")
+    config = await active_configuration()
     payload = await request.body()
     sig = request.headers.get("stripe-signature", "")
     try:
-        event = stripe.Webhook.construct_event(payload, sig, WEBHOOK_SECRET)
+        event = stripe.Webhook.construct_event(payload, sig, config["secret"])
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid signature")
     # Record receipt separately from successful processing so a failed event
