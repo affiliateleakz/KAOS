@@ -307,7 +307,13 @@ async def get_settings(admin: dict = Depends(admin_dep)):
     affiliate = await get_setting("affiliate", {})
     branding = await get_setting("branding", {"productName": "Trading Platform"})
     from routes_billing import DEFAULT_PLANS
-    return {"plans": plans or DEFAULT_PLANS, "affiliate": affiliate, "branding": branding}
+    from services_trading import FREE_ENTITLEMENTS
+    from kaos.memberships import RATES
+    return {"plans": plans or DEFAULT_PLANS, "affiliate": affiliate, "branding": branding,
+            "planDefaults": DEFAULT_PLANS,
+            "freePlan": {"id": "free", "tier": "free", "name": "Free", "amount": 0,
+                         "currency": "usd", "interval": None, "entitlements": dict(FREE_ENTITLEMENTS)},
+            "affiliateRates": {tier: list(rates) for tier, rates in RATES.items()}}
 
 
 @router.post("/settings")
@@ -315,6 +321,18 @@ async def update_settings(req: SettingsReq, admin: dict = Depends(admin_dep)):
     if req.key not in ("plans", "affiliate", "branding"):
         raise HTTPException(status_code=400, detail="Unknown setting")
     value = req.value.get("value", req.value)
+    if req.key == "plans":
+        if not isinstance(value, list) or not value:
+            raise HTTPException(status_code=400, detail="Provide paid membership plans. Free is managed separately.")
+        ids = set()
+        for plan in value:
+            if not isinstance(plan, dict) or not isinstance(plan.get("id"), str) or not plan["id"] or plan["id"] in ids or plan["id"] == "free":
+                raise HTTPException(status_code=400, detail="Paid plans need unique IDs; Free stays $0 and is not a checkout plan.")
+            ids.add(plan["id"])
+            if type(plan.get("amount")) is not int or not 0 < plan["amount"] <= 99999999:
+                raise HTTPException(status_code=400, detail="Paid plan amounts must be positive whole cents, up to 99999999.")
+            if not isinstance(plan.get("name"), str) or not plan["name"].strip() or plan.get("interval") not in ("month", "year"):
+                raise HTTPException(status_code=400, detail="Each paid plan needs a name and a valid billing interval.")
     await set_setting(req.key, value)
     await audit_log(admin, "update_settings", "settings", req.key)
     return {"ok": True, "key": req.key}

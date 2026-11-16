@@ -1,3 +1,4 @@
+import MembershipPlansEditor from './MembershipPlansEditor';
 import { deviceDate } from "../../lib/deviceDate";
 import React, { useEffect, useState } from "react";
 import { Navigate, Link } from "react-router-dom";
@@ -230,7 +231,6 @@ export function Settings() {
   useEffect(() => { api.get("/api/admin/settings").then((r) => setS(r.data)).catch(() => {}); }, []);
   const saveAffiliate = async () => { try { await api.post("/api/admin/settings", { key: "affiliate", value: { value: s.affiliate } }); toast.success("Affiliate settings saved"); } catch (e) { toast.error(errMsg(e)); } };
   const saveBranding = async () => { try { await api.post("/api/admin/settings", { key: "branding", value: { value: s.branding } }); toast.success("Branding saved"); } catch (e) { toast.error(errMsg(e)); } };
-  const savePlans = async () => { try { await api.post("/api/admin/settings", { key: "plans", value: { value: s.plans } }); toast.success("Plans saved"); } catch (e) { toast.error(errMsg(e)); } };
   if (!s) return <p className="text-slate-500">Loading…</p>;
   return (<div><H>Platform Settings</H>
     <div className="grid gap-6 lg:grid-cols-2">
@@ -244,16 +244,8 @@ export function Settings() {
         <Label className="label-mono mt-3 block">Instructions</Label>
         <Textarea value={s.affiliate.instructions || ""} onChange={(e) => setS({ ...s, affiliate: { ...s.affiliate, instructions: e.target.value } })} className="mt-1 bg-[#080808] border-[#3A3A3A]" />
         <Button data-testid="save-affiliate-button" onClick={saveAffiliate} className="mt-3 bg-[#22C55E] text-black">Save</Button></div>
-      <div className="card-surface p-5 lg:col-span-2"><h3 className="font-heading font-semibold">Membership Plans</h3>
-        {s.plans.map((p, i) => (
-          <div key={p.id} className="mt-3 grid grid-cols-3 gap-2">
-            <Input value={p.name} onChange={(e) => { const pl = [...s.plans]; pl[i] = { ...p, name: e.target.value }; setS({ ...s, plans: pl }); }} className="bg-[#080808] border-[#3A3A3A]" />
-            <Input type="number" value={p.amount} onChange={(e) => { const pl = [...s.plans]; pl[i] = { ...p, amount: parseInt(e.target.value) }; setS({ ...s, plans: pl }); }} className="bg-[#080808] border-[#3A3A3A] font-mono" />
-            <Input value={p.interval} disabled className="bg-[#080808] border-[#3A3A3A] font-mono opacity-60" />
-          </div>
-        ))}
-        <Button data-testid="save-plans-button" onClick={savePlans} className="mt-3 bg-[#22C55E] text-black">Save Plans</Button>
-        <p className="mt-2 text-xs text-slate-500">Amount in cents. Pricing is configurable — never hardcoded in app logic.</p></div>
+      <MembershipPlansEditor settings={s}/>
+
     </div>
   </div>);
 }

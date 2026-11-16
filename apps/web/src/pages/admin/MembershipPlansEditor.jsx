@@ -1,0 +1,26 @@
+import React,{useState} from 'react';
+import {api,errMsg} from '../../lib/api';
+import {toast} from 'sonner';
+import {Button} from '../../components/ui/button';
+import {Input} from '../../components/ui/input';
+import {planPrice} from '../Memberships';
+
+export default function MembershipPlansEditor({settings}){
+ const defaults=settings.planDefaults||[];
+ const current=Array.isArray(settings.plans)?settings.plans:[];
+ const [plans,setPlans]=useState(current),[busy,setBusy]=useState(false),[dirty,setDirty]=useState(false);
+ const legacy=plans.length!==2||!['pro','ultimate'].every(id=>plans.some(p=>p.id===id&&p.interval==='month'));
+ const free=settings.freePlan;
+ const edit=(id,key,value)=>{setPlans(old=>old.map(p=>p.id===id?{...p,[key]:value}:p));setDirty(true);};
+ const valid=plans.length>0&&plans.every(p=>p.name?.trim()&&Number.isSafeInteger(p.amount)&&p.amount>0&&p.amount<=99999999);
+ const useCurrent=()=>{setPlans(structuredClone(defaults));setDirty(true);};
+ const save=async()=>{setBusy(true);try{await api.post('/api/admin/settings',{key:'plans',value:{value:plans}});setDirty(false);toast.success('Membership plans saved. Public pricing now uses these amounts.');}catch(e){toast.error(errMsg(e));}finally{setBusy(false);}};
+ const summary=(plan)=>{const e=plan.entitlements||{},rates=settings.affiliateRates?.[plan.tier||plan.id];return <><p className="mt-3 text-sm text-[#e8c46f]">{e.chartLimit||1} broker chart slot{e.chartLimit>1?'s':''} · {e.deviceLimit||plan.deviceLimit||1} device{(e.deviceLimit||plan.deviceLimit)>1?'s':''}</p><ul className="mt-2 space-y-1 text-sm text-slate-300"><li>KAOS Strategy bot · broker-native charts</li>{e.community&&<li>Community, profiles & following</li>}{plan.id==='free'&&<li>Paper trading · no card required</li>}{e.scanners&&<li>Market scanners & heatmaps</li>}{e.aiInsights&&<li>AI research insights</li>}{e.cloudStrategies&&<li>Cloud strategies</li>}{e.premiumTools&&<li>Premium tools</li>}{(e.modes||[]).includes('AI')&&<li>AI-mode eligibility requires independent validation</li>}</ul>{rates&&<p className="mt-3 text-xs text-[#e8c46f]">Affiliate commissions: {rates.map((rate,index)=>rate?`Level ${index+1}: ${rate}%`:null).filter(Boolean).join(' · ')}</p>}</>;};
+ return <section className="card-surface p-5 lg:col-span-2" aria-labelledby="membership-plans-title"><h3 id="membership-plans-title" className="font-heading font-semibold">Membership Plans</h3><p className="mt-2 text-sm text-slate-400">Free, Pro and Ultimate. These saved paid prices feed public membership pricing and checkout. Free is always $0 and is not sold through checkout.</p>
+ {legacy&&<p role="status" className="mt-3 rounded border border-[#8b6b32] p-3 text-sm text-[#e8c46f]">Saved plans use older membership levels. Choose “Use current KAOS plans” to load Pro and Ultimate with the current tools and default monthly prices, then review and Save Plans.</p>}
+ {defaults.length>0&&<Button variant="outline" disabled={busy} onClick={useCurrent} className="mt-3 border-[#8b6b32] text-[#e8c46f]">Use current KAOS plans</Button>}
+ <div className="mt-5 grid gap-4 xl:grid-cols-3">{free&&<article data-testid="admin-plan-free" className="min-w-0 rounded border border-[#66512d] bg-[#0b100d] p-4"><h4 className="text-lg text-[#e8c46f]">Free</h4><p className="mt-2 text-2xl">$0 <span className="text-xs text-slate-400">always free</span></p>{summary(free)}</article>}
+ {plans.map(plan=><article key={plan.id} data-testid={'admin-plan-'+plan.id} className="min-w-0 rounded border border-[#66512d] bg-[#0b100d] p-4"><label className="block text-xs text-slate-400">Membership name<Input aria-label={plan.id+' membership name'} disabled={busy} value={plan.name||''} onChange={e=>edit(plan.id,'name',e.target.value)} className="mt-1 bg-[#080808] border-[#66512d]"/></label><label className="mt-4 block text-xs text-slate-400">Price in cents ({(plan.currency||'usd').toUpperCase()})<Input aria-label={plan.id+' price in cents'} type="number" min="1" max="99999999" step="1" disabled={busy} value={Number.isFinite(plan.amount)?plan.amount:''} onChange={e=>edit(plan.id,'amount',e.target.value===''?null:Number(e.target.value))} className="mt-1 bg-[#080808] border-[#66512d] font-mono"/></label><p className="mt-2 text-lg text-[#e8c46f]">{Number.isSafeInteger(plan.amount)?planPrice(plan):'Enter whole cents'} / {plan.interval}</p>{summary(plan)}</article>)}</div>
+ {!valid&&<p role="alert" className="mt-3 text-sm text-amber-300">Enter a name and a positive whole-cent price for each paid membership.</p>}<Button data-testid="save-plans-button" disabled={busy||!valid||!dirty} onClick={save} className="mt-4 bg-[#D4AF37] text-black">{busy?'Saving…':'Save Plans'}</Button><p aria-live="polite" className="mt-2 text-xs text-slate-400">{dirty?'Unsaved changes. Review the prices and Save Plans to apply them.':'No unsaved changes.'} Prices remain configurable; loading defaults does not change active settings or charge members.</p><p className="mt-2 text-xs text-slate-500">Affiliate rates apply to qualifying paid referrals and renewals; joining alone earns no commission. Saving plans does not enable AI execution, payments or affiliate payouts.</p>
+ </section>;
+}
