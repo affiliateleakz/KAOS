@@ -1302,7 +1302,8 @@ console.info('[KAOS BUILD] V24.1.287-B21 · BB WINNER PRO (15s BB20/2) + ACTIVE 
   };
   // 1.6.44: persist actual AI learning rows across browser shutdowns.
   // Storage is restored once on startup; never manufacture successful outcomes.
-  const KAOS_AI_STORE_KEY='kaos_ai_lab_persistent_v1';
+  let KAOS_AI_STORE_KEY='kaos_ai_lab_persistent_v2_unbound';
+  let kaosModelMember=null;
   let kaosAiRestored=false,kaosAiDirty=false,kaosAiLastSave=0;
   try{setInterval(()=>{if(kaosAiRestored && AI_LAB.samples.length){kaosAiDirty=true;kaosPersistAiLab();}},30000);}catch(_){}
   function kaosPersistAiLab(force=false){
@@ -1312,25 +1313,25 @@ console.info('[KAOS BUILD] V24.1.287-B21 · BB WINNER PRO (15s BB20/2) + ACTIVE 
     const payload={version:1,savedAt:now,samples:AI_LAB.samples.slice(-AI_LAB.maxSamples),model:AI_LAB.model,stats:AI_LAB.stats,training:AI_LAB.training,holdout:AI_LAB.holdout,marketProfiles:AI_LAB.marketProfiles};
     try{chrome.storage.local.set({[KAOS_AI_STORE_KEY]:payload},()=>{if(chrome.runtime.lastError){kaosAiDirty=true;console.warn('[KAOS AI] Save failed',chrome.runtime.lastError.message);}});}catch(_){kaosAiDirty=true;}
   }
-  try{chrome.storage.local.get(KAOS_AI_STORE_KEY,d=>{
+  async function kaosRefreshMemberModel(){
     try{
-      const saved=d?.[KAOS_AI_STORE_KEY];
-      if(saved && (saved.model || (Array.isArray(saved.samples) && saved.samples.length))) {
-        aiLabRestore(saved); // Existing user-trained knowledge always wins over the bundled bootstrap.
-      } else {
-        // Bootstrap only genuinely blank installations; never overwrite an existing trained model.
-        fetch(chrome.runtime.getURL('kaos_pretrained_bootstrap.json'))
-          .then(r=>{if(!r.ok)throw Error('Bootstrap file missing');return r.json();})
-          .then(seed=>{
-            if(AI_LAB.model || AI_LAB.samples.length)return;
-            if(Number(seed?.model?.features)!==AI_FEATURES || !Array.isArray(seed?.model?.trees) || !seed.model.trees.length)throw Error('Invalid bootstrap model');
-            aiLabRestore(seed);
-            console.info('[KAOS AI] Pretrained research bootstrap loaded; not validated for autonomous trading');
-          }).catch(e=>console.warn('[KAOS AI] Bootstrap load failed',e));
+      const response=await chrome.runtime.sendMessage({type:'KAOS_GET_TRAINED_MODEL',scope:'pocket_option:binary:5s:20s:'+(kaosPocketOptionBalanceIsDemo===true?'paper':'real')});
+      const data=response?.data;
+      if(!response?.ok || !data?.member){AI_LAB.model=null;return;}
+      if(kaosModelMember!==data.member){
+        kaosModelMember=data.member;KAOS_AI_STORE_KEY='kaos_ai_lab_persistent_v2_'+data.member;
+        AI_LAB.model=null;AI_LAB.samples=[];AI_LAB.holdout={};AI_LAB.marketProfiles={};
+        const stored=await chrome.storage.local.get(KAOS_AI_STORE_KEY);const saved=stored?.[KAOS_AI_STORE_KEY];
+        if(saved)aiLabRestore({...saved,model:null});
       }
-    }catch(e){console.warn('[KAOS AI] Restore failed',e);}
-    kaosAiRestored=true;kaosPersistAiLab(true);
-  });}catch(_){kaosAiRestored=true;}
+      if(data.available && Number(data.model?.features)===AI_FEATURES && data.model?.targetHorizonMs===20000 && Array.isArray(data.model?.trees)){
+        AI_LAB.model={...data.model,researchOnly:true};AI_LAB.training={status:'research-ready',message:'Validated member model loaded for research; execution requires separate approval'};
+      }else{AI_LAB.model=null;AI_LAB.training={status:'collecting',message:data.pretrainedAccess?'No published pretrained model is available yet':'Personal AI starts untrained. Train your own model in KAOS AI.'};}
+      kaosAiRestored=true;kaosAiDirty=true;kaosPersistAiLab(true);
+    }catch(_){AI_LAB.model=null;}
+  }
+  kaosRefreshMemberModel();
+  try{setInterval(kaosRefreshMemberModel,300000);}catch(_){}
   try{window.addEventListener('pagehide',()=>kaosPersistAiLab(true));}catch(_){}
   function clampProb(v){ return Math.max(0,Math.min(1,Number.isFinite(Number(v))?Number(v):0.5)); }
   function aiMarketKey(asset){ return String(asset||'').trim(); }
@@ -1433,7 +1434,7 @@ console.info('[KAOS BUILD] V24.1.287-B21 · BB WINNER PRO (15s BB20/2) + ACTIVE 
   }
   function modelPredictTree(node,x){
     if(!node)return 0; let n=node;
-    while(n && n.leaf==null){ const f=Number(n.f||0),v=Number(x[f]||0),t=Number(n.t||0); n=v<=t?n.l:n.r; if(!n)return 0; }
+    while(n && n.leaf==null){ const f=Number(n.f||0),v=Number(x[f]||0),t=Number(n.t||0); n=v<t?n.l:n.r; if(!n)return 0; }
     return Number(n&&n.leaf!=null?n.leaf:0);
   }
   // V24.1.65 CHAMPION / CHALLENGER MODEL SELECTION
@@ -3272,7 +3273,7 @@ console.info('[KAOS BUILD] V24.1.287-B21 · BB WINNER PRO (15s BB20/2) + ACTIVE 
     };
     // Without server-granted AI execution (Free, Pro, or Ultimate before validation) the AI is
     // advisory only: it must not place, veto or override the strategy's trade.
-    if (!kaosAiExecutionAllowed) {
+    if (!kaosAiExecutionAllowed || AI_LAB.model?.researchOnly===true) {
       lastIndicators.aiController.advisoryOnly = true;
       return { sig:Object.assign({}, strategySig, { aiAdvisory:d }), aiDecision:d, advisoryOnly:true };
     }
@@ -3784,6 +3785,8 @@ console.info('[KAOS BUILD] V24.1.287-B21 · BB WINNER PRO (15s BB20/2) + ACTIVE 
 
     return {
       ts: Date.now(),
+      accountMode: typeof kaosPocketOptionBalanceIsDemo==='boolean'?(kaosPocketOptionBalanceIsDemo?'DEMO':'REAL'):'UNKNOWN',
+      featureVector: (()=>{try{const v=aiFeatures(asset,refPrice,ind);return Array.isArray(v)&&v.length===104?v.slice():null;}catch(_){return null;}})(),
       timestamp: new Date().toISOString().replace('T', ' ').slice(0, 19),
       asset, direction: dir, amount: Number(amount) || 0,
       entryType: entryType || 'signal',
@@ -6184,14 +6187,16 @@ const t3MinConsensus = aiLearning ? 1 : 3;
           engineMode: r.engineMode || null,
           strategyVersion: r.strategyVersion || null,
           tradingMode: 'STRATEGY',
+          accountMode: r.accountMode||'UNKNOWN', sampleType: r.accountMode==='DEMO'?'PAPER':r.accountMode==='REAL'?'REAL':'UNKNOWN',
           entryPrice: r.entryPrice ?? null,
           settlementPrice: r.exitPrice ?? null,
           exitPrice: r.exitPrice ?? null,
           outcome: String(msg.result || r.result || '').toUpperCase().replace('DRAW','TIE'),
           result: String(msg.result || r.result || '').toUpperCase().replace('DRAW','TIE'),
           pnl: Number(r.profit ?? msg.profit ?? 0),
-          timeframe: r.indicatorTimeframe || '5s',
+          timeframe: '5s', // Canonical 104-feature base; strategy timeframe remains in the trade record.
           timestamp: new Date(msg.timestamp || Date.now()).toISOString(),
+          decisionAt: Number(r.ts)||null, settledAt: Number(r.resultTs)||Number(msg.timestamp)||Date.now(),
           featureVector: Array.isArray(r.featureVector) ? r.featureVector : (Array.isArray(r.x) ? r.x : null),
           aiPrediction: r.aiPrediction || null,
           aiConfidence: r.aiConfidence || null,

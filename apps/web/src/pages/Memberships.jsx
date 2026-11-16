@@ -35,7 +35,7 @@ export default function Memberships(){
     <section className="grid items-stretch gap-5 lg:grid-cols-3" aria-label="Membership options">{plansForInterval(catalog.plans,period).map(plan=>{
      const saving=annualSaving(plan,catalog.plans);
      const ent=plan.entitlements||{},rates=catalog.affiliateRates?.[plan.tier]||[0,0,0];
-     const features=[['KAOS Strategy bot',ent.botAccess],['Community access',ent.community],['Market scanners & heatmaps',ent.scanners],['AI insights',ent.aiInsights],['Cloud strategies',ent.cloudStrategies],['Premium tools',ent.premiumTools]];
+     const features=[['KAOS Strategy bot',ent.botAccess],['Community access',ent.community],['Market scanners & heatmaps',ent.scanners],['AI insights',ent.aiInsights],['Private AI training · starts untrained',ent.aiTraining],['Published pretrained bot models (when available)',ent.pretrainedModels],['Cloud strategies',ent.cloudStrategies],['Premium tools',ent.premiumTools]];
      return <article key={plan.id} className="flex min-w-0 flex-col rounded-xl border border-[#66502a] bg-[#12100d] p-6" data-testid={`membership-card-${plan.id}`}>
       {recommendedMonthly(plan)&&<p className="kaos-plan-recommended">Recommended · Ultimate monthly</p>}
       <p className="text-xs uppercase tracking-widest text-[#b5a487]">{plan.id==='free'?'Start exploring':plan.interval==='year'?'Annual membership':plan.interval==='month'?'Monthly membership':'Paid membership'}</p><h2 className="mt-3 text-3xl font-semibold text-[#e8c46f]">{plan.name}</h2>

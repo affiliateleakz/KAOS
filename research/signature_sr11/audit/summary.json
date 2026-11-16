@@ -1,0 +1,56 @@
+{
+  "strategy": "KAOS Strategy",
+  "engine": "SUPPORT_RESISTANCE",
+  "version": "SR1.1",
+  "parameters": {
+    "name": "KAOS_STRATEGY",
+    "version": "SR1.1",
+    "srLookback": 20,
+    "expiries": [
+      15,
+      20,
+      25
+    ]
+  },
+  "strategy_sha256": "3bc04593b6356e712a0d32dfb59da805e2d30ceb5cbfc283171af65f9efc552e",
+  "data_sha256": "5fff21ee9a398fd261c7c580982fec48cc195f8826e100465e3ce4d43552c1a6",
+  "source": "Coinbase BTC/ETH/SOL public observed five-second bars; not Pocket Option OTC; no gap filling",
+  "candles": 3944,
+  "markets": 3,
+  "segments": 114,
+  "gaps": 111,
+  "start_ts": 1794805790000,
+  "end_ts": 1794815000000,
+  "holdout_start_ts": 1794812700000,
+  "full": {
+    "trades": 5,
+    "wins": 3,
+    "losses": 2,
+    "ties": 0,
+    "win_rate": 0.6,
+    "wilson_lower_95": 0.23071993220883702,
+    "unit_pnl": 0.4,
+    "break_even_win_rate": 0.5555555555555556,
+    "assumed_binary_payout": 0.8
+  },
+  "holdout": {
+    "trades": 2,
+    "wins": 0,
+    "losses": 2,
+    "ties": 0,
+    "win_rate": 0.0,
+    "wilson_lower_95": 0.0,
+    "unit_pnl": -2,
+    "break_even_win_rate": 0.5555555555555556,
+    "assumed_binary_payout": 0.8
+  },
+  "research_gate": "insufficient_samples",
+  "broker_execution_verified": false,
+  "live_approved": false,
+  "limitations": [
+    "Next-candle open entry; exact strategy-selected 15/20/25-second later open settlement proxy.",
+    "Binary payout is an assumption, not an observed broker payout.",
+    "Market-specific spreads, rejected orders and latency are not modeled.",
+    "Historical replay is not an untouched future validation or a profitability guarantee."
+  ]
+}

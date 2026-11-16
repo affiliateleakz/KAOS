@@ -44,7 +44,7 @@ const BASE=process.env.KAOS_WEB_PREVIEW_URL;
  await page.clock.install();
  await page.goto(BASE+'/dashboard/opportunities');await page.getByRole('heading',{name:'KAOS Radar',exact:true}).waitFor();
  const nav=page.getByRole('navigation',{name:'Radar sections'});
- assert.deepEqual(await nav.getByRole('button').allTextContents(),['News','Research','AI Signal','Bot Entries']);
+ assert.deepEqual(await nav.getByRole('button').allTextContents(),['News','Research','AI Signal','Bot Entries','IPOs & ICOs']);
  await page.getByRole('heading',{name:'Market headline fixture',exact:true}).waitFor();
  assert.equal(await page.getByLabel('Signal ticker',{exact:true}).count(),0,'News must not include unrelated AI controls');
  await nav.getByRole('button',{name:'Research',exact:true}).click();
@@ -115,6 +115,6 @@ const BASE=process.env.KAOS_WEB_PREVIEW_URL;
  assert.equal(savedKey,'fixture-private-alpha-token');assert.equal(await input.inputValue(),'');assert.ok(!(await page.locator('body').innerText()).includes('fixture-private-alpha-token'));
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
  assert.deepEqual(errors,[]);
- console.log('Unified Radar: four purpose-specific tabs, same-snapshot mention totals, separately labeled news samples, stock research without discovery, discovery without sticky focus, four markets, mobile layout and owner settings passed.');
+ console.log('Unified Radar: five purpose-specific tabs, same-snapshot mention totals, separately labeled news samples, stock research without discovery, discovery without sticky focus, four markets, mobile layout and owner settings passed.');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exit(1)});

@@ -14,6 +14,8 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from db import db, ensure_indexes
+import routes_offerings
+import training_service
 import routes_auth, routes_strategies, routes_community, routes_billing, routes_extension, routes_admin, routes_trading, routes_affiliate, routes_botsync, routes_ai
 import seed
 import routes_coinbase
@@ -103,6 +105,9 @@ app.include_router(routes_chart_settings.router)
 app.include_router(routes_chart_settings.candles_router)
 app.include_router(routes_free_apis.router)
 app.include_router(routes_kaos_scanner.router)
+app.include_router(routes_offerings.router)
+app.include_router(training_service.router)
+app.include_router(training_service.admin_router)
 
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
 app.add_middleware(

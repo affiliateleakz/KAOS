@@ -96,6 +96,7 @@ export function Login() {
   };
   return (
     <Shell title="Welcome back" subtitle="Sign in to your member account.">
+      <p className="mb-4 text-xs leading-relaxed text-slate-400" data-testid="service-learning-notice">KAOS uses de-identified settled trade and market features to train personal, shared and owner models as a standard part of the service. Account credentials, payments, balances and raw screenshots are excluded from training. <a href="/privacy.html" className="text-[#e8c46f] underline">Privacy and data use</a>.</p>
       <form onSubmit={submit} className="space-y-4">
         <div><Label htmlFor="login-email" className="label-mono">Email address</Label>
           <Input id="login-email" autoComplete="username" placeholder="you@example.com" data-testid="login-email-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="kaos-auth-input mt-2" /></div>
@@ -143,6 +144,7 @@ export function Register() {
   let referral=sp.get('ref');try{referral=referral||localStorage.getItem('kaos_ref')||undefined;}catch{}
   return (
     <Shell title="Create your account" subtitle="Step 2 · Your membership choice is saved with your account.">
+      <p className="mb-4 text-xs leading-relaxed text-slate-400" data-testid="registration-learning-notice">Using KAOS includes de-identified settled trade and market data contributing to personal, shared and owner models. This is required service data use, not an optional setting. <a href="/privacy.html" className="text-[#e8c46f] underline">Privacy and data use</a>.</p>
       <section className="mb-6 rounded-lg border border-[#8a6b32] bg-[#d4af37]/5 p-4" data-testid="registration-plan-summary"><h2 className="font-semibold text-[#e8c46f]">{selected.name} · {planPrice(selected)}{selected.interval?' / '+selected.interval:''}</h2><p className="mt-2 text-xs text-[#c4b89f]">{selected.id==='free'?'No card required.':'No charge at signup. Paid features require a confirmed payment.'}</p><Link to={selectionUrl} className="mt-3 inline-block text-sm text-[#e8c46f] underline">Change membership</Link></section>
       <form onSubmit={submit} className="space-y-4">
         <div><Label className="label-mono">Full name</Label>

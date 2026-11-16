@@ -74,6 +74,11 @@ def test_validation_wrapper_blocks_orders_and_billing(monkeypatch, tmp_path):
     @app.post('/api/admin/reports/report_1/action')
     def community():
         return {'community':True,'execution_enabled':False}
+    @app.post('/api/v1/ai/learning-samples')
+    @app.post('/api/v1/trading/events')
+    @app.post('/api/v1/ai/training/train')
+    @app.post('/api/admin/ai/continuous/owner/train')
+    @app.post('/api/admin/radar/offerings')
     @app.post('/api/v1/devices/register')
     def device():
         return {'ok': True}
@@ -168,6 +173,8 @@ def test_validation_wrapper_blocks_orders_and_billing(monkeypatch, tmp_path):
     client = TestClient(app)
     assert client.get('/api').status_code == 200
     assert client.post('/api/v1/auth/login').status_code == 200
+    for path in ('/api/v1/ai/learning-samples','/api/v1/trading/events','/api/v1/ai/training/train','/api/admin/ai/continuous/owner/train','/api/admin/radar/offerings'):
+        assert client.post(path).status_code == 200
     assert client.post('/api/v1/devices/register').status_code == 200
     assert client.post('/api/community/posts').status_code == 200
     assert client.put('/api/community/posts/post_1/like').status_code == 200

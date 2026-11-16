@@ -142,7 +142,7 @@ async def intelligence(req: IntelReq, request: Request, user: dict = Depends(get
     await _check_chart(user, req.chartSlot)
     ctx = {"bucket": req.bucket or "", **(req.context or {})}
     strat = await kaos_strategy_predict(req.asset, req.platform, ctx) if req.mode in ("STRATEGY", "STRATEGY_AI") else None
-    ai = await kaos_ai_predict(req.asset, req.platform, ctx) if req.mode in ("AI", "STRATEGY_AI") else None
+    ai = await kaos_ai_predict(req.asset, req.platform, ctx, user=user) if req.mode in ("AI", "STRATEGY_AI") else None
     tc = await get_trading_config()
     authority = req.mode if req.mode != "STRATEGY_AI" else tc.get("executionAuthority", "STRATEGY")
     chosen = strat if authority in ("STRATEGY", "STRATEGY_AI") and strat else ai
@@ -296,68 +296,23 @@ class BacktestReq(BaseModel):
 
 @mt.post("/backtest")
 async def backtest(req: BacktestReq, user: dict = Depends(get_current_user)):
-    """Run the REAL deterministic KAOS engine across candle history and report per-engine win-rate.
-    Non-overlapping trades (each jumps past its expiration horizon). Read-only; persists nothing."""
-    ent = await get_entitlements(user)
-    if not ent.get("botAccess"):
-        raise HTTPException(status_code=403, detail="Bot access not included in your plan")
-    rows = req.candles or []
-    if len(rows) < 60:
-        raise HTTPException(status_code=400, detail="Provide at least ~60 candle rows: {ts,open,high,low,close}.")
+    """Bounded strict replay of the same engine as the extension; no training or orders."""
+    if not (await get_entitlements(user)).get("botAccess"):
+        raise HTTPException(403,"Bot access required")
     import asyncio
-    import kaos_berserker
-    rows = rows[-2500:]
-
-    def _run():
-        n = len(rows)
-
-        def hbars(exp):
-            try:
-                return max(1, int(str(exp).replace("s", "")) // 5)
-            except Exception:
-                return 6
-
-        def wr(d):
-            dec = d["wins"] + d["losses"]
-            return round(100 * d["wins"] / dec, 1) if dec else 0.0
-
-        by, eq, cum = {}, [], 0
-        overall = {"trades": 0, "wins": 0, "losses": 0, "ties": 0}
-        i = 50
-        while i < n:
-            sig = kaos_berserker.evaluate(rows[:i + 1])
-            if sig and sig.get("direction"):
-                j = i + hbars(sig.get("expiration"))
-                if j >= n:
-                    break
-                entry, settle = float(rows[i]["close"]), float(rows[j]["close"])
-                if settle == entry:
-                    res = "ties"
-                elif (settle > entry) == (sig["direction"] == "BUY"):
-                    res = "wins"
-                else:
-                    res = "losses"
-                b = by.setdefault(sig["engine"], {"trades": 0, "wins": 0, "losses": 0, "ties": 0})
-                b["trades"] += 1
-                b[res] += 1
-                overall["trades"] += 1
-                overall[res] += 1
-                cum += 1 if res == "wins" else (-1 if res == "losses" else 0)
-                eq.append(cum)
-                i = j
-                continue
-            i += 1
-        for d in by.values():
-            d["winRate"] = wr(d)
-        overall["winRate"] = wr(overall)
-        return {"bars": n, "byEngine": by, "overall": overall, "equity": eq[-240:]}
-
-    result = await asyncio.to_thread(_run)
-    from services_trading import get_official_strategy
-    cfg = await get_official_strategy()
-    result["strategyVersion"] = cfg.get("version")
-    result["simulated"] = False
-    return result
+    from signature_backtest import replay
+    if len(req.candles)<100:raise HTTPException(400,"Provide at least 100 aligned five-second candles with timestamps")
+    try:report=await asyncio.to_thread(replay,{req.asset:req.candles[-2500:]},provenance="User-supplied candles; fills unverified")
+    except (ValueError,KeyError,TypeError) as exc:raise HTTPException(422,str(exc))
+    by={};equity=[];net=0
+    for trade in report['trades']:
+        row=by.setdefault(trade['engine'],dict(trades=0,wins=0,losses=0,ties=0))
+        row['trades']+=1;row[{'WIN':'wins','LOSS':'losses','TIE':'ties'}[trade['result']]]+=1
+        net+=trade['unit_pnl'];equity.append(round(net,4))
+    for row in by.values():row['winRate']=round(100*row['wins']/max(1,row['wins']+row['losses']),2)
+    full=report['full'];overall={k:full[k] for k in ('trades','wins','losses','ties')}
+    overall['winRate']=round(100*full['win_rate'],2) if full['win_rate'] is not None else None
+    return {"bars":report['candles'],"byEngine":by,"overall":overall,"equity":equity[-240:],"strategyVersion":report['version'],"simulated":False,"mode":"offline-research-only","holdout":report['holdout'],"limitations":report['limitations'],"researchGate":report['research_gate'],"liveApproved":False}
 
 
 class ModeReq(BaseModel):
@@ -570,7 +525,7 @@ async def strategy_preview(req: ReplayReq, user: dict = Depends(get_current_user
     if len(rows) < 50:
         raise HTTPException(status_code=400, detail="Provide at least ~50 candle rows: {ts,open,high,low,close}.")
     import asyncio
-    import kaos_berserker
+    import kaos_signature as kaos_berserker
     lo = max(50, len(rows) - 300)
 
     def _scan():

@@ -37,6 +37,8 @@ def _get_app():
             auth = path.startswith(("/api/auth/", "/api/v1/auth/"))
             allowed_write = auth or path in (
                 "/api/v1/devices/register", "/api/v1/extension/google/access-token",
+                "/api/v1/ai/learning-samples", "/api/v1/trading/events", "/api/v1/ai/training/train",
+                "/api/admin/ai/continuous/owner/train", "/api/admin/radar/offerings",
                 "/api/affiliate/activate", "/api/affiliate/connect/onboarding",
                 "/api/v1/intelligence/sync-news", "/api/v1/intelligence/scan", "/api/v1/intelligence/signals/market", "/api/v1/intelligence/social/mentions", "/api/v1/intelligence/news/feed", "/api/v1/intelligence/signals/opportunities", "/api/v1/intelligence/research/asset")
             # These handlers still enforce the authenticated owner/admin authority.
@@ -61,7 +63,7 @@ def _get_app():
                     membership_setup = isinstance(payload, dict) and payload.get("key") == "plans"
                 except ValueError:
                     pass
-            allowed_write = allowed_write or bool(device_revoke) or commerce_setup or radar_setup or community_write or membership_setup
+            allowed_write = allowed_write or bool(device_revoke) or commerce_setup or radar_setup or community_write or membership_setup or (request.method == "POST" and bool(re.fullmatch(r"/api/admin/ai/continuous/publish/[a-f0-9]{64}", path)))
             pricing_read = path in ("/api/billing/plans", "/api/billing/availability", "/api/billing/memberships") and request.method in ("GET", "HEAD", "OPTIONS")
             if ((path.startswith("/api/billing") and not pricing_read) or
                     (request.method not in ("GET", "HEAD", "OPTIONS") and not allowed_write)):

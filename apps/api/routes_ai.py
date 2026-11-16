@@ -1,14 +1,12 @@
-"""KAOS AI: inference boundary, model registry/versioning/deployment, Collective Learning ingestion.
+"""Authenticated, member-scoped native AI research inference and required learning.
 
-The inference endpoint is a real, authenticated production BOUNDARY. When an admin trains and
-deploys a model, `/api/v1/ai/predict` runs REAL server-side inference over the native KAOS AI
-tree bundle (learning/reporting only — no execution authority). Until a bundle is deployed it
-returns a clearly-flagged simulated placeholder; it is never advertised as production-trained.
+An unavailable or unvalidated model returns HOLD; training jobs run only in the
+separate worker. Legacy registry endpoints remain for historical research.
 """
 import time
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from fastapi import APIRouter, HTTPException, Depends, Request
 from db import db, new_id, now_iso, clean
 from auth import get_current_user, require_role
@@ -35,6 +33,7 @@ class PredictReq(BaseModel):
     features: dict = {}
     featureVector: Optional[list] = None
     candles: Optional[list] = None
+    expiration: str = Field(default="20s", pattern=r"^(15|20|25|30|45|60)s$")
 
 
 @v1ai.post("/predict")
@@ -48,17 +47,18 @@ async def predict(req: PredictReq, request: Request, user: dict = Depends(get_cu
     if missing:
         raise HTTPException(status_code=422, detail=f"Missing feature keys: {missing}")
     t0 = time.perf_counter()
-    model = await _active_model()
+    model = {}
     ctx = {"bucket": req.features.get("bucket", ""), "featureVector": req.featureVector,
-           "x": req.featureVector, "features": req.featureVector, "candles": req.candles}
-    out = await kaos_ai_predict(req.asset, req.platform, ctx)
+           "x": req.featureVector, "features": req.featureVector, "candles": req.candles, "expiration": req.expiration}
+    out = await kaos_ai_predict(req.asset, req.platform, ctx, user=user)
+    model = {"id":out.get("modelVersion"),"version":out.get("modelVersion")}
     latency = round((time.perf_counter() - t0) * 1000, 2)
     simulated = bool(out.get("simulated"))
     rec = {"id": new_id("pred"), "userId": user["id"], "asset": req.asset, "platform": req.platform,
            "timeframe": req.timeframe, "prediction": out.get("direction"), "confidence": out.get("confidence"),
            "model_id": model.get("id"), "model_version": out.get("modelVersion") or model.get("version"),
            "latencyMs": latency, "modelKind": out.get("modelKind"), "probUp": out.get("probUp"),
-           "productionTrained": not simulated, "simulated": simulated, "timestamp": now_iso(), "outcome": None}
+           "productionTrained": bool(out.get("productionTrained")), "simulated": simulated, "timestamp": now_iso(), "outcome": None}
     await db.ai_predictions.insert_one(dict(rec))
     note = ("Live KAOS AI inference (native tree bundle). Learning/reporting only — no execution authority."
             if not simulated else
@@ -67,7 +67,8 @@ async def predict(req: PredictReq, request: Request, user: dict = Depends(get_cu
             "model_id": model.get("id"), "model_version": rec["model_version"],
             "prob_up": out.get("probUp"), "model_kind": out.get("modelKind"),
             "latency_ms": latency, "timestamp": rec["timestamp"], "source": "AI",
-            "authority": "LEARNING_ONLY", "simulated": simulated, "note": note}
+            "available": bool(out.get("available")), "productionTrained": bool(out.get("productionTrained")),
+            "authority": "LEARNING_ONLY", "simulated": simulated, "note": out.get("reason") or note}
 
 
 
@@ -306,6 +307,7 @@ async def openai_brain(
 class LearningSample(BaseModel):
     sampleId: str
     sampleType: str            # REAL | PAPER
+    accountMode: Optional[str] = None
     platform: str
     asset: str
     assetClass: Optional[str] = None
@@ -323,49 +325,39 @@ class LearningSample(BaseModel):
     features: dict = {}
     botVersion: Optional[str] = None
     timestamp: Optional[str] = None
+    decisionAt: Optional[int] = None
+    settledAt: Optional[int] = None
 
 
 @v1ai.post("/learning-samples")
 async def learning_samples(s: LearningSample, user: dict = Depends(get_current_user)):
-    if not user.get("collective_learning_consent"):
-        raise HTTPException(status_code=403, detail="Collective Learning consent required")
-    if s.sampleType not in ("REAL", "PAPER"):
-        raise HTTPException(status_code=400, detail="Invalid sampleType")
-    if await db.learning_samples.find_one({"sampleId": s.sampleId}):
-        return {"sampleId": s.sampleId, "duplicate": True}
-    # anonymized: no name/email/credentials/balance. Stable anonymous learning id per user.
-    anon = user.get("learning_id")
-    if not anon:
-        anon = new_id("lrn")
-        await db.users.update_one({"id": user["id"]}, {"$set": {"learning_id": anon}})
-    doc = s.model_dump()
-    doc.update({"id": new_id("sample"), "learningId": anon, "status": "ingested",
-                "createdAt": now_iso(), "timestamp": s.timestamp or now_iso()})
-    await db.learning_samples.insert_one(dict(doc))
-    return {"sampleId": s.sampleId, "duplicate": False, "learningId": anon}
+    from training_samples import ingest
+    try:return await ingest(user,s.model_dump())
+    except ValueError as exc:raise HTTPException(422,str(exc))
+
 
 
 @v1ai.get("/model")
-async def model_info():
-    return await _active_model()
+async def model_info(user: dict = Depends(get_current_user)):
+    from training_service import bundle
+    selected=await bundle(user=user)
+    return {k:v for k,v in selected.items() if k!='model'}
 
 
 @v1ai.get("/status")
-async def ai_status():
-    total = await db.learning_samples.count_documents({})
-    deployed_bundle = await db.ai_models.find_one({"status": "deployed", "bundle": {"$ne": None}}, {"_id": 0})
-    return {"activeModel": await _active_model(), "learningSamples": total,
-            "productionTrained": bool(deployed_bundle)}
+async def ai_status(user: dict = Depends(get_current_user)):
+    from training_service import status
+    return await status(user)
 
 
 @mai.get("/overview")
 async def ai_overview(user: dict = Depends(get_current_user)):
-    real = await db.learning_samples.count_documents({"learningId": user.get("learning_id"), "sampleType": "REAL"}) if user.get("learning_id") else 0
-    paper = await db.learning_samples.count_documents({"learningId": user.get("learning_id"), "sampleType": "PAPER"}) if user.get("learning_id") else 0
-    preds = await db.ai_predictions.find({"userId": user["id"]}, {"_id": 0}).sort("timestamp", -1).to_list(20)
-    return {"activeModel": await _active_model(), "consent": bool(user.get("collective_learning_consent")),
-            "realSamples": real, "paperSamples": paper, "recentPredictions": preds,
-            "entitlements": await get_entitlements(user)}
+    from training_service import contributor
+    who=contributor(user)
+    real=await db.ai_training_samples.count_documents({"contributor":who,"sampleType":"REAL"})
+    paper=await db.ai_training_samples.count_documents({"contributor":who,"sampleType":"PAPER"})
+    preds=await db.ai_predictions.find({"userId":user["id"]},{"_id":0}).sort("timestamp",-1).limit(20).to_list(20)
+    return {"activeModel":await model_info(user),"sharedLearningRequired":True,"realSamples":real,"paperSamples":paper,"recentPredictions":preds,"entitlements":await get_entitlements(user)}
 
 
 # ---- admin AI control center ----
@@ -484,7 +476,7 @@ async def train_ai_model(admin: dict = Depends(admin_dep)):
     """
     import asyncio
     import kaos_ai_trainer
-    samples = await db.learning_samples.find({}, {"_id": 0}).to_list(5000)
+    samples = await db.learning_samples.find({"expiration": "30s", "timeframe": "5s", "platform": "pocket_option"}, {"_id": 0}).to_list(5000)
     training, skipped = [], 0
     for s in samples:
         feats = s.get("features") or {}

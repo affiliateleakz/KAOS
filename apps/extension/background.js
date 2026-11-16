@@ -816,7 +816,7 @@ async function kaosLearn() {
   _kaosLearn = self.KaosLearningClient.createKaosLearningClient({
     apiBase: await kaosApiBase(),
     getAuth: kaosAuth,
-    hasConsent: async () => (await chrome.storage.local.get('collectiveLearning')).collectiveLearning === true,
+    hasConsent: async () => true,
     botVersion: (chrome.runtime.getManifest && chrome.runtime.getManifest().version) || '1.0'
   });
   return _kaosLearn;
@@ -836,13 +836,13 @@ async function kaosOnTradeEvent(type, trade) {
   if (type === 'TRADE_RESULT' && trade.featureVector && trade.outcome) {
     try {
       (await kaosLearn()).emit({
-        sampleType: trade.paper ? 'PAPER' : 'REAL',
+        sampleType: trade.sampleType || (trade.paper ? 'PAPER' : 'UNKNOWN'), accountMode: trade.accountMode || 'UNKNOWN',
         platform: trade.platform || 'pocket_option',
         asset: trade.asset, timeframe: trade.timeframe || '5s', expiration: trade.expiration,
         strategy: trade.engine || trade.strategy || 'KAOS_STRATEGY', strategyVersion: trade.strategyVersion || null, direction: trade.direction,
         aiPrediction: trade.aiPrediction, aiConfidence: trade.aiConfidence, aiModelVersion: trade.aiModelVersion,
         entryPrice: trade.entryPrice, settlementPrice: trade.settlementPrice, outcome: trade.outcome,
-        featureVector: trade.featureVector, sampleId: trade.tradeId
+        featureVector: trade.featureVector, sampleId: trade.tradeId, decisionAt: trade.decisionAt, settledAt: trade.settledAt
       });
     } catch (_) {}
   }
@@ -873,6 +873,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           sendResponse({ ok: true, state }); break;
         }
         case 'KAOS_LOGOUT': await kaosStopBrokerIntegration(); await self.KaosCloud.logout(); sendResponse({ ok: true }); break;
+        case 'KAOS_GET_TRAINED_MODEL': {
+          const scope=typeof msg.scope==='string'&&/^pocket_option:binary:5s:(15|20|25|30|45|60)s:(real|paper)$/.test(msg.scope)?msg.scope:'pocket_option:binary:5s:20s:real';
+          const response = await self.KaosCloud.authFetch('/ai/training/bundle?scope='+encodeURIComponent(scope), {method:'GET'});
+          sendResponse(response.ok ? {ok:true,data:await response.json()} : {ok:false,error:'Model access is unavailable'}); break;
+        }
         case 'KAOS_GET_PLATFORMS': sendResponse({ ok: true, platforms: await self.KaosCloud.platforms() }); break;
         case 'KAOS_SELECT_PLATFORM':
           await self.KaosCloud.selectPlatform(msg.platform, msg.remember);

@@ -1,0 +1,23 @@
+[Unit]
+Description=KAOS continuous research and model training worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=kaos
+WorkingDirectory=/opt/KAOS/apps/api
+EnvironmentFile=/etc/kaos/training.env
+Environment=PYTHONPATH=/opt/KAOS/packages/kaos-core
+Environment=OMP_NUM_THREADS=1
+Environment=OPENBLAS_NUM_THREADS=1
+ExecStart=/opt/KAOS/.venv/bin/python /opt/KAOS/apps/api/training_worker.py
+Restart=on-failure
+RestartSec=30
+Nice=10
+CPUQuota=75%
+MemoryMax=1G
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

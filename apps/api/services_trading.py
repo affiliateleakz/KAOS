@@ -29,25 +29,14 @@ async def apply_ai_execution_lock(ent: dict) -> dict:
     return {**ent, "modes": modes, "aiExecutionLocked": True}
 
 # Default KAOS Strategy metadata (owner-configurable via admin). This is DISPLAY METADATA only;
-# the tested execution logic lives in kaos_berserker.py / candidate7b_strategy.js (see STRATEGY_ENGINE.md).
+# the tested execution logic lives in kaos_signature.py / candidate7b_strategy.js (see STRATEGY_ENGINE.md).
 DEFAULT_OFFICIAL_STRATEGY = {
-    "name": "KAOS Strategy",
-    "type": "OFFICIAL",
-    "version": "C9.0",
-    "locked": True,
-    "engine": "TWO_CANDLE_CONTINUATION",
-    "signalTimeframe": "5s",
-    "expiration": "45s",
-    "emaFast": 9,
-    "emaSlow": 21,
-    "atrPeriod": 20,
-    "pullbackCandles": 2,
-    "pullbackRule": "Exactly 2 counter-trend pullback candles",
-    "maxPullbackAtr": 1.35,
-    "minConfirmBodyFrac": 0.45,
-    "description": ("Established trend -> exactly 2 counter-trend pullback candles -> continuation "
-                    "confirmation candle -> next-candle entry."),
+    "name":"KAOS Strategy","type":"OFFICIAL","version":"SR1.1","locked":True,
+    "engine":"SUPPORT_RESISTANCE","signalTimeframe":"5s","expirations":["15s","20s","25s"],
+    "srLookback":20,"contextTimeframe":"60s","emaFast":9,"emaSlow":21,
+    "description":"Trend-aligned support/resistance rejection, sweep/reclaim, breakout/retest and pullback continuation; closed-candle confirmation.",
 }
+
 
 # Trading decision config (execution authority / combine rules) is versioned config, NOT
 # hardcoded thresholds. Owner tunes these later via admin settings.
@@ -76,6 +65,8 @@ DEFAULT_ENTITLEMENTS = {
 
 async def get_official_strategy():
     metadata = await get_setting("official_strategy", DEFAULT_OFFICIAL_STRATEGY)
+    if metadata.get("engine") == "TWO_CANDLE_CONTINUATION" or metadata.get("version") == "C9.0":
+        return dict(DEFAULT_OFFICIAL_STRATEGY)
     if metadata.get("name") in {"KAOS Berserker", "Berserker", "Candidate 7B", "candidate"}:
         return {**metadata, "name": "KAOS Strategy"}
     return metadata
@@ -89,7 +80,7 @@ async def get_trading_config():
 FREE_ENTITLEMENTS = {
     "botAccess": True, "modes": ["STRATEGY"], "connectors": ["pocket_option"], "scanners": False,
     "aiInsights": False, "cloudStrategies": False, "community": True, "premiumTools": False, "deviceLimit": 1,
-    "chartLimit": 1,
+    "chartLimit": 1, "aiTraining": False, "pretrainedModels": False,
     "tier": "free",
 }
 
@@ -103,7 +94,7 @@ async def get_entitlements(user: dict) -> dict:
             and not user.get("extension_access_revoked")):
         return device_entitlements(user, await apply_ai_execution_lock({
             "botAccess": True, "modes": list(TRADING_MODES), "connectors": ["pocket_option"],
-            "scanners": True, "aiInsights": True, "cloudStrategies": True,
+            "scanners": True, "aiInsights": True, "aiTraining": True, "pretrainedModels": True, "cloudStrategies": True,
             "community": True, "premiumTools": True, "chartLimit": 4,
             "deviceLimit": None, "tier": "ultimate", "roleGranted": True,
         }))
@@ -121,8 +112,8 @@ async def _membership_entitlements(user: dict) -> dict:
     ent = (plan or {}).get("entitlements")
     if not ent:
         return {**DEFAULT_ENTITLEMENTS, "botAccess": True, "modes": ["STRATEGY"], "connectors": ["pocket_option"],
-                "cloudStrategies": True, "scanners": True, "aiInsights": True, "tier": "pro"}
-    return await apply_ai_execution_lock({"scanners": True, "aiInsights": True, **ent, "tier": plan.get("tier", "pro")})
+                "cloudStrategies": True, "scanners": True, "aiInsights": True, "aiTraining": True, "pretrainedModels": False, "tier": "pro"}
+    return await apply_ai_execution_lock({"scanners": True, "aiInsights": True, **ent, "aiTraining": True, "pretrainedModels": plan.get("tier", "pro") == "ultimate", "tier": plan.get("tier", "pro")})
 
 
 def _pseudo(*parts) -> int:
@@ -139,11 +130,11 @@ def _engine_label(cfg: dict, key: str) -> str:
 async def kaos_strategy_predict(asset: str, platform: str, context: dict) -> dict:
     """Real deterministic KAOS Strategy — execution authority.
 
-    When candle rows are supplied (context.candles / context.rows), the ported three-engine
+    When candle rows are supplied (context.candles / context.rows), the ported support/resistance
     strategy runs and returns a REAL, non-simulated decision. Without market data it falls back
     to a clearly-flagged simulated placeholder so the boundary never silently returns nothing.
     """
-    import kaos_berserker
+    import kaos_signature as kaos_berserker
     cfg = await get_official_strategy()
     candles = context.get("candles") or context.get("rows") or context.get("candleHistory")
     if candles and len(candles) >= 50:
@@ -161,7 +152,7 @@ async def kaos_strategy_predict(asset: str, platform: str, context: dict) -> dic
                     "overlap": sig.get("overlap"), "decision": "TRADE",
                     "strategyVersion": cfg.get("version"), "simulated": False, "live": True}
         return {"source": "STRATEGY", "engine": None, "direction": None, "decision": "NO_TRADE",
-                "reason": "No confirmed Reversal/Runner/Breakout setup (or opposite-direction conflict).",
+                "reason": "No confirmed support/resistance setup; complete 5s/15s/30s and 24 completed 60s context bars are required.",
                 "strategyVersion": cfg.get("version"), "simulated": False, "live": True}
     # Missing completed candles MUST NOT produce a tradeable signal.
     return {"source": "STRATEGY", "engine": None, "direction": None,
@@ -169,13 +160,18 @@ async def kaos_strategy_predict(asset: str, platform: str, context: dict) -> dic
             "strategyVersion": cfg.get("version"), "simulated": False, "live": False}
 
 
-async def kaos_ai_predict(asset: str, platform: str, context: dict) -> dict:
+async def kaos_ai_predict(asset: str, platform: str, context: dict, user: dict = None) -> dict:
     """Real KAOS AI server-side inference (learning/reporting only — no execution authority).
 
     When a model is deployed with a portable tree bundle AND a feature vector is supplied
     (context.featureVector / context.x), the native tree bundle is evaluated in-process. Without
     a real bundle or feature vector it falls back to a clearly-flagged simulated placeholder.
     """
+    if user is not None:
+        from training_service import predict_for_member
+        expiry = str(context.get("expiration", "20s"))
+        if expiry not in ("15s", "20s", "25s", "30s", "45s", "60s"):raise ValueError("Unsupported model horizon")
+        return await predict_for_member(user, context.get("featureVector") or context.get("x"), f"{platform}:binary:5s:{expiry}:real")
     tc = await get_trading_config()
     features = context.get("featureVector") or context.get("x")
     if not isinstance(features, list):

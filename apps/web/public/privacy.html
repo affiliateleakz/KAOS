@@ -28,7 +28,7 @@ footer{border-top:1px solid #343022;padding:20px;text-align:center;color:#9ba8bd
 <p><strong>Device information.</strong> To enforce the number of devices allowed by your membership, the Extension generates a random installation ID and sends it to our servers with the Extension version and your browser's platform name (for example "Win32").</p>
 <p><strong>Trading page data (Extension).</strong> The Extension runs only on the Pocket Option trading sites listed in its permissions. On those pages it reads the information needed to run the trading tools you start: the selected asset, market prices and candles, your available balance and whether the account is a demo or real account, and the details and results of trades placed by the bot. It does not read pages on other websites, and it does not collect your browsing history.</p>
 <p><strong>Trade activity sent to KAOS.</strong> When the bot generates a signal or a trade settles, the Extension sends a trade record to our servers so it can appear in your member dashboard: trade ID, asset, direction, stake amount, expiry, strategy name and version, entry and exit price, outcome, profit or loss, timestamp, and the numeric market-feature values and AI prediction used for that trade. Your account balance, broker login and broker session are not included.</p>
-<p><strong>Collective Learning (optional, off by default).</strong> If you turn on Collective Learning in the KAOS AI page of your member dashboard, the Extension also sends anonymised market-feature values and the trade outcome to help improve KAOS models. These samples contain no name, email, credentials or balance. You can turn it off at any time and we will stop collecting new samples.</p>
+<p><strong>KAOS service learning (required).</strong> Settled trade features and market outcomes are used to train your personal model, shared KAOS models and the owner's separate research models as a standard part of the service. Training uses a minimized numeric market-feature vector, asset, timeframe, expiration, decision/settlement timing, prices and outcome, with a pseudonymous contributor identifier. Names, emails, broker/account credentials, balances, payment details and raw screenshots are excluded from fitting. A private account link supports access controls, deduplication and deletion; this is de-identified, not irreversible anonymisation. Older data is not silently relabelled as new-policy data. Models remain research-only unless separately validated and authorized for execution.</p>
 <p><strong>Payments.</strong> Subscriptions are processed by Stripe. We receive your subscription status and a Stripe customer ID; we never receive or store your full card number.</p>
 <p><strong>Support and logs.</strong> We keep messages you send to support and standard server logs (IP address, request time, endpoint and error information) to operate and secure the service.</p>
 
@@ -41,7 +41,7 @@ footer{border-top:1px solid #343022;padding:20px;text-align:center;color:#9ba8bd
 <li>To run the trading tools you start and show your trade history and results in the member dashboard.</li>
 <li>To bill subscriptions and provide customer support.</li>
 <li>To detect abuse, fix bugs and keep the service reliable.</li>
-<li>If you opt in to Collective Learning, to train and evaluate KAOS models.</li>
+<li>To train and evaluate personal, shared and owner research models using the required, disclosed service-learning pipeline.</li>
 </ul>
 
 <h2>4. Why the Extension needs its permissions</h2>
@@ -66,11 +66,11 @@ footer{border-top:1px solid #343022;padding:20px;text-align:center;color:#9ba8bd
 <p>Information is sent between the Extension, the website and our servers over HTTPS. Passwords are stored as hashes and access to member data is restricted to authorised staff. No system is perfectly secure; if you believe your account has been compromised, change your password and contact us.</p>
 
 <h2>8. Retention and deletion</h2>
-<p>We keep account, subscription and trade records while your account is active and for up to 24 months afterwards, unless the law requires us to keep billing records longer. Server logs are kept for up to 90 days. You can ask us to access, correct, export or delete your data by emailing <a href="mailto:support@tradewithkaos.com">support@tradewithkaos.com</a>; we will respond within 30 days. Uninstalling the Extension deletes the data stored in Chrome on your device but does not delete your KAOS account.</p>
+<p>We keep account, subscription and trade records while your account is active and for up to 24 months afterwards, unless the law requires us to keep billing records longer. Minimized training observations expire after 90 days. Derived model artifacts can remain until retired; deleting your account removes linked training observations and retires models linked to your contribution. Server logs are kept for up to 90 days. You can ask us to access, correct, export or delete your data by emailing <a href="mailto:support@tradewithkaos.com">support@tradewithkaos.com</a>; we will respond within 30 days. Uninstalling the Extension deletes the data stored in Chrome on your device but does not delete your KAOS account.</p>
 
 <h2>9. Your choices</h2>
 <ul>
-<li>Turn Collective Learning on or off in the KAOS AI page of your member dashboard.</li>
+<li>Review model access, training progress and the service-learning policy in the KAOS AI page. Shared service learning is required, not an optional switch.</li>
 <li>Sign out of the Extension or remove authorised devices from your account.</li>
 <li>Uninstall the Extension at any time.</li>
 <li>Depending on where you live (for example California or the EU/UK), you may have additional rights to access, delete or object to the processing of your data. Contact us to exercise them.</li>

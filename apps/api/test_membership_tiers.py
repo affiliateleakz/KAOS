@@ -52,7 +52,8 @@ def test_ultimate_ai_modes_only_after_admin_validation(monkeypatch):
     ult = run(get_entitlements({"membership_status": "ACTIVE", "membership_plan": "ultimate"}))
     pro = run(get_entitlements({"membership_status": "ACTIVE", "membership_plan": "pro"}))
     assert {"AI", "STRATEGY_AI"} <= set(ult["modes"]) and ult["aiExecutionLocked"] is False
-    assert pro["modes"] == ["STRATEGY"]
+    assert {"AI", "STRATEGY_AI"} <= set(pro["modes"])
+    assert pro["aiTraining"] is True and pro["pretrainedModels"] is False
 
 
 def test_suspended_account_gets_nothing():

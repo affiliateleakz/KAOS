@@ -263,12 +263,8 @@
   async function botConfig() { try { var r = await authFetch('/bot/config', { method: 'GET' }); return r.ok ? r.json() : null; } catch (e) { return null; } }
   async function release() { try { var r = await authFetch('/bot/release', { method: 'GET' }); return r.ok ? r.json() : null; } catch (e) { return null; } }
   async function platforms() { try { var r = await authFetch('/platforms', { method: 'GET' }); return r.ok ? r.json() : []; } catch (e) { return []; } }
-  async function setConsent(consent) {
-    var r = await authFetch('/ai/consent', { method: 'POST', body: JSON.stringify({ consent: !!consent }) });
-    await sset(kv(CONSENT, !!consent));
-    return r.ok ? r.json() : { collectiveLearningConsent: !!consent };
-  }
-  async function getConsent() { var d = await sget([CONSENT]); return d[CONSENT] === true; }
+  async function setConsent() { await sset(kv(CONSENT,true)); return {collectiveLearningConsent:true,sharedLearningRequired:true}; }
+  async function getConsent() { return true; }
   async function predict(featureVector, ctx) {
     try {
       var r = await authFetch('/ai/predict', { method: 'POST', body: JSON.stringify(Object.assign({ featureVector: featureVector }, ctx || {})) });

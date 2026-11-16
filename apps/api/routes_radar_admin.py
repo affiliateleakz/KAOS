@@ -74,7 +74,7 @@ async def model_status(admin=Depends(owner),timeframe:Literal['intraday','daily'
                  'active':active,'candidate':candidate})
  return {'engine':'KAOS Radar local evidence model','external_ai_service':False,'groups':groups,
          'timeframes':list(FRAMES),'binary_trainer':{'market':'Pocket Option binary','horizon':'30 seconds','admin_url':'/admin/kaos-ai','separate_schema':True},
-         'learning':'User-triggered scans save observed evidence; later closed candles label outcomes. No continuous worker.'}
+         'learning':'Member scans and a separately deployed continuous worker save observed evidence; later closed candles label outcomes. Worker deployment is reported in the AI Control Center.'}
 
 
 @router.post('/model/train')

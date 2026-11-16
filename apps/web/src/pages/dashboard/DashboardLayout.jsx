@@ -124,7 +124,7 @@ export default function DashboardLayout() {
             </Link>
           </div>
         </header>
-        <main className="kaos-member-main flex-1 overflow-y-auto p-4 sm:p-6"><Outlet /></main>
+        <main className="kaos-member-main flex-1 overflow-y-auto p-4 sm:p-6"><p className="mb-4 rounded border border-[#65512d] bg-[#15150c] p-3 text-xs leading-relaxed text-[#bfb18e]">KAOS service learning uses de-identified trade features and outcomes for personal, shared and owner models. Credentials, balances and payments are excluded from training. <a href="/privacy.html" className="text-[#e8c46f] underline">Data policy</a></p><Outlet /></main>
         <div style={{fontSize:12,padding:"6px 24px",textAlign:"right"}}><a href="/privacy.html" style={{color:"#b9a36e"}}>Privacy Policy</a></div>
         <RiskBar />
       </div>

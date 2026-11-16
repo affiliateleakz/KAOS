@@ -57,7 +57,7 @@ const BASE=process.env.KAOS_WEB_PREVIEW_URL;
  await page.getByLabel('Coin range').selectOption('20');assert.equal(await nodes.count(),20);
  await page.emulateMedia({reducedMotion:'reduce'});await page.waitForTimeout(100);
  assert.equal(await map.getByRole('button',{name:'Animate bubbles'}).getAttribute('aria-pressed'),'true','Reduced motion uses gentle drift without disabling the requested startup animation');
- const gentle=await bitcoin.getAttribute('transform');await page.waitForTimeout(300);assert.notEqual(await bitcoin.getAttribute('transform'),gentle);
+ await map.scrollIntoViewIfNeeded();const gentle=await bitcoin.getAttribute('transform');await page.waitForTimeout(300);assert.notEqual(await bitcoin.getAttribute('transform'),gentle);
  await map.getByRole('button',{name:'Animate bubbles'}).click();assert.equal(await map.getByRole('button',{name:'Animate bubbles'}).getAttribute('aria-pressed'),'false');
  if(process.env.KAOS_CAPTURE_DIR){await map.scrollIntoViewIfNeeded();await page.screenshot({path:process.env.KAOS_CAPTURE_DIR+'/interactive-crypto-bubbles.png'});}
  fallback=true;await period.getByRole('button',{name:'Refresh',exact:true}).click();

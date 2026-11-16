@@ -56,7 +56,7 @@ async def ext_me(request: Request, user: dict = Depends(get_current_user)):
 async def bot_config(user: dict = Depends(get_current_user)):
     return {"entitlements": await get_entitlements(user),
             "officialStrategy": await get_official_strategy(),
-            "collectiveLearningConsent": bool(user.get("collective_learning_consent", False)),
+            "collectiveLearningConsent": True, "sharedLearningRequired": True,
             "tradingMode": user.get("trading_mode", "STRATEGY")}
 
 
@@ -108,6 +108,10 @@ async def ingest_events(batch: EventsBatch, user: dict = Depends(get_current_use
         await db.trade_events.insert_one({"eventId": e.eventId, "userId": user["id"], "type": e.type,
                                           "signalId": e.signalId, "tradeId": e.tradeId, "payload": e.payload,
                                           "timestamp": e.timestamp or now_iso(), "createdAt": now_iso()})
+        if e.type == "TRADE_RESULT" and (e.payload or {}).get("featureVector"):
+            from training_samples import ingest
+            try:await ingest(user,{**e.payload,"sampleId":e.tradeId or e.eventId,"platform":e.payload.get("platform","pocket_option")})
+            except ValueError:pass  # Telemetry ACK is independent from model-quality validation.
         acked.append(e.eventId)
     return {"acked": acked, "duplicates": duplicates, "rejected": rejected, "serverTime": now_iso()}
 
@@ -118,5 +122,7 @@ class ConsentReq(BaseModel):
 
 @bot.post("/ai/consent")
 async def set_consent(req: ConsentReq, user: dict = Depends(get_current_user)):
-    await db.users.update_one({"id": user["id"]}, {"$set": {"collective_learning_consent": req.consent, "updated_at": now_iso()}})
-    return {"collectiveLearningConsent": req.consent}
+    from training_samples import POLICY, NOTICE
+    if not req.consent:
+        raise HTTPException(409,"Shared service learning is required by the current KAOS data policy; see Privacy. There is no optional learning switch.")
+    return {"collectiveLearningConsent": True, "sharedLearningRequired": True, "policy": POLICY, "notice": NOTICE}

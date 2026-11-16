@@ -374,6 +374,11 @@ async def delete_account(response: Response, user: dict = Depends(get_current_us
     await db.community_comments.update_many({"authorId": user["id"]}, {"$set": {"hidden": True}})
     await db.community_reactions.delete_many({"userId": user["id"]})
     await db.follows.delete_many({"$or": [{"followerId": user["id"]}, {"followingId": user["id"]}]})
+    from training_service import contributor
+    who=contributor(user)
+    await db.ai_training_samples.delete_many({"contributor":who})
+    await db.ai_training_jobs.delete_many({"owner":who})
+    await db.ai_training_models.update_many({"$or":[{"owner":who},{"contributors":who}]},{"$set":{"state":"retired","retiredReason":"contributor_deleted"}})
     await db.devices.delete_many({"userId": user["id"]})
     await db.sessions.delete_many({"user_id": user["id"]})
     await db.users.update_one({"id": user["id"]}, {

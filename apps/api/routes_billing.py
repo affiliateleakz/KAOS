@@ -25,15 +25,15 @@ async def billing_availability():
 DEFAULT_PLANS = [
     {"id": "pro", "name": "Pro", "lookup_key": "membership_pro_monthly", "amount": 2995,
      "currency": "usd", "interval": "month", "deviceLimit": 3, "tier": "pro",
-     "features": ["KAOS Trading Bot", "KAOS Strategy mode", "Scanners", "AI insights", "Cloud Strategies", "Community", "Up to 4 broker chart slots", "3 Devices"],
-     "entitlements": {"botAccess": True, "modes": ["STRATEGY"], "connectors": ["pocket_option"], "scanners": True,
-                      "aiInsights": True, "cloudStrategies": True, "community": True, "premiumTools": False, "deviceLimit": 3,
+     "features": ["KAOS Trading Bot", "KAOS Strategy mode", "Scanners", "AI insights", "Personal AI starts untrained; train your own model", "Cloud Strategies", "Community", "Up to 4 broker chart slots", "3 Devices"],
+     "entitlements": {"botAccess": True, "modes": ["STRATEGY", "AI", "STRATEGY_AI"], "connectors": ["pocket_option"], "scanners": True,
+                      "aiInsights": True, "aiTraining": True, "pretrainedModels": False, "cloudStrategies": True, "community": True, "premiumTools": False, "deviceLimit": 3,
                       "chartLimit": 4}},
     {"id": "ultimate", "name": "Ultimate", "lookup_key": "membership_ultimate_monthly", "amount": 9995,
      "currency": "usd", "interval": "month", "deviceLimit": 5, "tier": "ultimate", "recommended": True,
-     "features": ["Everything in Pro", "AI / Strategy + AI eligibility (after independent validation)", "Premium Tools", "Up to 4 broker chart slots", "5 Devices"],
+     "features": ["Everything in Pro", "Published pretrained bot model access", "AI / Strategy + AI eligibility (after independent validation)", "Premium Tools", "Up to 4 broker chart slots", "5 Devices"],
      "entitlements": {"botAccess": True, "modes": ["STRATEGY", "AI", "STRATEGY_AI"], "connectors": ["pocket_option"],
-                      "scanners": True, "aiInsights": True, "cloudStrategies": True, "community": True,
+                      "scanners": True, "aiInsights": True, "aiTraining": True, "pretrainedModels": True, "cloudStrategies": True, "community": True,
                       "premiumTools": True, "deviceLimit": 5, "chartLimit": 4}},
 ]
 # Annual variants have stable IDs and the same tools as their monthly tier.
@@ -70,7 +70,7 @@ async def membership_catalog():
     plans = [{'id': 'free', 'name': 'Free', 'amount': 0, 'currency': 'usd',
               'interval': None, 'tier': 'free', 'entitlements': dict(FREE_ENTITLEMENTS)}]
     allowed = ('botAccess', 'chartLimit', 'deviceLimit', 'community', 'scanners', 'aiInsights',
-               'cloudStrategies', 'premiumTools', 'modes')
+               'cloudStrategies', 'premiumTools', 'modes', 'aiTraining', 'pretrainedModels')
     for plan in await get_plans():
         if plan.get('enabled', True) is not True or plan.get('id') == 'free': continue
         tier = plan.get('tier', 'pro')
@@ -78,7 +78,7 @@ async def membership_catalog():
             'currency': plan.get('currency', 'usd'), 'interval': plan.get('interval', 'month'),
             'tier': tier if tier in RATES else 'pro',
             'recommended': plan.get('recommended', tier == 'ultimate' and plan.get('interval', 'month') == 'month') is True,
-            'entitlements': {key: value for key, value in (plan.get('entitlements') or {}).items() if key in allowed}})
+            'entitlements': {**{key: value for key, value in (plan.get('entitlements') or {}).items() if key in allowed}, 'aiTraining': tier in ('pro','ultimate'), 'pretrainedModels': tier == 'ultimate'}})
     affiliate = await get_setting('affiliate_program', {'enabled': True})
     return {'plans': plans, 'affiliateRates': {tier: list(rates) for tier, rates in RATES.items()},
             'affiliateEnrollmentEnabled': affiliate.get('enabled') is True, 'payoutsEnabled': False, 'affiliateHoldDays': DEFAULT_HOLD_DAYS,

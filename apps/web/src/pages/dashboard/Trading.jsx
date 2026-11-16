@@ -25,9 +25,10 @@ const MODE_META = {
 // per-engine logic in kaos_strategy.py (REVERSAL / RUNNER / BREAKOUT), so the summary
 // card must not assume the payload already contains an `engines` array.
 const STRATEGY_ENGINE_FALLBACK = [
-  { key: "REVERSAL", label: "Reversal", expiration: "30s", description: "Failed-break rejection on the 30s structure." },
-  { key: "RUNNER", label: "Runner", expiration: "15s", description: "First-pullback continuation on the 5s structure." },
-  { key: "BREAKOUT", label: "Breakout", expiration: "30s", description: "Confirmed break with hold/retest on the 15s structure." },
+ {key:'SR_REJECTION',label:'Support / resistance rejection',expiration:'20s',description:'Closed-candle rejection aligned with the 60s trend.'},
+ {key:'FAILED_BREAK_RECLAIM',label:'Sweep & reclaim',expiration:'20s',description:'Failed break and closed-candle recovery of a prior level.'},
+ {key:'BREAKOUT_RETEST',label:'Breakout & retest',expiration:'25s',description:'Confirmed break, retest and continuation.'},
+ {key:'TREND_PULLBACK',label:'Trend pullback',expiration:'15s',description:'15s pullback confirmation aligned with 60s context.'},
 ];
 
 function relTime(iso) {
@@ -72,7 +73,7 @@ function SyncHealth({ sync, expired, onRefresh }) {
 }
 
 function genRandomWalk(n = 1200) {
-  const rows = []; let ts = Date.now() - n * 5000; let price = 100;
+  const rows = []; let ts = Math.floor(Date.now()/5000)*5000 - n * 5000; let price = 100;
   for (let i = 0; i < n; i++) {
     ts += 5000;
     const o = price;
@@ -123,7 +124,7 @@ function parseCandles(text) {
   if (t[0] === "[" || t[0] === "{") {
     const a = JSON.parse(t);
     const arr = Array.isArray(a) ? a : a.candles || [];
-    return arr.map((r, i) => ({ ts: +(r.ts ?? r.time ?? i * 5000), open: +r.open, high: +r.high, low: +r.low, close: +r.close }));
+    return arr.map((r, i) => ({ ts: +(r.ts ?? r.time ?? NaN), open: +r.open, high: +r.high, low: +r.low, close: +r.close }));
   }
   const lines = t.split(/\r?\n/).filter((l) => l.trim());
   const header = lines[0].toLowerCase().split(",").map((s) => s.trim());
@@ -132,8 +133,8 @@ function parseCandles(text) {
   const rows = [];
   for (let i = hasHeader ? 1 : 0; i < lines.length; i++) {
     const p = lines[i].split(",").map((s) => s.trim());
-    if (hasHeader) rows.push({ ts: +(p[idx("ts")] || i * 5000), open: +p[idx("open")], high: +p[idx("high")], low: +p[idx("low")], close: +p[idx("close")] });
-    else { const [ts, open, high, low, close] = p.map(Number); rows.push({ ts: ts || i * 5000, open, high, low, close }); }
+    if (hasHeader) rows.push({ ts: +(p[idx("ts")] || NaN), open: +p[idx("open")], high: +p[idx("high")], low: +p[idx("low")], close: +p[idx("close")] });
+    else { const [ts, open, high, low, close] = p.map(Number); rows.push({ ts: ts || NaN, open, high, low, close }); }
   }
   return rows;
 }
@@ -225,7 +226,7 @@ function StrategyReplay() {
       {showPaste && (
         <div className="mt-3">
           <Textarea data-testid="strategy-replay-paste-input" value={pasteText} onChange={(e) => setPasteText(e.target.value)}
-            placeholder='Paste candles: JSON [{"ts","open","high","low","close"}, …] or CSV with header open,high,low,close'
+            placeholder='Paste candles: JSON [{"ts","open","high","low","close"}, …] or CSV with header ts,open,high,low,close'
             className="min-h-[90px] bg-[#080808] border-[#3A3A3A] font-mono text-xs" />
           <div className="mt-2 flex items-center gap-3">
             <Button data-testid="strategy-replay-run-pasted" onClick={runPasted} disabled={busy} size="sm" className="bg-[#D4AF37] text-black">Run on pasted candles</Button>
@@ -242,7 +243,7 @@ function StrategyReplay() {
                 <span className={`font-mono text-sm font-bold ${sig.direction === "BUY" ? "text-[#22C55E]" : "text-[#C62828]"}`}>{sig.direction}</span>
                 <span className="font-mono text-xs text-slate-400">expiry {sig.expiration}</span>
                 <span className="font-mono text-xs text-slate-400">confidence {sig.confidence}</span>
-                <span className="ml-auto font-mono text-[10px] uppercase text-slate-500">bar {res.barIndex} / {res.bars} · v{res.strategyVersion} · LIVE</span>
+                <span className="ml-auto font-mono text-[10px] uppercase text-slate-500">bar {res.barIndex} / {res.bars} · v{res.strategyVersion} · OFFLINE REPLAY</span>
               </div>
               <p className="mt-2 text-xs text-slate-400">{sig.reason}</p>
               {sig.overlap && <p className="mt-1 font-mono text-[10px] text-slate-500">overlap: {sig.overlap.join(", ")}</p>}
@@ -278,7 +279,7 @@ function StrategyReplay() {
             </div>
           ) : (
             <div className="rounded-md border border-[#2E2E2E] bg-[#0c0c0c] p-4 text-sm text-slate-400" data-testid="strategy-replay-notrade">
-              No confirmed Reversal / Runner / Breakout setup in the last {res.scanned} windows (or an opposite-direction conflict blocked entry). Run again for a fresh market.
+              No confirmed support/resistance setup in the last {res.scanned} windows (or an opposite-direction conflict blocked entry). Run again for a fresh market.
             </div>
           )}
         </div>
@@ -307,19 +308,19 @@ function BacktestExplorer() {
   const [showPaste, setShowPaste] = useState(false);
   const [pasteText, setPasteText] = useState("");
   const run = async (candles) => {
-    if (candles.length < 60) { toast.error("Provide at least ~60 candle rows."); return; }
+    if (candles.length < 100) { toast.error("Provide at least 100 timestamped five-second candle rows."); return; }
     setBusy(true); setRes(null);
     try { const r = await api.post("/api/trading/backtest", { candles, asset: "EURUSD" }); setRes(r.data); }
     catch (e) { toast.error(errMsg(e)); }
     finally { setBusy(false); }
   };
-  const engines = ["REVERSAL", "RUNNER", "BREAKOUT"];
+  const engines = ["SR_REJECTION", "FAILED_BREAK_RECLAIM", "BREAKOUT_RETEST", "TREND_PULLBACK"];
   return (
     <div className="card-surface mb-6 p-5" data-testid="backtest-explorer">
       <div className="flex flex-wrap items-center gap-3">
         <LineChart className="h-5 w-5 text-[#D4AF37]" />
         <h3 className="font-heading font-semibold">Backtest Explorer</h3>
-        <span className="font-mono text-xs text-slate-500">real engine win-rate per strategy over market history</span>
+        <span className="font-mono text-xs text-slate-500">Offline closed-candle replay · exact strategy expiries · assumed payout</span>
         <div className="ml-auto flex items-center gap-2">
           <button data-testid="backtest-paste-toggle" onClick={() => setShowPaste((v) => !v)} className="text-xs text-slate-400 hover:text-white">{showPaste ? "Hide paste" : "Paste candles"}</button>
           <Button data-testid="backtest-run" onClick={() => run(genRandomWalk(1500))} disabled={busy} className="bg-[#22C55E] text-black">{busy ? "Running…" : "Run on demo history"}</Button>
@@ -328,7 +329,7 @@ function BacktestExplorer() {
       {showPaste && (
         <div className="mt-3">
           <Textarea data-testid="backtest-paste-input" value={pasteText} onChange={(e) => setPasteText(e.target.value)}
-            placeholder='Paste candles: JSON array or CSV with open,high,low,close' className="min-h-[80px] bg-[#080808] border-[#3A3A3A] font-mono text-xs" />
+            placeholder='Paste candles: JSON array or CSV with ts,open,high,low,close' className="min-h-[80px] bg-[#080808] border-[#3A3A3A] font-mono text-xs" />
           <Button data-testid="backtest-run-pasted" onClick={() => { try { run(parseCandles(pasteText).filter((x) => [x.open, x.high, x.low, x.close].every(Number.isFinite))); } catch (e) { toast.error("Could not parse candles."); } }} disabled={busy} size="sm" className="mt-2 bg-[#D4AF37] text-black">Run on pasted candles</Button>
         </div>
       )}
@@ -338,7 +339,7 @@ function BacktestExplorer() {
             <span className="font-mono text-sm text-slate-300">Overall</span>
             <span className="font-mono text-2xl font-bold text-[#D4AF37]" data-testid="backtest-overall-winrate">{res.overall.winRate}%</span>
             <span className="font-mono text-xs text-slate-400">{res.overall.trades} trades · {res.overall.wins}W / {res.overall.losses}L / {res.overall.ties}T</span>
-            <span className="ml-auto font-mono text-[10px] uppercase text-slate-500">{res.bars} bars · v{res.strategyVersion} · LIVE</span>
+            <span className="ml-auto font-mono text-[10px] uppercase text-slate-500">{res.bars} bars · v{res.strategyVersion} · OFFLINE REPLAY</span>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {engines.map((e) => {
@@ -392,7 +393,7 @@ export default function Trading() {
       <FourChartTerminal entitlements={ent} />
       <div className="mb-6"><TrendPauseBacktest /></div>
       <div className="mb-6 rounded-lg border border-[#D4AF37]/20 bg-[#D4AF37]/5 p-3 text-xs text-[#D4AF37]">
-        The real KAOS Strategy runs server-side and returns live decisions when the extension streams market candles. KAOS AI serves live inference once a trained model is deployed. Broker execution happens only inside the extension — no live trades occur on this page.
+        The real KAOS Strategy runs server-side and returns live decisions when the extension streams market candles. Pro trains a private model; Ultimate can also use published pretrained models. Both require validation before use. Broker execution happens only inside the extension — no live trades occur on this page.
       </div>
 
       <SyncHealth sync={sync} expired={syncExpired} onRefresh={loadSync} />
