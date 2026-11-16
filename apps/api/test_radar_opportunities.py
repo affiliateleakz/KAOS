@@ -135,7 +135,7 @@ def test_expired_option_quotes_are_not_returned_from_cache(monkeypatch):
  db=SimpleNamespace(kaos_opportunity_scans=Store(),kaos_opportunity_locks=Store(),kaos_opportunity_member_limits=Store())
  play=scanner.setup({'symbol':'AAPL','asset_class':'stock'},quote(),{},NOW)
  play['expires_at']=(NOW-timedelta(seconds=1)).isoformat()
- db.kaos_opportunity_scans.docs['options:universe']={'checked':NOW.timestamp(),'report':{'plays':[play],'market':'options','scanned':10}}
+ db.kaos_opportunity_scans.docs['options:universe:intraday']={'checked':NOW.timestamp(),'report':{'plays':[play],'market':'options','scanned':10}}
  monkeypatch.setattr(scanner,'db',db)
- out=asyncio.run(scanner.opportunities(scanner.OpportunityInput(market='options'),{'id':'member'}))
+ out=asyncio.run(scanner.opportunities(scanner.OpportunityInput(market='options',timeframe='intraday'),{'id':'member'}))
  assert out['plays']==[]

@@ -177,3 +177,37 @@ node ../../scripts/browser/run.cjs
 
 Browser checks require installed Chrome/Chromium (`CHROME_BIN` is supported) or
 the matching Playwright Chromium download. They use fixture accounts and candles.
+
+### AI Signal timeframes and closed-session plans
+
+The scanner defaults to **Daily** and offers Intraday (45–60 minutes), Daily
+(1 trading session), Weekly (5 sessions), and Monthly (21 sessions). The last
+three use at least 60 completed **daily** candles, not weekly/monthly candles.
+Stock candles are excluded until their exchange-local regular session closes;
+historical US sessions conservatively use 16:00 local exchange time. FX and
+crypto daily bars must complete their full daily interval. Source data older
+than five calendar days is rejected, allowing ordinary weekends/holidays while
+bounding stale plans. Source timestamps remain unchanged and visible.
+
+Longer-horizon plans use the shared technical/evidence score with current news,
+disclosures, attention and other available evidence. They never invoke or train
+the 45–60-minute supervised model: `timeframe_not_trained` is explicit. They are
+research plans, not validated long-horizon model forecasts. Daily ATR reference
+distances scale by sqrt(1/5/21) sessions for daily/weekly/monthly respectively;
+this is a planning heuristic, not a calibrated prediction interval. Plans refresh
+on the existing shared five-minute cadence and expire from the UI after fifteen
+minutes unless refreshed. Candle, research and opportunity caches isolate frames.
+
+Longer-horizon **Options** produces CALL/PUT underlying research directions even
+when the market is closed and OPRA is unconfigured. These plans contain **no
+contract, expiry, premium or live quote**. The user must validate a live chain,
+expiry beyond the outlook, spread, liquidity and Greeks before entry. Intraday
+options still require authenticated OPRA and quotes no older than 120 seconds.
+No orders, broker execution, live trading or hosting activation are enabled.
+
+**Any timeframe** combines the intraday scan with all three planning horizons.
+The planning horizons share a daily candle/evidence assessment and differ in
+outlook and ATR reference distance; they are not independent model forecasts.
+This uses two provider scans rather than four. Results retain timeframe labels,
+share the selected score threshold, and are capped at the user's chosen 1–10
+results across all horizons. Multiple horizons for one instrument may qualify.

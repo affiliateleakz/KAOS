@@ -27,6 +27,7 @@ UNIVERSES={
 class OpportunityInput(BaseModel):
     model_config=ConfigDict(extra='forbid')
     market:Literal['stocks','crypto','forex','options']='stocks'
+    timeframe:Literal['any','intraday','daily','weekly','monthly']='daily'
     limit:int=Field(default=5,ge=1,le=10)
     minimum_score:int=Field(default=70,ge=50,le=95)
     symbol:str|None=Field(default=None,pattern=r'^[A-Z][A-Z0-9.]{0,11}$')
@@ -41,7 +42,8 @@ def setup(asset,quote,ai,now):
     try:
         price=float(quote['price']);atr=quote['feature_vector'][6]
         sign=1 if card['direction']=='BUY' else -1
-        stop=price-sign*atr*price*1.5;target=price+sign*atr*price*3
+        scale=math.sqrt({'daily':1,'weekly':5,'monthly':21}.get(quote.get('timeframe'),1))
+        stop=price-sign*atr*price*1.5*scale;target=price+sign*atr*price*3*scale
         if not math.isfinite(stop) or not math.isfinite(target) or stop<=0 or target<=0:return None
         stamp=utc(quote['source_time'])
         return {'symbol':asset['symbol'],'asset_class':asset['asset_class'],'direction':card['direction'],'score':card['score'],
@@ -52,16 +54,18 @@ def setup(asset,quote,ai,now):
             'basis':'KAOS evidence score + validated AI confirmation' if card.get('ai_confirmed') else 'KAOS evidence score; AI not confirming',
             'model_state':ai.get('model_state','unavailable'),'ai_confirmed':card.get('ai_confirmed',False),
             'reference_entry':price,'reference_stop':stop,'reference_target':target,'reward_risk':2,
-            'horizon':'45–60 minutes','reason':card['reason'],'attention':ai.get('attention'),
+            'timeframe':quote.get('timeframe','intraday'),'planning':quote.get('planning',False),
+            'plan_note':'Last completed daily session; revalidate price, news and liquidity before entry. Weekly/monthly levels scale daily ATR by the square root of 5/21 sessions; these are planning estimates.' if quote.get('planning') else None,
+            'horizon':quote.get('horizon','45–60 minutes'),'reason':card['reason'],'attention':ai.get('attention'),
             'source':quote.get('source'),'source_time':quote['source_time'],
             'supporting_sources':ai.get('supporting_sources',[]),
-            'expires_at':min(now+timedelta(minutes=5),stamp+timedelta(minutes=20)).isoformat(),'execution_enabled':False}
+            'expires_at':(now+timedelta(minutes=15) if quote.get('planning') else min(now+timedelta(minutes=5),stamp+timedelta(minutes=20))).isoformat(),'execution_enabled':False}
     except (ValueError,TypeError,KeyError):return None
 
 
-async def collect(market,focus=None):
+async def collect(market,focus=None,timeframe='intraday'):
     now=datetime.now(timezone.utc)
-    if market=='options':
+    if market=='options' and timeframe=='intraday':
         import radar_settings
         cfg=await radar_settings.settings('options_data')
         if not cfg.get('enabled',True) or not cfg.get('api_key') or not cfg.get('api_secret') or cfg.get('configuration_error'):
@@ -88,12 +92,15 @@ async def collect(market,focus=None):
     async def candidate(asset):
         async with gate:
             try:
-                quote=await asyncio.wait_for(radar_signals.market(SimpleNamespace(**asset)),timeout=10)
+                quote=await asyncio.wait_for((radar_signals.market(SimpleNamespace(**asset)) if timeframe=='intraday' else radar_signals.market(SimpleNamespace(**asset),timeframe)),timeout=10)
                 report=await radar_research.asset_report(asset,context_data,trending,quote)
                 play=setup(asset,quote,report,datetime.now(timezone.utc))
                 if play and market=='options' and play['score']<70:
                     return {'symbol':asset['symbol'],'reason':'Underlying setup did not reach the options score threshold.'}
-                if play and market=='options':
+                if play and market=='options' and timeframe!='intraday':
+                    play.update(direction='CALL' if play['direction']=='BUY' else 'PUT',asset_class='option',
+                        option_note='Underlying directional options research only. No contract or premium selected. Verify a live chain, expiry beyond the outlook, spread, liquidity and Greeks before entry.')
+                if play and market=='options' and timeframe=='intraday':
                     contract,message=await asyncio.wait_for(radar_options.chain(asset['symbol'],play['direction'],play['reference_entry'],datetime.now(timezone.utc)),timeout=8)
                     if contract is None:return {'symbol':asset['symbol'],'reason':message}
                     play.update(option=contract,direction=contract['type'],asset_class='option',option_note=message,
@@ -123,12 +130,34 @@ async def collect(market,focus=None):
             'started_at':now.isoformat()}
 
 
+async def collect_any(market,focus=None):
+    """Share daily evidence across planning horizons; do not multiply provider scans."""
+    import copy
+    intraday,daily=await asyncio.gather(collect(market,focus,'intraday'),collect(market,focus,'daily'))
+    plays=list(intraday['plays'])
+    for original in daily['plays']:
+        for frame,sessions in (('daily',1),('weekly',5),('monthly',21)):
+            play=copy.deepcopy(original)
+            price=play['reference_entry'];scale=math.sqrt(sessions)
+            play.update(timeframe=frame,horizon=f'{sessions} trading session'+('s' if sessions!=1 else ''),
+                reference_stop=price+(original['reference_stop']-price)*scale,
+                reference_target=price+(original['reference_target']-price)*scale)
+            if play['reference_stop']>0 and play['reference_target']>0:plays.append(play)
+    return {**daily,'plays':sorted(plays,key=lambda p:(-p['score'],p['symbol'],p['timeframe'])),
+        'timeframe':'any','scanned':intraday['scanned']+daily['scanned'],
+        'universe_size':intraday['universe_size']+daily['universe_size'],
+        'partial':intraday.get('partial',False) or daily.get('partial',False),
+        'coverage':sorted(set(intraday.get('coverage',[])+daily.get('coverage',[]))),
+        'status_message':None,
+        'universe_note':daily.get('universe_note','')+' Any timeframe combines intraday scans with daily, weekly and monthly planning horizons. Planning horizons share daily candles/evidence; they are not independent model forecasts.'}
+
+
 @router.post('/signals/opportunities')
 async def opportunities(request:OpportunityInput,user=Depends(member)):
-    key=request.market+':'+(request.symbol or 'universe')
+    key=request.market+':'+(request.symbol or 'universe')+':'+request.timeframe
     now=datetime.now(timezone.utc);stamp=now.timestamp()
     cached=await db.kaos_opportunity_scans.find_one({'_id':key})
-    ttl=60 if request.market=='options' else 300
+    ttl=60 if request.market=='options' and request.timeframe=='intraday' else 300
     report=None
     if cached and 0<=stamp-cached.get('checked',0)<ttl:report=cached.get('report')
     if report is None:
@@ -139,14 +168,14 @@ async def opportunities(request:OpportunityInput,user=Depends(member)):
         try:
             try:
                 await db.kaos_opportunity_member_limits.update_one(
-                    {'_id':user['id']+':'+request.market,'until':{'$lt':stamp}},
+                    {'_id':user['id']+':'+request.market+':'+request.timeframe,'until':{'$lt':stamp}},
                     {'$set':{'until':stamp+30}},upsert=True)
-            except DuplicateKeyError:raise HTTPException(429,'Wait 30 seconds before requesting another new scan in this market.')
-            try:report=await asyncio.wait_for(collect(request.market,request.symbol),timeout=50)
+            except DuplicateKeyError:raise HTTPException(429,'Wait 30 seconds before requesting another new scan in this market and timeframe.')
+            try:report=await asyncio.wait_for((collect_any(request.market,request.symbol) if request.timeframe=='any' else collect(request.market,request.symbol,request.timeframe)),timeout=50)
             except asyncio.TimeoutError:
                 raise HTTPException(504,'The scan did not finish within its time budget. Retry shortly; no plays were fabricated.')
             await db.kaos_opportunity_scans.update_one({'_id':key},{'$set':{'checked':datetime.now(timezone.utc).timestamp(),'report':report}},upsert=True)
         finally:await db.kaos_opportunity_locks.update_one({'_id':key},{'$set':{'until':0}})
     fresh=[r for r in report['plays'] if r['score']>=request.minimum_score and utc(r['expires_at'])>datetime.now(timezone.utc)]
-    return {**report,'plays':fresh[:request.limit],'state':'complete','minimum_score':request.minimum_score,
-            'message':None if fresh else report.get('status_message','No setups meet the score and freshness requirements. No plays were fabricated.')}
+    return {**report,'timeframe':request.timeframe,'plays':fresh[:request.limit],'state':'complete','minimum_score':request.minimum_score,
+            'message':None if fresh else (report.get('status_message') or 'No setups meet the score and freshness requirements. No plays were fabricated.')}

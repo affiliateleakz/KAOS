@@ -163,6 +163,8 @@ async def assessment(asset, market, evidence, now=None, discovery=None):
     result['attention'] = attention_snapshot(asset,discovery)
     result['news_articles'] = [{k:r.get(k) for k in ('summary','source_url','published_at','provider')} for r in cited if r.get('source')=='news']
     result['evidence_count'] = len(cited)
+    if market.get('planning'):
+        return {**result,'model_state':'timeframe_not_trained','explanation':'Long-horizon evidence plan; the intraday AI model is not used for this timeframe.'}
     technical = market.get('feature_vector')
     if not isinstance(technical,list) or len(technical)!=7 or not all(isinstance(v,(int,float)) and math.isfinite(v) for v in technical):
         technical=None

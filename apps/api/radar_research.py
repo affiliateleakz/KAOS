@@ -102,13 +102,14 @@ async def cached_report(asset,trending):
 
 
 async def asset_report(asset,context_data,trending,quote=None):
-    now=datetime.now(timezone.utc);key=report_key(asset,trending)
-    old=await cached_report(asset,trending)
+    now=datetime.now(timezone.utc);planning=bool(quote and quote.get('planning'))
+    key=report_key(asset,trending)+(':'+quote['timeframe'] if planning else '')
+    old=None if planning else await cached_report(asset,trending)
     if old is not None:return old
     if quote is None:quote=await asyncio.wait_for(radar_signals.market(SimpleNamespace(**asset)),timeout=10)
     await native.ensure_indexes()
     report=await native.assessment(asset,quote,context_data['evidence'],now,trending)
-    report['market_snapshot']={k:quote.get(k) for k in ('price','feature_vector','source_time','source','symbol','asset_class')}
+    report['market_snapshot']={k:quote.get(k) for k in ('price','feature_vector','source_time','source','symbol','asset_class','timeframe','planning','horizon')}
     report['scorecard']=score(asset,quote,report,now)
     report['source_status']=[r for r in context_data['source_status'] if r.get('asset')==asset['symbol']]
     # Checked but empty is different from an unconnected source; neither is neutral sentiment.

@@ -67,7 +67,7 @@ def score(asset,quote,ai,now=None):
     try:
         if not x or len(x)!=7 or not all(math.isfinite(v) for v in x):raise ValueError('No candle features')
         stamp=utc(quote['source_time']);price=float(quote['price'])
-        if not 0<=(now-stamp).total_seconds()<1200 or not math.isfinite(price) or price<=0:raise ValueError('Stale price')
+        if not 0<=(now-stamp).total_seconds()<(432000 if quote.get('planning') else 1200) or not math.isfinite(price) or price<=0:raise ValueError('Stale price')
         r1,r4,_,trend,position,volume,atr=x
         if not 0<atr<=.1:raise ValueError('Invalid volatility')
     except (ValueError,TypeError,KeyError):
