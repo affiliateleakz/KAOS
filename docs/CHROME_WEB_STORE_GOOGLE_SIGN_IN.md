@@ -4,8 +4,8 @@
 to this existing item. Do not create a different listing or register OAuth for
 the previous unpacked ID `pnbakkallmfhliciobnamffmhclkgofb`.
 
-Google sign-in is retained in extension **1.7.27**. The code now checks backend
-configuration before opening Chrome OAuth, requires the official item ID,
+Google sign-in is retained in extension **1.7.28**. The code checks backend configuration when the diagnostic route is available,
+requires the official item ID,
 checks that the server/manifest OAuth clients match, bounds network requests,
 refreshes an invalid Chrome token once, and identifies hosting HTML challenges.
 It never saves the Google access token as a KAOS session.
@@ -41,8 +41,11 @@ Send Asura support:
 3. Verify the Google Auth Platform audience/publishing state permits the reviewer
    to sign in. A Testing app limited to named test users is not a public sign-in
    experience; complete any Google-required consent/verification work.
-4. Deploy the matching backend (including GET
-   `/api/v1/extension/google/config`) only when the owner authorizes installation.
+4. The backend must provide POST `/api/v1/extension/google/access-token` with
+   Google token verification and its own configured OAuth allowlist. GET
+   `/api/v1/extension/google/config` is an optional diagnostic on newer backends.
+   Extension 1.7.28 continues to the verified exchange if that GET returns 404;
+   it still rejects explicit configuration errors or mismatched clients.
 5. Extension 1.7.27 includes the owner-provided manifest public key. Its SHA-256
    identity was verified against this exact store item. Unpacked installations
    must show `gbobopmnjgeeegniphckfpalhnebapjm` in `chrome://extensions`. A public
@@ -57,7 +60,9 @@ been changed by this work.
 
 Run `python scripts/check_extension_google_login.py` from an external network.
 A passing check confirms health/configuration only, **not a successful Google
-sign-in**. Then test the actual store-ID build with a fresh Chrome profile:
+sign-in**. On older backends, a missing diagnostic route makes this checker report
+404; verify the environment setting manually and test the real Google exchange.
+That missing diagnostic does not itself prevent sign-in in extension 1.7.28. Then test the actual store-ID build with a fresh Chrome profile:
 
 1. Sign into Chrome with a Google account allowed by the production consent app.
 2. Open KAOS and choose Continue with Google. Complete Google's consent.
@@ -81,3 +86,12 @@ Suggested reviewer note after completing those checks:
 
 Do not claim the rejected functionality has been verified until the real Google
 flow succeeds. The ZIP is a review candidate, not evidence of Google approval.
+
+## Compatibility correction in 1.7.28
+
+The live API health route returned valid JSON, the optional Google configuration
+GET returned 404, and an empty request to the existing Google exchange returned
+400 "Google access token required". This shows the exchange is installed and its
+OAuth environment variable is set; no real token or account was used. Versions
+1.7.26–1.7.27 incorrectly treated that missing GET as a missing server setting.
+Version 1.7.28 fixes that compatibility error without weakening token verification.

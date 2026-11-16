@@ -141,3 +141,25 @@ test('Google cancellation leaves email login available and saves no session',asy
  await assert.rejects(c.api.googleLogin(),/cancelled.*email sign-in/);
  assert.equal(c.calls.length,1);assert.equal(c.storage.kaos_tokens,undefined);
 });
+
+test('a backend without the diagnostic route can still perform the verified Google exchange',async()=>{
+ const c=cloud([{status:404,body:{detail:'Not Found'}},{status:200,body:{accessToken:'verified-kaos-token',user:{id:'u1'}}}]);
+ c.context.chrome.runtime.id='gbobopmnjgeeegniphckfpalhnebapjm';
+ c.context.chrome.identity={getAuthToken:async()=>({token:'google-fixture'})};
+ await c.api.googleLogin();
+ assert.equal(c.storage.kaos_tokens.accessToken,'verified-kaos-token');
+ assert.equal(c.calls.length,2);
+ assert.ok(c.calls[1].url.endsWith('/extension/google/access-token'));
+ assert.equal(JSON.parse(c.calls[1].opts.body).access_token,'google-fixture');
+});
+test('missing diagnostic route never replaces server-side Google verification',async()=>{
+ const c=cloud([{status:404,body:{detail:'Not Found'}},{status:401,body:{detail:'Unrecognized Google OAuth client'}}]);
+ c.context.chrome.identity={getAuthToken:async()=>({token:'google-fixture'})};
+ await assert.rejects(c.api.googleLogin(),/Unrecognized Google OAuth client/);
+ assert.equal(c.storage.kaos_tokens,undefined);
+});
+test('an HTML 404 for the diagnostic route does not prevent a verified Google exchange',async()=>{
+ const c=cloud([{status:404,raw:'<h1>Not Found</h1>'},{status:200,body:{accessToken:'verified-kaos-token'}}]);
+ c.context.chrome.identity={getAuthToken:async()=>({token:'google-fixture'})};
+ await c.api.googleLogin();assert.equal(c.storage.kaos_tokens.accessToken,'verified-kaos-token');
+});

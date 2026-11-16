@@ -188,10 +188,15 @@
       finally { clearTimeout(timer); }
     }
     var configResponse=await request('/extension/google/config',{method:'GET',cache:'no-store'});
-    var config=await apiJson(configResponse,'KAOS Google configuration');
-    if (!configResponse.ok || !config.configured || !config.client_id) throw new Error('KAOS extension Google sign-in is not configured on the server. Contact KAOS support or use email sign-in.');
-    var oauth=(chrome.runtime.getManifest()||{}).oauth2;
-    if (!oauth || oauth.client_id!==config.client_id) throw new Error('The KAOS server and extension use different Google OAuth clients. Contact KAOS support.');
+    // Earlier KAOS backends support the verified token exchange but not this
+    // optional diagnostic endpoint. A missing diagnostic must not block sign-in.
+    // Authentication still requires the same Google-verified server exchange.
+    if (configResponse.status!==404) {
+      var config=await apiJson(configResponse,'KAOS Google configuration');
+      if (!configResponse.ok || !config.configured || !config.client_id) throw new Error('KAOS extension Google sign-in is not configured on the server. Contact KAOS support or use email sign-in.');
+      var oauth=(chrome.runtime.getManifest()||{}).oauth2;
+      if (!oauth || oauth.client_id!==config.client_id) throw new Error('The KAOS server and extension use different Google OAuth clients. Contact KAOS support.');
+    }
     for (var attempt=0;attempt<2;attempt++) {
       var tokenResponse;
       try { tokenResponse=await chrome.identity.getAuthToken({interactive:true}); }
