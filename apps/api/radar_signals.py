@@ -53,16 +53,18 @@ def assess(candles, now, interval=900, planning=False):
 
 async def market(asset, timeframe='intraday'):
     planning=timeframe!='intraday'
-    key = asset.asset_class+':'+asset.symbol+(':'+timeframe if planning else '')
+    key = asset.asset_class+':'+asset.symbol+(':daily-training-v1' if planning else '')
+    def framed(report):
+        return {**report,'timeframe':timeframe,'horizon':{'daily':'1 trading session','weekly':'5 trading sessions','monthly':'21 trading sessions'}[timeframe]} if planning else report
     now = datetime.now(timezone.utc).timestamp()
     cached = await db.kaos_market_signals.find_one({'_id': key})
     if cached and now-cached.get('checked', 0)<300:
-        return cached['report']
+        return framed(cached['report'])
     try:
         await db.kaos_market_signal_locks.update_one(
             {'_id':key, 'until':{'$lt':now}}, {'$set':{'until':now+20}}, upsert=True)
     except DuplicateKeyError:
-        return cached['report'] if cached else {'symbol':asset.symbol,'direction':'WAIT','reason':'A shared scan is already running. Refresh shortly.'}
+        return framed(cached['report']) if cached else {'symbol':asset.symbol,'direction':'WAIT','reason':'A shared scan is already running. Refresh shortly.'}
     try:
         async with httpx.AsyncClient(timeout=8, follow_redirects=False) as client:
             if asset.asset_class == 'crypto':

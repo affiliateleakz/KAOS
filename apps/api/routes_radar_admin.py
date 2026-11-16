@@ -1,5 +1,7 @@
 from fastapi import APIRouter,Depends,HTTPException
 from pydantic import BaseModel,Field,SecretStr,ConfigDict
+from typing import Literal
+from radar_training_profiles import key as profile_key,FRAMES
 from auth import require_role
 from db import db,now_iso
 from services import audit_log
@@ -43,6 +45,7 @@ async def save(provider:str,request:ProviderInput,admin=Depends(owner)):
 class TrainInput(BaseModel):
  model_config=ConfigDict(extra='forbid')
  group:str=Field(pattern=r'^(stock|crypto|forex)$')
+ timeframe:Literal['intraday','daily','weekly','monthly']='intraday'
 
 
 class ActivateInput(TrainInput):
@@ -50,24 +53,27 @@ class ActivateInput(TrainInput):
 
 
 @router.get('/model')
-async def model_status(admin=Depends(owner)):
+async def model_status(admin=Depends(owner),timeframe:Literal['intraday','daily','weekly','monthly']='intraday'):
  from kaos_radar_ai import SCHEMA
  groups=[]
  for group in ('stock','crypto','forex'):
-  count=await db.kaos_radar_samples.count_documents({'group':group,'schema':SCHEMA,'label':{'$in':[0,1]}})
-  active=await db.kaos_radar_models.find_one({'_id':group})
-  candidate=await db.kaos_radar_models.find_one({'_id':'candidate:'+group})
+  profile=profile_key(group,timeframe)
+  scope={'group':group,'schema':SCHEMA,'label':{'$in':[0,1]},'timeframe':timeframe if timeframe!='intraday' else {'$exists':False}}
+  count=await db.kaos_radar_samples.count_documents(scope)
+  active=await db.kaos_radar_models.find_one({'_id':profile})
+  candidate=await db.kaos_radar_models.find_one({'_id':'candidate:'+profile})
   def public_model(row):
    if not row:return None
-   compatible=row.get('bundle',{}).get('schema')==SCHEMA
+   compatible=row.get('bundle',{}).get('schema')==SCHEMA and (not row.get('bundle',{}).get('profile') if timeframe=='intraday' else row.get('bundle',{}).get('profile')==profile)
    clean={k:v for k,v in row.items() if k!='bundle'}
    if not compatible and clean.get('state') in ('active','candidate'):clean['state']='retraining_required'
    clean['compatible_schema']=compatible
    return clean
   active=public_model(active);candidate=public_model(candidate)
-  groups.append({'group':group,'labeled_samples':count,'required_samples':120,
+  groups.append({'group':group,'timeframe':timeframe,'profile':profile,'labeled_samples':count,'required_samples':120,
                  'active':active,'candidate':candidate})
  return {'engine':'KAOS Radar local evidence model','external_ai_service':False,'groups':groups,
+         'timeframes':list(FRAMES),'binary_trainer':{'market':'Pocket Option binary','horizon':'30 seconds','admin_url':'/admin/kaos-ai','separate_schema':True},
          'learning':'User-triggered scans save observed evidence; later closed candles label outcomes. No continuous worker.'}
 
 
@@ -77,23 +83,24 @@ async def train_model(request:TrainInput,admin=Depends(owner)):
  import time
  from pymongo.errors import DuplicateKeyError
  from kaos_radar_ai import SCHEMA,train
+ profile=profile_key(request.group,request.timeframe)
  stamp=time.time()
  try:
-  await db.kaos_radar_model_locks.update_one({'_id':request.group,'until':{'$lt':stamp}},
+  await db.kaos_radar_model_locks.update_one({'_id':profile,'until':{'$lt':stamp}},
      {'$set':{'until':stamp+300}},upsert=True)
  except DuplicateKeyError:
   raise HTTPException(429,'Training has a five-minute cooldown per market group')
- rows=await db.kaos_radar_samples.find({'group':request.group,'schema':SCHEMA,'label':{'$in':[0,1]}},
+ rows=await db.kaos_radar_samples.find({'group':request.group,'schema':SCHEMA,'label':{'$in':[0,1]},'timeframe':request.timeframe if request.timeframe!='intraday' else {'$exists':False}},
     {'_id':0}).sort('asof',-1).limit(2000).to_list(2000)
  # Reduce correlated overlapping labels per ticker before the chronological split.
  spaced=[];last={}
  for row in sorted(rows,key=lambda r:r['asof']):
   if row['asof']<=last.get(row['symbol'],0):continue
   spaced.append(row);last[row['symbol']]=row['target_at']
- result=await asyncio.to_thread(train,spaced)
+ result=await asyncio.to_thread(train,spaced,profile if request.timeframe!='intraday' else None)
  version=now_iso()
- doc={**result,'version':version,'group':request.group,'trainedAt':version}
- await db.kaos_radar_models.update_one({'_id':'candidate:'+request.group},{'$set':doc},upsert=True)
+ doc={**result,'version':version,'group':request.group,'timeframe':request.timeframe,'profile':profile,'trainedAt':version}
+ await db.kaos_radar_models.update_one({'_id':'candidate:'+profile},{'$set':doc},upsert=True)
  await audit_log(admin,'radar_model_trained','radar_model',request.group,{'state':result['state']})
  return {k:v for k,v in doc.items() if k!='bundle'}
 
@@ -102,15 +109,17 @@ async def train_model(request:TrainInput,admin=Depends(owner)):
 async def activate_model(request:ActivateInput,admin=Depends(owner)):
  import time
  from kaos_radar_ai import SCHEMA,FEATURES,probability
- candidate=await db.kaos_radar_models.find_one({'_id':'candidate:'+request.group,'version':request.version,'state':'candidate'})
+ profile=profile_key(request.group,request.timeframe)
+ candidate=await db.kaos_radar_models.find_one({'_id':'candidate:'+profile,'version':request.version,'state':'candidate'})
  if (not candidate or candidate.get('bundle',{}).get('schema')!=SCHEMA
-     or not 0 < time.time()-candidate.get('bundle',{}).get('trained_through',0) <= 30*86400):
+     or (bool(candidate.get('bundle',{}).get('profile')) if request.timeframe=='intraday' else candidate.get('bundle',{}).get('profile')!=profile)
+     or not 0 < time.time()-candidate.get('bundle',{}).get('trained_through',0) <= (30 if request.timeframe=='intraday' else 90)*86400):
   raise HTTPException(409,'A matching candidate that passed validation is required')
  try:probability(candidate['bundle'],[0.0]*len(FEATURES))
  except (ValueError,TypeError,KeyError,OverflowError):raise HTTPException(409,'Candidate model bundle is invalid')
  active={k:v for k,v in candidate.items() if k!='_id'}
  active.update(state='active',activated_at=time.time())
- await db.kaos_radar_models.update_one({'_id':request.group},{'$set':active},upsert=True)
+ await db.kaos_radar_models.update_one({'_id':profile},{'$set':active},upsert=True)
  # Cached research reports must not hide a newly activated model.
  await db.kaos_radar_scans.update_many({}, {'$set':{'expires_at':now_iso()}})
  await db.kaos_asset_reports.delete_many({})

@@ -33,7 +33,7 @@ const BASE=process.env.KAOS_WEB_PREVIEW_URL;
   if(path==='/api/v1/intelligence/scan'){
    scanCalls++;const data=req.postDataJSON();assert.deepEqual(data.assets,[{symbol:'AAPL',asset_class:'stock'},{symbol:'ETH',asset_class:'crypto'}]);assert.equal(data.include_ai,true);latest=report();return route.fulfill({json:latest});
   }
-  if(path==='/api/admin/radar/model/train')return route.fulfill({json:{state:'collecting'}});
+  if(path==='/api/admin/radar/model/train'){assert.equal(req.postDataJSON().timeframe,'monthly');return route.fulfill({json:{state:'collecting'}});}
   if(path==='/api/admin/radar/model')return route.fulfill({json:{engine:'KAOS local',groups:[{group:'crypto',labeled_samples:0,active:null,candidate:null}]}});
   if(path==='/api/admin/radar/providers')return route.fulfill({json:{providers:providers(),vaultReady}});
   if(path==='/api/admin/radar/vault/initialize'){vaultReady=true;return route.fulfill({json:{vaultReady:true}});}
@@ -103,6 +103,8 @@ const BASE=process.env.KAOS_WEB_PREVIEW_URL;
  await page.setViewportSize({width:1440,height:1000});
  await page.goto(BASE+'/admin/radar');await page.getByTestId('radar-source-settings').waitFor();
  assert.ok(!(await page.locator('body').innerText()).includes('OpenAI API key'));
+ await page.getByLabel('Training timeframe',{exact:true}).selectOption('monthly');
+ await page.getByRole('link',{name:'Open binary trainer',exact:true}).waitFor();
  await page.getByRole('button',{name:'Train crypto model',exact:true}).click();
  await page.getByRole('status').filter({hasText:'KAOS model: collecting'}).waitFor();
  const count=opportunityCalls;await page.clock.fastForward(300010);assert.equal(opportunityCalls,count,'Opportunity polling stops after leaving Radar');

@@ -63,7 +63,7 @@ def setup(asset,quote,ai,now):
     except (ValueError,TypeError,KeyError):return None
 
 
-async def collect(market,focus=None,timeframe='intraday'):
+async def collect(market,focus=None,timeframe='intraday',shared=None):
     now=datetime.now(timezone.utc)
     if market=='options' and timeframe=='intraday':
         import radar_settings
@@ -74,7 +74,10 @@ async def collect(market,focus=None,timeframe='intraday'):
                 'partial':False,'completed_at':now.isoformat(),'execution_enabled':False,
                 'status_message':'Options need OPRA chain access. The owner can connect it in Admin → Radar Sources.',
                 'universe_note':'No chain access: no option contracts were fabricated.','score_explanation':'Options scores rank the underlying setup; fresh bid/ask and contract filters are also required.'}
-    trending=await radar_trending.snapshot() if market=='stocks' else {'state':'unavailable'}
+    if shared is not None and market=='stocks':
+        if 'trending' not in shared:shared['trending']=asyncio.create_task(radar_trending.snapshot())
+        trending=await shared['trending']
+    else:trending=await radar_trending.snapshot() if market=='stocks' else {'state':'unavailable'}
     symbols=UNIVERSES[market]
     if market=='stocks' and trending.get('state')=='complete' and not trending.get('stale'):
         symbols=list(dict.fromkeys([r['symbol'] for r in trending.get('rankings',[])[:6]]+symbols))[:16]
@@ -87,7 +90,10 @@ async def collect(market,focus=None,timeframe='intraday'):
     assets=[{'symbol':s,'asset_class':kind} for s in symbols]
     await native.ensure_indexes()
     import radar_research
-    context_data=await radar_research.context(assets,budget=12)
+    if shared is not None:
+        if 'context' not in shared:shared['context']=asyncio.create_task(radar_research.context(assets,budget=12))
+        context_data=await shared['context']
+    else:context_data=await radar_research.context(assets,budget=12)
     gate=asyncio.Semaphore(3);evaluated=[]
     async def candidate(asset):
         async with gate:
@@ -131,25 +137,16 @@ async def collect(market,focus=None,timeframe='intraday'):
 
 
 async def collect_any(market,focus=None):
-    """Share daily evidence across planning horizons; do not multiply provider scans."""
-    import copy
-    intraday,daily=await asyncio.gather(collect(market,focus,'intraday'),collect(market,focus,'daily'))
-    plays=list(intraday['plays'])
-    for original in daily['plays']:
-        for frame,sessions in (('daily',1),('weekly',5),('monthly',21)):
-            play=copy.deepcopy(original)
-            price=play['reference_entry'];scale=math.sqrt(sessions)
-            play.update(timeframe=frame,horizon=f'{sessions} trading session'+('s' if sessions!=1 else ''),
-                reference_stop=price+(original['reference_stop']-price)*scale,
-                reference_target=price+(original['reference_target']-price)*scale)
-            if play['reference_stop']>0 and play['reference_target']>0:plays.append(play)
-    return {**daily,'plays':sorted(plays,key=lambda p:(-p['score'],p['symbol'],p['timeframe'])),
-        'timeframe':'any','scanned':intraday['scanned']+daily['scanned'],
-        'universe_size':intraday['universe_size']+daily['universe_size'],
-        'partial':intraday.get('partial',False) or daily.get('partial',False),
-        'coverage':sorted(set(intraday.get('coverage',[])+daily.get('coverage',[]))),
-        'status_message':None,
-        'universe_note':daily.get('universe_note','')+' Any timeframe combines intraday scans with daily, weekly and monthly planning horizons. Planning horizons share daily candles/evidence; they are not independent model forecasts.'}
+    """Warm shared daily candles, then assess each horizon with its own model."""
+    shared={}
+    intraday,daily=await asyncio.gather(collect(market,focus,'intraday',shared),collect(market,focus,'daily',shared))
+    weekly,monthly=await asyncio.gather(collect(market,focus,'weekly',shared),collect(market,focus,'monthly',shared))
+    reports=[intraday,daily,weekly,monthly]
+    return {**daily,'plays':sorted([p for r in reports for p in r['plays']],key=lambda p:(-p['score'],p['symbol'],p['timeframe'])),
+        'timeframe':'any','scanned':sum(r['scanned'] for r in reports),'universe_size':sum(r['universe_size'] for r in reports),
+        'partial':any(r.get('partial',False) for r in reports),
+        'coverage':sorted({text for r in reports for text in r.get('coverage',[])}),'status_message':None,
+        'universe_note':daily.get('universe_note','')+' Each market/timeframe has its own trained model. Daily bars and provider evidence are shared; outcomes and model decisions are separate.'}
 
 
 @router.post('/signals/opportunities')

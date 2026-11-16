@@ -80,9 +80,9 @@ def probability(model, features):
     return sigmoid(model['bias']+sum(w*v for w,v in zip(model['weights'], x)))
 
 
-def train(rows):
+def train(rows, profile=None):
     """Chronological split, horizon purge, train-only normalization; no shuffling."""
-    clean = sorted([r for r in rows if r.get('schema') == SCHEMA and r.get('label') in (0, 1)
+    clean = sorted([r for r in rows if (r.get('profile')==profile if profile is not None else not r.get('profile')) and r.get('schema') == SCHEMA and r.get('label') in (0, 1)
                     and len(r.get('x', [])) == len(FEATURES)
                     and all(isinstance(v, (int, float)) and math.isfinite(v) for v in r['x'])], key=lambda r:r['asof'])
     # All assets share timestamps: purge the split globally, not per ticker.
@@ -109,6 +109,7 @@ def train(rows):
         weights = [w-.05*(g/len(fitting)+.02*w) for w,g in zip(weights,grad)]
     model = {'schema':SCHEMA, 'features':list(FEATURES), 'means':means, 'scales':scales,
              'weights':weights, 'bias':bias, 'trained_through':max(r['target_at'] for r in clean)}
+    if profile is not None:model['profile']=profile
     predictions = [probability(model,r['x']) for r in held]
     recalls = [sum((p>=.5)==r['label'] for p,r in zip(predictions,held) if r['label']==y)/max(1,sum(r['label']==y for r in held)) for y in (0,1)]
     balanced = sum(recalls)/2
@@ -164,7 +165,11 @@ async def assessment(asset, market, evidence, now=None, discovery=None):
     result['news_articles'] = [{k:r.get(k) for k in ('summary','source_url','published_at','provider')} for r in cited if r.get('source')=='news']
     result['evidence_count'] = len(cited)
     if market.get('planning'):
-        return {**result,'model_state':'timeframe_not_trained','explanation':'Long-horizon evidence plan; the intraday AI model is not used for this timeframe.'}
+        import sys
+        from radar_training_profiles import assess as planning_assess
+        technical=market.get('feature_vector')
+        vector=(technical+context+discovery_values+extra_features(result['evidence_channels'])+reported_transactions(cited)) if isinstance(technical,list) and len(technical)==7 else []
+        return await planning_assess(sys.modules[__name__],asset,market,result,vector,now)
     technical = market.get('feature_vector')
     if not isinstance(technical,list) or len(technical)!=7 or not all(isinstance(v,(int,float)) and math.isfinite(v) for v in technical):
         technical=None
@@ -210,6 +215,8 @@ async def assessment(asset, market, evidence, now=None, discovery=None):
     if not model:
         return result
     bundle = model['bundle']
+    if bundle.get('profile'):
+        return {**result,'model_state':'incompatible','explanation':'A planning model cannot be used for intraday signals.'}
     if not 0 <= now.timestamp()-model.get('activated_at',0) <= 30*86400 or not 0 < now.timestamp()-bundle.get('trained_through',now.timestamp()) <= 30*86400:
         return {**result,'model_state':'expired','explanation':'Model needs fresh validation before it can issue signals.'}
     try:

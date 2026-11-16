@@ -40,10 +40,15 @@ def test_timeframe_validation():
 
 def test_plans_do_not_train_or_query_intraday_models(monkeypatch):
     import kaos_radar_ai as native
-    monkeypatch.setattr(native,'db',SimpleNamespace())
+    from test_kaos_radar_ai import Samples
+    models=SimpleNamespace(find_one=AsyncMock(return_value=None))
+    samples=Samples()
+    monkeypatch.setattr(native,'db',SimpleNamespace(kaos_radar_samples=samples,kaos_radar_models=models))
     report=asyncio.run(native.assessment({'symbol':'AAPL','asset_class':'stock'},
         quote(planning=True,timeframe='monthly'),[],NOW))
-    assert report['model_state']=='timeframe_not_trained'
+    assert report['model_state']=='collecting'
+    assert models.find_one.call_args.args[0]['_id']=='stock:monthly'
+    assert samples.writes[0][1]['$setOnInsert']['profile']=='stock:monthly'
 
 
 def test_options_plans_work_without_claiming_fresh_contracts(monkeypatch):
@@ -90,16 +95,13 @@ def test_stock_daily_provider_excludes_live_session_and_uses_exchange_close(monk
     assert datetime.fromisoformat(result['source_time']).astimezone(zone).hour==16
 
 
-def test_any_timeframe_combines_live_and_plans_without_repeating_daily_sources(monkeypatch):
+def test_any_timeframe_assesses_each_horizon_separately(monkeypatch):
     import radar_opportunities as scanner
-    plan=setup({'symbol':'AAPL','asset_class':'stock'},quote(planning=True,timeframe='daily',source_time=(NOW-timedelta(days=2)).isoformat()),{},NOW)
-    live=setup({'symbol':'AAPL','asset_class':'stock'},quote(),{},NOW)
-    async def collect(market,focus,frame):
-        return {'plays':[live if frame=='intraday' else plan],'scanned':1,'universe_size':1,'coverage':[]}
+    async def collect(market,focus,frame,shared=None):
+        plan=setup({'symbol':'AAPL','asset_class':'stock'},quote(planning=frame!='intraday',timeframe=frame),{},NOW)
+        return {'plays':[plan],'scanned':1,'universe_size':1,'coverage':[]}
     collector=AsyncMock(side_effect=collect);monkeypatch.setattr(scanner,'collect',collector)
     result=asyncio.run(scanner.collect_any('stocks'))
     assert {p['timeframe'] for p in result['plays']}=={'intraday','daily','weekly','monthly'}
-    assert collector.await_count==2 and result['scanned']==2
-    monthly=next(p for p in result['plays'] if p['timeframe']=='monthly')
-    assert monthly['reference_stop']<plan['reference_stop'] and monthly['planning']
+    assert collector.await_count==4 and result['scanned']==4
     assert OpportunityInput(timeframe='any').timeframe=='any'

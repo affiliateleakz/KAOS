@@ -178,36 +178,40 @@ node ../../scripts/browser/run.cjs
 Browser checks require installed Chrome/Chromium (`CHROME_BIN` is supported) or
 the matching Playwright Chromium download. They use fixture accounts and candles.
 
-### AI Signal timeframes and closed-session plans
+### AI Signal timeframes, closed-session plans and training
 
-The scanner defaults to **Daily** and offers Intraday (45–60 minutes), Daily
-(1 trading session), Weekly (5 sessions), and Monthly (21 sessions). The last
-three use at least 60 completed **daily** candles, not weekly/monthly candles.
-Stock candles are excluded until their exchange-local regular session closes;
-historical US sessions conservatively use 16:00 local exchange time. FX and
-crypto daily bars must complete their full daily interval. Source data older
-than five calendar days is rejected, allowing ordinary weekends/holidays while
-bounding stale plans. Source timestamps remain unchanged and visible.
+AI Signal offers Intraday (45–60 minutes), Daily (1 completed daily session),
+Weekly (5), Monthly (21), and Any timeframe. Planning uses at least 60 completed
+daily candles; US stock sessions must close before inclusion. Source timestamps
+remain visible and data older than five calendar days is rejected. Longer-term
+reference distances scale daily ATR by sqrt(1/5/21); these are planning estimates,
+not calibrated prediction intervals.
 
-Longer-horizon plans use the shared technical/evidence score with current news,
-disclosures, attention and other available evidence. They never invoke or train
-the 45–60-minute supervised model: `timeframe_not_trained` is explicit. They are
-research plans, not validated long-horizon model forecasts. Daily ATR reference
-distances scale by sqrt(1/5/21) sessions for daily/weekly/monthly respectively;
-this is a planning heuristic, not a calibrated prediction interval. Plans refresh
-on the existing shared five-minute cadence and expire from the UI after fifteen
-minutes unless refreshed. Candle, research and opportunity caches isolate frames.
+The multi-market trainer in **Admin → Radar Sources & AI** now isolates stock,
+crypto and forex profiles for each timeframe (12 profiles). It records the 51
+market/news/mentions/disclosure/other-evidence features when actually observed.
+Daily/weekly/monthly profiles label actual later session closes after that
+observation, including observations made over weekends. No past news or mentions
+are fabricated from current feeds. Each profile trains a local classifier with
+purged chronological validation, at least 120 non-overlapping labels and a maximum
+2,000-row training window. Training creates a candidate only; activation remains
+a separate owner action. An untrained profile stays WAIT in the native model;
+visible technical/evidence plans are labeled as such.
 
-Longer-horizon **Options** produces CALL/PUT underlying research directions even
-when the market is closed and OPRA is unconfigured. These plans contain **no
-contract, expiry, premium or live quote**. The user must validate a live chain,
-expiry beyond the outlook, spread, liquidity and Greeks before entry. Intraday
-options still require authenticated OPRA and quotes no older than 120 seconds.
-No orders, broker execution, live trading or hosting activation are enabled.
+**Any timeframe** evaluates each profile independently; it no longer clones a
+daily decision into weekly/monthly results. It shares one provider-evidence
+collection and daily candles across planning horizons, then evaluates their
+separate models. Results retain timeframe labels and the selected 1–10 limit.
 
-**Any timeframe** combines the intraday scan with all three planning horizons.
-The planning horizons share a daily candle/evidence assessment and differ in
-outlook and ATR reference distance; they are not independent model forecasts.
-This uses two provider scans rather than four. Results retain timeframe labels,
-share the selected score threshold, and are capped at the user's chosen 1–10
-results across all horizons. Multiple horizons for one instrument may qualify.
+The existing Pocket Option binary trainer remains separate (104 features,
+30-second target). Its admin link is shown alongside the market trainer. This
+change does not add new binary expiries or mix broker outcomes into spot models.
+Longer-term options use the stock underlying profile, not an option-premium model:
+plans have no fabricated contract, premium, expiry or live quote. Intraday options
+continue to require OPRA contracts with quotes no older than 120 seconds.
+
+There is no continuous collector or automatic retraining on shared hosting. Use
+Collect evidence or normal Radar scans, let outcomes mature, train and review the
+candidate. Snapshot retention for planning is two years; sparse scans or gaps
+can prevent labels from maturing. Training and activation never enable orders,
+payments, live trading or automatic hosting deployment.
