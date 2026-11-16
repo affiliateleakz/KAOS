@@ -12,7 +12,7 @@ const BASE=process.env.KAOS_WEB_PREVIEW_URL;
   const replies={
    '/api/auth/me':{id:'fixture',name:'Owner',role:'super_admin'},
    '/api/notifications':[],
-   '/api/billing/memberships':{plans:[{id:'free',tier:'free',name:'Free',amount:0,currency:'usd',entitlements:{botAccess:true,community:true,chartLimit:1,deviceLimit:1}},{id:'pro',tier:'pro',name:'Pro',amount:9900,currency:'usd',interval:'month',entitlements:{botAccess:true,chartLimit:4,deviceLimit:3}}],affiliateRates:{free:[10,0,0],pro:[30,15,0],ultimate:[50,25,5]},affiliateHoldDays:30,affiliateEnrollmentEnabled:true,payoutsEnabled:false,checkoutEnabled:false},
+   '/api/billing/memberships':{plans:[{id:'free',tier:'free',name:'Free',amount:0,currency:'usd',entitlements:{botAccess:true,community:true,chartLimit:1,deviceLimit:1}},{id:'pro',tier:'pro',name:'Pro',amount:9900,currency:'usd',interval:'month',entitlements:{botAccess:true,chartLimit:4,deviceLimit:3,community:true,scanners:true,aiInsights:true,cloudStrategies:true,modes:['STRATEGY']}},{id:'ultimate',tier:'ultimate',name:'Ultimate',amount:14900,currency:'usd',interval:'month',entitlements:{botAccess:true,chartLimit:4,deviceLimit:5,community:true,scanners:true,aiInsights:true,cloudStrategies:true,premiumTools:true,modes:['STRATEGY','AI','STRATEGY_AI']}}],affiliateRates:{free:[10,0,0],pro:[30,15,0],ultimate:[50,25,5]},affiliateHoldDays:30,affiliateEnrollmentEnabled:true,payoutsEnabled:false,checkoutEnabled:false},
    '/api/v1/trading/config':{entitlements:{tier:'ultimate',scanners:true,chartLimit:4}},
    '/api/v1/stocks/heatmap':{provider:'Fixture',feed:'fixture',sectors:[{sector:'Technology',stocks:[{symbol:'AAPL',price:100,volume:1000,change_pct:2}]}]},
    '/api/v1/intelligence/opportunities':{results:[]},
@@ -31,6 +31,18 @@ const BASE=process.env.KAOS_WEB_PREVIEW_URL;
  await page.getByTestId('home-plan-free').waitFor();
  await page.getByTestId('home-plan-pro').getByText('$99.00',{exact:false}).waitFor();
  await page.getByTestId('homepage-commission-total').getByText('$9.90',{exact:false}).waitFor();
+ const comparison=page.getByRole('table',{name:'Membership benefits comparison',exact:true});
+ await comparison.getByRole('row',{name:'Broker chart slots 1 4 4',exact:true}).waitFor();
+ await comparison.getByRole('row',{name:'Devices 1 3 5',exact:true}).waitFor();
+ await comparison.getByRole('row',{name:'Premium tools Not included Not included Included',exact:true}).waitFor();
+ await comparison.getByRole('row',{name:'Affiliate Level 1 10% 30% 50%',exact:true}).waitFor();
+ await comparison.getByRole('row',{name:'Affiliate Level 2 Not included 15% 25%',exact:true}).waitFor();
+ await comparison.getByRole('row',{name:'Affiliate Level 3 Not included Not included 5%',exact:true}).waitFor();
+ await page.getByTestId('home-direct-examples-free').getByText('Pro payment → $9.90',{exact:true}).waitFor();
+ await page.getByTestId('home-direct-examples-ultimate').getByText('Ultimate payment → $74.50',{exact:true}).waitFor();
+ await page.getByTestId('homepage-affiliate-payouts').getByText('Commissions have a 30-day hold. Refunds and chargebacks can reverse commissions.',{exact:true}).waitFor();
+ await page.getByTestId('homepage-affiliate-payouts').getByText(/Cash payouts are not live yet/).waitFor();
+
  await page.getByLabel('Your affiliate tier',{exact:true}).selectOption('ultimate');
  await page.getByLabel('Level 2 paid referrals',{exact:true}).fill('1');
  await page.getByTestId('homepage-commission-total').getByText('$74.25',{exact:false}).waitFor();
