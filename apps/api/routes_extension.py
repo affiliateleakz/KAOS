@@ -108,6 +108,14 @@ async def extension_me(request: Request, user: dict = Depends(get_current_user))
     }
 
 
+@v1.get("/extension/google/config")
+async def extension_google_config():
+    """Public OAuth client ID (not a secret); no tokens or private settings."""
+    client=os.environ.get("KAOS_GOOGLE_EXTENSION_CLIENT_ID", "").strip()
+    return {"configured":bool(client),"client_id":client or None,
+            "store_item_id":"gbobopmnjgeeegniphckfpalhnebapjm"}
+
+
 @v1.post("/extension/google/access-token")
 async def extension_google_access_token(request: Request):
     """Exchange a Google-authenticated Chrome Identity access token for a KAOS JWT.

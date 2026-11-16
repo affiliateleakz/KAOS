@@ -6,7 +6,7 @@ function cloud(responses) {
   const storage = {}, calls = [];
   const context = {module: {exports: {}}, crypto: {randomUUID: () => 'device-test'},
     setTimeout, clearTimeout, AbortController,
-    chrome: {runtime: {getManifest: () => ({version:"1.7.14"})}, storage: {local: {
+    chrome: {runtime: {getManifest: () => ({version:"1.7.26",oauth2:{client_id:"fixture-client"}})}, storage: {local: {
       get: (keys, cb) => cb(storage), set: (obj, cb) => {Object.assign(storage, obj); cb();}
     }}},
     fetch: async (url, opts) => {
@@ -14,10 +14,10 @@ function cloud(responses) {
       const next = responses.shift();
       if (next instanceof Error) throw next;
       assert.ok(next, 'unexpected request');
-      return new Response(JSON.stringify(next.body), {status: next.status});
+      return new Response(next.raw ?? JSON.stringify(next.body), {status: next.status});
     }};
   vm.runInNewContext(fs.readFileSync(__dirname + '/kaos-cloud.js', 'utf8'), context);
-  return {api: context.module.exports, storage, calls};
+  return {api: context.module.exports, storage, calls, context};
 }
 test('legacy 404 reports incompatibility without resending credentials or storing a session', async () => {
   const c = cloud([{status:404, body:{detail:'Not found'}},
@@ -81,4 +81,63 @@ test('periodic server failure is offline rather than an expired password session
  const c=cloud([{status:200,body:{accessToken:'access'}},{status:503,body:{detail:'Temporarily unavailable'}}]);
  await c.api.login('member@example.com','secret');const result=await c.api.sessionStatus();
  assert.equal(result.step,'OFFLINE');assert.equal(result.httpStatus,503);
+});
+
+test('hosting bot challenge is never treated as a successful API health check', async()=>{
+ const c=cloud([{status:200,raw:'<title>Bot Verification</title>'},{status:200,raw:'<form id="lsrecaptcha-form">'}]);
+ const result=await c.api.health();assert.equal(result.ok,false);assert.match(result.error,/hosting firewall/);
+});
+test('password login detects an HTTP 200 hosting challenge without saving a session',async()=>{
+ const c=cloud([{status:200,raw:'<title>Bot Verification</title>'}]);
+ await assert.rejects(c.api.login('member@example.com','secret'),e=>e.kind==='HOSTING_VERIFICATION');
+ assert.equal(c.storage.kaos_tokens,undefined);
+});
+test('Google exchange detects hosting HTML without accepting it as a login',async()=>{
+ const c=cloud([{status:200,body:{configured:true,client_id:'fixture-client'}},{status:200,raw:'<title>Bot Verification</title>'}]);
+ c.context.chrome.identity={getAuthToken:async()=>({token:'fixture-google-token'})};
+ await assert.rejects(c.api.googleLogin(),e=>e.kind==='HOSTING_VERIFICATION');
+ assert.equal(c.storage.kaos_tokens,undefined);
+});
+test('Google exchange stores only returned KAOS tokens, never the Google token',async()=>{
+ const c=cloud([{status:200,body:{configured:true,client_id:'fixture-client'}},{status:200,body:{accessToken:'kaos-access',refreshToken:'kaos-refresh',user:{id:'u1'}}}]);
+ c.context.chrome.identity={getAuthToken:async()=>({token:'fixture-google-token'})};
+ await c.api.googleLogin();
+ assert.equal(c.storage.kaos_tokens.accessToken,'kaos-access');
+ assert.ok(!JSON.stringify(c.storage).includes('fixture-google-token'));
+ assert.equal(c.calls[1].url,'https://api.tradingwithkaos.com/api/v1/extension/google/access-token');
+});
+
+test('unconfigured Google login fails before opening OAuth or storing tokens',async()=>{
+ const c=cloud([{status:200,body:{configured:false,client_id:null}}]);let opened=false;
+ c.context.chrome.identity={getAuthToken:async()=>{opened=true;return 'google';}};
+ await assert.rejects(c.api.googleLogin(),/not configured/);assert.equal(opened,false);assert.equal(c.storage.kaos_tokens,undefined);
+});
+test('mismatched OAuth clients fail before sending Google tokens',async()=>{
+ const c=cloud([{status:200,body:{configured:true,client_id:'other-client'}}]);
+ c.context.chrome.identity={getAuthToken:async()=>{throw Error('must not run');}};
+ await assert.rejects(c.api.googleLogin(),/different Google OAuth clients/);assert.equal(c.calls.length,1);
+});
+test('Google sign-in removes an invalid cached token and retries exactly once',async()=>{
+ const c=cloud([{status:200,body:{configured:true,client_id:'fixture-client'}},{status:401,body:{detail:'Invalid Google access token'}},{status:200,body:{accessToken:'kaos-access'}}]);
+ const removed=[];let issued=0;
+ c.context.chrome.identity={getAuthToken:async()=>({token:'google-'+(++issued)}),removeCachedAuthToken:async({token})=>removed.push(token)};
+ await c.api.googleLogin();assert.deepEqual(removed,['google-1']);assert.equal(issued,2);assert.equal(c.storage.kaos_tokens.accessToken,'kaos-access');
+});
+test('Google rejection after the refresh does not loop or save a session',async()=>{
+ const c=cloud([{status:200,body:{configured:true,client_id:'fixture-client'}},{status:401,body:{detail:'Invalid Google access token'}},{status:401,body:{detail:'Invalid Google access token'}}]);
+ let issued=0;c.context.chrome.identity={getAuthToken:async()=>({token:'google-'+(++issued)}),removeCachedAuthToken:async()=>{}};
+ await assert.rejects(c.api.googleLogin(),/Invalid Google access token/);assert.equal(issued,2);assert.equal(c.storage.kaos_tokens,undefined);
+});
+
+test('Google sign-in rejects another extension ID before sending anything',async()=>{
+ const c=cloud([]);c.context.chrome.runtime.id='pnbakkallmfhliciobnamffmhclkgofb';
+ c.context.chrome.identity={getAuthToken:async()=>{throw Error('must not run');}};
+ await assert.rejects(c.api.googleLogin(),/gbobopmnjgeeegniphckfpalhnebapjm/);
+ assert.equal(c.calls.length,0);
+});
+test('Google cancellation leaves email login available and saves no session',async()=>{
+ const c=cloud([{status:200,body:{configured:true,client_id:'fixture-client'}}]);
+ c.context.chrome.identity={getAuthToken:async()=>{throw Error('The user did not approve access.');}};
+ await assert.rejects(c.api.googleLogin(),/cancelled.*email sign-in/);
+ assert.equal(c.calls.length,1);assert.equal(c.storage.kaos_tokens,undefined);
 });

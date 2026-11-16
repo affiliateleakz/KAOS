@@ -61,6 +61,24 @@
     };
   }
   async function setTokens(t) { await sset(kv(TOK, normalizeTokens(t))); }
+  async function apiJson(response, label) {
+    var text = await response.text();
+    var body;
+    try { body = JSON.parse(text); } catch (_) {
+      var challenged = /bot verification|lsrecaptcha|recaptcha|captcha|verify you are human/i.test(text);
+      var error = new Error(challenged ?
+        'KAOS hosting returned a bot-verification page instead of the API. Contact KAOS support; the hosting firewall must allow API requests.' :
+        label + ' returned an invalid API response (HTTP ' + response.status + '). Contact KAOS support.');
+      error.kind = challenged ? 'HOSTING_VERIFICATION' : 'INVALID_API_RESPONSE';
+      error.httpStatus = response.status;
+      throw error;
+    }
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      var invalid = new Error(label + ' returned an invalid JSON object. Contact KAOS support.');
+      invalid.kind = 'INVALID_API_RESPONSE'; throw invalid;
+    }
+    return body;
+  }
   async function health() {
     var host=await apiHost(), urls=[host+'/api',host+'/api/'];
     var last=null;
@@ -70,12 +88,9 @@
         var timer=ctrl?setTimeout(function(){try{ctrl.abort();}catch(_){}},6000):null;
         var r=await fetch(urls[i],{method:'GET',cache:'no-store',signal:ctrl?ctrl.signal:undefined});
         if(timer)clearTimeout(timer);
-        var text=await r.text();
-        if(r.ok) {
-          var body=null; try{body=JSON.parse(text);}catch(_){}
-          return {ok:true,httpStatus:r.status,url:urls[i],body:body||text};
-        }
-        last={ok:false,httpStatus:r.status,url:urls[i],body:text.slice(0,300)};
+        var body=await apiJson(r,'KAOS health check');
+        if(r.ok && (body.status==='ok'||body.runtime==='native-wsgi')) return {ok:true,httpStatus:r.status,url:urls[i],body:body};
+        last={ok:false,httpStatus:r.status,url:urls[i],error:'KAOS health check did not report a healthy API'};
       } catch(e) { last={ok:false,error:String(e&&e.message||e),url:urls[i]}; }
     }
     return last||{ok:false,error:'health check failed'};
@@ -151,7 +166,7 @@
       var e = new Error(label); e.kind = res.status === 401 ? 'BAD_CREDENTIALS' : 'LOGIN_FAILED'; e.httpStatus = res.status; throw e;
     }
     var j;
-    try { j = await res.json(); } catch (_) { throw new Error('KAOS login server returned invalid JSON'); }
+    j = await apiJson(res, 'KAOS login server');
     var normalized = normalizeTokens(j);
     if (!normalized.accessToken) throw new Error('KAOS login response did not contain an access token');
     await setTokens(j);
@@ -162,25 +177,47 @@
 
   async function googleLogin() {
     if (!chrome.identity || !chrome.identity.getAuthToken) throw new Error('Chrome Identity API is unavailable');
-    // Chrome obtains a Google OAuth access token for the manifest-bound extension client.
-    // The KAOS server verifies the token with Google and checks its client audience.
-    var tokenResponse = await chrome.identity.getAuthToken({ interactive: true });
-    var accessToken = typeof tokenResponse === 'string' ? tokenResponse : tokenResponse && tokenResponse.token;
-    if (!accessToken) throw new Error('Google did not return an access token');
-    var res;
-    try {
-      res = await fetch((await apiBase()) + '/extension/google/access-token', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ access_token: accessToken })
+    var storeItem='gbobopmnjgeeegniphckfpalhnebapjm';
+    if (chrome.runtime.id && chrome.runtime.id!==storeItem) throw new Error('Google sign-in requires the official KAOS extension ID '+storeItem+'. For an unpacked build, use this listing’s public key; do not create another store item.');
+    var base=await apiBase();
+    async function request(path,options) {
+      var controller=new AbortController();
+      var timer=setTimeout(function(){controller.abort();},15000);
+      try { return await fetch(base+path,Object.assign({},options,{signal:controller.signal})); }
+      catch (_) { throw new Error('KAOS API is unavailable during Google sign-in. Try email sign-in or contact KAOS support.'); }
+      finally { clearTimeout(timer); }
+    }
+    var configResponse=await request('/extension/google/config',{method:'GET',cache:'no-store'});
+    var config=await apiJson(configResponse,'KAOS Google configuration');
+    if (!configResponse.ok || !config.configured || !config.client_id) throw new Error('KAOS extension Google sign-in is not configured on the server. Contact KAOS support or use email sign-in.');
+    var oauth=(chrome.runtime.getManifest()||{}).oauth2;
+    if (!oauth || oauth.client_id!==config.client_id) throw new Error('The KAOS server and extension use different Google OAuth clients. Contact KAOS support.');
+    for (var attempt=0;attempt<2;attempt++) {
+      var tokenResponse;
+      try { tokenResponse=await chrome.identity.getAuthToken({interactive:true}); }
+      catch (error) {
+        var message=String(error&&error.message||error);
+        if (/cancel|did not approve|not grant/i.test(message)) throw new Error('Google sign-in was cancelled. Try again or use email sign-in.');
+        if (/client|oauth|not signed in/i.test(message)) throw new Error('Chrome could not authorize Google sign-in. Check that you are signed into Chrome and contact KAOS support to verify the OAuth client for this extension ID.');
+        throw new Error('Chrome Google sign-in failed: '+message.slice(0,180));
+      }
+      var accessToken=typeof tokenResponse==='string'?tokenResponse:tokenResponse&&tokenResponse.token;
+      if (!accessToken) throw new Error('Google did not return an access token');
+      var res=await request('/extension/google/access-token',{
+        method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({access_token:accessToken})
       });
-    } catch (_) { throw new Error('KAOS cloud offline during Google sign-in'); }
-    var data = await res.json().catch(function () { return {}; });
-    if (!res.ok) throw new Error(String(data.detail || 'Google login failed (HTTP ' + res.status + ')').slice(0,180));
-    if (!normalizeTokens(data).accessToken) throw new Error('Google login response missing KAOS access token');
-    await setTokens(data);
-    await sset(kv(USER, data.user || null));
-    await installId();
-    return data.user;
+      var data=await apiJson(res,'KAOS Google sign-in');
+      if (res.status===401 && attempt===0 && chrome.identity.removeCachedAuthToken) {
+        await chrome.identity.removeCachedAuthToken({token:accessToken});
+        continue;
+      }
+      if (!res.ok) throw new Error(String(data.detail||'Google login failed (HTTP '+res.status+')').slice(0,180));
+      if (!normalizeTokens(data).accessToken) throw new Error('Google login response missing KAOS access token');
+      await setTokens(data);
+      await sset(kv(USER,data.user||null));
+      await installId();
+      return data.user;
+    }
   }
 
   async function logout() {
