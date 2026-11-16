@@ -4,7 +4,8 @@ import {api,errMsg} from '../../lib/api';
 const button='rounded-md border border-[#8a6b32] px-4 py-2 text-sm font-semibold text-[#e8c46f] disabled:opacity-50';
 function ProviderCard({provider,vaultReady,onChanged}){
  const [form,setForm]=useState(provider),[secrets,setSecrets]=useState({}),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState('');
- useEffect(()=>{setForm(provider);setSecrets({});},[provider]);
+ // Metadata refreshes must not erase a credential being typed. Save clears it on success.
+ useEffect(()=>{setForm(provider);},[provider]);
  async function save(){setBusy(true);setError('');setMessage('');try{await api.put(`/api/admin/commerce/providers/${provider.id}`,{mode:form.mode,paymentsSelected:form.paymentsSelected,payoutsSelected:form.payoutsSelected,cryptoAsset:form.cryptoAsset,credentials:secrets});setSecrets({});setMessage('Settings saved. Run a connection check next. No payments or payouts were enabled.');await onChanged();}catch(e){setError(errMsg(e));}finally{setBusy(false);}}
  async function check(){setBusy(true);setError('');setMessage('');try{const {data}=await api.post(`/api/admin/commerce/providers/${provider.id}/test`);setMessage(data.message);await onChanged();}catch(e){setError(errMsg(e));await onChanged();}finally{setBusy(false);}}
  return <section className="rounded-xl border border-[#514027] bg-[#12100d] p-5 sm:p-7" data-testid={`provider-${provider.id}`}>

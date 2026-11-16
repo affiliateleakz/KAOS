@@ -12,6 +12,7 @@ if(!BASE)throw Error('Run through scripts/browser/run.cjs');
   if(path==='/api/auth/me')return route.fulfill({json:{id:'owner-fixture',role:'super_admin'}});
   if(path==='/api/admin/commerce/providers')return route.fulfill({json:{vaultReady:vault,providers,activationNote:'Setup only. Money movement is disabled.'}});
   if(path==='/api/admin/commerce/vault/initialize'){vault=true;return route.fulfill({json:{vaultReady:true}});}
+  if(path==='/api/admin/commerce/providers/stripe'&&request.method()==='PUT'){assert.deepEqual(request.postDataJSON().credentials,{});return route.fulfill({json:providers[0]});}
   if(path==='/api/admin/commerce/providers/paypal'&&request.method()==='PUT'){
    saveBody=request.postDataJSON();Object.assign(providers[1],{...saveBody,credentials:undefined});providers[1].fields[0].configured=true;providers[1].fields[0].source='encrypted storage';
    return route.fulfill({json:providers[1]});
@@ -24,7 +25,12 @@ if(!BASE)throw Error('Run through scripts/browser/run.cjs');
  assert.equal(await page.getByLabel('PayPal Client secret',{exact:true}).getAttribute('type'),'password');
  assert.equal(await page.getByLabel('PayPal Client secret',{exact:true}).isDisabled(),true);
  await page.getByRole('button',{name:'Initialize secure vault'}).click();
+ await page.getByRole('button',{name:'Initialize secure vault'}).waitFor({state:'detached'});
  const paypal=page.getByTestId('provider-paypal');await page.getByLabel('PayPal Client secret',{exact:true}).fill('fixture-private-value');
+ const refreshed=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/admin/commerce/providers'&&response.request().method()==='GET');
+ await page.getByTestId('provider-stripe').getByRole('button',{name:'Save setup',exact:true}).click();await refreshed;
+ await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+ assert.equal(await page.getByLabel('PayPal Client secret',{exact:true}).inputValue(),'fixture-private-value','Another provider refresh must preserve an unsaved credential');
  await paypal.getByLabel('Select for affiliate payouts').check();
  assert.equal(await paypal.getByRole('button',{name:'Check API connection'}).isDisabled(),true);
  await paypal.getByRole('button',{name:'Save setup'}).click();

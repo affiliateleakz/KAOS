@@ -231,7 +231,7 @@ def main():
     else:
         install(site, web, backend)
     print('Files installed. Restart the API in cPanel, then check /api and extension sign-in.')
-    print('Payments and non-authentication writes are disabled in login-validation mode.')
+    print('Payments and live orders remain disabled; member research and community actions are permitted.')
     print('Legacy wsgi_app.py remains available; no database migration or full backup was performed.')
 
 
