@@ -11,6 +11,7 @@ import routes_radar
 import routes_opportunity
 import radar_trending  # registers keyless trending and the retired endpoint
 import radar_opportunities  # registers the multi-market scanner
+import radar_research
 
 class SettingsStore:
  def __init__(self):self.docs={}
@@ -22,7 +23,7 @@ class SettingsStore:
    else:row[name]=value
 
 def test_saved_credentials_are_encrypted_and_never_returned(monkeypatch):
- store=SettingsStore();fake=SimpleNamespace(radar_provider_settings=store)
+ store=SettingsStore();fake=SimpleNamespace(radar_provider_settings=store,kaos_asset_reports=SimpleNamespace(delete_many=AsyncMock()),kaos_opportunity_scans=SimpleNamespace(delete_many=AsyncMock()))
  monkeypatch.setenv('KAOS_COMMERCE_VAULT_KEY',Fernet.generate_key().decode())
  monkeypatch.setattr(radar_settings,'db',fake);monkeypatch.setattr(admin_api,'db',fake);monkeypatch.setattr(admin_api,'audit_log',AsyncMock())
  async def run():
@@ -46,6 +47,7 @@ def test_admin_setup_rejects_non_owner_and_member_scan_rejects_free_access(monke
   assert client.get('/api/v1/intelligence/scan/status').status_code==403
   assert client.post('/api/v1/intelligence/social/mentions').status_code==403
   assert client.post('/api/v1/intelligence/signals/opportunities',json={'market':'stocks'}).status_code==403
+  assert client.post('/api/v1/intelligence/research/asset',json={'symbol':'AAPL','asset_class':'stock'}).status_code==403
   assert client.post('/api/v1/intelligence/scan',json={'assets':[{'symbol':'AAPL','asset_class':'stock'}]}).status_code==403
 
 
@@ -69,7 +71,7 @@ def test_validated_local_model_activation_expires_cache_without_enabling_orders(
  candidate={'_id':'candidate:crypto','state':'candidate','version':'fixture-v1','bundle':{'schema':SCHEMA,'features':list(FEATURES),'means':[0]*len(FEATURES),'scales':[1]*len(FEATURES),'weights':[0]*len(FEATURES),'bias':0,'trained_through':time.time()-3600}}
  models=SimpleNamespace(find_one=AsyncMock(return_value=candidate),update_one=AsyncMock())
  scans=SimpleNamespace(update_many=AsyncMock())
- monkeypatch.setattr(admin_api,'db',SimpleNamespace(kaos_radar_models=models,kaos_radar_scans=scans))
+ monkeypatch.setattr(admin_api,'db',SimpleNamespace(kaos_radar_models=models,kaos_radar_scans=scans,kaos_asset_reports=SimpleNamespace(delete_many=AsyncMock()),kaos_opportunity_scans=SimpleNamespace(delete_many=AsyncMock())))
  monkeypatch.setattr(admin_api,'audit_log',AsyncMock())
  out=asyncio.run(admin_api.activate_model(admin_api.ActivateInput(group='crypto',version='fixture-v1'),{'id':'owner'}))
  assert out['state']=='active' and out['execution_enabled'] is False
@@ -79,7 +81,7 @@ def test_validated_local_model_activation_expires_cache_without_enabling_orders(
 
 
 def test_alpha_vantage_key_is_encrypted_and_write_only(monkeypatch):
- store=SettingsStore();fake=SimpleNamespace(radar_provider_settings=store)
+ store=SettingsStore();fake=SimpleNamespace(radar_provider_settings=store,kaos_asset_reports=SimpleNamespace(delete_many=AsyncMock()),kaos_opportunity_scans=SimpleNamespace(delete_many=AsyncMock()))
  monkeypatch.setenv('KAOS_COMMERCE_VAULT_KEY',Fernet.generate_key().decode())
  monkeypatch.setattr(radar_settings,'db',fake);monkeypatch.setattr(admin_api,'db',fake);monkeypatch.setattr(admin_api,'audit_log',AsyncMock())
  async def run():
@@ -89,3 +91,12 @@ def test_alpha_vantage_key_is_encrypted_and_write_only(monkeypatch):
   assert store.docs['alphavantage']['encrypted']['api_key']!='fixture-alpha-key'
   assert (await radar_settings.settings('alphavantage'))['api_key']=='fixture-alpha-key'
  asyncio.run(run())
+
+
+def test_model_status_marks_old_schema_for_retraining_without_returning_weights(monkeypatch):
+ async def model(query):
+  return {'state':'candidate' if query['_id'].startswith('candidate:') else 'active','bundle':{'schema':'old-schema','weights':['private-model-data']}}
+ monkeypatch.setattr(admin_api,'db',SimpleNamespace(kaos_radar_models=SimpleNamespace(find_one=model),kaos_radar_samples=SimpleNamespace(count_documents=AsyncMock(return_value=0))))
+ out=asyncio.run(admin_api.model_status({'id':'owner'}))
+ assert all(row['active']['state']=='retraining_required' and row['candidate']['state']=='retraining_required' for row in out['groups'])
+ assert 'private-model-data' not in str(out)

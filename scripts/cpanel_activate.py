@@ -38,7 +38,7 @@ def _get_app():
             allowed_write = auth or path in (
                 "/api/v1/devices/register", "/api/v1/extension/google/access-token",
                 "/api/affiliate/activate", "/api/affiliate/connect/onboarding",
-                "/api/v1/intelligence/sync-news", "/api/v1/intelligence/scan", "/api/v1/intelligence/signals/market", "/api/v1/intelligence/social/mentions", "/api/v1/intelligence/news/feed", "/api/v1/intelligence/signals/opportunities")
+                "/api/v1/intelligence/sync-news", "/api/v1/intelligence/scan", "/api/v1/intelligence/signals/market", "/api/v1/intelligence/social/mentions", "/api/v1/intelligence/news/feed", "/api/v1/intelligence/signals/opportunities", "/api/v1/intelligence/research/asset")
             # These handlers still enforce the authenticated owner/admin authority.
             device_revoke = (
                 request.method == "DELETE" and re.fullmatch(r"/api/v1/devices/[^/]+", path)

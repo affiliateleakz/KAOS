@@ -10,15 +10,12 @@ Radar scan. Bluesky could also treat newly indexed old posts as fresh mentions.
 
 ## Current workflow
 
-Radar now has five simple top tabs: **News**, **Trending**, **AI Signal**,
-**Sentiment**, and **Bot Entries**. News opens first. Each tab shows only its own
-controls/content. Technical model/source details are collapsed. The older
-multi-source research workspace is no longer mounted on the member screen.
-
-Use News for headlines, Trending for keyless ApeWisdom stock-mention rankings, or choose one
-ticker and market in AI Signal. The analysis model still uses available data
-from all configured sources; its internal sources are not separate member setup
-steps. Owner configuration and training remain under Admin → Radar Sources & AI.
+Radar now has four purpose-specific tabs: **News**, **Research**, **AI Signal**
+and **Bot Entries**. Research combines the trending list and single-instrument
+analysis; there is no separate Sentiment tab with competing metrics. **View
+research** stays in Research and always shows that instrument, including WAIT
+or unavailable data. AI Signal remains an automatic, market-wide shortlist;
+viewing a trending stock no longer sets a sticky discovery focus.
 
 The request gathers bounded source samples and recent saved evidence. A source
 failure is shown separately from a successful search with no matching results.
@@ -60,7 +57,7 @@ its provider settings. Historical encrypted OpenAI settings are ignored. The
 separate short-expiry broker AI is not repurposed for market opportunities.
 
 `kaos_radar_ai.py` is a local supervised logistic evidence model with a versioned
-23-feature schema: price returns, trend/range, relative volume/volatility, news
+51-feature schema: price returns, trend/range, relative volume/volatility, news
 and social sentiment/activity, insider and Congressional disclosure activity,
 whale activity, source coverage and aggregate mention counts/rank with explicit provider and comparison availability flags. Available records must match the symbol and
 asset class, have valid availability timestamps, and be deduplicated. Missing
@@ -219,8 +216,7 @@ No paid alternative service or subscription is enabled.
 **AI Signal** now scans a market instead of requiring a single ticker. Choose
 Stocks, Crypto, Forex or Options and a result count from 1–10. Scans start on
 entry/selection, refresh every five minutes while visible (one minute for options),
-and stop polling when the tab is left. A focused ticker selected from Trending
-is supported, with a one-click return to the broader market.
+and stop polling when the tab is left. Single-instrument research is a separate view; the discovery screen does not inherit a sticky ticker filter.
 
 The scan checks a bounded universe: up to 16 stock candidates (ApeWisdom leaders
 plus liquid core stocks/ETFs), 12 crypto USD pairs, 8 major FX pairs, or 10 liquid
@@ -279,3 +275,76 @@ The Alpha Vantage free news key does not supply this OPRA entitlement.
 
 All outputs remain advisory. No automatic orders, broker permissions, payment
 settings, homepage design or short-expiry strategy rules are changed.
+
+## Unified asset research and all-evidence scoring (current)
+
+Trending's **View research** opens `/research/asset` for that instrument, not the
+opportunity scanner. The response supplies the provider snapshot and the stock
+report together. The detail counter and the list adopt the same ApeWisdom
+snapshot on return. A stale list request cannot replace a newer detail snapshot.
+Reddit mentions (broad provider totals) and news items reviewed (bounded local
+text samples) are labeled separately; counts are never forced to match or
+misrepresented as the same metric. ApeWisdom does not provide post sentiment.
+
+`radar_research.py` collects/caches available news, SEC, government and ETH
+sources and merges recent stored evidence across each supported category. A
+per-category bound prevents busy news feeds from burying filings/flows. Provider
+snapshots use shared leases and TTLs: news 5m, SEC/government 1h, ETH 1m, failures
+2m. Context collection is bounded to 12 seconds. Source credentials remain on
+the server. Additional stored institutional, options-flow, liquidity, macro,
+dark-pool and short-interest records are considered when available; this change
+does not invent collectors or buy access for absent sources.
+
+Explicit options-flow records indexed by their underlying ticker and class
+`option` can inform that stock's research; provenance is retained. Unrelated
+assets are excluded. One article mentioning two stocks can inform both without
+being counted twice inside either stock. Separate transactions in one filing
+URL remain separate events. Tracking URLs are deduplicated while substantive
+article-ID query parameters are preserved.
+
+Research and discovery now call the same asset-report service and
+`radar_scoring.py` function. Cached scores retain their exact candle/price frame,
+so a score cannot be combined with a different price on the next screen. The
+quality breakdown totals 100: trend 25, momentum 20, range 15, risk 10, volume
+10, news mood 4, actual social-text mood 1, non-directional attention growth 3,
+disclosures 3, institutional/on-chain direction 3, derivatives/macro/liquidity
+2, validated model agreement 4. Forex omits volume and scales 90 points to 100.
+
+Only explicit, fresh directional evidence gets directional points. Neutral
+transfers/disclosures are context, not guessed buy/sell intent. Multiple events
+within one category cannot overwhelm the score: the strongest age-decayed vote
+per direction is used. Missing data earns no points and appears as missing;
+a checked source with no usable records is distinct from neutral sentiment.
+Evidence coverage is the fraction of applicable categories with actual usable
+evidence, not a prediction confidence. High technical quality can coexist with
+limited coverage and is labeled that way. A validated opposing model blocks a
+play; mixed/overextended price action remains WAIT. Scores are not win rates.
+
+The local model schema is `kaos-radar-all-evidence-v2`, with **51 features**.
+In addition to price/news/attention, it now explicitly includes balance, count
+and strength for filings, institutional activity, on-chain activity, options
+flow, liquidity, macro, dark-pool and short-interest evidence. Separate SEC
+reported-purchase/sale and government reported-purchase/sale counts preserve
+those facts without treating them as forecasts. Older model bundles cannot be
+reused; new chronological training/validation is required. The broker model and
+execution rules remain separate. No OpenAI service is introduced.
+
+Canonical asset reports expire from cache after five minutes and have a one-day
+storage TTL; source-evidence caches have a seven-day storage TTL. Saving owner
+provider settings or activating a new model invalidates research/discovery
+reports. Shared cached research avoids duplicate work; cold per-member research
+refreshes have a short 10-second cooldown. No payments or orders are enabled.
+
+These current notes supersede the former separate Sentiment tab and the older
+single-ticker-to-discovery navigation/scoring descriptions above.
+
+## Bubble startup motion
+
+The shared stock/crypto bubble map starts animating as soon as data is visible;
+no pointer, scroll or Resume action is required. Initial collision relaxation
+reseeds non-zero velocity so layout settling cannot drain startup movement.
+Reduced-motion preferences use one-quarter-speed drift instead of starting the
+map paused, following the requested default; the explicit Pause/Resume control
+remains available. Hidden tabs and offscreen maps still stop their animation
+frames to conserve hosting/client resources. Motion is entirely client-side and
+does not add market-provider requests.

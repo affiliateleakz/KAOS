@@ -36,3 +36,11 @@ describe('interactive bubble field',()=>{
   for(const n of a)expect(Number.isFinite(n.r+n.x+n.y)).toBe(true);
  });
 });
+
+it('new data starts moving immediately after layout relaxation',()=>{
+ const nodes=createBubbles([{symbol:'AAA',market_cap:100},{symbol:'BBB',market_cap:80}]);
+ expect(nodes.every(n=>Math.hypot(n.vx,n.vy)>.1)).toBe(true);
+ const before=nodes.map(n=>[n.x,n.y]);
+ stepBubbles(nodes,1000,620,1);
+ expect(nodes.some((n,i)=>n.x!==before[i][0]||n.y!==before[i][1])).toBe(true);
+});

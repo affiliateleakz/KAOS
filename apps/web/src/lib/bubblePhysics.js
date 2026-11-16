@@ -29,6 +29,8 @@ export function createBubbles(items, {width=1000,height=620,valueKey='market_cap
   node.x=best.x;node.y=best.y;node.vx=(rand()-.5)*0.7;node.vy=(rand()-.5)*0.7;node.phase=rand()*Math.PI*2;placed.push(node);
  }
  for(let i=0;i<45;i++)stepBubbles(nodes,width,height,0,null);
+ // Layout collision relaxation must not drain the visible startup motion.
+ for(const node of nodes){node.vx=Math.cos(node.phase)*.35;node.vy=Math.sin(node.phase)*.35;}
  return nodes;
 }
 

@@ -21,7 +21,8 @@ const BASE=process.env.KAOS_WEB_PREVIEW_URL;
  await page.goto(BASE+'/dashboard/crypto-scanner');
  const map=page.getByTestId('bubble-map'),nodes=map.locator('[data-bubble-id]');
  await page.waitForFunction(()=>document.querySelectorAll('[data-bubble-id]').length===36);
- await map.scrollIntoViewIfNeeded();
+ // Assert automatic movement before any pointer, key or scroll interaction.
+ assert.equal(await map.getByRole('button',{name:'Animate bubbles'}).getAttribute('aria-pressed'),'true');
  const bitcoin=map.getByRole('button',{name:/^BTC Bitcoin,/});
  const first=await bitcoin.getAttribute('transform');await page.waitForTimeout(350);
  assert.notEqual(await bitcoin.getAttribute('transform'),first,'Bubbles should drift');
@@ -54,7 +55,10 @@ const BASE=process.env.KAOS_WEB_PREVIEW_URL;
  await map.scrollIntoViewIfNeeded();const single=await nodes.first().getAttribute('transform');await page.waitForTimeout(300);assert.notEqual(await nodes.first().getAttribute('transform'),single,'A single filtered bubble should keep drifting');
  await page.getByRole('button',{name:/Show all coins/}).click();
  await page.getByLabel('Coin range').selectOption('20');assert.equal(await nodes.count(),20);
- await page.emulateMedia({reducedMotion:'reduce'});await page.waitForFunction(()=>document.querySelector('[aria-label="Animate bubbles"]').getAttribute('aria-pressed')==='false');assert.equal(await map.getByRole('button',{name:'Animate bubbles'}).getAttribute('aria-pressed'),'false');
+ await page.emulateMedia({reducedMotion:'reduce'});await page.waitForTimeout(100);
+ assert.equal(await map.getByRole('button',{name:'Animate bubbles'}).getAttribute('aria-pressed'),'true','Reduced motion uses gentle drift without disabling the requested startup animation');
+ const gentle=await bitcoin.getAttribute('transform');await page.waitForTimeout(300);assert.notEqual(await bitcoin.getAttribute('transform'),gentle);
+ await map.getByRole('button',{name:'Animate bubbles'}).click();assert.equal(await map.getByRole('button',{name:'Animate bubbles'}).getAttribute('aria-pressed'),'false');
  if(process.env.KAOS_CAPTURE_DIR){await map.scrollIntoViewIfNeeded();await page.screenshot({path:process.env.KAOS_CAPTURE_DIR+'/interactive-crypto-bubbles.png'});}
  fallback=true;await period.getByRole('button',{name:'Refresh',exact:true}).click();
  await page.waitForFunction(()=>document.querySelector('[aria-label="Bubble timeframe"] button').disabled);
@@ -67,6 +71,16 @@ const BASE=process.env.KAOS_WEB_PREVIEW_URL;
  await page.setViewportSize({width:390,height:844});
  await page.waitForTimeout(150);
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'Mobile page must not overflow');
+ const reduced=await context.newPage({viewport:{width:1440,height:1000}});
+ await reduced.emulateMedia({reducedMotion:'reduce'});
+ await reduced.goto(BASE+'/dashboard/crypto-scanner');
+ const reducedMap=reduced.getByTestId('bubble-map');
+ await reduced.waitForFunction(()=>document.querySelectorAll('[data-bubble-id]').length===36);
+ assert.equal(await reducedMap.getByRole('button',{name:'Animate bubbles'}).getAttribute('aria-pressed'),'true');
+ const initialReduced=await reducedMap.locator('[data-bubble-id]').first().getAttribute('transform');
+ await reduced.waitForTimeout(350);
+ assert.notEqual(await reducedMap.locator('[data-bubble-id]').first().getAttribute('transform'),initialReduced,'Gentle motion must also start automatically on a fresh reduced-motion visit');
+ await reduced.close();
  assert.deepEqual(errors,[]);
  console.log('Interactive bubbles: motion/pause, drag, keyboard details, periods, sizing, persistent watchlist, range, reduced motion, fallback, mobile and no extra fetches passed.');
  }finally{await browser.close();}

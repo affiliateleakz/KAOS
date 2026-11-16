@@ -172,3 +172,18 @@ def test_forex_never_loads_the_stock_or_crypto_model(monkeypatch):
     out=asyncio.run(ai.assessment({'symbol':'EURUSD','asset_class':'forex'},quote(now),[],now))
     assert out['direction']=='WAIT'
     assert model.find_one.call_args.args[0]=={'_id':'forex','state':'active'}
+
+
+def test_model_features_include_all_collected_categories_without_inventing_whale_direction(monkeypatch):
+    now=datetime.now(timezone.utc)
+    samples=Samples()
+    monkeypatch.setattr(ai,'db',SimpleNamespace(kaos_radar_sentiment=Samples(),kaos_radar_samples=samples,
+        kaos_radar_models=SimpleNamespace(find_one=AsyncMock(return_value=None))))
+    events=[row(now,source='macro',event_id='macro-one',summary='Macro fixture',direction='bullish',strength=.8),
+            row(now,source='onchain',event_id='whale-one',summary='Unknown-wallet transfer',direction='neutral',strength=.8),
+            row(now,source='institutional',event_id='fund-one',summary='Institutional fixture',direction='bearish',strength=.7)]
+    out=asyncio.run(ai.assessment({'symbol':'AAPL','asset_class':'stock'},quote(now),events,now))
+    vector=out['feature_values']
+    assert vector['macro_balance']>0 and vector['institutional_balance']<0
+    assert vector['onchain_count']>0 and vector['onchain_balance']==0
+    assert len(vector)==len(ai.FEATURES)==51

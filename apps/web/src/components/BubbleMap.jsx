@@ -12,7 +12,8 @@ const periods=[["change_1h","1 hour"],["change_24h","24 hours"],["change_7d","7 
 export default function BubbleMap({items=[],valueKey="market_cap",changeKey="change_24h",label="Market cap",emptyText="No market data available.",onSelect,sizing='value',periodLabel='Selected period',favorites=[],onToggleFavorite}){
  const host=useRef(null),svg=useRef(null),elements=useRef(new Map()),drag=useRef(null),suppressClick=useRef(false),closeButton=useRef(null);
  const [dimensions,setDimensions]=useState({width:1000,height:620});
- const [motion,setMotion]=useState(()=>typeof window!=='undefined'&&!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
+ const [motion,setMotion]=useState(true);
+ const [reducedMotion,setReducedMotion]=useState(()=>typeof window!=='undefined'&&Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches));
  const [selected,setSelected]=useState(null);
  const prefix=useId().replace(/:/g,'');
  const nodes=useMemo(()=>createBubbles(items,{...dimensions,valueKey,changeKey,sizing}),[items,valueKey,changeKey,sizing,dimensions]);
@@ -26,14 +27,14 @@ export default function BubbleMap({items=[],valueKey="market_cap",changeKey="cha
  },[]);
  useEffect(()=>{
   const media=window.matchMedia('(prefers-reduced-motion: reduce)');
-  const changed=()=>{if(media.matches)setMotion(false);};media.addEventListener('change',changed);return()=>media.removeEventListener('change',changed);
+  const changed=()=>setReducedMotion(media.matches);media.addEventListener('change',changed);return()=>media.removeEventListener('change',changed);
  },[]);
  useEffect(()=>{
   let frame=null,last=0,onScreen=true,disposed=false;
   const stop=()=>{if(frame!==null)cancelAnimationFrame(frame);frame=null;last=0;};
   const tick=time=>{
    frame=null;if(disposed||document.hidden||!onScreen||!motion||nodes.length<1)return;
-   if(!last||time-last>=32){stepBubbles(nodes,dimensions.width,dimensions.height,last?(time-last)/16.67:1,drag.current);paint();last=time;}
+   if(!last||time-last>=32){stepBubbles(nodes,dimensions.width,dimensions.height,(last?(time-last)/16.67:1)*(reducedMotion ? 0.25 : 1),drag.current);paint();last=time;}
    frame=requestAnimationFrame(tick);
   };
   const resume=()=>{if(disposed)return;stop();if(motion&&!document.hidden&&onScreen&&nodes.length>0)frame=requestAnimationFrame(tick);};
@@ -41,7 +42,7 @@ export default function BubbleMap({items=[],valueKey="market_cap",changeKey="cha
   const observer=new IntersectionObserver(entries=>{onScreen=entries[0]?.isIntersecting!==false;resume();});
   if(host.current)observer.observe(host.current);resume();
   return()=>{disposed=true;stop();observer.disconnect();document.removeEventListener('visibilitychange',resume);drag.current=null;};
- },[nodes,motion,dimensions]); // Positions stay outside React's render loop.
+ },[nodes,motion,reducedMotion,dimensions]); // Positions stay outside React's render loop.
  useEffect(()=>{if(chosen)closeButton.current?.focus();},[selected]);
  function select(item){setSelected(bubbleId(item));onSelect?.(item);}
  function close(){const id=selected;setSelected(null);elements.current.get(id)?.focus();}

@@ -28,7 +28,7 @@ def test_quality_score_is_not_confidence_and_rejects_stale_conflicting_data():
 def test_confirmed_ai_and_news_add_explicit_points_and_forex_omits_volume():
  ai={'model_state':'active','direction':'BUY','sentiment':{'sources':{'news':{'samples':2,'score':.5}}}}
  row=scanner.setup({'symbol':'AAPL','asset_class':'stock'},quote(),ai,NOW)
- assert row['score']==100 and row['ai_confirmed']
+ assert row['score']==88 and row['ai_confirmed']
  fx=scanner.setup({'symbol':'EURUSD','asset_class':'forex'},quote(feature_vector=[.001,.002,.003,.002,1.1,0,.002]),{},NOW)
  assert fx and 'volume' not in fx['score_components'] and fx['score']<=100
 
@@ -122,8 +122,9 @@ def test_discovery_checks_multiple_instruments_with_bounded_concurrency(monkeypa
   return quote()
  monkeypatch.setattr(scanner.radar_signals,'market',candles)
  monkeypatch.setattr(scanner.native,'ensure_indexes',AsyncMock())
- monkeypatch.setattr(scanner.native,'assessment',AsyncMock(return_value={'model_state':'collecting'}))
- monkeypatch.setattr(scanner,'evidence',AsyncMock(return_value=[]))
+ import radar_research
+ monkeypatch.setattr(radar_research,'asset_report',AsyncMock(return_value={'model_state':'collecting'}))
+ monkeypatch.setattr(radar_research,'context',AsyncMock(return_value={'evidence':[],'source_status':[]}))
  result=asyncio.run(scanner.collect('crypto'))
  assert len(seen)==12 and peak<=3 and result['scanned']==12
  assert len(result['plays'])==12 and not result['execution_enabled']

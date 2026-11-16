@@ -34,6 +34,8 @@ async def save(provider:str,request:ProviderInput,admin=Depends(owner)):
   if len(value)>8192:raise HTTPException(400,'Credential too long')
   update['encrypted.'+name]=settings.cipher().encrypt(value.encode()).decode();changed.append(name)
  await db.radar_provider_settings.update_one({'_id':provider},{'$set':update},upsert=True)
+ await db.kaos_asset_reports.delete_many({})
+ await db.kaos_opportunity_scans.delete_many({})
  await audit_log(admin,'radar_provider_saved','radar_provider',provider,{'credentialFieldsChanged':changed,'enabled':request.enabled})
  return await settings.public_settings(provider)
 
@@ -53,8 +55,16 @@ async def model_status(admin=Depends(owner)):
  groups=[]
  for group in ('stock','crypto','forex'):
   count=await db.kaos_radar_samples.count_documents({'group':group,'schema':SCHEMA,'label':{'$in':[0,1]}})
-  active=await db.kaos_radar_models.find_one({'_id':group},{'bundle':0})
-  candidate=await db.kaos_radar_models.find_one({'_id':'candidate:'+group},{'bundle':0})
+  active=await db.kaos_radar_models.find_one({'_id':group})
+  candidate=await db.kaos_radar_models.find_one({'_id':'candidate:'+group})
+  def public_model(row):
+   if not row:return None
+   compatible=row.get('bundle',{}).get('schema')==SCHEMA
+   clean={k:v for k,v in row.items() if k!='bundle'}
+   if not compatible and clean.get('state') in ('active','candidate'):clean['state']='retraining_required'
+   clean['compatible_schema']=compatible
+   return clean
+  active=public_model(active);candidate=public_model(candidate)
   groups.append({'group':group,'labeled_samples':count,'required_samples':120,
                  'active':active,'candidate':candidate})
  return {'engine':'KAOS Radar local evidence model','external_ai_service':False,'groups':groups,
@@ -103,5 +113,7 @@ async def activate_model(request:ActivateInput,admin=Depends(owner)):
  await db.kaos_radar_models.update_one({'_id':request.group},{'$set':active},upsert=True)
  # Cached research reports must not hide a newly activated model.
  await db.kaos_radar_scans.update_many({}, {'$set':{'expires_at':now_iso()}})
+ await db.kaos_asset_reports.delete_many({})
+ await db.kaos_opportunity_scans.delete_many({})
  await audit_log(admin,'radar_model_activated','radar_model',request.group,{'version':request.version})
  return {'state':'active','version':request.version,'execution_enabled':False}

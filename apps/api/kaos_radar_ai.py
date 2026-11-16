@@ -13,14 +13,15 @@ from db import db
 from kaos_opportunity import utc
 
 from radar_sentiment import analyzer, text_score, summarize
+from radar_scoring import channels,extra_features,EXTRA_CHANNELS,attention as attention_snapshot,reported_transactions,canonical_url
 
-SCHEMA = 'kaos-radar-vader-trending-v1'
+SCHEMA = 'kaos-radar-all-evidence-v2'
 HORIZON = 2700
 FEATURES = ('return_1', 'return_4', 'return_20', 'trend', 'range_position',
             'volume_ratio', 'atr_fraction', 'news_tone', 'news_count',
             'social_tone', 'social_count', 'insider_balance',
             'government_balance', 'insider_count', 'government_count', 'whale_count', 'source_coverage',
-            'trending_mentions', 'trending_change', 'trending_rank', 'trending_upvotes', 'trending_comparison_available', 'trending_available')
+            'trending_mentions', 'trending_change', 'trending_rank', 'trending_upvotes', 'trending_comparison_available', 'trending_available') + tuple(f'{source}_{metric}' for source in EXTRA_CHANNELS for metric in ('balance','count','strength')) + ('reported_insider_purchases','reported_insider_sales','reported_government_purchases','reported_government_sales')
 
 def evidence_features(evidence, symbol, kind, now):
     analyzer()
@@ -38,7 +39,9 @@ def evidence_features(evidence, symbol, kind, now):
             continue
         # Identical headlines/posts from multiple feeds count once.
         identity = re.sub(r'\W+', '', str(row.get('summary', '')).lower())
-        reference=str(row.get('source_url','')).split('?')[0]
+        if row.get('source') not in ('news','social'):
+            identity=str(row.get('source'))+':'+str(row.get('event_id') or row.get('id') or identity)
+        reference=canonical_url(row.get('source_url','')) if row.get('source') in ('news','social') else ''
         if not identity or identity in seen or reference and reference in seen:
             continue
         seen.add(identity)
@@ -156,6 +159,9 @@ async def assessment(asset, market, evidence, now=None, discovery=None):
               'explanation':'Collecting evidence and future outcomes for the KAOS Radar model.', 'model_state':'collecting'}
     if attention:result['supporting_sources'].append(attention)
     result['sentiment'] = summarize(cited)
+    result['evidence_channels'] = channels(cited,now)
+    result['attention'] = attention_snapshot(asset,discovery)
+    result['news_articles'] = [{k:r.get(k) for k in ('summary','source_url','published_at','provider')} for r in cited if r.get('source')=='news']
     result['evidence_count'] = len(cited)
     technical = market.get('feature_vector')
     if not isinstance(technical,list) or len(technical)!=7 or not all(isinstance(v,(int,float)) and math.isfinite(v) for v in technical):
@@ -174,7 +180,7 @@ async def assessment(asset, market, evidence, now=None, discovery=None):
         return {**result,'model_state':'invalid_features','explanation':'Invalid market timestamp; no signal generated.'}
     if not timedelta(0) <= now-source_time <= timedelta(minutes=20):
         return {**result,'model_state':'stale','explanation':'Fresh market candles are required.'}
-    vector = technical+context+discovery_values
+    vector = technical+context+discovery_values+extra_features(result['evidence_channels'])+reported_transactions(cited)
     if not all(math.isfinite(v) for v in vector):
         return {**result, 'model_state':'invalid_features','explanation':'Invalid input; no signal generated.'}
     result['feature_values'] = dict(zip(FEATURES,vector))
@@ -223,6 +229,8 @@ _indexes_ready = False
 async def ensure_indexes():
     global _indexes_ready
     if _indexes_ready:return
+    await db.kaos_evidence_cache.create_index('expires_at',expireAfterSeconds=0)
+    await db.kaos_asset_reports.create_index('expires_at',expireAfterSeconds=0)
     await db.kaos_radar_sentiment.create_index([('symbol',1),('asset_class',1),('observed_at',-1)])
     await db.kaos_radar_sentiment.create_index('expires_at',expireAfterSeconds=0)
     await db.kaos_radar_samples.create_index([('group',1),('symbol',1),('target_at',1)])

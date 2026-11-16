@@ -33,62 +33,30 @@ class OpportunityInput(BaseModel):
 
 
 def setup(asset,quote,ai,now):
-    """Fixed, disclosed components. Missing news/model confirmation earns no points."""
-    x=quote.get('feature_vector')
+    """Convert the shared research score into an eligible, expiring setup."""
+    from radar_scoring import score
+    quote=ai.get('market_snapshot') or quote
+    card=ai.get('scorecard') or score(asset,quote,ai,now)
+    if not card['eligible'] or card['direction'] not in ('BUY','SELL'):return None
     try:
-        if not x or len(x)!=7 or not all(math.isfinite(v) for v in x):return None
-        stamp=utc(quote['source_time']);price=float(quote['price'])
-        if not 0<=(now-stamp).total_seconds()<1200 or not math.isfinite(price) or not price>0:return None
-        r1,r4,_,trend,position,volume,atr=x
-        if atr<=0 or atr>.1 or abs(r4)/atr>3.5:return None
-        direction='BUY' if trend>0 and r4>0 and r1>0 else 'SELL' if trend<0 and r4<0 and r1<0 else None
-        if direction is None:return None
-        if ai.get('model_state')=='active' and ai.get('direction') in ('BUY','SELL') and ai['direction']!=direction:return None
-        sign=1 if direction=='BUY' else -1
-        points={'trend':round(25*min(1,abs(trend)/atr/.75),2),'momentum':20,
-                'range':15 if (position>1 if sign>0 else position<0) else 8 if (position>.6 if sign>0 else position<.4) else 0,
-                'risk':10 if abs(r4)/atr<=2 else 5,'news':0,'ai_confirmation':0}
-        denominator=90 if asset['asset_class']=='forex' else 100
-        if asset['asset_class']!='forex':points['volume']=10 if volume>=1.2 else 5 if volume>=.8 else 0
-        tone=ai.get('sentiment',{}).get('sources',{}).get('news',{})
-        if tone.get('samples') and tone.get('score') is not None:
-            points['news']=10 if sign*tone['score']>=.05 else -10 if sign*tone['score']<=-.05 else 0
-        confirmed=ai.get('model_state')=='active' and ai.get('direction')==direction
-        if confirmed:points['ai_confirmation']=10
-        score=round(max(0,min(100,100*sum(points.values())/denominator)))
+        price=float(quote['price']);atr=quote['feature_vector'][6]
+        sign=1 if card['direction']=='BUY' else -1
         stop=price-sign*atr*price*1.5;target=price+sign*atr*price*3
         if not math.isfinite(stop) or not math.isfinite(target) or stop<=0 or target<=0:return None
-        return {'symbol':asset['symbol'],'asset_class':asset['asset_class'],'direction':direction,'score':score,
-                'display_symbol':asset['symbol'][:3]+'/'+asset['symbol'][3:] if asset['asset_class']=='forex' else asset['symbol']+'/USD' if asset['asset_class']=='crypto' else asset['symbol'],
-                'score_type':'Setup quality / 100; not a win probability','score_components':points,
-                'basis':'KAOS technical setup + validated AI confirmation' if confirmed else 'KAOS technical setup; AI not confirming',
-                'model_state':ai.get('model_state','unavailable'),'ai_confirmed':confirmed,
-                'reference_entry':price,'reference_stop':stop,'reference_target':target,'reward_risk':2,
-                'horizon':'45–60 minutes','reason':'Trend and short-term momentum agree; bounded volatility and risk levels.',
-                'source':quote.get('source'),'source_time':quote['source_time'],
-                'supporting_sources':ai.get('supporting_sources',[]),'expires_at':min(now+timedelta(minutes=5),stamp+timedelta(minutes=20)).isoformat(),
-                'execution_enabled':False}
+        stamp=utc(quote['source_time'])
+        return {'symbol':asset['symbol'],'asset_class':asset['asset_class'],'direction':card['direction'],'score':card['score'],
+            'display_symbol':asset['symbol'][:3]+'/'+asset['symbol'][3:] if asset['asset_class']=='forex' else asset['symbol']+'/USD' if asset['asset_class']=='crypto' else asset['symbol'],
+            'score_type':'Setup quality / 100; not a win probability','score_components':card['components'],
+            'coverage_percent':card['coverage_percent'],'context_level':card.get('context_level','Limited evidence'),
+            'score_coverage':card['coverage'],'score_version':card['version'],
+            'basis':'KAOS evidence score + validated AI confirmation' if card.get('ai_confirmed') else 'KAOS evidence score; AI not confirming',
+            'model_state':ai.get('model_state','unavailable'),'ai_confirmed':card.get('ai_confirmed',False),
+            'reference_entry':price,'reference_stop':stop,'reference_target':target,'reward_risk':2,
+            'horizon':'45–60 minutes','reason':card['reason'],'attention':ai.get('attention'),
+            'source':quote.get('source'),'source_time':quote['source_time'],
+            'supporting_sources':ai.get('supporting_sources',[]),
+            'expires_at':min(now+timedelta(minutes=5),stamp+timedelta(minutes=20)).isoformat(),'execution_enabled':False}
     except (ValueError,TypeError,KeyError):return None
-
-
-async def evidence(assets):
-    cutoff=(datetime.now(timezone.utc)-timedelta(days=7)).isoformat()
-    rows=await db.kaos_intelligence.find({'asset':{'$in':[a['symbol'] for a in assets]},'published_at':{'$gte':cutoff}}, {'_id':0}).sort('published_at',-1).limit(200).to_list(200)
-    # One shared cached news request, not one paid-provider call per candidate.
-    import alpha_vantage
-    from radar_news import normalize
-    from radar_sources import SourceIssue
-    try:
-        news=normalize(await alpha_vantage.news())
-        stamp=datetime.now(timezone.utc).isoformat()
-        for asset in assets:
-            for row in news:
-                if not {asset['symbol'],'CRYPTO:'+asset['symbol']}.intersection(row['tickers']):continue
-                rows.append({'asset':asset['symbol'],'asset_class':asset['asset_class'],'source':'news',
-                    'published_at':row['published_at'],'observed_at':stamp,'summary':row['title']+' '+row['summary'],
-                    'source_url':row['source_url']})
-    except SourceIssue:pass
-    return rows
 
 
 async def collect(market,focus=None):
@@ -114,13 +82,14 @@ async def collect(market,focus=None):
     kind={'stocks':'stock','crypto':'crypto','forex':'forex','options':'stock'}[market]
     assets=[{'symbol':s,'asset_class':kind} for s in symbols]
     await native.ensure_indexes()
-    rows=await evidence(assets)
+    import radar_research
+    context_data=await radar_research.context(assets,budget=12)
     gate=asyncio.Semaphore(3);evaluated=[]
     async def candidate(asset):
         async with gate:
             try:
                 quote=await asyncio.wait_for(radar_signals.market(SimpleNamespace(**asset)),timeout=10)
-                report=await native.assessment(asset,quote,rows,datetime.now(timezone.utc),trending)
+                report=await radar_research.asset_report(asset,context_data,trending,quote)
                 play=setup(asset,quote,report,datetime.now(timezone.utc))
                 if play and market=='options' and play['score']<70:
                     return {'symbol':asset['symbol'],'reason':'Underlying setup did not reach the options score threshold.'}
@@ -134,7 +103,7 @@ async def collect(market,focus=None):
             except (asyncio.TimeoutError,ValueError,TypeError):return {'symbol':asset['symbol'],'reason':'Data did not finish within the scan budget.'}
     tasks=[asyncio.create_task(candidate(a)) for a in assets]
     try:
-        done,pending=await asyncio.wait(tasks,timeout=35)
+        done,pending=await asyncio.wait(tasks,timeout=25)
         for task in tasks:
             if task in done:
                 try:evaluated.append(task.result())
@@ -149,7 +118,7 @@ async def collect(market,focus=None):
     return {'plays':plays,'market':market,'scanned':len(evaluated),'universe_size':len(assets),
             'coverage':sorted({r['reason'] for r in evaluated if r.get('reason')}),
             'partial':len(evaluated)<len(assets),'completed_at':datetime.now(timezone.utc).isoformat(),
-            'execution_enabled':False,'score_explanation':'Quality points: trend 25, momentum 20, range 15, risk 10, volume 10, news 10, validated AI agreement 10. Forex omits volume and scales the remaining 90 points to 100. Missing confirmation earns no points.',
+            'execution_enabled':False,'score_explanation':'Shared research score: market setup up to 80, news/text 5, attention 3, disclosures 3, large-holder activity 3, derivatives/macro/liquidity 2, validated AI 4. Missing evidence earns no points and is shown in coverage. Forex omits volume and scales 90 points to 100.',
             'universe_note':'Bounded liquid-market watchlist, with ApeWisdom leaders for stocks; not every listed instrument.',
             'started_at':now.isoformat()}
 
