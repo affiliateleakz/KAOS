@@ -267,6 +267,9 @@ async def report_action(rid: str, req: SettingsReq, mod: dict = Depends(mod_dep)
         await db.strategies.update_one({"id": report["targetId"]}, {"$set": {"published": False, "visibility": "PRIVATE"}})
     if action in ("hide", "remove") and report["targetType"] == "comment":
         await db.comments.update_one({"id": report["targetId"]}, {"$set": {"hidden": True}})
+    if action in ("hide", "remove") and report["targetType"] in ("community_post", "community_comment"):
+        collection = db.community_posts if report["targetType"] == "community_post" else db.community_comments
+        await collection.update_one({"id": report["targetId"]}, {"$set": {"hidden": True}})
     await db.moderation_actions.insert_one({"id": new_id("mod"), "reportId": rid, "moderatorId": mod["id"],
                                             "action": action, "createdAt": now_iso()})
     await audit_log(mod, f"moderation_{action}", report["targetType"], report["targetId"])

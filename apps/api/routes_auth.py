@@ -370,6 +370,10 @@ async def export_data(user: dict = Depends(get_current_user)):
 async def delete_account(response: Response, user: dict = Depends(get_current_user)):
     # defined deletion workflow: anonymize account, remove private data, keep attribution shells
     await db.strategies.delete_many({"ownerUserId": user["id"], "visibility": {"$ne": "PUBLIC"}})
+    await db.community_posts.update_many({"authorId": user["id"]}, {"$set": {"hidden": True}})
+    await db.community_comments.update_many({"authorId": user["id"]}, {"$set": {"hidden": True}})
+    await db.community_reactions.delete_many({"userId": user["id"]})
+    await db.follows.delete_many({"$or": [{"followerId": user["id"]}, {"followingId": user["id"]}]})
     await db.devices.delete_many({"userId": user["id"]})
     await db.sessions.delete_many({"user_id": user["id"]})
     await db.users.update_one({"id": user["id"]}, {

@@ -63,6 +63,17 @@ def test_validation_wrapper_blocks_orders_and_billing(monkeypatch, tmp_path):
     @app.post('/api/v1/auth/login')
     def login():
         return {'ok': True}
+    @app.post('/api/community/posts')
+    @app.put('/api/community/posts/post_1/like')
+    @app.patch('/api/community/posts/post_1')
+    @app.delete('/api/community/posts/post_1')
+    @app.post('/api/community/posts/post_1/comments')
+    @app.post('/api/community/posts/post_1/report')
+    @app.post('/api/users/bob/follow')
+    @app.delete('/api/users/bob/follow')
+    @app.post('/api/admin/reports/report_1/action')
+    def community():
+        return {'community':True,'execution_enabled':False}
     @app.post('/api/v1/devices/register')
     def device():
         return {'ok': True}
@@ -150,6 +161,15 @@ def test_validation_wrapper_blocks_orders_and_billing(monkeypatch, tmp_path):
     assert client.get('/api').status_code == 200
     assert client.post('/api/v1/auth/login').status_code == 200
     assert client.post('/api/v1/devices/register').status_code == 200
+    assert client.post('/api/community/posts').status_code == 200
+    assert client.put('/api/community/posts/post_1/like').status_code == 200
+    assert client.patch('/api/community/posts/post_1').status_code == 200
+    assert client.delete('/api/community/posts/post_1').status_code == 200
+    assert client.post('/api/community/posts/post_1/comments').status_code == 200
+    assert client.post('/api/community/posts/post_1/report').status_code == 200
+    assert client.post('/api/users/bob/follow').status_code == 200
+    assert client.delete('/api/users/bob/follow').status_code == 200
+    assert client.post('/api/admin/reports/report_1/action').status_code == 200
     assert client.post('/api/v1/intelligence/scan').status_code == 200
     assert client.post('/api/v1/intelligence/research/asset').status_code == 200
     assert client.post('/api/v1/intelligence/signals/opportunities').status_code == 200

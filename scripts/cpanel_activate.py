@@ -48,7 +48,12 @@ def _get_app():
             commerce_setup = request.method in ("PUT", "POST") and bool(re.fullmatch(r"/api/admin/commerce/providers/(stripe|paypal|nowpayments)(/test)?", path))
             commerce_setup = commerce_setup or (request.method == "POST" and path == "/api/admin/commerce/vault/initialize")
             radar_setup = (request.method == "PUT" and bool(re.fullmatch(r"/api/admin/radar/providers/(options_data|alphavantage|reddit|x|bluesky|facebook|sec|ethereum|government)", path))) or (request.method == "POST" and path in ("/api/admin/radar/vault/initialize", "/api/admin/radar/model/train", "/api/admin/radar/model/activate"))
-            allowed_write = allowed_write or bool(device_revoke) or commerce_setup or radar_setup
+            # Social content never executes code or orders. Handlers enforce member/author/moderator permissions.
+            community_write = request.method in ("POST", "PUT", "PATCH", "DELETE") and (
+                path.startswith("/api/community/posts") or
+                bool(re.fullmatch(r"/api/users/[^/]+/follow", path)) or
+                bool(re.fullmatch(r"/api/admin/reports/[^/]+/action", path)))
+            allowed_write = allowed_write or bool(device_revoke) or commerce_setup or radar_setup or community_write
             pricing_read = path in ("/api/billing/plans", "/api/billing/availability", "/api/billing/memberships") and request.method in ("GET", "HEAD", "OPTIONS")
             if ((path.startswith("/api/billing") and not pricing_read) or
                     (request.method not in ("GET", "HEAD", "OPTIONS") and not allowed_write)):

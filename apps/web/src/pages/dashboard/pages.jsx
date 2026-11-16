@@ -1,3 +1,4 @@
+import CommunityHub from './CommunityHub';
 import { deviceDate } from "../../lib/deviceDate";
 import React, { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -157,27 +158,7 @@ export function MyStrategies() {
 }
 
 // ---------- Community feed ----------
-export function CommunityFeed() {
-  const [sort, setSort] = useState("popular");
-  const [list, setList] = useState([]);
-  const load = () => api.get(`/api/community/strategies?sort=${sort}`).then((r) => setList(r.data)).catch(() => {});
-  useEffect(() => { load(); }, [sort]);
-  return (
-    <div>
-      <H>Community</H>
-      <Tabs value={sort} onValueChange={setSort} className="mb-6">
-        <TabsList className="bg-[#111111]">
-          {[["popular", "Popular"], ["newest", "Newest"], ["saved", "Most Saved"], ["updated", "Recently Updated"]].map(([v, l]) => (
-            <TabsTrigger key={v} value={v} data-testid={`community-sort-${v}`} className="data-[state=active]:bg-[#22C55E] data-[state=active]:text-black">{l}</TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {list.map((s) => <StrategyCard key={s.id} s={s} onChange={load} />)}
-      </div>
-    </div>
-  );
-}
+export {default as CommunityFeed} from './CommunityHub';
 
 // ---------- Indicators ----------
 export function Indicators() {
@@ -286,13 +267,7 @@ export function Saved() {
   return (<div><H>Saved Strategies</H>{list.length === 0 ? <Empty>Nothing saved yet.</Empty> :
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">{list.map((s) => <StrategyCard key={s.id} s={s} onChange={load} />)}</div>}</div>);
 }
-export function Following() {
-  const [list, setList] = useState([]);
-  const load = () => api.get("/api/following/strategies").then((r) => setList(r.data)).catch(() => {});
-  useEffect(() => { load(); }, []);
-  return (<div><H>Following Feed</H>{list.length === 0 ? <Empty>Follow creators to see their strategies here.</Empty> :
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">{list.map((s) => <StrategyCard key={s.id} s={s} onChange={load} />)}</div>}</div>);
-}
+export function Following(){return <CommunityHub initialFeed="following"/>;}
 
 // ---------- Subscription ----------
 export function Subscription() {

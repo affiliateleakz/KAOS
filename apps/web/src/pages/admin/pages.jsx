@@ -1,6 +1,6 @@
 import { deviceDate } from "../../lib/deviceDate";
 import React, { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, Link } from "react-router-dom";
 import { api, errMsg } from "../../lib/api";
 import { StatusBadge } from "../../components/Brand";
 import { Button } from "../../components/ui/button";
@@ -194,8 +194,8 @@ export function Moderation() {
   return (<div><H>Moderation Queue</H>
     {list.length === 0 ? <div className="card-surface p-10 text-center text-slate-500">No reports.</div> : (
       <div className="space-y-3">{list.map((r) => (
-        <div key={r.id} className="card-surface flex items-center justify-between p-4" data-testid={`report-${r.id}`}>
-          <div><div className="font-medium">{r.targetType} · {r.reason}</div><div className="font-mono text-xs text-slate-500">{r.details} · {r.status}</div></div>
+        <div key={r.id} className="card-surface flex flex-wrap items-center justify-between gap-3 p-4" data-testid={`report-${r.id}`}>
+          <div className="min-w-0"><div className="font-medium">{r.targetType} · {r.reason}</div><div className="break-words font-mono text-xs text-slate-500">{r.details} · {r.status}</div>{["community_post","community_comment"].includes(r.targetType)&&<Link className="mt-2 inline-block text-sm text-[#e8c46f] underline" to={"/dashboard/community?post="+encodeURIComponent(r.postId||r.targetId)} target="_blank" rel="noopener noreferrer">Review reported post</Link>}</div>
           {r.status === "open" && <div className="flex gap-2">
             <Button size="sm" variant="outline" className="border-[#3A3A3A] bg-transparent text-white" onClick={() => act(r.id, "dismiss")}>Dismiss</Button>
             <Button size="sm" variant="outline" className="border-[#FFB800]/30 bg-transparent text-[#FFB800]" onClick={() => act(r.id, "hide")}>Hide</Button>

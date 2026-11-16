@@ -3,6 +3,8 @@ from db import db, new_id, now_iso, clean
 from auth import get_current_user, get_optional_user
 from services import public_user, notify
 from models import CommentReq, ReportReq
+from pymongo.errors import DuplicateKeyError
+from hashlib import sha256
 
 router = APIRouter(prefix="/api/community", tags=["community"])
 social = APIRouter(prefix="/api", tags=["social"])
@@ -31,11 +33,11 @@ async def community_list(sort: str = "popular", user: dict = Depends(get_optiona
 @router.get("/strategies/{sid}")
 async def community_detail(sid: str, user: dict = Depends(get_optional_user)):
     s = await db.strategies.find_one({"id": sid})
-    if not s or not s.get("published"):
+    if not s or not s.get("published") or s.get("visibility")!="PUBLIC":
         raise HTTPException(status_code=404, detail="Not found")
     out = await _enrich(s, user["id"] if user else None)
     out["versions"] = await db.strategy_versions.find({"strategyId": sid}, {"_id": 0}).sort("version", -1).to_list(100)
-    comments = await db.comments.find({"targetType": "strategy", "targetId": sid}, {"_id": 0}).sort("createdAt", 1).to_list(500)
+    comments = await db.comments.find({"targetType": "strategy", "targetId": sid, "hidden": {"$ne": True}}, {"_id": 0}).sort("createdAt", 1).to_list(500)
     for c in comments:
         au = await db.users.find_one({"id": c["authorId"]})
         c["author"] = public_user(au)
@@ -46,7 +48,7 @@ async def community_detail(sid: str, user: dict = Depends(get_optional_user)):
 @router.post("/strategies/{sid}/like")
 async def like(sid: str, user: dict = Depends(get_current_user)):
     s = await db.strategies.find_one({"id": sid})
-    if not s:
+    if not s or not s.get("published") or s.get("visibility")!="PUBLIC":
         raise HTTPException(status_code=404, detail="Not found")
     if await db.strategy_likes.find_one({"strategyId": sid, "userId": user["id"]}):
         return {"liked": True}
@@ -68,7 +70,7 @@ async def unlike(sid: str, user: dict = Depends(get_current_user)):
 @router.post("/strategies/{sid}/save")
 async def save(sid: str, user: dict = Depends(get_current_user)):
     s = await db.strategies.find_one({"id": sid})
-    if not s:
+    if not s or not s.get("published") or s.get("visibility")!="PUBLIC":
         raise HTTPException(status_code=404, detail="Not found")
     if not await db.strategy_saves.find_one({"strategyId": sid, "userId": user["id"]}):
         await db.strategy_saves.insert_one({"id": new_id("save"), "strategyId": sid, "userId": user["id"], "createdAt": now_iso()})
@@ -92,7 +94,7 @@ async def unsave(sid: str, user: dict = Depends(get_current_user)):
 @router.post("/strategies/{sid}/fork")
 async def fork(sid: str, user: dict = Depends(get_current_user)):
     s = await db.strategies.find_one({"id": sid})
-    if not s or not s.get("published"):
+    if not s or not s.get("published") or s.get("visibility")!="PUBLIC":
         raise HTTPException(status_code=404, detail="Not found")
     fork_doc = {
         "id": new_id("strat"), "ownerUserId": user["id"], "ownerUsername": user.get("username"),
@@ -120,7 +122,7 @@ async def fork(sid: str, user: dict = Depends(get_current_user)):
 @router.post("/strategies/{sid}/comment")
 async def comment(sid: str, req: CommentReq, user: dict = Depends(get_current_user)):
     s = await db.strategies.find_one({"id": sid})
-    if not s:
+    if not s or not s.get("published") or s.get("visibility")!="PUBLIC":
         raise HTTPException(status_code=404, detail="Not found")
     doc = {"id": new_id("cmt"), "targetType": "strategy", "targetId": sid, "authorId": user["id"],
            "body": req.body, "parentId": req.parentId, "hidden": False, "createdAt": now_iso()}
@@ -160,7 +162,12 @@ async def follow(username: str, user: dict = Depends(get_current_user)):
     if target["id"] == user["id"]:
         raise HTTPException(status_code=400, detail="Cannot follow yourself")
     if not await db.follows.find_one({"followerId": user["id"], "followingId": target["id"]}):
-        await db.follows.insert_one({"followerId": user["id"], "followingId": target["id"], "createdAt": now_iso()})
+        from community_network import rate
+        await rate(user,"follow",60)
+        try:
+            await db.follows.insert_one({"_id":sha256((user["id"]+":"+target["id"]).encode()).hexdigest(),"followerId": user["id"], "followingId": target["id"], "createdAt": now_iso()})
+        except DuplicateKeyError:
+            return {"following":True}
         await notify(target["id"], "new_follower", f"{user.get('username')} followed you", f"/u/{user.get('username')}", user)
     return {"following": True}
 
@@ -169,7 +176,7 @@ async def follow(username: str, user: dict = Depends(get_current_user)):
 async def unfollow(username: str, user: dict = Depends(get_current_user)):
     target = await db.users.find_one({"username": username})
     if target:
-        await db.follows.delete_one({"followerId": user["id"], "followingId": target["id"]})
+        await db.follows.delete_many({"followerId": user["id"], "followingId": target["id"]})
     return {"following": False}
 
 
@@ -185,7 +192,7 @@ async def following_feed(user: dict = Depends(get_current_user)):
 async def saved_feed(user: dict = Depends(get_current_user)):
     saves = await db.strategy_saves.find({"userId": user["id"]}).to_list(1000)
     ids = [s["strategyId"] for s in saves]
-    docs = await db.strategies.find({"id": {"$in": ids}}, {"_id": 0}).to_list(200)
+    docs = await db.strategies.find({"id": {"$in": ids}, "$or":[{"ownerUserId":user["id"]},{"published":True,"visibility":"PUBLIC"}]}, {"_id": 0}).to_list(200)
     return [await _enrich(d, user["id"]) for d in docs]
 
 
@@ -208,3 +215,7 @@ async def create_report(req: ReportReq, user: dict = Depends(get_current_user)):
            "status": "open", "createdAt": now_iso()}
     await db.reports.insert_one(dict(doc))
     return clean(doc)
+
+# Member social posts complement, rather than replace, the public strategy library.
+from community_network import router as network_router
+router.include_router(network_router)
