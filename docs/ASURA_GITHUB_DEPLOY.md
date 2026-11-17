@@ -7,13 +7,13 @@ This is the simplest safe first step for the **existing domains**:
 - Existing API application root: `/home/itsabout/tradingwithkaos.com/backend` (Python 3.11)
 - **Current live API is the older native WSGI application**: `passenger_wsgi.py` imports `wsgi_app.application`, reported build `1.1.11-full-admin-repair`.
 
-The GitHub workflow `Prepare KAOS release on Asura Hosting` only uploads release ZIPs to `~/kaos_release_staging/<commit-SHA>/`. It **does not** switch API runtimes, upload into the live app, modify the website, restart cPanel Python, or deploy live trading. The mismatch between the old native WSGI API and the new extension must still be resolved and tested. Do not replace the existing `passenger_wsgi.py` by itself.
+The GitHub workflow `Prepare KAOS release on Asura Hosting` only uploads release ZIPs to `~/kaos_cpanel_releases/<commit-SHA>/`. It **does not** switch API runtimes, upload into the live app, modify the website, restart cPanel Python, or deploy live trading. The mismatch between the old native WSGI API and the new extension must still be resolved and tested. Do not replace the existing `passenger_wsgi.py` by itself.
 
 ## One-time Asura setup
 
 1. In cPanel, check **Security → SSH Access**. If you cannot find it, ask Asura Hosting support to enable SSH for your account. Confirm the SSH **host**, **port**, **username**, and the server's **verified host-key fingerprint** directly with Asura Hosting.
 2. In cPanel **SSH Access → Manage SSH Keys**, generate a dedicated deployment key pair, or import a new public key generated on your own machine. **Authorize the public key** for SSH login. Keep the private key out of GitHub source files, chats, screenshots, and website folders. Prefer a restricted deployment-only account/key when Asura supports it.
-3. Ensure the SSH account can create files in a **private** directory under its home directory (`~/kaos_release_staging`) and that it cannot accidentally overwrite production paths through account-level restrictions, if supported.
+3. Ensure the SSH account can create files in a **private** directory under its home directory (`~/kaos_cpanel_releases`) and that it cannot accidentally overwrite production paths through account-level restrictions, if supported.
 
 ## One-time GitHub setup
 
@@ -332,3 +332,13 @@ The approved three-card Viking hero uses current extension and website captures.
 After activation and a cPanel Python restart, use Admin → Platform Settings → Membership Plans. If retired plans or old limits remain, select **Use current KAOS plans**, review Free $0 / Pro $29.95 monthly or $299.95 yearly / Ultimate $99.95 monthly or $995.95 yearly and the allowances, then **Save Plans**. Loading defaults alone does not save. Already configured custom prices should be retained unless intentionally changed.
 
 The validation adapter allows only the `plans` key at `POST /api/admin/settings`; the underlying handler still requires an authenticated admin and validates plan amounts. This makes Save Plans work on cPanel while other settings writes, real payment processing and live-order restrictions remain unchanged. No database migration or automatic billing activation occurs.
+
+## Compiled releases without a cPanel build
+
+GitHub preparation and local `cpanel_prepare.sh` now publish to the same private directory: `~/kaos_cpanel_releases/<full-commit-SHA>/`. The SSH upload remains preparation only: it verifies both ZIP checksums and revision before writing `COMPLETE`; it does not install files or restart Passenger. Older uploads under `~/kaos_release_staging` are not automatically moved or activated.
+
+The GitHub workflow also retains a `kaos-cpanel-<full-commit-SHA>` Actions artifact for 14 days, before attempting SSH. It contains the website/backend ZIPs, `SHA256SUMS` and `RELEASE.txt`, so an SSH failure does not require rebuilding the frontend on shared hosting. Treat source archives and compiled deployment archives as different files. Do not extract a backend ZIP directly over the site using File Manager; the installer preserves the live routing and environment files.
+
+A separately supplied `KAOS-Website-Backend-<short-SHA>.zip` is an outer upload bundle whose top-level directory is the full commit SHA and includes the verified `COMPLETE` marker. Upload this outer bundle to `/home/itsabout/`, outside the web document root. Extract it under `/home/itsabout/kaos_cpanel_releases/` only when that revision directory does not already exist; do not overwrite a previously prepared revision. Then run the existing installer with `--revision <full-SHA>` **without** `--activate` first to check the checksums and package layout. This check does not change live files. Adding `--activate` is the separate live installation step; the existing login-validation/payment and order restrictions remain in effect. Restart the Python app only after an authorized installation.
+
+Prebuilt files reduce hosting build work; they do not repair the API hostname's verification page, change saved catalog prices, install missing Python dependencies or configure a payment provider. Use the corresponding launch checks for those items.

@@ -63,6 +63,20 @@ jobs:
           sha256sum kaos-cpanel-website.zip kaos-cpanel-backend.zip > SHA256SUMS
           printf 'KAOS revision %s\n' "$GITHUB_SHA" > RELEASE.txt
 
+      # Retain compiled files even if SSH staging is unavailable, avoiding a
+      # second npm/vite build on the resource-limited cPanel account.
+      - name: Save downloadable prepared release
+        uses: actions/upload-artifact@v4
+        with:
+          name: kaos-cpanel-${{ github.sha }}
+          path: |
+            dist/kaos-cpanel-website.zip
+            dist/kaos-cpanel-backend.zip
+            dist/SHA256SUMS
+            dist/RELEASE.txt
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Configure verified SSH connection
         env:
           SSH_PRIVATE_KEY: ${{ secrets.ASURA_SSH_PRIVATE_KEY }}
