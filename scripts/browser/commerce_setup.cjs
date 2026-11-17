@@ -42,6 +42,7 @@ if(!BASE)throw Error('Run through scripts/browser/run.cjs');
  assert.equal(await page.getByTestId('provider-nowpayments').getByLabel('Crypto asset and network').inputValue(),'usdttrc20');
  await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
  assert.equal(await page.getByText('Setup only · not live',{exact:true}).count(),3);
+ const stripe=page.getByTestId('provider-stripe');await stripe.getByLabel('Stripe environment',{exact:true}).selectOption('live');await stripe.getByText('Sandbox and live credentials are separate.',{exact:false}).waitFor();assert.equal(await stripe.getByRole('button',{name:'Check API connection',exact:true}).isDisabled(),true);
  assert.deepEqual(errors,[]);console.log('Admin provider setup: vault initialization, masked credentials, save-before-check, PayPal selection, crypto network and mobile layout passed.');
  await browser.close();
 })().catch(error=>{console.error(error);process.exit(1)});

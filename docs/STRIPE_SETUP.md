@@ -15,3 +15,9 @@ Saving credentials never activates checkout. KAOS_STRIPE_CHECKOUT_ENABLED must e
 Validate sandbox payments against a separate test database/accounts so test subscriptions cannot grant real member access or enter live affiliate accounting. Confirm the four plan amounts (Pro $29.95 monthly/$299.95 yearly; Ultimate $99.95 monthly/$995.95 yearly), signed delivery, retries, renewals, failed invoices, cancellation and refund reversals. Verify actual Stripe Checkout and customer portal configuration. Only then review a live deployment with the matching live keys and live webhook secret. Do not reuse sandbox Stripe customer/subscription IDs in live mode.
 
 No payments, invoices, subscriptions, refunds, payouts or Stripe account settings were created by the repository tests. No real credential is present in the repository.
+
+## Credential and lifecycle update
+
+Current setup stores sandbox and live Stripe values separately under the existing encrypted vault. Switching modes no longer reuses the other mode's values. Legacy settings are preserved by actual key prefix on save. Use the matching live/test signing secret from its own destination; `whsec_` alone does not identify its mode. The connection check prioritizes membership payments credentials, not a separate Connect key. Mode changes are blocked during activated checkout to avoid cross-environment customer reuse.
+
+The billing implementation now verifies real subscription periods, extends paid renewals, checks checkout/customer/subscription identities, journals initial payments by invoice, resolves dispute charges and keeps cancellation separate from refunds. Existing active subscribers cannot create a second checkout. Review BUSINESS_LAUNCH.md for sandbox and hosted acceptance steps; code changes do not remove the current validation deployment gate or activate funds.

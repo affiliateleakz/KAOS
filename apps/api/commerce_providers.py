@@ -79,32 +79,66 @@ async def document(provider):
     return await db.commerce_provider_settings.find_one({'_id': provider}) or {}
 
 
-async def credentials(provider, doc=None):
-    info = provider_info(provider)
-    doc = await document(provider) if doc is None else doc
-    result = {}
-    for name, (_, env) in info['fields'].items():
-        encrypted = (doc.get('encrypted') or {}).get(name)
-        if encrypted:
-            try: result[name] = cipher().decrypt(encrypted.encode()).decode()
-            except (InvalidToken, UnicodeError, ValueError) as exc:
-                raise HTTPException(503, 'Stored commerce credentials cannot be decrypted; restore the original commerce vault key') from exc
-        elif os.getenv(env):
-            result[name] = os.environ[env]
+def stripe_mode(key):
+    if key.startswith(('sk_live_','rk_live_')):return 'live'
+    if key.startswith(('sk_test_','rk_test_')):return 'sandbox'
+    return None
+
+
+def decrypt(value):
+    try:return cipher().decrypt(value.encode()).decode()
+    except (InvalidToken,UnicodeError,ValueError) as exc:
+        raise HTTPException(503,'Stored commerce credentials cannot be decrypted; restore the original commerce vault key') from exc
+
+
+def legacy_stripe_mode(doc):
+    fields=doc.get('encrypted') or {}
+    for name in ('secret_key','connect_secret_key'):
+        if fields.get(name):
+            mode=stripe_mode(decrypt(fields[name]))
+            if mode:return mode
+    return doc.get('mode','sandbox')
+
+
+def stored_fields(provider,doc):
+    if provider!='stripe':return doc.get('encrypted') or {}
+    mode=doc.get('mode','sandbox');fields=dict((doc.get('encryptedByMode') or {}).get(mode) or {})
+    if doc.get('encrypted'):
+        try:legacy_mode=legacy_stripe_mode(doc)
+        except HTTPException:legacy_mode=mode  # Display stored presence; actual use still fails closed.
+        if legacy_mode==mode:
+            for name,value in doc['encrypted'].items():fields.setdefault(name,value)
+    return fields
+
+
+def env_value(provider,name,env,doc):
+    if provider!='stripe':return os.getenv(env,'')
+    mode=doc.get('mode','sandbox');prefix='LIVE' if mode=='live' else 'TEST'
+    alias={'secret_key':'SECRET_KEY','connect_secret_key':'CONNECT_SECRET_KEY','webhook_secret':'WEBHOOK_SECRET'}[name]
+    direct=os.getenv('STRIPE_'+prefix+'_'+alias,'')
+    if direct:return direct if name=='webhook_secret' or stripe_mode(direct)==mode else ''
+    value=os.getenv(env,'')
+    if name!='webhook_secret':return value if stripe_mode(value)==mode else ''
+    return value if stripe_mode(os.getenv('STRIPE_SECRET_KEY',''))==mode else ''
+
+
+async def credentials(provider,doc=None):
+    info=provider_info(provider);doc=await document(provider) if doc is None else doc;stored=stored_fields(provider,doc);result={}
+    for name,(_,env) in info['fields'].items():
+        value=decrypt(stored[name]) if stored.get(name) else env_value(provider,name,env,doc)
+        if value and (provider!='stripe' or name=='webhook_secret' or stripe_mode(value)==doc.get('mode','sandbox')):result[name]=value
     return result
 
 
 async def public_provider(provider):
-    info = provider_info(provider); doc = await document(provider)
-    encrypted = doc.get('encrypted') or {}
-    return {'id': provider, 'name': info['name'], 'description': info['description'], 'dashboard': info['dashboard'],
-        'mode': doc.get('mode', 'sandbox'), 'paymentsSelected': doc.get('paymentsSelected', False),
-        'payoutsSelected': doc.get('payoutsSelected', False), 'cryptoAsset': doc.get('cryptoAsset', 'usdttrc20'),
-        'fields': [{'name': name, 'label': label, 'environmentVariable': env,
-                    'configured': bool(encrypted.get(name) or os.getenv(env)),
-                    'source': 'encrypted storage' if encrypted.get(name) else 'hosting environment' if os.getenv(env) else 'not configured'}
-                   for name, (label, env) in info['fields'].items()],
-        'lastCheck': doc.get('lastCheck'), 'paymentsLive': False, 'payoutsLive': False}
+    info=provider_info(provider);doc=await document(provider);encrypted=stored_fields(provider,doc)
+    return {'id':provider,'name':info['name'],'description':info['description'],'dashboard':info['dashboard'],
+        'mode':doc.get('mode','sandbox'),'paymentsSelected':doc.get('paymentsSelected',False),
+        'payoutsSelected':doc.get('payoutsSelected',False),'cryptoAsset':doc.get('cryptoAsset','usdttrc20'),
+        'fields':[{'name':name,'label':label,'environmentVariable':env,
+            'configured':bool(encrypted.get(name) or env_value(provider,name,env,doc)),
+            'source':'encrypted storage' if encrypted.get(name) else 'hosting environment' if env_value(provider,name,env,doc) else 'not configured'} for name,(label,env) in info['fields'].items()],
+        'lastCheck':doc.get('lastCheck'),'paymentsLive':False,'payoutsLive':False}
 
 
 async def check_connection(provider):
@@ -113,9 +147,9 @@ async def check_connection(provider):
     try:
         async with httpx.AsyncClient(timeout=12, follow_redirects=False) as client:
             if provider == 'stripe':
-                key = values.get('connect_secret_key') or values.get('secret_key')
+                key = values.get('secret_key') or values.get('connect_secret_key')
                 if not key: raise HTTPException(400, 'Add a Stripe secret key first')
-                if not key.startswith('sk_live_' if mode == 'live' else 'sk_test_'):
+                if stripe_mode(key)!=mode:
                     raise HTTPException(400, 'Stripe key does not match the selected sandbox/live mode')
                 response = await client.get('https://api.stripe.com/v1/account', headers={'Authorization': 'Bearer ' + key})
                 response.raise_for_status(); data = response.json()

@@ -1,3 +1,4 @@
+import os
 from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, SecretStr
@@ -39,14 +40,30 @@ async def save_provider(provider: str, request: ProviderSettings, admin=Depends(
         raise HTTPException(400, 'Unknown credential field')
     updates = {**request.model_dump(exclude={'credentials'}), 'updatedAt': now_iso(), 'updatedBy': admin['id']}
     changed = []
+    if provider=='stripe':
+        previous=await providers.document(provider)
+        if request.mode!=previous.get('mode','sandbox') and os.getenv('KAOS_STRIPE_CHECKOUT_ENABLED')=='true' and os.getenv('KAOS_LOGIN_VALIDATION_MODE')!='true':
+            raise HTTPException(409,'Disable checkout before switching the active Stripe environment')
+        # Preserve old single-environment ciphertext under its actual key prefix.
+        if previous.get('encrypted'):
+            old_mode=providers.legacy_stripe_mode(previous)
+            for name,value in previous['encrypted'].items():
+                actual=providers.stripe_mode(providers.decrypt(value)) if name in ('secret_key','connect_secret_key') else old_mode
+                actual=actual or old_mode
+                if not (previous.get('encryptedByMode') or {}).get(actual,{}).get(name):updates['encryptedByMode.'+actual+'.'+name]=value
     for name, secret in request.credentials.items():
         value = secret.get_secret_value().strip()
         if not value: continue  # Blank means keep the existing secret.
         if len(value) > 8192: raise HTTPException(400, 'Credential is too long')
-        updates['encrypted.' + name] = providers.cipher().encrypt(value.encode()).decode()
+        if provider=='stripe':
+            if name in ('secret_key','connect_secret_key') and providers.stripe_mode(value)!=request.mode:
+                raise HTTPException(400,'Stripe '+name.replace('_',' ')+' must match '+request.mode+' mode (use sk_live_/rk_live_ for live or sk_test_/rk_test_ for sandbox)')
+            if name=='webhook_secret' and not value.startswith('whsec_'):raise HTTPException(400,'Use the webhook destination signing secret starting whsec_')
+        path='encryptedByMode.'+request.mode+'.'+name if provider=='stripe' else 'encrypted.'+name
+        updates[path] = providers.cipher().encrypt(value.encode()).decode()
         changed.append(name)
     # A mode/key/settings change invalidates the old connection-check badge.
-    await db.commerce_provider_settings.update_one({'_id': provider}, {'$set': updates, '$unset': {'lastCheck': ''}}, upsert=True)
+    await db.commerce_provider_settings.update_one({'_id': provider}, {'$set':updates,'$unset':{'lastCheck':'',**({'encrypted':''} if provider=='stripe' else {})}}, upsert=True)
     await audit_log(admin, 'commerce_provider_configured', 'commerce_provider', provider,
                     {'mode': request.mode, 'credentialFieldsChanged': changed})
     return await providers.public_provider(provider)

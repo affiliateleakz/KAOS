@@ -288,7 +288,7 @@ export function Subscription() {
   useEffect(()=>{const chosen=plans.find(p=>p.id===selectedPlan);if(chosen)setPeriod(chosen.interval||'month');},[plans,selectedPlan]);
   const checkout = async (lookup_key) => { try { const { data } = await api.post("/api/billing/checkout", { lookup_key, origin_url: window.location.origin }); window.location.href = data.checkout_url; } catch (e) { toast.error(errMsg(e)); } };
   const portal = async () => { try { const { data } = await api.post("/api/billing/portal", { lookup_key: "x", origin_url: window.location.origin }); window.location.href = data.url; } catch (e) { toast.error(errMsg(e)); } };
-  const cancel = async () => { try { await api.post("/api/billing/cancel"); toast.success("Subscription canceled"); } catch (e) { toast.error(errMsg(e)); } };
+  const cancel = async () => { try { await api.post("/api/billing/cancel"); toast.success("Cancellation scheduled for the end of your paid period"); } catch (e) { toast.error(errMsg(e)); } };
   return (
     <div>
       <H>Subscription & Billing</H>

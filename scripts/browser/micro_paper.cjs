@@ -26,7 +26,7 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
  assert.equal(await page.locator('#results tr').count(),0,'Warmup must not invent retrospective forward trades');
  assert.equal(await page.evaluate(()=>permissionRequests.length),1);
  await page.getByRole('button',{name:'Stop',exact:true}).click();
- await page.locator('summary').click();
+ await page.getByText('Replay a candle file instead',{exact:true}).click();
  await page.locator('#candles-file').setInputFiles({name:'BTCUSDT_5s.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({markets:{BTCUSDT:fixture.rows}}))});
  await page.getByText('Historical paper replay complete.',{exact:false}).waitFor();
  assert.ok(await page.locator('#results tr').count()>0);

@@ -20,7 +20,9 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 EMAIL_BASE_URL = (os.environ.get("INTEGRATION_PROXY_URL") or "").strip().rstrip("/") or "https://integrations.emergentagent.com"
 EMAIL_KEY = os.environ.get("EMERGENT_EMAIL_KEY", "")
-EMAIL_FROM_NAME = os.environ.get("EMAIL_FROM_NAME") or "Trading Platform"
+EMAIL_FROM_NAME = os.environ.get("EMAIL_FROM_NAME") or "KAOS Trading"
+
+from mail_delivery import smtp_ready, send_smtp
 
 from login_policy import MAX_LOGIN_ATTEMPTS as MAX_ATTEMPTS, LOGIN_LOCK_MINUTES as LOCK_MINUTES
 
@@ -28,7 +30,7 @@ from login_policy import MAX_LOGIN_ATTEMPTS as MAX_ATTEMPTS, LOGIN_LOCK_MINUTES 
 async def send_password_reset_email(to_email: str, token: str) -> bool:
     base = os.environ.get("FRONTEND_URL", "").rstrip("/")
     link = f"{base}/reset-password?token={token}"
-    if not EMAIL_KEY or EMAIL_KEY.startswith("{") or not base.startswith("https://"):
+    if (not smtp_ready() and (not EMAIL_KEY or EMAIL_KEY.startswith("{"))) or not base.startswith("https://"):
         if urlparse(base).hostname in ("localhost", "127.0.0.1", "::1"):
             logger.warning("Email not configured; password reset link: %s", link)
         else:
@@ -39,6 +41,8 @@ async def send_password_reset_email(to_email: str, token: str) -> bool:
             f'<p>We received a request to reset your {brand} password.</p>'
             f'<p><a href="{escape(link)}">Reset your password</a></p>'
             f'<p>This link expires in 1 hour and can be used once.</p></td></tr></table>')
+    if smtp_ready():
+        return await send_smtp(to_email,f"Reset your {EMAIL_FROM_NAME} password",html)
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(f"{EMAIL_BASE_URL}/api/v1/email/send",

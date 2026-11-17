@@ -17,6 +17,7 @@ from db import db, ensure_indexes
 import routes_offerings
 import training_service
 import routes_research_models
+import launch_readiness
 import routes_auth, routes_strategies, routes_community, routes_billing, routes_extension, routes_admin, routes_trading, routes_affiliate, routes_botsync, routes_ai
 import seed
 import routes_coinbase
@@ -109,6 +110,7 @@ app.include_router(routes_kaos_scanner.router)
 app.include_router(routes_offerings.router)
 app.include_router(training_service.router)
 app.include_router(routes_research_models.router)
+app.include_router(launch_readiness.router)
 app.include_router(training_service.admin_router)
 
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")

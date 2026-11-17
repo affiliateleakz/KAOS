@@ -22,8 +22,9 @@ def setup(monkeypatch, tmp_path):
     async def update(query, change, **kwargs):
         doc = records.setdefault(query['_id'], {'_id': query['_id']})
         for key, value in change.get('$set', {}).items():
-            if key.startswith('encrypted.'): doc.setdefault('encrypted', {})[key.split('.', 1)[1]] = value
-            else: doc[key] = value
+            cursor=doc;parts=key.split('.')
+            for part in parts[:-1]:cursor=cursor.setdefault(part,{})
+            cursor[parts[-1]]=value
         for key in change.get('$unset', {}): doc.pop(key, None)
     database = SimpleNamespace(commerce_provider_settings=SimpleNamespace(find_one=find, update_one=update))
     monkeypatch.setattr(providers, 'db', database); monkeypatch.setattr(routes, 'db', database)
@@ -143,3 +144,46 @@ def test_stripe_profiles_never_cross_test_and_live_environments():
     assert connect.account_for_mode(account,'test')=='acct_test_fixture'
     assert connect.account_for_mode(account,'live')=='acct_live_fixture'
     with pytest.raises(HTTPException):connect.account_for_mode({'stripeConnectAccountId':'acct_unknown'},'live')
+
+
+def test_stripe_keeps_sandbox_and_live_credentials_separate(setup):
+    records,_=setup
+    async def save(mode,values):
+        return await routes.save_provider('stripe',routes.ProviderSettings(mode=mode,paymentsSelected=True,credentials={k:SecretStr(v) for k,v in values.items()}),{'id':'owner'})
+    asyncio.run(save('sandbox',{'secret_key':'sk_test_fixture_payments','webhook_secret':'whsec_fixture_test'}))
+    asyncio.run(save('live',{'secret_key':'sk_live_fixture_payments','webhook_secret':'whsec_fixture_live'}))
+    assert asyncio.run(providers.credentials('stripe'))['secret_key']=='sk_live_fixture_payments'
+    result=asyncio.run(save('sandbox',{}))
+    assert asyncio.run(providers.credentials('stripe'))['secret_key']=='sk_test_fixture_payments'
+    assert set(records['stripe']['encryptedByMode'])=={'sandbox','live'}
+    assert 'sk_test_fixture_payments' not in str(result)
+    assert 'sk_live_fixture_payments' not in str(result)
+
+
+def test_stripe_legacy_mismatched_mode_preserves_actual_test_key(setup):
+    records,_=setup
+    encrypted=lambda value:providers.cipher().encrypt(value.encode()).decode()
+    records['stripe']={'_id':'stripe','mode':'live','encrypted':{'secret_key':encrypted('sk_test_legacy_fixture'),'webhook_secret':encrypted('whsec_test_legacy')}}
+    asyncio.run(routes.save_provider('stripe',routes.ProviderSettings(mode='live',credentials={'secret_key':SecretStr('sk_live_replacement_fixture')}),{'id':'owner'}))
+    assert 'encrypted' not in records['stripe']
+    assert asyncio.run(providers.credentials('stripe'))['secret_key']=='sk_live_replacement_fixture'
+    assert 'webhook_secret' not in asyncio.run(providers.credentials('stripe'))
+    asyncio.run(routes.save_provider('stripe',routes.ProviderSettings(mode='sandbox'),{'id':'owner'}))
+    assert asyncio.run(providers.credentials('stripe'))['secret_key']=='sk_test_legacy_fixture'
+    assert asyncio.run(providers.credentials('stripe'))['webhook_secret']=='whsec_test_legacy'
+
+
+def test_wrong_mode_stripe_key_is_rejected_before_save(setup):
+    with pytest.raises(HTTPException) as failure:
+        asyncio.run(routes.save_provider('stripe',routes.ProviderSettings(mode='live',credentials={'secret_key':SecretStr('sk_test_fixture')}),{'id':'owner'}))
+    assert failure.value.status_code==400 and not setup[0]
+
+
+def test_stripe_connection_checks_payments_key_before_connect_key(setup,monkeypatch):
+    monkeypatch.setenv('STRIPE_SECRET_KEY','rk_test_payments_fixture')
+    monkeypatch.setenv('STRIPE_CONNECT_SECRET_KEY','sk_test_connect_fixture')
+    observed=[]
+    def respond(request):observed.append(request.headers['authorization']);return httpx.Response(200,json={'id':'acct_fixture'})
+    client=httpx.AsyncClient;monkeypatch.setattr(providers.httpx,'AsyncClient',lambda **kwargs:client(transport=httpx.MockTransport(respond),**kwargs))
+    assert asyncio.run(providers.check_connection('stripe'))['ok']
+    assert observed==['Bearer rk_test_payments_fixture']

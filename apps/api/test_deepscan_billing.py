@@ -18,7 +18,7 @@ def test_checkout_status_rejects_other_user(monkeypatch):
     assert find.await_args.args[0] == {"session_id":"cs_test_someone_else","userId":"member2"}
 
 def test_cancel_failed_stripe_call_does_not_mark_member_canceled(monkeypatch):
-    class StripeFailure(api.stripe.error.StripeError):
+    class StripeFailure(api.stripe.StripeError):
         pass
     def fail(*args, **kwargs):
         raise StripeFailure("failed")

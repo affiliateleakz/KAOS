@@ -5,6 +5,8 @@ uploads and legacy wsgi_app.py remain in place. No files are deleted.
 """
 import argparse
 import hashlib
+import json
+from datetime import datetime, timezone
 import os
 from pathlib import Path, PurePosixPath
 import subprocess
@@ -171,7 +173,9 @@ def write_file(path, data, mode):
             os.unlink(temporary)
 
 
-def install(site, web, backend):
+def install(site, web, backend, revision=None):
+    if revision is not None and (len(revision)!=40 or any(c not in '0123456789abcdef' for c in revision)):
+        raise ValueError('A full verified release revision is required')
     # Validate every destination before writing anything.
     api = safe_destination(site, 'backend')
     for name in web:
@@ -200,6 +204,9 @@ def install(site, web, backend):
     write_file(site / 'index.html', web['index.html'], 0o644)
     # Switch only after all release files have been installed.
     write_file(api / 'passenger_wsgi.py', WRAPPER.encode(), 0o600)
+    if revision is not None:
+        marker=json.dumps({'revision':revision,'installedAt':datetime.now(timezone.utc).isoformat()}).encode()
+        write_file(safe_destination(api,'apps/api/deployed_release.json'),marker,0o600)
 
 
 def main():
@@ -240,7 +247,7 @@ def main():
     if args.entrypoint_only:
         write_file(safe_destination(site, 'backend/passenger_wsgi.py'), WRAPPER.encode(), 0o600)
     else:
-        install(site, web, backend)
+        install(site, web, backend, sha)
     print('Files installed. Restart the API in cPanel, then check /api and extension sign-in.')
     print('Payments and live orders remain disabled; member research and community actions are permitted.')
     print('Legacy wsgi_app.py remains available; no database migration or full backup was performed.')

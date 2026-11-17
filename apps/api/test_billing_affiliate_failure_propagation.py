@@ -24,10 +24,13 @@ def test_checkout_commission_errors_propagate(monkeypatch):
     user={"id":"buyer1","email":"buyer@example.test"}
     plan={"id":"pro","interval":"month"}
     db=SimpleNamespace(
-        subscriptions=SimpleNamespace(update_one=AsyncMock()),
+        subscriptions=SimpleNamespace(update_one=AsyncMock(),find_one=AsyncMock(return_value={"session_id":"session1"})),
+        affiliate_ledger_payments=SimpleNamespace(find_one=AsyncMock(return_value=None)),
         users=SimpleNamespace(update_one=AsyncMock(),find_one=AsyncMock(return_value=user)))
     monkeypatch.setattr(billing,"db",db)
     monkeypatch.setattr(billing,"get_plans",AsyncMock(return_value=[plan]))
+    monkeypatch.setattr(billing,"_verified_subscription",AsyncMock(return_value={"status":"active","current_period_end":4102444800}))
+    monkeypatch.setattr(billing,"_checkout_invoice",AsyncMock(return_value={"id":"in1","amount_paid":2995}))
     import routes_affiliate
     async def fail(*args,**kwargs):
         raise RuntimeError("commission storage offline")
@@ -43,7 +46,8 @@ def test_refund_does_not_guess_latest_buyer_payment(monkeypatch):
     with pytest.raises(RuntimeError,match="payment journal not found"):
         asyncio.run(billing._reverse_for_charge(
             {"id":"ch1","invoice":"inv_unknown","customer":"cus1","amount_refunded":500}, "refund"))
-    payments.find_one.assert_awaited_once_with({"event_id":"invoice:inv_unknown"})
+    assert payments.find_one.await_args_list[0].args[0]=={"event_id":"invoice:inv_unknown"}
+    assert payments.find_one.await_args_list[1].args[0]=={"invoice_id":"inv_unknown","buyer_id":"buyer1"}
 
 def test_refund_rejects_cross_customer_payment(monkeypatch):
     payments=SimpleNamespace(find_one=AsyncMock(return_value={

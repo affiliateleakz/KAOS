@@ -54,7 +54,7 @@ def test_checkout_passes_saved_key_to_each_stripe_call(monkeypatch):
     monkeypatch.setattr(billing.stripe.Customer,'create',customer)
     monkeypatch.setattr(billing.stripe.Price,'create',price)
     monkeypatch.setattr(billing.stripe.checkout.Session,'create',session)
-    monkeypatch.setattr(billing,'db',SimpleNamespace(users=SimpleNamespace(update_one=AsyncMock()),subscriptions=SimpleNamespace(insert_one=AsyncMock())))
+    monkeypatch.setattr(billing,'db',SimpleNamespace(checkout_locks=SimpleNamespace(update_one=AsyncMock()),stripe_price_catalog=SimpleNamespace(find_one=AsyncMock(return_value=None),update_one=AsyncMock()),users=SimpleNamespace(update_one=AsyncMock(),find_one=AsyncMock(return_value={'id':'fixture','email':'member@example.com'})),subscriptions=SimpleNamespace(find_one=AsyncMock(return_value=None),update_one=AsyncMock())))
     monkeypatch.setenv('FRONTEND_URL','https://example.com')
     result=asyncio.run(billing.checkout(SimpleNamespace(lookup_key='membership_pro_monthly'),{'id':'fixture','email':'member@example.com'}))
     assert result['checkout_url']=='https://checkout.stripe.com/fixture'

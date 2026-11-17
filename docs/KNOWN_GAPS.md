@@ -1,27 +1,23 @@
-# Known gaps and open questions
+# Current known gaps
 
-## Needs founder input
-1. **Which backend is live** on `api.tradingwithkaos.com`: the FastAPI/a2wsgi app (this repo), or the hand-written `wsgi_app.py` that `KAOS_REPAIRED` patches? The parent zip `KAOS_DEEPSCAN_AUTH_PARITY_CONTINUED_DEV.zip` is missing.
-2. **Which extension version is in the Chrome Web Store.** Only the 1.7.12 Pro Terminal manifest has the `key` that pins ID `gbobopmnjgeeegniphckfpalhnebapjm`. The v1.7.11 baseline lacks it, so a store upload from it needs care.
-3. **Branding:** the code uses "Trade With KAOS", TradeWithKAOS.com, and gold/red. The spec says tradingwithkaos.com, black/silver/electric-blue, and "Where We Give the Advantage to the Trader".
-4. **Final pricing:** the code has monthly/yearly plans. The spec proposes Free/Pro/Ultimate.
-5. GitHub repository target and hosting/deploy access.
+See [BUSINESS_LAUNCH.md](BUSINESS_LAUNCH.md) for the current operational handoff. Historical audit documents describe earlier states and are not current pricing, branding or deployment instructions.
 
-## Technical gaps
-- No original web build config. A CRA/craco config was reconstructed, so dependency versions are inferred.
-- `apps/api/requirements.txt` pinned `websockets==16.1.1`, which conflicts with `coinbase-advanced-py` (<14). Relaxed to `>=13,<14`.
-- REPAIRED's parity tests can't run because `kaos_berserker`/`berserker_fixtures` are missing.
-- `content.js` still hard-codes legacy strategy labels (`7B`/`KAOS_BERSERKER`). REPAIRED's FIXES.md says this was fixed in the other runtime.
-- Emergent platform dependencies: email proxy, Google OAuth, and the (now removed) analytics.
-- Pricing (founder decision 2026-10-18): monthly billing only — Free $0, Pro $49/mo, Ultimate $149/mo. Yearly is retired; legacy `monthly`/`yearly` plan ids map to Pro/Ultimate. Stripe prices are created at checkout from these amounts (no live Stripe change made).
-- Free tier (founder decision 2026-10-18): bot in STRATEGY mode on 1 device, no AI modes/scanners/premium tools. The extension license no longer requires a paid membership, but still requires a verified Pocket Option affiliate account and an unsuspended account. AI endpoints (`routes_ai`, FinBERT) still require an ACTIVE paid membership.
-- Recipient tier is the sponsor's tier when the payment is recorded; members who are not ACTIVE/TRIAL count as Free (10% L1 only).
-- Partial refunds reduce the ledger, but the legacy `commissions` mirror only flips to REVERSED on full reversals.
-- Membership gating uses the existing per-plan `entitlements`; the kaos-core `PERMISSIONS` map (free/pro/ultimate) is not yet the source of truth.
-- Paper-order flow is not demonstrated end-to-end. The extension and mobile app are not run.
-- Lint: 17 eslint warnings (unused vars, hook deps) in the web app.
-- **Unsubstantiated performance claims on the homepage:** the hero mockup shows "78.6% win rate", "+$542.30", and "25,287 trained samples". Nothing in the handoff backs these up, and the v2.1 audit is net negative. Remove them or label them as illustrative before going public (compliance).
+## Confirmed decisions and implemented foundations
 
-- Paper trading (simulated): BUY/SELL fill immediately at the member-entered quote price; long-only average-cost book with realized P&L, cash and position close-out. No authorized quote feed, so these are not market fills; unrealized P&L is only shown at a price the member types in. Closing a position is blocked while the emergency stop is active (risk engine behaviour).
+- Canonical site is tradingwithkaos.com with its approved Viking/black/gold homepage. The React build uses Vite and the low-thread cPanel preparation script.
+- Free $0; Pro $29.95/month or $299.95/year; Ultimate $99.95/month or $995.95/year. Pro/Ultimate support four broker slots; owner device allowance is unlimited.
+- The user confirmed the FastAPI API is responding through the production Passenger app. Application root is `/home/itsabout/tradingwithkaos.com/backend`; repository is `/home/itsabout/repositories/KAOS` on the development branch. A new full-release marker identifies installed files after activation; it is not a process-health certificate.
+- Official Chrome item ID is gbobopmnjgeeegniphckfpalhnebapjm. Google sign-in previously worked for the owner. Current test package is 1.7.33; current Store publication still needs direct verification.
+- Registration, entitlement/device checks, public membership catalog, private training queues, owner-only research, community and affiliate accounting have code/browser test coverage. Mocked integration tests do not prove current hosted behavior.
+- New billing fixes reconcile authoritative periods and invoice identities, preserve earned commissions on cancellation, separate sandbox/live credentials, and block a second active subscription. Secure SMTP supports password recovery.
 
-- AI-controlled trading (spec §10): AI and Strategy+AI modes are locked for every tier, Ultimate included, until an admin records independent validation (`POST /api/admin/ai-execution {validated, note}`, audit-logged; setting `ai_execution_validated`, default off). The extension stores the server entitlements (`kaosEntitlements`) at startup and only allows its local autonomous-AI execution path when `aiExecutionLocked === false` and `modes` includes `AI` (fails closed when unknown). Without that entitlement the legacy AI controller (`aiCtrlApply`, not on the live execution path) is advisory-only and cannot place, veto or override a strategy trade. Chart limits: Free 1, Pro 4, Ultimate 4 (founder decision 2026-10-18: Ultimate differentiates with signals, scanners and validated AI, not chart count) — `chartLimit` entitlement. Enforced in the extension popup's 1–4 chart selector (options above the plan are disabled; unknown entitlements fail closed to 1), in the content script's per-chart strategy slots, and server-side via optional 0-based `chartSlot` on `/api/v1/trading/intelligence|signal|execution` (403 `chart_limit`) and `chartSlot` in `/api/v1/trading/events` payloads (rejected `chart_limit`). Four concurrent charts are not yet performance-tested; the web dashboard and mobile have no multi-chart trading view.
+## Still requiring real evidence or a business decision
+
+1. Install the tested release and confirm hosted registration, session restore, password reset and the official extension flow. Mail credentials and real delivery are not available in the development workspace.
+2. Stripe account authentication, isolated test checkout, signed webhooks, renewal/failure/recovery, cancellation, refund/dispute and ledger reconciliation must be demonstrated before a billing-capable live rollout. The current cPanel validation gate remains on. Arbitrary portal plan changes/proration and catalog migration are not certified.
+3. Payout settings are setup/accounting, not a connected active payout service. Provider permission, recipient onboarding, held/reversed balances and reconciliation need verification before release.
+4. Dedicated training-worker hosting is still the owner's deferred decision. No production pretrained model or profitable strategy was established by the recent research.
+5. Radar source settings and actual feed availability/rate budgets need checking on hosting. Do not imply unavailable sources are scanning or force shared-host CPU-heavy workers.
+6. Chrome Store review/submission and installed-broker chart/order behavior need direct verification. Do not create a replacement Store item or claim compatibility with planned brokers that have no working connector.
+
+No live hosting, payment, payout or strategy execution state can be inferred solely from GitHub commits. Use Admin → Launch Status for configuration evidence, then the hosted acceptance sequence in BUSINESS_LAUNCH.md.

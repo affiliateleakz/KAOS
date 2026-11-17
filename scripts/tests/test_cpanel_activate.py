@@ -278,3 +278,14 @@ assert os.waitstatus_to_exitcode(status) == 0, status
     wrapper.write_text(unsafe)
     old = subprocess.run([sys.executable, str(script), str(wrapper)], capture_output=True, timeout=15)
     assert old.returncode != 0, 'Regression fixture must reproduce the inherited-lock hang'
+
+
+def test_full_install_records_verified_revision_only_after_files_install(tmp_path):
+    import json
+    site,web,backend=inputs(tmp_path)
+    activation.install(site,web,backend,'a'*40)
+    marker=site/'backend/apps/api/deployed_release.json'
+    assert json.loads(marker.read_text())['revision']=='a'*40
+    assert marker.stat().st_mode & 0o777==0o600
+    with pytest.raises(ValueError):activation.install(site,web,backend,'invalid')
+    assert json.loads(marker.read_text())['revision']=='a'*40
