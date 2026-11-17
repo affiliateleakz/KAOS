@@ -4,10 +4,11 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
 (async()=>{
  const BASE=process.env.KAOS_EXTENSION_PREVIEW_URL,root=path.resolve(__dirname,'../..');
  const fixture=JSON.parse(fs.readFileSync(root+'/apps/extension/fixtures/micro-paper-parity.json'));
+ const model=JSON.parse(fs.readFileSync(root+'/downloads/KAOS-Micro-Reversion-Paper-Model.json'));
  const browser=await chromium.launch({executablePath:process.env.CHROME_BIN,headless:true,args:['--no-sandbox']});
  try{
  const page=await browser.newPage({viewport:{width:1000,height:850},acceptDownloads:true});const errors=[],calls=[];page.on('pageerror',e=>errors.push(e.message));
- await page.addInitScript(()=>{window.permissionRequests=[];window.chrome={permissions:{request:async options=>{window.permissionRequests.push(options);return true;}}};});
+ await page.addInitScript(model=>{window.permissionRequests=[];window.modelMessages=[];window.chrome={runtime:{sendMessage:async msg=>{window.modelMessages.push(msg.type);return {ok:true,data:{model}};}},permissions:{request:async options=>{window.permissionRequests.push(options);return true;}}};},model);
  const seconds=fixture.rows.flatMap(b=>Array.from({length:5},(_,i)=>[b.ts+i*1000,String(b.open),String(b.high),String(b.low),String(b.close),'1',b.ts+i*1000+999,'1',1]));
  await page.route('**/*',route=>{
   const url=new URL(route.request().url());if(url.origin===new URL(BASE).origin)return route.continue();
@@ -16,7 +17,7 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
   const limit=Number(url.searchParams.get('limit')),end=url.searchParams.get('endTime');
   return route.fulfill({json:seconds.filter(r=>!end||r[0]<=Number(end)).slice(-limit)});
  });
- await page.goto(BASE+'/kaos-micro-paper.html');assert.equal(await page.getByRole('button',{name:'Start live paper feed'}).isDisabled(),true);assert.equal(calls.length,0);
+ await page.goto(BASE+'/kaos-micro-paper.html');await page.getByText('Owner research model loaded from KAOS',{exact:false}).waitFor();assert.equal(await page.getByRole('button',{name:'Start live paper feed'}).isEnabled(),true);assert.equal(calls.length,0);assert.deepEqual(await page.evaluate(()=>modelMessages),['KAOS_GET_RESEARCH_MODEL']);
  await page.locator('#model-file').setInputFiles(root+'/downloads/KAOS-Micro-Reversion-Paper-Model.json');
  await page.getByText('Experimental model loaded locally',{exact:false}).waitFor();
  await page.getByRole('button',{name:'Start live paper feed'}).click();

@@ -25,3 +25,11 @@ test('warmup history alone cannot create live paper trades',()=>{
 test('invalid or duplicated bars and unsupported markets are rejected',()=>{
  assert.throws(()=>new PaperSession(model,'EURUSD_otc'));const ctx=new Context(),row=bars(1)[0];ctx.push(row);assert.throws(()=>ctx.push(row));assert.throws(()=>new Context().push({...row,closeTs:row.ts+4000}));
 });
+test('public second aggregation excludes partial and empty buckets',()=>{
+ const {aggregateSeconds}=require('./kaos-micro-paper-core.js'),ts=1791244800000;
+ const rows=Array.from({length:5},(_,i)=>[ts+i*1000,'100','101','99','100.5','1',ts+i*1000+999,'1',1]);
+ assert.equal(aggregateSeconds(rows,ts+5000).length,1);
+ assert.equal(aggregateSeconds(rows.slice(0,4),ts+5000).length,0);
+ assert.equal(aggregateSeconds(rows.map(r=>{const c=[...r];c[8]=0;return c;}),ts+5000).length,0);
+ assert.equal(aggregateSeconds(rows,ts+4000).length,0);
+});

@@ -1,3 +1,19 @@
+# Website and extension paper model — 1.7.33
+
+The owner research model now ships in the backend at `apps/api/research_models/micro_reversion_v1.json`. An authenticated super-admin-only GET endpoint (`/api/v1/ai/research/micro-reversion`) returns it with `Cache-Control: private, no-store`. It is not added to the normal model registry, and ordinary Pro/Ultimate members cannot request it.
+
+After installing the latest website/backend package and restarting the API:
+
+- Website: sign in as super admin → KAOS AI → Open experimental paper test. The model loads automatically; no JSON upload is needed.
+- Extension: update the existing unpacked extension to 1.7.33 → Bot → Open paper test. It loads the same owner model through the authenticated background client. A manual model-file fallback remains available if the backend is unavailable.
+- Choose a crypto market and click Start live paper feed, or replay a local five-second candle file. Defaults retain the known one-basis-point adverse entry assumption. Export before closing or changing tests.
+
+Website testing runs in the browser with direct GET requests to the public Binance data host only after Start. It does not add polling or training work to the shared hosting server. The website and extension use the same paper engine and source-second aggregator. Model weights are not bundled into public website JavaScript or the extension package. Stop/unmount aborts requests and clears timers. These controls do not connect to a broker or execute orders.
+
+The frozen model failed the adverse-fill gate and remains owner-only research. Neither installation nor model loading publishes it to members or enables live execution. The site/privacy source and deployment packages have been prepared; installing them on hosting is a separate terminal action.
+
+Historical 1.7.32 manual setup notes follow for existing builds.
+
 # Micro Reversion paper test — extension 1.7.32
 
 This adds an isolated research test page to the existing KAOS extension. It does not replace the production KAOS Strategy, install a trained model for all members, connect to a broker, or submit orders. Official Chrome Store identity and Google sign-in configuration are retained.

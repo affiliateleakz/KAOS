@@ -873,6 +873,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           sendResponse({ ok: true, state }); break;
         }
         case 'KAOS_LOGOUT': await kaosStopBrokerIntegration(); await self.KaosCloud.logout(); sendResponse({ ok: true }); break;
+        case 'KAOS_GET_RESEARCH_MODEL': {
+          const response=await self.KaosCloud.authFetch('/ai/research/micro-reversion',{method:'GET',cache:'no-store'});
+          sendResponse(response.ok?{ok:true,data:await response.json()}:{ok:false,error:'Owner research model unavailable. Sign in as super admin and update the website backend.'});break;
+        }
         case 'KAOS_GET_TRAINED_MODEL': {
           const scope=typeof msg.scope==='string'&&/^pocket_option:binary:5s:(15|20|25|30|45|60)s:(real|paper)$/.test(msg.scope)?msg.scope:'pocket_option:binary:5s:20s:real';
           const response = await self.KaosCloud.authFetch('/ai/training/bundle?scope='+encodeURIComponent(scope), {method:'GET'});

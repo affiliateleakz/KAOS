@@ -50,5 +50,10 @@ class PaperSession{
  }
  summary(){const wins=this.results.filter(r=>r.outcome==='WIN').length,losses=this.results.filter(r=>r.outcome==='LOSS').length;return {symbol:this.symbol,wins,losses,ties:this.results.length-wins-losses,winRate:wins+losses?wins/(wins+losses):null,pnl:this.results.reduce((s,r)=>s+r.pnl,0),gaps:this.gaps,cancelled:this.cancelled,open:Boolean(this.open),pending:Boolean(this.pending),warmup:this.context.count,researchOnly:true,executionEnabled:false};}
 }
-const api={Context,score,PaperSession};if(typeof module!=='undefined')module.exports=api;else root.KAOSMicroPaper=api;
+function aggregateSeconds(rows,now){
+ const groups=new Map();for(const r of rows){const ts=Number(r[0]);if(Number(r[6])>=now)continue;const bucket=Math.floor(ts/5000)*5000;const group=groups.get(bucket)||[];group.push(r);groups.set(bucket,group);}
+ const output=[];for(const [ts,group] of [...groups].sort((a,b)=>a[0]-b[0])){group.sort((a,b)=>a[0]-b[0]);if(group.length!==5||group.some((r,i)=>Number(r[0])!==ts+i*1000)||ts+5000>now||!group.some(r=>Number(r[8])>0))continue;output.push({ts,closeTs:ts+5000,open:Number(group[0][1]),high:Math.max(...group.map(r=>Number(r[2]))),low:Math.min(...group.map(r=>Number(r[3]))),close:Number(group[4][4])});}return output;
+}
+
+const api={Context,score,PaperSession,aggregateSeconds};if(typeof module!=='undefined')module.exports=api;else root.KAOSMicroPaper=api;
 })(typeof window!=='undefined'?window:globalThis);

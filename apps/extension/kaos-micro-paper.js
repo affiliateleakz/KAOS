@@ -19,10 +19,7 @@ function validModel(data){
 function create(){const payout=Number($('payout').value)/100,adverseBps=Number($('adverse').value);session=new KAOSMicroPaper.PaperSession(model,$('symbol').value,{payout,adverseBps});startedAt=new Date().toISOString();}
 $('model-file').addEventListener('change',async event=>{try{stop();$('error').textContent='';const file=event.target.files[0];if(!file)return;if(file.size>250000)throw Error('Model file is too large');model=validModel(JSON.parse(await file.text()));session=null;$('model-status').textContent='Experimental model loaded locally · failed adverse-fill gate · paper only';message('Ready. Choose live public paper feed or a historical candle replay.');render();}catch(e){model=null;session=null;$('error').textContent=e.message;controls();}});
 async function api(path,params,gen){const response=await fetch(BASE+path+(params?'?'+new URLSearchParams(params):''),{signal:AbortSignal.any([controller.signal,AbortSignal.timeout(15000)]),credentials:'omit',cache:'no-store'});if(gen!==generation)throw new DOMException('Stopped','AbortError');if(!response.ok)throw Error('Public price feed returned HTTP '+response.status+'. Try later or use a local candle replay.');return response.json();}
-function aggregate(rows,now){
- const groups=new Map();for(const r of rows){const ts=Number(r[0]);if(Number(r[6])>=now)continue;const bucket=Math.floor(ts/5000)*5000;const group=groups.get(bucket)||[];group.push(r);groups.set(bucket,group);}
- const output=[];for(const [ts,group] of [...groups].sort((a,b)=>a[0]-b[0])){group.sort((a,b)=>a[0]-b[0]);if(group.length!==5||group.some((r,i)=>Number(r[0])!==ts+i*1000)||ts+5000>now||!group.some(r=>Number(r[8])>0))continue;output.push({ts,closeTs:ts+5000,open:Number(group[0][1]),high:Math.max(...group.map(r=>Number(r[2]))),low:Math.min(...group.map(r=>Number(r[3]))),close:Number(group[4][4])});}return output;
-}
+const aggregate=KAOSMicroPaper.aggregateSeconds;
 $('start').addEventListener('click',async()=>{
  $('error').textContent='';running=true;const gen=++generation;controller=new AbortController();controls();
  try{
@@ -43,5 +40,12 @@ $('candles-file').addEventListener('change',async event=>{
  try{stop();$('error').textContent='';const file=event.target.files[0];if(!file)return;if(file.size>40000000)throw Error('Use one market JSON under 40 MB');const data=JSON.parse(await file.text()),symbol=$('symbol').value,rows=data.markets?.[symbol];if(!Array.isArray(rows)||!rows.length||rows.length>600000)throw Error('Choose a five-second public candle JSON for '+symbol);create();mode='historical-replay';for(const row of rows)session.step(row);message('Historical paper replay complete. These are not forward-test results.');render();}catch(e){session=null;$('error').textContent=e.message;render();}
 });
 $('export').addEventListener('click',()=>{if(!session)return;const data={kind:'KAOS-Micro-Reversion-Paper-Test',version:1,mode,startedAt,exportedAt:new Date().toISOString(),symbol:session.symbol,modelSource: model.source_sha256,assumedPayout:session.payout,adverseEntryBps:session.adverseBps,expirySeconds:15,summary:session.summary(),openPosition:session.open,pendingSignal:session.pending,results:session.results,executionEnabled:false,researchOnly:true};const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='KAOS-paper-'+session.symbol+'-'+Date.now()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
+async function loadOwnerModel(){
+ if(typeof chrome==='undefined'||!chrome.runtime?.sendMessage)return;
+ $('model-status').textContent='Loading your owner research model from KAOS…';
+ try{const response=await chrome.runtime.sendMessage({type:'KAOS_GET_RESEARCH_MODEL'});if(!response?.ok)throw Error(response?.error||'Research model unavailable');model=validModel(response.data?.model);$('model-status').textContent='Owner research model loaded from KAOS · paper only';message('Ready. Start the paper feed when you choose.');render();}
+ catch(e){$('model-status').textContent=e.message+' You can also import the separate paper-model JSON.';}
+}
+loadOwnerModel();
 window.addEventListener('beforeunload',()=>{clearTimeout(timer);controller?.abort();});render();
 })();
