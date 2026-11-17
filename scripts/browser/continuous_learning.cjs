@@ -42,7 +42,8 @@ const assert=require('node:assert/strict');
  role='super_admin';await page.goto(BASE+'/admin/kaos-ai');
  await page.getByTestId('continuous-training-admin').waitFor();
  await page.getByText('Worker: Not running / deployment pending · Last phase: Not deployed',{exact:true}).waitFor();
- await page.getByRole('button',{name:'Queue my owner model',exact:true}).click();
+ const ownerQueued=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/admin/ai/continuous/owner/train');
+ await page.getByRole('button',{name:'Queue my owner model',exact:true}).click();await ownerQueued;
  assert.equal(requests.at(-1).owner,true);assert.deepEqual(errors,[]);
  console.log('Private untrained AI, required learning disclosure/no opt-in, queued training, truthful worker status, sourced IPO/ICO states, owner queue and mobile layout passed.');
  }finally{await browser.close();}

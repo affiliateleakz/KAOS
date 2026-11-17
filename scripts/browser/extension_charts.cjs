@@ -87,6 +87,7 @@ const assert=require('node:assert/strict');
  await page.goto(BASE+'/popup.html?restored');
  await page.waitForFunction(()=>document.getElementById('screen-main')?.classList.contains('active'),{timeout:15000});
  assert.ok(!(await page.evaluate(()=>window.testMessages)).some(m=>m.type==='START_BOT'));
+ assert.equal(await page.getByRole('button',{name:'Open paper test',exact:true}).isVisible(),true);
  console.log('Restored authorized session reached the companion.');
  await page.waitForFunction(()=>window.__kaosChartSessionInitialized===true);
  const checksBefore=await page.evaluate(()=>window.testMessages.filter(m=>m.type==='KAOS_STARTUP').length);

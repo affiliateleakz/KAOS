@@ -110,7 +110,7 @@ jobs:
           python -m pip install pytest
           python -m pytest -q apps/extension/test_broker_login_isolation.py
       - name: Test extension login runtime compatibility
-        run: node --test apps/extension/test_cloud_login.cjs apps/extension/test_chart_session.cjs apps/extension/test_chart_data_audit.cjs apps/extension/test_companion_window.cjs
+        run: node --test apps/extension/test_cloud_login.cjs apps/extension/test_chart_session.cjs apps/extension/test_chart_data_audit.cjs apps/extension/test_companion_window.cjs apps/extension/test_micro_paper.cjs
       - name: Syntax-check extension JavaScript
         run: |
           node --check apps/extension/background.js

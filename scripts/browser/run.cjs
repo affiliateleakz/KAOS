@@ -27,6 +27,6 @@ function check(name,env){return new Promise((resolve,reject)=>{
  const ext=await serve(path.join(root,'apps/extension'));
  const chrome=process.env.CHROME_BIN || ['/usr/bin/chromium','/usr/bin/google-chrome','/opt/google/chrome/chrome'].find(file=>fs.existsSync(file));
  const env={...process.env,KAOS_WEB_PREVIEW_URL:web.url,KAOS_EXTENSION_PREVIEW_URL:ext.url,...(chrome?{CHROME_BIN:chrome}:{})};
- try{for(const name of ['auth_login.cjs','registration_memberships.cjs','annual_memberships.cjs','membership_access.cjs','restored_website.cjs','interactive_bubbles.cjs','radar_workflow.cjs','continuous_learning.cjs','community_network.cjs','affiliate_hub.cjs','commerce_setup.cjs','admin_membership_plans.cjs','extension_charts.cjs','content_candles.cjs'])await check(name,env);}
+ try{for(const name of ['auth_login.cjs','registration_memberships.cjs','annual_memberships.cjs','membership_access.cjs','restored_website.cjs','interactive_bubbles.cjs','radar_workflow.cjs','continuous_learning.cjs','community_network.cjs','affiliate_hub.cjs','commerce_setup.cjs','admin_membership_plans.cjs','extension_charts.cjs','micro_paper.cjs','content_candles.cjs'])await check(name,env);}
  finally{web.server.close();ext.server.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});
