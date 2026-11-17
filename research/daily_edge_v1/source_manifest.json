@@ -1,0 +1,87 @@
+{
+  "retrievedAt": "2026-11-17T04:54:38.745952+00:00",
+  "plan_sha256": "8f0bcb3fd96cb4059f4d16083b641a47f82ae317a4283cd1009d998ef35d3220",
+  "assets": {
+    "SPY": {
+      "kind": "stocks",
+      "file": "SPY.json",
+      "bars": 4781,
+      "invalid_rows": 0,
+      "dividends": 76,
+      "sha256": "ed03b3658894573f6d224d1f6a79d8dcbf6042b1a9c5e662a87dd95ae570ca6a"
+    },
+    "QQQ": {
+      "kind": "stocks",
+      "file": "QQQ.json",
+      "bars": 4781,
+      "invalid_rows": 0,
+      "dividends": 79,
+      "sha256": "b3009d501fa9cab4f03f7787bd808594e4e6c42cbf7ba2ec00d4021681f0600f"
+    },
+    "IWM": {
+      "kind": "stocks",
+      "file": "IWM.json",
+      "bars": 4781,
+      "invalid_rows": 0,
+      "dividends": 76,
+      "sha256": "045a37777bf2f4783009673d5e95c58b2c6331eb5f741cdd183572ebd1dac6e0"
+    },
+    "DIA": {
+      "kind": "stocks",
+      "file": "DIA.json",
+      "bars": 4781,
+      "invalid_rows": 0,
+      "dividends": 227,
+      "sha256": "aa599f58c304724e4a29e397cf7628b204d935bd42a946cbd21da59ad5fafe76"
+    },
+    "BTC-USD": {
+      "kind": "crypto",
+      "file": "BTC-USD.json",
+      "bars": 3759,
+      "invalid_rows": 0,
+      "dividends": 0,
+      "sha256": "c3ab30425873cb606d86247a33094d12e05e55d4c2227390e10f378e12dd0a7e"
+    },
+    "ETH-USD": {
+      "kind": "crypto",
+      "file": "ETH-USD.json",
+      "bars": 2610,
+      "invalid_rows": 0,
+      "dividends": 0,
+      "sha256": "282275462be3670bb7324f44d6364a0c427ce8338a0a50a7e98a82841e09825f"
+    },
+    "EURUSD=X": {
+      "kind": "forex",
+      "file": "EURUSD_X.json",
+      "bars": 4823,
+      "invalid_rows": 134,
+      "dividends": 0,
+      "sha256": "bdf2ab74bf0c9e2480fec13298bfe94b711882bc5a63f1a7554898d417db19a4"
+    },
+    "GBPUSD=X": {
+      "kind": "forex",
+      "file": "GBPUSD_X.json",
+      "bars": 4854,
+      "invalid_rows": 103,
+      "dividends": 0,
+      "sha256": "dde19eb8450fbb7d0f8a403cceb803a7325bc1a9639794b04f2d573907c9e8e4"
+    },
+    "USDJPY=X": {
+      "kind": "forex",
+      "file": "USDJPY_X.json",
+      "bars": 4697,
+      "invalid_rows": 260,
+      "dividends": 0,
+      "sha256": "19034651fc43200a6236aaa58d81883b5bdfda1f708ea6ad7fbac9c5b6957fa1"
+    },
+    "AUDUSD=X": {
+      "kind": "forex",
+      "file": "AUDUSD_X.json",
+      "bars": 4724,
+      "invalid_rows": 137,
+      "dividends": 0,
+      "sha256": "0ce009285c76c11f87958816f1c79d4fbab6d3b2eb46bcb37f827b9254681b45"
+    }
+  },
+  "live_approved": false
+}
