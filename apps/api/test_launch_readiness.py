@@ -1,5 +1,7 @@
 """Owner-only read-only launch evidence, never a false launch certification."""
 import asyncio
+from copy import deepcopy
+import pytest
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from fastapi import FastAPI
@@ -17,7 +19,7 @@ class Cursor:
 def test_launch_report_does_not_expose_credentials_or_claim_verified_launch(monkeypatch):
     db=SimpleNamespace(ai_worker_state=SimpleNamespace(find_one=AsyncMock(return_value=None)),ai_training_models=SimpleNamespace(count_documents=AsyncMock(return_value=0)),webhook_events=SimpleNamespace(find=lambda *a:Cursor()))
     monkeypatch.setattr(launch,'db',db)
-    monkeypatch.setattr(launch,'get_plans',AsyncMock(return_value=[{'id':key,'amount':amount} for key,amount in {'pro':2995,'pro_yearly':29995,'ultimate':9995,'ultimate_yearly':99595}.items()]))
+    monkeypatch.setattr(launch,'get_plans',AsyncMock(return_value=deepcopy(launch.DEFAULT_PLANS)))
     monkeypatch.setattr(launch,'availability',AsyncMock(return_value={'configurationReady':True,'checkoutEnabled':False,'mode':'live','note':'Validation mode blocks billing'}))
     monkeypatch.setattr(launch.commerce_providers,'document',AsyncMock(return_value={'encrypted':{'secret_key':'fixture-secret-ciphertext'},'lastCheck':{'ok':True,'mode':'sandbox'}}))
     result=asyncio.run(launch.report());checks={c['id']:c for c in result['checks']}
@@ -40,3 +42,31 @@ def test_launch_endpoint_requires_super_admin(monkeypatch):
         app.dependency_overrides[get_current_user]=lambda:{'id':'owner','role':'super_admin'}
         response=client.get(path)
         assert response.status_code==200 and response.headers['cache-control']=='private, no-store'
+
+
+@pytest.mark.parametrize('field,value', [('interval','month'),('currency','eur'),('tier','pro')])
+def test_matching_price_cannot_hide_wrong_yearly_period_or_tier(field,value):
+    plans=deepcopy(launch.DEFAULT_PLANS)
+    next(p for p in plans if p['id']=='ultimate_yearly')[field]=value
+    assert not launch.catalog_matches(plans)
+
+
+@pytest.mark.parametrize('field,value', [('chartLimit',1),('deviceLimit',1),
+                                      ('aiTraining',False),('pretrainedModels',False)])
+def test_matching_prices_do_not_hide_missing_ultimate_tools(field,value):
+    plans=deepcopy(launch.DEFAULT_PLANS)
+    next(p for p in plans if p['id']=='ultimate')['entitlements'][field]=value
+    assert not launch.catalog_matches(plans)
+
+
+def test_catalog_rejects_duplicates_and_disabled_tiers_but_preserves_custom_settings():
+    plans=deepcopy(launch.DEFAULT_PLANS)
+    assert launch.catalog_matches(plans)
+    assert not launch.catalog_matches(plans+[deepcopy(plans[0])])
+    plans[0]['enabled']=False
+    assert not launch.catalog_matches(plans)
+    plans[0]['enabled']=True
+    plans[0]['amount']=3000
+    before=deepcopy(plans)
+    assert not launch.catalog_matches(plans)
+    assert plans==before  # A review flag must never overwrite an owner's saved catalog.

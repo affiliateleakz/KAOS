@@ -4,7 +4,7 @@ from pathlib import Path
 from fastapi import APIRouter,Depends,Response
 from auth import require_role
 from db import db,now_iso
-from routes_billing import get_plans
+from routes_billing import get_plans,DEFAULT_PLANS
 from stripe_runtime import availability
 import commerce_providers
 from mail_delivery import smtp_ready
@@ -28,14 +28,28 @@ def installed_release():
     except (OSError,ValueError,TypeError):return None
 
 
+def catalog_matches(plans):
+    """Check billing periods and delivered tier limits as well as displayed prices."""
+    if not isinstance(plans,list) or any(not isinstance(p,dict) for p in plans):return False
+    active=[p for p in plans if p.get('enabled',True) is True]
+    if len(active)!=len(DEFAULT_PLANS):return False
+    for expected in DEFAULT_PLANS:
+        matches=[p for p in active if p.get('id')==expected['id']]
+        if len(matches)!=1:return False
+        plan=matches[0];entitlements=plan.get('entitlements')
+        if not isinstance(entitlements,dict):return False
+        if any(plan.get(key)!=expected[key] for key in ('amount','currency','interval','tier')):return False
+        if any(entitlements.get(key)!=expected['entitlements'][key]
+               for key in ('chartLimit','deviceLimit','aiTraining','pretrainedModels')):return False
+    return True
+
+
 async def report():
     plans=await get_plans();stripe=await availability();provider=await commerce_providers.document('stripe')
     worker=await db.ai_worker_state.find_one({'_id':'continuous'},{'_id':0,'heartbeat':1}) or {}
     published=await db.ai_training_models.count_documents({'audience':'shared','state':'published','createdAtMs':{'$gt':(time.time()-30*86400)*1000}})
     events=await db.webhook_events.find({'state':'completed'},{'_id':0,'type':1,'livemode':1,'createdAt':1}).sort('createdAt',-1).limit(8).to_list(8)
-    expected={'pro':2995,'pro_yearly':29995,'ultimate':9995,'ultimate_yearly':99595}
-    prices={p['id']:p.get('amount') for p in plans if p.get('enabled',True)}
-    pricing=all(prices.get(k)==v for k,v in expected.items())
+    pricing=catalog_matches(plans)
     last=provider.get('lastCheck') or {};mode='live' if stripe['mode']=='live' else 'sandbox'
     connection=bool(stripe.get('configurationReady')) and last.get('ok') is True and last.get('mode')==mode
     smtp=smtp_ready()
@@ -43,7 +57,7 @@ async def report():
     google=bool(os.getenv('KAOS_GOOGLE_WEB_CLIENT_ID'))
     extension_google=bool(os.getenv('KAOS_GOOGLE_EXTENSION_CLIENT_ID'))
     checks=[
-        check('plans','Membership catalog','configured' if pricing else 'needs_review','Current target: Free $0; Pro $29.95/month or $299.95/year; Ultimate $99.95/month or $995.95/year.','Review and save actual configured plans.','/admin/settings'),
+        check('plans','Membership catalog','configured' if pricing else 'needs_review','Current target: Free $0; Pro $29.95/month or $299.95/year; Ultimate $99.95/month or $995.95/year.','In Settings, choose Use current KAOS plans, review prices and tools, then Save Plans. Existing subscriptions are not repriced.','/admin/settings'),
         check('stripe_config','Stripe credentials','configured' if stripe.get('configurationReady') else 'blocked',stripe.get('note','Not configured'),'Save matching payments key and signing secret.','/admin/commerce'),
         check('stripe_connection','Stripe account connection','checked' if connection else 'unverified','A saved API check is not proof of a charge, webhook, renewal or refund.','Run the saved-environment connection check.','/admin/commerce'),
         check('checkout','Membership checkout','activated' if stripe['checkoutEnabled'] else 'blocked',stripe.get('note','Checkout disabled'),'Finish isolated sandbox testing before a billing-capable live deployment.','/admin/commerce'),
