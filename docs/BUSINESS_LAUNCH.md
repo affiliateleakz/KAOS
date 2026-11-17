@@ -75,3 +75,15 @@ During this work, external GET requests to both `https://api.tradingwithkaos.com
 The website client now rejects an HTML verification/routing page as an API failure instead of accepting it as account data. The extension already distinguishes bot-verification/invalid-JSON responses. Neither client change bypasses a challenge or makes webhook delivery work through it.
 
 Hosting/support needs to investigate the API hostname's browser-verification/routing layer and allow legitimate browserless API and signature-verified Stripe webhook requests to reach Passenger without an interactive challenge. Confirm from an external client that GET `/api` returns JSON, and that Stripe's destination delivers signed POSTs to `/api/stripe/webhook` with the intended application response. An unsigned webhook may correctly return an application-level rejection; it must not receive an HTML challenge. Retain application authentication, signatures and rate controls. Do not interpret an outgoing Stripe account-key check as inbound webhook verification.
+
+## Repeatable public deployment check
+
+Run from the repository (local computer or cPanel; standard-library Python only):
+
+```bash
+python3 scripts/check_hosted_launch.py
+```
+
+On this cPanel account, use `/home/itsabout/virtualenv/tradingwithkaos.com/backend/3.11/bin/python` instead of `python3` if needed. This issues six bounded GET requests: health, public memberships and extension Google configuration with two client user agents, including the Store readiness checker. It checks website CORS, approved catalog prices and chart/device limits, and the official extension OAuth client/item configuration. It does not log response bodies or credentials, follow redirects, authenticate, change plans or send payments. Exit status 1 means a public check failed; even a passing report does not verify checkout, signed webhook delivery or an actual sign-in.
+
+The follow-up external check found health/catalog JSON reachable for one client while the Store checker still encountered bot verification. The public catalog exposed legacy `monthly` ($29/month) and `yearly` ($279/year) records, with checkout disabled by login-validation hosting. Repository defaults do not overwrite these saved database settings. To apply the approved catalog, open **Admin → Settings → Membership Plans → Use current KAOS plans**, review Pro $29.95/$299.95 and Ultimate $99.95/$995.95, then **Save Plans**. This changes the offered catalog, not existing Stripe subscription prices, and does not enable checkout. Re-run the public check afterward. If older code lacks the button, deploy/restart the tested release first.
