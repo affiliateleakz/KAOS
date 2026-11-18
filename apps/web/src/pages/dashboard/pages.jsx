@@ -288,7 +288,7 @@ export function Subscription() {
   useEffect(()=>{const chosen=plans.find(p=>p.id===selectedPlan);if(chosen)setPeriod(chosen.interval||'month');},[plans,selectedPlan]);
   const checkout = async (lookup_key) => { try { const { data } = await api.post("/api/billing/checkout", { lookup_key, origin_url: window.location.origin }); window.location.href = data.checkout_url; } catch (e) { toast.error(errMsg(e)); } };
   const portal = async () => { try { const { data } = await api.post("/api/billing/portal", { lookup_key: "x", origin_url: window.location.origin }); window.location.href = data.url; } catch (e) { toast.error(errMsg(e)); } };
-  const cancel = async () => { try { await api.post("/api/billing/cancel"); toast.success("Cancellation scheduled for the end of your paid period"); } catch (e) { toast.error(errMsg(e)); } };
+  const cancel = async () => { try { await api.post("/api/billing/cancel"); toast.success(user?.membership_status==="TRIAL"?"Trial cancellation scheduled. It will not renew.":"Cancellation scheduled for the end of your current billing period"); } catch (e) { toast.error(errMsg(e)); } };
   return (
     <div>
       <H>Subscription & Billing</H>
@@ -296,12 +296,13 @@ export function Subscription() {
       {planError&&<p role="alert" className="mb-4 text-amber-200">{planError}</p>}
       {billing&&!billing.checkoutEnabled&&<p role="status" className="mb-5 rounded border border-[#8a6b32] p-4 text-sm text-[#e8c46f]">Compare memberships below. Online checkout is not available yet; no payment will be taken here.</p>}
       <div className="card-surface mb-6 flex items-center justify-between p-5">
-        <div><div className="label-mono">Current status</div><div className="mt-2"><StatusBadge value={user?.membership_status} /></div></div>
+        <div><div className="label-mono">Current status</div><div className="mt-2"><StatusBadge value={user?.membership_status} /></div>{user?.membership_status==="TRIAL"&&<p className="mt-2 text-sm text-[#e8c46f]">Your Pro trial ends {user.membership_expires_at?new Date(user.membership_expires_at).toLocaleString():"on the date shown in Stripe"}. Cancel before then to avoid renewal.</p>}</div>
         <div className="flex gap-2">
           <Button data-testid="billing-portal-button" disabled={!billing?.checkoutEnabled} onClick={portal} variant="outline" className="border-[#3A3A3A] bg-transparent text-white"><CreditCard className="mr-2 h-4 w-4" />Manage billing</Button>
-          {user?.membership_status === "ACTIVE" && <Button data-testid="cancel-subscription-button" onClick={cancel} variant="outline" className="border-[#C62828]/30 bg-transparent text-[#C62828]">Cancel</Button>}
+          {["ACTIVE","TRIAL"].includes(user?.membership_status) && <Button data-testid="cancel-subscription-button" onClick={cancel} variant="outline" className="border-[#C62828]/30 bg-transparent text-[#C62828]">Cancel</Button>}
         </div>
       </div>
+      {billing?.checkoutEnabled&&!["ACTIVE","TRIAL"].includes(user?.membership_status)&&plans.some(p=>p.id==="pro"&&p.interval==="month")&&<Link to="/checkout?plan=pro&trial=1" className="mb-5 inline-block rounded bg-[#d4af37] px-5 py-3 font-semibold text-black">7-day free trial</Link>}
       <BillingPeriodToggle value={period} onChange={setPeriod} plans={plans}/>
       <div className="grid gap-6 md:grid-cols-2">
         {plansForInterval(plans,period).map((p) => (

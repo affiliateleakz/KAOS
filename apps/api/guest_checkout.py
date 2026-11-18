@@ -11,6 +11,7 @@ import stripe
 from db import db, now, now_iso
 from auth import get_current_user
 import routes_billing as billing
+import subscription_trial as trials
 from stripe_runtime import active_configuration
 from mail_delivery import account_mail_ready
 
@@ -19,6 +20,8 @@ COOKIE = "kaos_guest_checkout"
 
 
 class Intent(BaseModel):
+    name: str = Field(default="", max_length=120)
+    start_trial: bool = False
     plan_id: str = Field(min_length=1, max_length=64)
     email: EmailStr
     refCode: str | None = Field(default=None, max_length=128)
@@ -105,6 +108,10 @@ async def intent(req: Intent, request: Request, response: Response):
     )
     if not plan:
         raise HTTPException(400, "Choose a current paid membership")
+    if req.start_trial and not trials.eligible_plan(plan):
+        raise HTTPException(
+            400, "The 7-day free trial is available on Pro monthly only"
+        )
     email = str(req.email).strip().lower()
     if await db.users.find_one({"email": email}):
         raise HTTPException(
@@ -126,9 +133,11 @@ async def intent(req: Intent, request: Request, response: Response):
     ours = prior and hmac.compare_digest(prior.get("secret_hash", ""), digest(secret))
     if ours and prior.get("stripe_mode") == config["mode"]:
         same = (
-            prior["email"] == email
+            bool(prior.get("trial_requested")) == req.start_trial
+            and prior["email"] == email
             and prior["plan"]["id"] == plan["id"]
             and prior["plan"]["amount"] == plan["amount"]
+            and prior["plan"].get("currency") == plan.get("currency")
             and prior["plan"]["interval"] == plan["interval"]
         )
         if same and prior.get("session_id"):
@@ -196,6 +205,8 @@ async def intent(req: Intent, request: Request, response: Response):
     row = {
         "_id": pid,
         "email": email,
+        "name": req.name.strip(),
+        "trial_requested": req.start_trial,
         "secret_hash": digest(secret),
         "plan": plan,
         "stripe_mode": config["mode"],
@@ -269,7 +280,23 @@ async def checkout(request: Request, response: Response):
             )
         plan = purchase["plan"]
         price = await billing._price(plan, config)
-        metadata = {"guest_purchase_id": purchase["_id"], "plan_id": plan["id"]}
+        requested = bool(purchase.get("trial_requested"))
+        trial_fields = {}
+        if requested:
+            key = await trials.reserve(purchase["email"], config, purchase["_id"])
+            trial_fields = {
+                "trial_key": key,
+                "trial_owner": purchase["_id"],
+                "trial_days": trials.TRIAL_DAYS,
+            }
+            await db.guest_purchases.update_one(
+                {"_id": purchase["_id"]}, {"$set": trial_fields}
+            )
+        metadata = {
+            "guest_purchase_id": purchase["_id"],
+            "plan_id": plan["id"],
+            **({"kaos_trial_days": str(trials.TRIAL_DAYS)} if requested else {}),
+        }
         from os import environ
 
         base = environ["FRONTEND_URL"].rstrip("/")
@@ -279,13 +306,18 @@ async def checkout(request: Request, response: Response):
             idempotency_key="kaos-guest-session-" + config["mode"] + purchase["_id"],
             mode="subscription",
             customer=customer,
-            payment_method_types=["card"],
+            **({} if requested else {"payment_method_types": ["card"]}),
+            **trials.checkout_arguments(requested),
             line_items=[{"price": price, "quantity": 1}],
             metadata=metadata,
-            subscription_data={"metadata": metadata},
+            subscription_data=trials.subscription_arguments(metadata, requested),
             success_url=base + "/payment/complete?session_id={CHECKOUT_SESSION_ID}",
-            cancel_url=base + "/payment/cancel?" + urlencode({"plan": plan["id"]}),
+            cancel_url=base
+            + "/payment/cancel?"
+            + urlencode({"plan": plan["id"], **({"trial": "1"} if requested else {})}),
         )
+        if requested:
+            await trials.attach(key, purchase["_id"], session.id)
         await db.guest_purchases.update_one(
             {"_id": purchase["_id"]},
             {"$set": {"session_id": session.id, "state": "CHECKOUT"}},
@@ -294,6 +326,7 @@ async def checkout(request: Request, response: Response):
             {"_id": "guest:" + purchase["_id"]},
             {
                 "$setOnInsert": {
+                    **trial_fields,
                     "id": "guest:" + purchase["_id"],
                     "guest_purchase_id": purchase["_id"],
                     "session_id": session.id,
@@ -329,7 +362,10 @@ async def verified_payment(purchase):
         or meta.get("plan_id") != purchase["plan"]["id"]
     ):
         raise HTTPException(409, "Payment identity needs review")
-    if session.get("status") != "complete" or session.get("payment_status") != "paid":
+    if session.get("status") != "complete" or session.get("payment_status") not in (
+        "paid",
+        "no_payment_required",
+    ):
         return None
     detail = session.get("customer_details") or {}
     if str(detail.get("email", "")).lower() != purchase["email"]:
@@ -344,6 +380,11 @@ async def verified_payment(purchase):
         or billing.period_end(subscription) <= now().timestamp()
     ):
         raise HTTPException(409, "Subscription needs support review")
+    if (
+        session.get("payment_status") == "no_payment_required"
+        or subscription.get("status") == "trialing"
+    ):
+        await trials.verify(purchase, session, subscription, config)
     invoice = await asyncio.to_thread(
         stripe.Invoice.retrieve, invoice_id, api_key=config["key"]
     )
@@ -434,6 +475,8 @@ async def _fulfill(purchase, viewer=None):
             ),
             "emailSent": bool(purchase.get("invite_sent")),
             "receiptEmail": purchase["email"],
+            "trial": bool(purchase.get("trial_requested")),
+            "trialEndsAt": (user or {}).get("pro_trial_ends_at"),
         }
     verified = await verified_payment(purchase)
     if not verified:
@@ -445,7 +488,8 @@ async def _fulfill(purchase, viewer=None):
     if not user:
         doc = await auth._new_user_doc(
             purchase["email"],
-            (verified["session"].get("customer_details") or {}).get("name")
+            purchase.get("name")
+            or (verified["session"].get("customer_details") or {}).get("name")
             or purchase["email"],
             provider="stripe_checkout",
         )
@@ -487,6 +531,11 @@ async def _fulfill(purchase, viewer=None):
                 "stripe_subscription_id": verified["subscription"],
             },
             "$setOnInsert": {
+                **{
+                    k: purchase[k]
+                    for k in ("trial_key", "trial_owner", "trial_days")
+                    if k in purchase
+                },
                 "id": "guest:" + purchase["_id"],
                 "guest_purchase_id": purchase["_id"],
                 "session_id": purchase["session_id"],
@@ -522,6 +571,7 @@ async def _fulfill(purchase, viewer=None):
         )
         await billing._paid_invoice(invoice)
         await db.guest_invoice_events.delete_one({"_id": event["_id"]})
+    user = await db.users.find_one({"id": user["id"]})
     sent = await invite(purchase, user)
     await db.guest_purchases.update_one(
         {"_id": purchase["_id"]}, {"$set": {"state": "ACTIVE"}}
@@ -532,6 +582,8 @@ async def _fulfill(purchase, viewer=None):
         and user.get("auth_provider") == "stripe_checkout",
         "emailSent": sent,
         "receiptEmail": purchase["email"],
+        "trial": bool(purchase.get("trial_requested")),
+        "trialEndsAt": (user or {}).get("pro_trial_ends_at"),
     }
 
 
@@ -579,3 +631,49 @@ async def resend(session_id: str, request: Request):
         raise HTTPException(409, "Payment must be confirmed before account setup")
     user = await db.users.find_one({"id": purchase["user_id"]})
     return {"sent": await invite(purchase, user, True)}
+
+
+@router.post("/guest-cancel/{session_id}")
+async def cancel_trial_from_receipt(
+    session_id: str, request: Request, response: Response
+):
+    """Allow the buyer to stop renewal even before the setup email is delivered."""
+    response.headers["Cache-Control"] = "private, no-store"
+    purchase = await owned(request, session_id)
+    if not purchase.get("trial_requested") or purchase.get("state") != "ACTIVE":
+        raise HTTPException(409, "A confirmed trial receipt is required")
+    from stripe_runtime import configuration
+
+    config = await configuration()
+    if not config["ready"] or config["mode"] != purchase["stripe_mode"]:
+        raise HTTPException(503, "Billing management is temporarily unavailable")
+    record = await db.subscriptions.find_one(
+        {"session_id": session_id, "guest_purchase_id": purchase["_id"]}
+    )
+    sub_id = (record or {}).get("stripe_subscription_id")
+    if not sub_id:
+        raise HTTPException(503, "Trial subscription is still being linked")
+    subscription = await asyncio.to_thread(
+        stripe.Subscription.retrieve, sub_id, api_key=config["key"]
+    )
+    if (
+        billing.identity(subscription.get("customer")) != purchase["customer_id"]
+        or subscription.get("id") != sub_id
+    ):
+        raise HTTPException(409, "Trial subscription identity mismatch")
+    if subscription.get("status") == "canceled":
+        return {"cancelAtPeriodEnd": True}
+    if subscription.get("status") != "trialing":
+        raise HTTPException(409, "Sign in to manage your current paid subscription")
+    result = await asyncio.to_thread(
+        stripe.Subscription.modify,
+        sub_id,
+        cancel_at_period_end=True,
+        api_key=config["key"],
+        idempotency_key="kaos-trial-cancel-" + purchase["_id"],
+    )
+    if result.get("cancel_at_period_end") is not True:
+        raise HTTPException(
+            503, "Cancellation is not confirmed; retry or contact support"
+        )
+    return {"cancelAtPeriodEnd": True}

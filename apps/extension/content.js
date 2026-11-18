@@ -9946,6 +9946,13 @@ const t3MinConsensus = aiLearning ? 1 : 3;
   }
 
   function fireTrade(assetName, sig, tfKey, expiry, chartConfirmed = false, microConfirmed = false, microAssessment = null) {
+    if(botConfig?.kaosTrialExpiresAt&&!globalThis.KaosMembershipLease?.allowed(botConfig.kaosTrialExpiresAt)){
+      isRunning=false;
+      try{chrome.storage.local.set({botRunning:false});}catch(_){}
+      sendStatus('Pro trial ended. Manage your KAOS membership to start new entries.');
+      return;
+    }
+
     // V276.1: FOLLOWS POCKET OPTION — no account-type gate. Autonomous execution
     // runs on whatever account Pocket Option has active (DEMO or REAL); the
     // real/demo choice belongs to PO alone. The previous V198 demo-only gate
@@ -11682,6 +11689,7 @@ try {
     // ─────────────────────────────────────────────────────────
     // START BOT
     // ─────────────────────────────────────────────────────────
+    if(msg.type==='KAOS_MEMBERSHIP_LEASE'){if(botConfig)botConfig.kaosTrialExpiresAt=msg.expiresAt;sendResponse({ok:true});return false;}
     if (msg.type === 'START_BOT') {
       if (KAOS_AUDIT_READ_ONLY) { sendResponse({ok:false,error:'Trading disabled during release audit'}); return false; }
 

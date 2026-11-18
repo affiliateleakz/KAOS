@@ -21,7 +21,7 @@ export function PaymentSuccess() {
       try {
         const { data } = await api.get(`/api/billing/status/${encodeURIComponent(sessionId)}`);
         if(cancelled)return;
-        if (data.state === "active" || data.membershipStatus === "ACTIVE") { await refreshUser();if(!cancelled)setState("done");return; }
+        if (data.state === "active" || ["ACTIVE","TRIAL"].includes(data.membershipStatus)) { await refreshUser();if(!cancelled)setState("done");return; }
       } catch {}
       if(cancelled)return;
       if (++tries < 8) timer=setTimeout(poll, 2000);

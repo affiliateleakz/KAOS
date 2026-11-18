@@ -50,7 +50,7 @@ const assert=require('node:assert/strict');
     if(!account){
      await page.getByTestId('guest-checkout').waitFor();assert.equal(await page.locator('input[type=password]').count(),0);
      assert.equal(new URL(page.url()).searchParams.get('ref'),'KAOS-REF');
-     await page.getByTestId('checkout-email').fill('buyer@example.com');await page.getByRole('button',{name:'Continue to secure payment',exact:true}).click();
+     await page.getByTestId('checkout-name').fill('Buyer');await page.getByTestId('checkout-email').fill('buyer@example.com');await page.getByRole('button',{name:'Continue to secure payment',exact:true}).click();
      if(scenario==='login'){
       await page.getByRole('link',{name:'Sign in to continue this membership'}).click();await page.waitForURL('**/login?**');
       assert.equal(new URL(page.url()).searchParams.get('plan'),plan);

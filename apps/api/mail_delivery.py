@@ -41,3 +41,21 @@ async def send_smtp(to,subject,html):
 def account_mail_ready():
     key=os.getenv('EMERGENT_EMAIL_KEY','')
     return os.getenv('FRONTEND_URL','').startswith('https://') and (smtp_ready() or bool(key and not key.startswith('{')))
+
+
+async def send_account_email(to,subject,html):
+    """Transactional account mail only; no password/credential data in logs."""
+    if smtp_ready():return await send_smtp(to,subject,html)
+    key=os.getenv('EMERGENT_EMAIL_KEY','')
+    if not key or key.startswith('{'):return False
+    import httpx
+    base=os.getenv('INTEGRATION_PROXY_URL','').rstrip('/') or 'https://integrations.emergentagent.com'
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            result=await client.post(base+'/api/v1/email/send',headers={'X-Email-Key':key},
+                json={'to':[to],'subject':subject,'html':html,'from_name':'KAOS Trading'})
+            result.raise_for_status()
+        return True
+    except Exception as exc:
+        log.error('Account email delivery failed (%s)',type(exc).__name__)
+        return False

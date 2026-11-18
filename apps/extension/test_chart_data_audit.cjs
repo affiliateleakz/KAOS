@@ -54,16 +54,17 @@ test('trading release enables all four execution layers but retains explicit Sta
  }
  assert.match(fs.readFileSync(__dirname+'/popup.js','utf8'),/▶ START KAOS/);
 });
-for(const authorized of [false,true])test('Start Bot requires broker authorization: '+authorized,()=>{
+for(const [authorized,deadline] of [[false,null],[true,null],[true,'2000-01-01T00:00:00Z'],[true,'2999-01-01T00:00:00Z']])test('Start Bot requires broker authorization and valid deadline: '+authorized+' '+deadline,()=>{
  const begin=source.indexOf('chrome.runtime.onMessage.addListener('),end=source.indexOf('\nconst KAOS_PO_PATTERNS',begin);
  let listener;const botState={running:false},writes=[];
- const context={KAOS_AUDIT_READ_ONLY:false,kaosAuthorizedPo:authorized,botState,setTimeout(){},appendAiAudit(){},
+ const expected=authorized&&require('./kaos-membership-lease').allowed(deadline);
+ const context={self:{KaosMembershipLease:require('./kaos-membership-lease')},kaosTrialExpiresAt:deadline,KAOS_AUDIT_READ_ONLY:false,kaosAuthorizedPo:authorized,botState,setTimeout(){},appendAiAudit(){},
   chrome:{runtime:{onMessage:{addListener:cb=>listener=cb}},storage:{local:{set:()=>writes.push('storage')}},
    tabs:{update:async()=>{},reload:()=>writes.push('reload')}}};
  vm.runInNewContext(source.slice(begin,end),context);
  let response;listener({type:'START_BOT',tabId:42},{},r=>response=r);
- assert.equal(response.ok,authorized);assert.equal(botState.running,authorized);
- assert.deepEqual(writes,authorized?['storage','reload']:[]);
+ assert.equal(response.ok,expected);assert.equal(botState.running,expected);
+ assert.deepEqual(writes,expected?['storage','reload']:[]);
 });
 test('chart healing delegates to the worker and never directly injects page scripts',async()=>{
  const popup=fs.readFileSync(__dirname+'/popup.js','utf8'),start=popup.indexOf('async function kaosHealPoTab('),end=popup.indexOf('\nfunction kaosRenderEmptyChartState',start);

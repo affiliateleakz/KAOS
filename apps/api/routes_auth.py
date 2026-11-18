@@ -44,8 +44,8 @@ async def send_password_reset_email(to_email: str, token: str, account_setup: bo
             f'<p>This link expires in 1 hour and can be used once.</p></td></tr></table>')
     subject = f"Reset your {EMAIL_FROM_NAME} password"
     if account_setup:
-        subject = "Finish your paid KAOS account setup"
-        html = html.replace("We received a request to reset your", "Payment confirmed. Set up your").replace("Reset your password", "Create your password")
+        subject = "Finish your KAOS account setup"
+        html = html.replace("We received a request to reset your", "Membership confirmed. Set up your").replace("Reset your password", "Create your password")
     if smtp_ready():
         return await send_smtp(to_email,subject,html)
     try:
@@ -90,6 +90,7 @@ async def _new_user_doc(email, name, username=None, password=None, provider="pas
         "avatar": avatar,
         "bio": "",
         "auth_provider": provider,
+        "bot_trial_required": True,
         "google_id": google_id,
         "account_status": "active",
         "onboarding_step": 1,

@@ -1,7 +1,7 @@
 let kaosExpiryStorageQueue = Promise.resolve();
 // Pocket Option Auto Trader — background.js v5.2.0
 // KAOS cloud clients are loaded alongside the existing bot worker (broker execution untouched).
-importScripts('kaos-sync-client.js', 'kaos-learning-client.js', 'kaos-cloud.js');
+importScripts('kaos-membership-lease.js','kaos-sync-client.js', 'kaos-learning-client.js', 'kaos-cloud.js');
 
 const KAOS_AUDIT_READ_ONLY = false;
 let botState = { running: false, tabId: null, config: null };
@@ -267,6 +267,7 @@ chrome.alarms.create('keepAlive', { periodInMinutes: 0.5 });
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name !== 'keepAlive') return;
   if (!botState.running || !botState.tabId) return;
+  kaosRefreshTrialLease().catch(()=>{});
   chrome.tabs.sendMessage(botState.tabId, { type: 'PING' }, (resp) => {
     if (chrome.runtime.lastError || !resp) {
       // content.js is declared in manifest.json and is injected automatically.
@@ -329,6 +330,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === 'START_BOT') {
     if (KAOS_AUDIT_READ_ONLY) { sendResponse({ok:false,error:'Trading is disabled during the release audit; chart data remains available'}); return false; }
     if (!kaosAuthorizedPo) { sendResponse({ok:false,error:'KAOS sign-in and broker connection required'}); return false; }
+    if(!self.KaosMembershipLease.allowed(kaosTrialExpiresAt)){sendResponse({ok:false,error:'Your trial has expired. Manage your KAOS membership to start new entries.'});return false;}
+    msg.kaosTrialExpiresAt=kaosTrialExpiresAt;
     botState.running = true;
     botState.tabId   = msg.tabId;
     botState.config  = msg;
@@ -568,6 +571,8 @@ const KAOS_PO_BRIDGE_SCRIPT = 'kaos-authorized-po-bridge';
 const KAOS_PO_ENGINE_SCRIPT = 'kaos-authorized-po-engine';
 const KAOS_PO_SCRIPT_IDS = [KAOS_PO_BRIDGE_SCRIPT, KAOS_PO_ENGINE_SCRIPT];
 let kaosAuthorizedPo = false;
+let kaosTrialExpiresAt = null;
+let kaosTrialRefresh = null;
 let kaosBrokerGeneration = 0;
 const kaosAttachedTabIds = new Set();
 const kaosAttachAttemptAt = new Map();
@@ -608,13 +613,15 @@ async function kaosPermitBrokerIntegration() {
     {id:KAOS_PO_BRIDGE_SCRIPT, matches:KAOS_PO_PATTERNS,
      js:['po-bridge.js'], runAt:'document_start', world:'MAIN', persistAcrossSessions:false},
     {id:KAOS_PO_ENGINE_SCRIPT, matches:KAOS_PO_PATTERNS,
-     js:['candidate7b_strategy.js','kaos_expiry_collector.js','content.js','kaos-cloud-ui.js'],
+     js:['kaos-membership-lease.js','candidate7b_strategy.js','kaos_expiry_collector.js','content.js','kaos-cloud-ui.js'],
      css:['kaos-cloud-ui.css'], runAt:'document_idle', world:'ISOLATED', persistAcrossSessions:false}
   ]);
   if (generation !== kaosBrokerGeneration) {
     await chrome.scripting.unregisterContentScripts({ids:KAOS_PO_SCRIPT_IDS});
     throw new Error('KAOS session changed during broker connection');
   }
+  kaosTrialExpiresAt=self.KaosMembershipLease.fromLicense(state.license);
+  if(!self.KaosMembershipLease.allowed(kaosTrialExpiresAt))throw new Error('Your trial has expired. Manage your KAOS membership.');
   kaosAuthorizedPo = true;
   return state;
 }
@@ -1011,3 +1018,25 @@ chrome.runtime.onMessage.addListener((msg,sender,sendResponse)=>{
     }catch(e){sendResponse({ok:false,error:String(e.message||e)});}
   })();return true;
 });
+
+// Refresh only near a running trial's deadline, not on every market tick.
+async function kaosRefreshTrialLease(){
+ if(!botState.running||!kaosTrialExpiresAt||Date.parse(kaosTrialExpiresAt)-Date.now()>70000)return;
+ if(kaosTrialRefresh)return kaosTrialRefresh;
+ kaosTrialRefresh=(async()=>{
+  try{
+   const state=await self.KaosCloud.sessionStatus();
+   if(state.license?.authorized&&state.entitlements?.botAccess){
+    kaosTrialExpiresAt=self.KaosMembershipLease.fromLicense(state.license);
+    if(botState.config)botState.config.kaosTrialExpiresAt=kaosTrialExpiresAt;
+    if(botState.tabId)await chrome.tabs.sendMessage(botState.tabId,{type:'KAOS_MEMBERSHIP_LEASE',expiresAt:kaosTrialExpiresAt});
+   }
+  }catch(_){} // The content engine still enforces the original deadline offline.
+  if(!self.KaosMembershipLease.allowed(kaosTrialExpiresAt)){
+   v219Stop();botState.running=false;botState.config=null;
+   await chrome.storage.local.set({botRunning:false});
+   if(botState.tabId)await chrome.tabs.sendMessage(botState.tabId,{type:'STOP_BOT'}).catch(()=>{});
+  }
+ })().finally(()=>{kaosTrialRefresh=null;});
+ return kaosTrialRefresh;
+}

@@ -339,6 +339,7 @@ def test_explicit_stripe_checkout_flag_reaches_only_billing_handlers(tmp_path,mo
     @app.get('/api/billing/status/{session_id}')
     def owned_status(session_id:str):return {'state':'pending'}
     @app.get('/api/billing/guest-status/{session_id}')
+    @app.post('/api/billing/guest-cancel/{session_id}')
     @app.post('/api/billing/guest-resend/{session_id}')
     def private_receipt(session_id:str):raise HTTPException(403,'Receipt cookie required')
     @app.post('/api/stripe/webhook')
@@ -360,6 +361,7 @@ def test_explicit_stripe_checkout_flag_reaches_only_billing_handlers(tmp_path,mo
         assert client.get('/api/billing/status/cs_fixture').status_code==expected
         assert client.get('/api/billing/guest-status/cs_fixture').status_code==403
         assert client.post('/api/billing/guest-resend/cs_fixture').status_code==403
+        assert client.post('/api/billing/guest-cancel/cs_fixture').status_code==403
         assert client.post('/api/stripe/webhook').status_code==(400 if expected==200 else 503)
         assert client.post('/api/stripe/webhook',headers={'Stripe-Signature':'fixture-signed'}).status_code==expected
         assert client.post('/api/trading/execute').status_code==503

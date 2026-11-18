@@ -75,6 +75,7 @@ class AffiliateSubmitReq(BaseModel):
 
 
 class CheckoutReq(BaseModel):
+    start_trial: bool = False
     lookup_key: Optional[str] = None
     origin_url: Optional[str] = None
     plan_id: Optional[str] = None

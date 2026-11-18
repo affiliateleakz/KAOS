@@ -106,8 +106,11 @@ async def _membership_entitlements(user: dict) -> dict:
     from routes_billing import get_plans, find_plan
     if user.get("account_status", "active") in ("suspended", "banned"):
         return {**DEFAULT_ENTITLEMENTS, "botAccess": False}
+    if user.get('membership_status')=='TRIAL':
+        from subscription_trial import trial_expired
+        if trial_expired(user):return {**FREE_ENTITLEMENTS,'botAccess':False,'modes':[]}
     if user.get("membership_status") not in ("ACTIVE", "TRIAL"):
-        return dict(FREE_ENTITLEMENTS)
+        return {**FREE_ENTITLEMENTS,**({"botAccess":False,"modes":[]} if user.get("bot_trial_required") or user.get("pro_trial_ends_at") else {})}
     plan = find_plan(await get_plans(), user.get("membership_plan"))
     ent = (plan or {}).get("entitlements")
     if not ent:

@@ -6,8 +6,8 @@ it('paid homepage choices open checkout with exact annual plan and referral',()=
  expect(url.searchParams.get('billing')).toBe('year');expect(url.searchParams.get('ref')).toBe('OWNER');
  expect(url.searchParams.get('utm_source')).toBe('banner');
 });
-it('Free remains account registration and login retains the selected purchase',()=>{
- expect(registrationLink('free','')).toBe('/register/account?plan=free');
+it('Free CTA opens the Pro trial and login retains the selected purchase',()=>{
+ expect(registrationLink('free','')).toBe('/checkout?trial=1&plan=pro');
  const login=new URL(purchaseLoginLink('pro','ref=OWNER'),'https://example.com');
  expect(login.pathname).toBe('/login');expect(login.searchParams.get('plan')).toBe('pro');
  expect(login.searchParams.get('ref')).toBe('OWNER');

@@ -425,3 +425,50 @@ Recheck `/api/billing/availability` after restart. Current API releases also ret
 `runtimeSource`, `loginValidationMode`, and `checkoutRequested` for diagnosis.
 These fields never contain credentials. A checkout-enabled response does not
 prove successful webhook delivery or email delivery; verify those separately.
+
+### Seven-day Pro free trial
+
+The public button is **7-day free trial**. It opens a name/email form with Pro
+and Ultimate choices. Pro monthly offers all configured Pro entitlements for
+seven days; Ultimate and annual plans are paid choices. Switching to Ultimate
+removes the trial flag. Stripe collects a card, shows the exact renewal date and
+saved price, and renews after seven days unless canceled. No live price is
+rewritten by this release: the website, API and Stripe price creation all use
+admin-saved plan amounts. Existing subscriber renewal amounts remain their
+Stripe subscription amounts, rather than changing when the public price changes.
+
+No KAOS account or bot access is created from an unfinished checkout. A completed
+trial requires a canonical trialing Stripe subscription, a matching saved card,
+valid trial dates, the expected checkout metadata and a reserved customer email.
+One used trial is recorded per normalized customer email and Stripe environment.
+This prevents email/account reuse; it is not a guarantee against someone using
+multiple identities. Trial signup and its $0 invoice do not generate commissions;
+qualifying actual paid renewals use their invoice identity as before.
+
+New accounts require confirmed trial or paid access for the bot. Legacy Free
+accounts retain their existing allowance. Existing paid plan entitlements and
+super-admin access are unchanged. Trial expiry is checked server-side even if
+webhooks are delayed. The updated extension also checks the trial deadline before
+new entries; stopped sessions are never restarted automatically after renewal.
+Stop controls and broker position management remain available. The cookie-protected
+trial receipt also offers Cancel trial renewal before account email setup is
+finished; a public checkout ID alone cannot cancel anything. Submit the new
+extension build to the **existing** Chrome Web Store listing; an already installed
+old build cannot acquire the new local deadline guard from a website deployment.
+
+Stripe webhook endpoint: `https://api.tradingwithkaos.com/api/stripe/webhook`.
+Include the existing checkout, invoice, cancellation/refund/dispute events and
+**`customer.subscription.trial_will_end`**. This event normally arrives about three
+days before trial end; KAOS verifies the current subscription and sends an email
+using configured account SMTP, with the actual stored subscription price, end
+date and Manage billing link. Canceled trials do not get a renewal reminder.
+Delivery failures return a retryable error. Enable and test Stripe Customer Portal
+cancellation. Hosting CAPTCHA challenges must not intercept Stripe webhooks or
+API preflights. A live availability response alone does not verify these services.
+
+Before publishing the trial, test in Stripe sandbox (preferably a test clock):
+finish card setup, verify TRIAL/full Pro access and the setup email, cancel before
+expiry, verify the reminder event, advance to expiry, and verify a successful
+paid invoice converts TRIAL to ACTIVE exactly once. Check failed payment access,
+repeat email eligibility and Ultimate's normal paid checkout. Automated repository
+tests mock Stripe/mail and cannot certify live email or webhook delivery.

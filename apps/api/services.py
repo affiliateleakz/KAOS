@@ -14,6 +14,7 @@ async def set_setting(key: str, value):
 
 
 LICENSE_REASON_MESSAGES = {
+    "membership_required": "Start your free trial or manage your membership to use the bot.",
     "account_suspended": "Your KAOS account is suspended.",
     "account_banned": "Your KAOS account is banned.",
     "access_revoked": "Extension access was revoked for this account.",
@@ -38,6 +39,11 @@ async def compute_license(user: dict, device: dict = None, broker: str = "pocket
     if user.get("extension_access_revoked"):
         authorized = False
         reasons.append("access_revoked")
+    if user.get('role')!='super_admin':
+        from subscription_trial import trial_expired
+        if (membership=='TRIAL' and trial_expired(user)) or ((user.get('bot_trial_required') or user.get('pro_trial_ends_at')) and membership not in ACTIVE_MEMBERSHIP):
+            authorized=False
+            reasons.append('membership_required')
     # Free tier: no paid membership needed for the bot; AI and paid features are gated by entitlements.
     tier = "paid" if membership in ACTIVE_MEMBERSHIP else "free"
     if device is not None and device.get("revoked"):

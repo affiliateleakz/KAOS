@@ -163,7 +163,8 @@ async def register_device(req: DeviceReq, request: Request, user: dict = Depends
     # Otherwise a suspended or revoked member could refresh an already enrolled device.
     entitlements = await get_entitlements(user)
     if not entitlements.get("botAccess") or user.get("extension_access_revoked"):
-        raise HTTPException(status_code=403, detail="Bot access is not authorized")
+        detail="Start your 7-day Pro free trial or manage your KAOS membership on the website to use the bot." if user.get("bot_trial_required") or user.get("pro_trial_ends_at") else "Bot access is not authorized"
+        raise HTTPException(status_code=403, detail=detail)
     existing = await db.devices.find_one({"installId": req.installId, "userId": user["id"]})
     if existing:
         # A revoked device must not be able to restore its own authorization

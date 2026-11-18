@@ -10,7 +10,8 @@ from pymongo.errors import DuplicateKeyError
 from copy import deepcopy
 import os
 import stripe
-from fastapi import APIRouter, HTTPException, Depends, Request
+import subscription_trial as trials
+from fastapi import APIRouter, HTTPException, Depends, Request, Response
 from db import db, new_id, now, now_iso, clean
 from auth import get_current_user
 from services import get_setting, set_setting, audit_log
@@ -70,12 +71,14 @@ async def get_plans():
 
 
 @router.get("/plans")
-async def list_plans():
+async def list_plans(response: Response = None):
+    if response is not None:response.headers["Cache-Control"]="no-store"
     return await get_plans()
 
 
 @router.get('/memberships')
-async def membership_catalog():
+async def membership_catalog(response: Response = None):
+    if response is not None:response.headers["Cache-Control"]="no-store"
     from kaos.memberships import RATES
     from kaos.affiliate_ledger import DEFAULT_HOLD_DAYS
     plans = [{'id': 'free', 'name': 'Free', 'amount': 0, 'currency': 'usd',
@@ -90,8 +93,9 @@ async def membership_catalog():
             'tier': tier if tier in RATES else 'pro',
             'recommended': plan.get('recommended', tier == 'ultimate' and plan.get('interval', 'month') == 'month') is True,
             'entitlements': {**{key: value for key, value in (plan.get('entitlements') or {}).items() if key in allowed}, 'aiTraining': tier in ('pro','ultimate'), 'pretrainedModels': tier == 'ultimate'}})
+    trial_plan=next((p for p in plans if trials.eligible_plan(p)),None)
     affiliate = await get_setting('affiliate_program', {'enabled': True})
-    return {'plans': plans, 'affiliateRates': {tier: list(rates) for tier, rates in RATES.items()},
+    return {'trial':{'days':trials.TRIAL_DAYS,'planId':trial_plan['id'],'amount':trial_plan['amount'],'currency':trial_plan['currency'],'interval':trial_plan['interval']} if trial_plan else None,'plans': plans, 'affiliateRates': {tier: list(rates) for tier, rates in RATES.items()},
             'affiliateEnrollmentEnabled': affiliate.get('enabled') is True, 'payoutsEnabled': False, 'affiliateHoldDays': DEFAULT_HOLD_DAYS,
             'aiExecutionValidated': await get_setting('ai_execution_validated', False) is True,
             **await billing_availability()}
@@ -136,6 +140,8 @@ async def checkout(req: CheckoutReq,user:dict=Depends(get_current_user)):
         plan=next((p for p in plans if (p.get('id')==requested_id if requested_id else lookup and p.get('lookup_key')==lookup) and p.get('enabled',True)),None)
         if not plan or plan.get('amount',0)<=0 or (lookup and plan.get('lookup_key')!=lookup):
             raise HTTPException(400,'Paid plan unavailable or selection does not match')
+        requested=bool(getattr(req,'start_trial',False))
+        if requested and not trials.eligible_plan(plan):raise HTTPException(400,'The free trial is available on Pro monthly only')
         existing=await db.subscriptions.find_one({'userId':user['id'],'state':'initiated'},sort=[('createdAt',-1)])
         if existing:
             if existing.get('stripe_mode',mode)!=mode:raise HTTPException(409,'Existing checkout belongs to another environment; use an isolated test database')
@@ -144,7 +150,7 @@ async def checkout(req: CheckoutReq,user:dict=Depends(get_current_user)):
                 raise HTTPException(409,'Existing checkout identity requires reconciliation')
             if old.get('status')=='complete':raise HTTPException(409,'The previous payment is being verified; refresh membership status')
             if old.get('status')=='open' and old.get('url'):
-                if (existing.get('planId')==plan['id'] and existing.get('amount')==plan['amount']
+                if (bool(existing.get('trial_days'))==requested and existing.get('planId')==plan['id'] and existing.get('amount')==plan['amount']
                         and existing.get('currency')==plan.get('currency','usd') and existing.get('interval')==plan.get('interval','month')):
                     return {'checkout_url':old['url'],'session_id':old['id']}
                 await asyncio.to_thread(stripe.checkout.Session.expire,old['id'],api_key=config['key'])
@@ -158,12 +164,19 @@ async def checkout(req: CheckoutReq,user:dict=Depends(get_current_user)):
         latest=await db.subscriptions.find_one({'userId':user['id']},sort=[('createdAt',-1)])
         previous_id=latest.get('session_id','first') if latest else 'first'
         slot=int(time.time()//1800);key=hashlib.sha256(f"{mode}:{user['id']}:{plan['id']}:{previous_id}:{slot}".encode()).hexdigest()
+        trial_fields={}
+        if requested:
+            trial_key=await trials.reserve(user['email'],config,'user:'+user['id'])
+            trial_fields={'trial_key':trial_key,'trial_owner':'user:'+user['id'],'trial_days':trials.TRIAL_DAYS}
+        metadata={'user_id':user['id'],'plan_id':plan['id'],'lookup_key':plan['lookup_key'],**({'kaos_trial_days':str(trials.TRIAL_DAYS)} if requested else {})}
         session=await asyncio.to_thread(stripe.checkout.Session.create,api_key=config['key'],idempotency_key='kaos-checkout-'+key,
+            **trials.checkout_arguments(requested),
             mode='subscription',customer=customer,line_items=[{'price':price,'quantity':1}],
             success_url=f"{os.environ['FRONTEND_URL'].rstrip('/')}/payment/success?session_id={{CHECKOUT_SESSION_ID}}",
-            cancel_url=f"{os.environ['FRONTEND_URL'].rstrip('/')}/payment/cancel?{urlencode({'plan':plan['id']})}",
-            metadata={'user_id':user['id'],'plan_id':plan['id'],'lookup_key':plan['lookup_key']},subscription_data={'metadata':{'user_id':user['id'],'plan_id':plan['id']}})
-        await db.subscriptions.update_one({'session_id':session.id},{'$setOnInsert':{'id':new_id('sub'),'userId':user['id'],'session_id':session.id,'planId':plan['id'],'lookup_key':plan['lookup_key'],'amount':plan['amount'],'currency':plan.get('currency','usd'),'interval':plan.get('interval','month'),'state':'initiated','stripe_customer_id':customer,'stripe_subscription_id':None,'stripe_mode':mode,'createdAt':now_iso(),'updatedAt':now_iso()}},upsert=True)
+            cancel_url=f"{os.environ['FRONTEND_URL'].rstrip('/')}/payment/cancel?{urlencode({'plan':plan['id'],**({'trial':'1'} if requested else {})})}",
+            metadata=metadata,subscription_data=trials.subscription_arguments({'user_id':user['id'],'plan_id':plan['id'],**({'kaos_trial_days':str(trials.TRIAL_DAYS)} if requested else {})},requested))
+        if requested:await trials.attach(trial_key,'user:'+user['id'],session.id)
+        await db.subscriptions.update_one({'session_id':session.id},{'$setOnInsert':{**trial_fields,'id':new_id('sub'),'userId':user['id'],'session_id':session.id,'planId':plan['id'],'lookup_key':plan['lookup_key'],'amount':plan['amount'],'currency':plan.get('currency','usd'),'interval':plan.get('interval','month'),'state':'initiated','stripe_customer_id':customer,'stripe_subscription_id':None,'stripe_mode':mode,'createdAt':now_iso(),'updatedAt':now_iso()}},upsert=True)
         return {'checkout_url':session.url,'session_id':session.id}
 
 
@@ -176,7 +189,7 @@ async def status(session_id: str, user: dict = Depends(get_current_user)):
         try:
             config = await active_configuration()
             s = await asyncio.to_thread(stripe.checkout.Session.retrieve, session_id, api_key=config["key"])
-            if (s.payment_status == "paid" and s.status == "complete"
+            if (s.payment_status in ("paid","no_payment_required") and s.status == "complete"
                     and s.get("customer") == rec.get("stripe_customer_id")
                     and s.get("metadata", {}).get("user_id") == user["id"]):
                 await _activate(rec["userId"], rec["planId"], s.get("customer"), s.get("subscription"), session_id)
@@ -204,7 +217,11 @@ async def _checkout_invoice(session_id,user_id,plan_id,customer,sub_id):
         guest=await db.guest_purchases.find_one({'_id':metadata['guest_purchase_id'], 'user_id':user_id,
             'session_id':session_id, 'customer_id':customer, 'plan.id':plan_id, 'stripe_mode':config['mode']})
         owner_matches=bool(guest)
-    if (session.get('payment_status')!='paid' or session.get('status')!='complete' or identity(session.get('customer'))!=customer
+    if session.get('payment_status')=='no_payment_required' or (session.get('metadata') or {}).get('kaos_trial_days')==str(trials.TRIAL_DAYS):
+        record=await db.subscriptions.find_one({'session_id':session_id,'userId':user_id})
+        verified=await _verified_subscription(sub_id,customer)
+        await trials.verify(record or {},session,verified,config)
+    if (session.get('payment_status') not in ('paid','no_payment_required') or session.get('status')!='complete' or identity(session.get('customer'))!=customer
         or identity(session.get('subscription'))!=sub_id or not owner_matches or metadata.get('plan_id')!=plan_id):
         raise HTTPException(409,'Checkout payment identity does not match the membership')
     invoice_id=identity(session.get('invoice'))
@@ -237,17 +254,25 @@ async def _activate(user_id, plan_id, customer, subscription, session_id):
     end=period_end(verified)
     if end<=now().timestamp():raise HTTPException(409,'Subscription period has already ended')
     invoice=await _checkout_invoice(session_id,user_id,plan_id,customer,subscription)
+    is_trial=verified.get('status')=='trialing'
+    if is_trial:
+        end=min(end,int(verified.get('trial_end') or 0))
+        if end<=now().timestamp():raise HTTPException(409,'Trial has expired')
+        if not record.get('trial_key'):raise HTTPException(409,'Trial reservation is missing')
+        await trials.consume(record,session_id)
+    membership_status='TRIAL' if is_trial else 'ACTIVE'
     expires=iso(end)
     await db.subscriptions.update_one({'session_id':session_id}, {'$set':{
-        'state':'active','membershipStatus':'ACTIVE','stripe_subscription_id':subscription,
+        'state':'active','membershipStatus':membership_status,'stripe_subscription_id':subscription,
         'period_end':end,'invoice_id':invoice['id'],'updatedAt':now_iso()}})
     await db.users.update_one({'id':user_id},{'$set':{
-        'membership_status':'ACTIVE','membership_plan':plan_id,'membership_expires_at':expires,
+        'membership_status':membership_status,'membership_plan':plan_id,'membership_expires_at':expires,
         'stripe_paid_through':end,'stripe_subscription_id':subscription,'stripe_customer_id':customer,
         'cancel_at_period_end':bool(verified.get('cancel_at_period_end')),'onboarding_step':7,'updated_at':now_iso()}})
+    if is_trial:await db.users.update_one({'id':user_id},{'$set':{'pro_trial_ends_at':expires}})
     # Retrying the same checkout uses the same ledger identity, including after a partial failure.
     customer_user=await db.users.find_one({'id':user_id})
-    await _initial_commission(customer_user,plan,invoice,record)
+    if not is_trial:await _initial_commission(customer_user,plan,invoice,record)
 
 
 async def _paid_invoice(invoice):
@@ -260,6 +285,9 @@ async def _paid_invoice(invoice):
     plan=find_plan(await get_plans(),record.get('planId'))
     if not plan:raise HTTPException(503,'Invoice membership plan needs reconciliation')
     verified=await _verified_subscription(sub_id,customer)
+    if verified.get('status')=='trialing':
+        if invoice.get('amount_paid',0)>0:raise HTTPException(503,'Paid subscription transition is still processing; retry')
+        return
     end=invoice_period_end(invoice,sub_id)
     if end is None:end=period_end(verified)
     if user.get('stripe_subscription_id')==sub_id and verified.get('status') in ('past_due','unpaid') and end>now().timestamp():
@@ -356,13 +384,16 @@ async def stripe_webhook(request: Request):
     t = event["type"]
     if t in ("checkout.session.completed", "checkout.session.async_payment_succeeded"):
         meta = obj.get("metadata", {})
+        confirmed = obj.get('payment_status')=='paid' or (obj.get('payment_status')=='no_payment_required' and meta.get('kaos_trial_days')==str(trials.TRIAL_DAYS))
         # A completed Checkout can still be unpaid for delayed payment methods.
         # Only the paid transition may grant membership/affiliate commission.
-        if meta.get('guest_purchase_id') and obj.get('payment_status')=='paid' and obj.get('status')=='complete':
+        if meta.get('guest_purchase_id') and confirmed and obj.get('status')=='complete':
             from guest_checkout import from_webhook
             await from_webhook(obj['id'])
-        elif meta.get("user_id") and obj.get("payment_status") == "paid" and obj.get("status") == "complete":
+        elif meta.get("user_id") and confirmed and obj.get("status") == "complete":
             await _activate(meta["user_id"], meta.get("plan_id"), obj.get("customer"), obj.get("subscription"), obj["id"])
+    elif t=='customer.subscription.trial_will_end':
+        await trials.reminder(obj,config)
     elif t in ('invoice.payment_failed','customer.subscription.deleted'):
         customer=identity(obj.get('customer'))
         sub_id=subscription_id(obj) if t=='invoice.payment_failed' else obj.get('id')

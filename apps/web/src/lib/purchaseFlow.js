@@ -1,11 +1,17 @@
 // Public plan selection is retained through account creation, never a paid entitlement.
 export function registrationLink(planId, search) {
- const query=new URLSearchParams(search);query.set('plan',planId);
+ const query=new URLSearchParams(search);
+ if(planId==='free'){planId='pro';query.set('trial','1');}
+ if(planId!=='pro')query.delete('trial');
+ query.set('plan',planId);
  if(planId==='yearly'||planId.endsWith('_yearly'))query.set('billing','year');else query.delete('billing');
  return (planId==='free'?'/register/account':'/checkout')+'?'+query.toString();
 }
 export function purchaseLoginLink(planId, search) {
- const query=new URLSearchParams(search);query.set('plan',planId);
+ const query=new URLSearchParams(search);
+ if(planId==='free'){planId='pro';query.set('trial','1');}
+ if(planId!=='pro')query.delete('trial');
+ query.set('plan',planId);
  return '/login?'+query.toString();
 }
 export function stripeCheckoutUrl(value) {

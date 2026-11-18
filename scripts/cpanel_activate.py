@@ -93,7 +93,7 @@ def _get_app():
             stripe_operation = stripe_live and ((request.method == "POST" and path in (
                 "/api/billing/guest-intent", "/api/billing/guest-checkout", "/api/billing/checkout", "/api/billing/portal", "/api/billing/cancel", "/api/stripe/webhook")) or
                 (request.method == "GET" and bool(re.fullmatch(r"/api/billing/status/[^/]+", path))))
-            receipt_operation = (request.method == "GET" and bool(re.fullmatch(r"/api/billing/guest-status/[^/]+", path))) or (request.method == "POST" and bool(re.fullmatch(r"/api/billing/guest-resend/[^/]+", path)))
+            receipt_operation = (request.method == "GET" and bool(re.fullmatch(r"/api/billing/guest-status/[^/]+", path))) or (request.method == "POST" and bool(re.fullmatch(r"/api/billing/guest-(resend|cancel)/[^/]+", path)))
             stripe_operation = stripe_operation or receipt_operation
             allowed_write = allowed_write or stripe_operation
             pricing_read = path in ("/api/billing/plans", "/api/billing/availability", "/api/billing/memberships") and request.method in ("GET", "HEAD", "OPTIONS")

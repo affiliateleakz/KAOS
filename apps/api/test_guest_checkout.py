@@ -12,9 +12,11 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import guest_checkout as guest
 import routes_billing as billing
 import routes_auth as auth
+import subscription_trial as trials
 
 
-def test_payment_first_lifecycle(monkeypatch):
+@pytest.mark.parametrize("trial", [False, True])
+def test_payment_first_lifecycle(monkeypatch, trial):
     assert os.environ["MONGO_URL"] in (
         "mongodb://127.0.0.1:27017",
         "mongodb://localhost:27017",
@@ -26,7 +28,7 @@ def test_payment_first_lifecycle(monkeypatch):
             os.environ["MONGO_URL"], serverSelectionTimeoutMS=2000
         )
         database = client["kaos_test_guest_" + uuid4().hex]
-        for module in (guest, billing, auth):
+        for module in (guest, billing, auth, trials):
             monkeypatch.setattr(module, "db", database)
         config = {"mode": "test", "key": "sk_test_fixture", "enabled": True}
         monkeypatch.setattr(
@@ -68,8 +70,12 @@ def test_payment_first_lifecycle(monkeypatch):
         subscription = {
             "id": "sub_guest",
             "customer": "cus_guest",
-            "status": "active",
-            "current_period_end": int(guest.time.time()) + 86400,
+            "status": "trialing" if trial else "active",
+            "trial_start": int(guest.time.time()) - 10,
+            "trial_end": int(guest.time.time()) + trials.TRIAL_DAYS * 86400 - 10,
+            "default_payment_method": "pm_fixture",
+            "current_period_end": int(guest.time.time())
+            + (trials.TRIAL_DAYS * 86400 - 10 if trial else 86400),
         }
         monkeypatch.setattr(
             guest.stripe.Subscription, "retrieve", lambda *a, **k: dict(subscription)
@@ -79,13 +85,22 @@ def test_payment_first_lifecycle(monkeypatch):
             "customer": "cus_guest",
             "subscription": "sub_guest",
             "status": "paid",
-            "amount_paid": 2995,
+            "amount_paid": 0 if trial else 2995,
         }
         monkeypatch.setattr(
             guest.stripe.Invoice, "retrieve", lambda *a, **k: dict(invoice)
         )
         charges = {"data": [{"paid": True, "status": "succeeded"}], "has_more": False}
         monkeypatch.setattr(guest.stripe.Charge, "list", lambda **k: charges)
+        monkeypatch.setattr(
+            trials.stripe.PaymentMethod,
+            "retrieve",
+            lambda *a, **k: {
+                "id": "pm_fixture",
+                "type": "card",
+                "customer": "cus_guest",
+            },
+        )
         app = FastAPI()
         app.include_router(guest.router)
         app.include_router(auth.router)
@@ -95,6 +110,8 @@ def test_payment_first_lifecycle(monkeypatch):
             ) as browser:
                 payload = {
                     "plan_id": "pro",
+                    "name": "Buyer",
+                    "start_trial": trial,
                     "email": "BUYER@example.com",
                     "refCode": "REF",
                 }
@@ -112,6 +129,7 @@ def test_payment_first_lifecycle(monkeypatch):
                 )
                 purchase = await database.guest_purchases.find_one({})
                 session["metadata"] = {
+                    **({"kaos_trial_days": str(trials.TRIAL_DAYS)} if trial else {}),
                     "guest_purchase_id": purchase["_id"],
                     "plan_id": "pro",
                 }
@@ -149,7 +167,10 @@ def test_payment_first_lifecycle(monkeypatch):
                         "password_hash": "unchanged",
                     }
                 )
-                session.update(status="complete", payment_status="paid")
+                session.update(
+                    status="complete",
+                    payment_status="no_payment_required" if trial else "paid",
+                )
                 assert (await browser.get("/api/billing/guest-status/cs_guest")).json()[
                     "state"
                 ] == "signin_required"
@@ -182,7 +203,7 @@ def test_payment_first_lifecycle(monkeypatch):
                 assert r.json()["state"] == "active" and r.json()["setupRequired"]
                 user = await database.users.find_one({"email": "buyer@example.com"})
                 assert (
-                    user["membership_status"] == "ACTIVE"
+                    user["membership_status"] == ("TRIAL" if trial else "ACTIVE")
                     and user["membership_plan"] == "pro"
                 )
                 assert user.get("password_hash") is None and not user["email_verified"]
@@ -194,6 +215,51 @@ def test_payment_first_lifecycle(monkeypatch):
                     sent.call_count == 1
                     and sent.call_args.kwargs["account_setup"] is True
                 )
+                if trial:
+                    import stripe_runtime
+
+                    monkeypatch.setattr(
+                        stripe_runtime,
+                        "configuration",
+                        AsyncMock(return_value={**config, "ready": True}),
+                    )
+                    cancel = Mock(return_value={"cancel_at_period_end": True})
+                    monkeypatch.setattr(trials.stripe.Subscription, "modify", cancel)
+                    cancelled = await browser.post("/api/billing/guest-cancel/cs_guest")
+                    assert cancelled.status_code == 200, cancelled.text
+                    assert cancelled.json()["cancelAtPeriodEnd"] is True
+                    assert cancel.call_args.kwargs["cancel_at_period_end"] is True
+                    import routes_affiliate
+
+                    commission = AsyncMock()
+                    monkeypatch.setattr(
+                        routes_affiliate, "record_commission", commission
+                    )
+                    zero = dict(invoice, billing_reason="subscription_create")
+                    await billing._paid_invoice(zero)
+                    assert (await database.users.find_one({"id": user["id"]}))[
+                        "membership_status"
+                    ] == "TRIAL"
+                    commission.assert_not_called()
+                    subscription.update(
+                        status="active",
+                        current_period_end=int(guest.time.time()) + 30 * 86400,
+                    )
+                    renewal = dict(
+                        invoice,
+                        id="in_first_paid",
+                        amount_paid=2995,
+                        billing_reason="subscription_cycle",
+                    )
+                    await billing._paid_invoice(renewal)
+                    assert (await database.users.find_one({"id": user["id"]}))[
+                        "membership_status"
+                    ] == "ACTIVE"
+                    assert (
+                        commission.call_count == 1
+                        and commission.call_args.kwargs["event_id"]
+                        == "invoice:in_first_paid"
+                    )
                 token = sent.call_args.args[1]
                 # Repeated receipts/webhooks cannot restore a canceled/upgraded membership.
                 await database.users.update_one(
@@ -218,7 +284,7 @@ def test_payment_first_lifecycle(monkeypatch):
                     and fresh["membership_plan"] == "ultimate"
                 )
                 assert await database.users.count_documents({}) == 1
-                assert billing._initial_commission.call_count == 1
+                assert billing._initial_commission.call_count == (0 if trial else 1)
                 # Receipt/session IDs are never password setup credentials.
                 assert (
                     await browser.post(
@@ -268,4 +334,4 @@ def test_setup_mail_has_fragment_token_and_no_token_logs(monkeypatch):
         "/reset-password#token=one-time-fixture&amp;setup=checkout"
         in send.call_args.args[2]
     )
-    assert send.call_args.args[1] == "Finish your paid KAOS account setup"
+    assert send.call_args.args[1] == "Finish your KAOS account setup"
