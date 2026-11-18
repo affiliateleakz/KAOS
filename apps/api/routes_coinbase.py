@@ -86,6 +86,35 @@ def asdict(value):
     if isinstance(value, dict): return value
     raise ValueError("Unexpected Coinbase response")
 
+def submission_state(response, req):
+    """Only explicit provider outcomes can release a reserved position."""
+    success = response.get("success_response")
+    error = response.get("error_response")
+    if response.get("success") is True and isinstance(success, dict):
+        order_id = success.get("order_id")
+        if not isinstance(order_id, str) or not order_id.strip():
+            raise ValueError("Missing accepted order identity")
+        for key in ("client_order_id", "product_id", "side"):
+            if key in success and success[key] != getattr(req, key):
+                raise ValueError("Accepted order identity mismatch")
+        if error:
+            raise ValueError("Conflicting exchange outcome")
+        return "ACCEPTED", order_id
+    if (response.get("success") is False and isinstance(error, dict)
+            and isinstance(error.get("error"), str) and error["error"].strip()
+            and not success and not response.get("order_id")):
+        return "REJECTED", None
+    raise ValueError("Ambiguous exchange submission outcome")
+
+
+async def release_unsubmitted_exit(source, client_order_id):
+    """Safe only before any order-submission call has started."""
+    if source:
+        await db.coinbase_order_intents.update_one({"_id": source["_id"], "state": "EXIT_SUBMITTING",
+            "exit_client_order_id": client_order_id},
+            {"$set": {"state": "FILLED"}, "$unset": {"exit_client_order_id": ""}})
+
+
 @router.get("/status")
 async def status(request: Request, user: dict = Depends(get_current_user)):
     # No consent or credentials disclosed to the browser.
@@ -138,7 +167,7 @@ async def order(req: OrderRequest, request: Request, user: dict = Depends(get_cu
             raise HTTPException(409, "Existing active or uncertain KAOS position")
         except Exception:
             raise HTTPException(503, "Unable to reserve position slot")
-    doc = {**key, "product_id": req.product_id, "side": req.side,
+    doc = {"_id": f"coinbase:{uid}:{req.client_order_id}", **key, "product_id": req.product_id, "side": req.side,
         "quote_size": size if req.side == "BUY" else None,
         "base_size": size if req.side == "SELL" else None,
         "source_buy_client_order_id": req.source_buy_client_order_id if source else None,
@@ -148,10 +177,12 @@ async def order(req: OrderRequest, request: Request, user: dict = Depends(get_cu
     except DuplicateKeyError:
         if slot:
             await db.coinbase_active_slots.delete_one({"_id": slot["_id"], "client_order_id": req.client_order_id})
+        await release_unsubmitted_exit(source, req.client_order_id)
         raise HTTPException(409, "Order ID already reserved")
     except Exception:
         if slot:
             await db.coinbase_active_slots.delete_one({"_id": slot["_id"], "client_order_id": req.client_order_id})
+        await release_unsubmitted_exit(source, req.client_order_id)
         raise HTTPException(503, "Unable to persist order; no exchange call made")
     try:
         def submit():
@@ -162,8 +193,7 @@ async def order(req: OrderRequest, request: Request, user: dict = Depends(get_cu
             return asdict(client.market_order_sell(client_order_id=req.client_order_id,
                 product_id=req.product_id, base_size=size))
         response = await asyncio.to_thread(submit)
-        order_id = (response.get("success_response") or {}).get("order_id")
-        state = "ACCEPTED" if response.get("success") and order_id else "REJECTED"
+        state, order_id = submission_state(response, req)
         await db.coinbase_order_intents.update_one(key, {"$set": {"state": state,
             "order_id": order_id, "updated_at": now_iso()}})
         if state == "REJECTED" and slot:
@@ -175,7 +205,7 @@ async def order(req: OrderRequest, request: Request, user: dict = Depends(get_cu
                 "exit_client_order_id": req.client_order_id},
                 {"$set": {"state": "FILLED"}, "$unset": {"exit_client_order_id": ""}})
         return {"client_order_id": req.client_order_id, "order_id": order_id, "state": state,
-                "note": "Accepted does not mean filled; reconcile before position changes"}
+                "note": "Accepted does not mean filled; reconcile before position changes" if state == "ACCEPTED" else "Coinbase explicitly rejected this order"}
     except Exception:
         await db.coinbase_order_intents.update_one(key, {"$set": {
             "state": "UNKNOWN_RECONCILIATION_REQUIRED", "updated_at": now_iso()}})
