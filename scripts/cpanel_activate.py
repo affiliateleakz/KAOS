@@ -58,6 +58,10 @@ def _get_app():
         # First activation supports sign-in/device validation, not payments or orders.
         @app.middleware("http")
         async def login_validation_only(request, call_next):
+            # Preflight has no payment side effects. Let the configured CORS
+            # middleware validate origin/method/headers before gating real writes.
+            if request.method == "OPTIONS":
+                return await call_next(request)
             path = request.url.path
             auth = path.startswith(("/api/auth/", "/api/v1/auth/"))
             allowed_write = auth or (request.method == "POST" and path == "/api/analytics/visit") or path in (

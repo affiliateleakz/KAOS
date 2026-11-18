@@ -112,3 +112,44 @@ def test_symlink_policy_is_rejected(tmp_path, monkeypatch):
     with pytest.raises(ValueError):
         repair.repair(site, True)
     assert target.read_text() == "untouched"
+
+
+@pytest.mark.parametrize('enabled', [True, False])
+def test_checkout_preflight_reaches_cors_but_post_retains_gate(tmp_path, monkeypatch, enabled):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from starlette.middleware.cors import CORSMiddleware
+
+    site, backend = fixture_site(tmp_path)
+    repair = load_repair(monkeypatch)
+    repair.repair(site, enabled)
+    app = FastAPI()
+    app.add_middleware(CORSMiddleware,
+                       allow_origins=['https://tradingwithkaos.com'],
+                       allow_methods=['POST'], allow_headers=['Content-Type'])
+
+    @app.post('/api/billing/guest-intent')
+    def checkout():
+        return {'fixture': True}
+
+    module = ModuleType('server')
+    module.app = app
+    monkeypatch.setitem(sys.modules, 'server', module)
+    monkeypatch.setattr(sys, 'path', list(sys.path))
+    monkeypatch.setenv('KAOS_STRIPE_CHECKOUT_ENABLED', 'false')
+    monkeypatch.setenv('KAOS_LOGIN_VALIDATION_MODE', 'true')
+    scope = {'__file__': str(backend / 'passenger_wsgi.py')}
+    exec(compile(activation.WRAPPER, 'passenger_wsgi.py', 'exec'), scope)
+    scope['_get_app']()
+    with TestClient(app) as client:
+        headers = {'Origin': 'https://tradingwithkaos.com',
+                   'Access-Control-Request-Method': 'POST',
+                   'Access-Control-Request-Headers': 'content-type'}
+        response = client.options('/api/billing/guest-intent', headers=headers)
+        assert response.status_code == 200
+        assert response.headers['access-control-allow-origin'] == headers['Origin']
+        headers['Origin'] = 'https://untrusted.example'
+        rejected = client.options('/api/billing/guest-intent', headers=headers)
+        assert rejected.status_code == 400
+        assert 'access-control-allow-origin' not in rejected.headers
+        assert client.post('/api/billing/guest-intent').status_code == (200 if enabled else 503)
