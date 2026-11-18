@@ -10,6 +10,7 @@ function show(error){if(authenticated){brokerScreen()?.classList.add('visible');
 function hide(){brokerScreen()?.classList.remove('visible');chooserOpen=false;}
 function message(text,link){const el=$('kaos-broker-status');el.replaceChildren();el.hidden=false;const p=document.createElement('p');p.textContent=text;el.append(p);if(link){const a=document.createElement('a');a.href=link;a.target='_blank';a.rel='noopener noreferrer';a.textContent='Open broker website';el.append(a);}}
 async function choose(id){if(!authenticated)return;if(!brokerURLs[id])return;if(typeof state!=='undefined'&&state.running){message('Stop the running bot before changing brokers.');return;}
+ if(id!=='coinbase' && window.KAOSCoinbaseBot?.managing()){message('Coinbase is still managing this session. Close and reconcile its positions before switching brokers.');return;}
  if(id==='coinbase'){
   message('Checking your Coinbase connection…');
   const r=await send({type:'KAOS_BROKER_VAULT',method:'GET',path:'/broker-connections/coinbase/status'});
@@ -21,7 +22,7 @@ async function choose(id){if(!authenticated)return;if(!brokerURLs[id])return;if(
   if(!preference.ok){message(preference.data?.detail||preference.error||'Could not save Coinbase broker preference');return;}
   selected=id;await chrome.storage.local.set({kaosSelectedBroker:id});window.KAOSCoinbaseBot?.open((await cloudState()).entitlements);document.dispatchEvent(new CustomEvent('kaos-selected-broker-changed'));hide();$('kaos-broker-switch').hidden=false;$('kaos-broker-switch').textContent='Broker: Coinbase · Change';
   await chrome.tabs.create({url:brokerURLs[id],active:true});
-  message('Coinbase connected. Load USD spot markets in the main bot tab, review your existing risk settings, then press Start KAOS. Real orders require a configured server gateway and automatic worker.');return;
+  message('Coinbase connected. Load USD spot markets in the main bot tab, review your existing risk settings, then press Start KAOS. Keep the KAOS window open for extension-run decisions. The backend securely relays orders.');return;
  }
  if(id!=='pocketoption'){message('This broker is listed for future integration. No account, market-data, or trade execution adapter is active. Visit the broker site for information.',brokerURLs[id]);return;}
  if(connecting)return;

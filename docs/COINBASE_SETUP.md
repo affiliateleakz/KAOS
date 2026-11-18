@@ -1,3 +1,9 @@
+# Current extension mode
+
+Extension 1.7.38 uses browser-driven Coinbase spot decisions. See
+[Coinbase extension spot setup](COINBASE_EXTENSION_SPOT.md). The server-worker
+mode below describes legacy sessions and remains separate from new extension sessions.
+
 # Coinbase automatic spot trading candidate
 
 Coinbase uses the member's existing bot controls. The owner requested automatic real-money trading; this release prepares that path without changing a hosting environment or placing an order during development. Repository checks are not live exchange acceptance or evidence of profitability.

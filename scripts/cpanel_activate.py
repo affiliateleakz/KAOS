@@ -93,7 +93,7 @@ def _get_app():
                 except ValueError:
                     pass
             broker_setup = (request.method == "PUT" and path in ("/api/v1/broker-selection", "/api/v1/broker-connections/coinbase")) or (request.method == "DELETE" and path == "/api/v1/broker-connections/coinbase")
-            coinbase_live = (os.environ.get("KAOS_COINBASE_LIVE_ORDERS") == "enabled" and request.method == "POST" and path in ("/api/v1/coinbase-bot/start", "/api/v1/coinbase-bot/stop", "/api/v1/coinbase-live/orders", "/api/v1/coinbase-live/reconcile"))
+            coinbase_live = (os.environ.get("KAOS_COINBASE_LIVE_ORDERS") == "enabled" and request.method == "POST" and path in ("/api/v1/coinbase-bot/start", "/api/v1/coinbase-bot/stop", "/api/v1/coinbase-bot/browser-order", "/api/v1/coinbase-live/orders", "/api/v1/coinbase-live/reconcile"))
             coinbase_stop = request.method == "POST" and path == "/api/v1/coinbase-bot/stop"
             commission_setup = request.method == "PUT" and path in ("/api/admin/affiliate/commission-rates", "/api/admin/follow-us")
             payout_operation = request.method == "POST" and path in ("/api/admin/affiliate/payouts/release", "/api/admin/affiliate/payouts/requests", "/api/admin/affiliate/payouts/reconcile")

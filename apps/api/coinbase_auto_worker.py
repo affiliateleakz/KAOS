@@ -163,7 +163,7 @@ async def run_session(session,http):
 
 async def cycle(http):
     if not await control_enabled(http) or not await lease():return
-    async for session in db.coinbase_bot_sessions.find({'state':{'$in':['RUNNING','STOPPING']}}).limit(100):
+    async for session in db.coinbase_bot_sessions.find({'state':{'$in':['RUNNING','STOPPING']},'execution_mode':{'$ne':'extension'}}).limit(100):
         try:await run_session(session,http)
         except Exception as exc:
             log.warning('Coinbase automatic cycle paused (%s)',type(exc).__name__)

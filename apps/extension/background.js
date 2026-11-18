@@ -1009,10 +1009,10 @@ chrome.runtime.onMessage.addListener((msg,sender,sendResponse)=>{
     try{
       const expected=new URL(chrome.runtime.getURL('popup.html')),actual=new URL(sender?.url||'about:blank');
       if(actual.protocol!==expected.protocol||actual.host!==expected.host||actual.pathname!==expected.pathname)throw Error('Coinbase controls require the KAOS app window');
-      const methods={status:'GET',start:'POST',stop:'POST'};
+      const methods={status:'GET',snapshot:'GET',start:'POST',stop:'POST','browser-order':'POST'};
       if(!Object.hasOwn(methods,msg.action))throw Error('Invalid Coinbase bot action');
       if(msg.action==='start'&&botState.running)throw Error('Stop Pocket Option before starting Coinbase');
-      const r=await self.KaosCloud.authFetch('/coinbase-bot/'+msg.action,{method:methods[msg.action],headers:{'Content-Type':'application/json'},...(msg.action==='start'?{body:JSON.stringify(msg.payload)}:{})});
+      const r=await self.KaosCloud.authFetch('/coinbase-bot/'+msg.action,{method:methods[msg.action],headers:{'Content-Type':'application/json'},...(methods[msg.action]==='POST'?{body:JSON.stringify(msg.payload||{})}:{})});
       if(!r.headers?.get('content-type')?.includes('application/json'))throw Error('KAOS API returned a web page; check hosting verification and routing');
       const data=await r.json();sendResponse({ok:r.ok,data,httpStatus:r.status});
     }catch(e){sendResponse({ok:false,error:String(e.message||e)});}
