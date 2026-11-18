@@ -389,3 +389,39 @@ buyers. `/` on the API hostname intentionally has no route and may return
 `{"detail":"Not Found"}`. HTML verification pages are hosting responses, not
 Stripe status. An `EXPIRED` account without a confirmed paid subscription must
 not be promoted to paid membership manually as a workaround.
+
+### Repair stale Passenger billing flags
+
+When availability reports `mode: live`, `configurationReady: true` but still
+says login-validation blocks billing after cPanel settings were saved, the
+running process has not applied those settings. This does not establish whether
+the cause is an older installed startup wrapper, inherited Passenger environment,
+or a restart that did not replace the workers.
+
+The owner can apply the billing-only startup repair from the repository:
+
+```
+cd /home/itsabout/repositories/KAOS
+git pull --ff-only
+/home/itsabout/virtualenv/tradingwithkaos.com/backend/3.11/bin/python scripts/cpanel_billing_runtime.py --enable-stripe
+```
+
+This installs the current startup wrapper, writes only the two intended runtime
+flags via private `backend/.kaos-billing-runtime.json`, and touches Passenger's
+`backend/tmp/restart.txt`. If this host ignores that restart request, restart the
+Python application in cPanel. It does not replace website/API source, copy keys,
+modify `.env`, query the database, or enable trading/payouts. It does not require
+rebuilding the website or a prepared release merely to repair billing flags.
+Install any pending website/backend release separately for payment-first signup.
+
+**Precedence:** when present, this explicit local policy controls Stripe checkout
+and login-validation mode ahead of cPanel's inherited environment and `.env`.
+Subsequent releases preserve it. To turn checkout off, run the same script with
+`--disable-stripe`; to return to cPanel environment management, remove only this
+non-secret policy file and restart the app. Saved matching Stripe credentials,
+the webhook secret, provider selection and mail requirements remain enforced.
+
+Recheck `/api/billing/availability` after restart. Current API releases also return
+`runtimeSource`, `loginValidationMode`, and `checkoutRequested` for diagnosis.
+These fields never contain credentials. A checkout-enabled response does not
+prove successful webhook delivery or email delivery; verify those separately.

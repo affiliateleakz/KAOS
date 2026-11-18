@@ -29,6 +29,9 @@ async def availability():
     from mail_delivery import account_mail_ready
     return {'guestCheckoutEnabled': config['enabled'] and account_mail_ready(), 'checkoutEnabled': config['enabled'], 'mode': config['mode'],
             'configurationReady': config['ready'],
+            'runtimeSource': os.getenv('KAOS_BILLING_POLICY_SOURCE', 'environment'),
+            'loginValidationMode': config['validation'],
+            'checkoutRequested': os.getenv('KAOS_STRIPE_CHECKOUT_ENABLED') == 'true',
             'note': 'Login-validation hosting blocks billing and webhook delivery.' if config['validation'] else
                     'Stripe setup saved; checkout remains disabled until separately activated.' if not config['enabled'] else
                     'Checkout activated; webhook delivery must be verified separately.'}

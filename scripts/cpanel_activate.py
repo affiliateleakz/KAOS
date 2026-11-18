@@ -23,6 +23,22 @@ from starlette.responses import JSONResponse
 
 ROOT = Path(__file__).resolve().parent
 load_dotenv(ROOT / ".env", override=False)
+# Explicit owner repair policy overrides stale cPanel/Passenger process flags.
+# It contains no credentials and changes only the two billing/validation flags.
+import json
+_billing_policy = ROOT / ".kaos-billing-runtime.json"
+if _billing_policy.exists():
+    if _billing_policy.is_symlink():
+        raise RuntimeError("Refusing symlink billing runtime policy")
+    _policy = json.loads(_billing_policy.read_text())
+    if not isinstance(_policy, dict) or _policy.get("version") != 1 or type(_policy.get("stripeCheckoutEnabled")) is not bool:
+        raise RuntimeError("Invalid billing runtime policy; repair it before restarting")
+    _enabled = _policy["stripeCheckoutEnabled"]
+    os.environ["KAOS_STRIPE_CHECKOUT_ENABLED"] = "true" if _enabled else "false"
+    os.environ["KAOS_LOGIN_VALIDATION_MODE"] = "false" if _enabled else "true"
+    os.environ["KAOS_BILLING_POLICY_SOURCE"] = "application-runtime-policy"
+else:
+    os.environ["KAOS_BILLING_POLICY_SOURCE"] = "environment"
 os.environ.setdefault("KAOS_COINBASE_LIVE_ORDERS", "disabled")
 # Saved keys alone never activate payments. Honor the owner's explicit checkout flag.
 _stripe_requested = os.environ.get("KAOS_STRIPE_CHECKOUT_ENABLED") == "true"

@@ -72,3 +72,16 @@ def test_disabled_checkout_never_contacts_stripe(monkeypatch):
     with pytest.raises(HTTPException):
         asyncio.run(billing.checkout(SimpleNamespace(lookup_key='membership_pro_monthly'),{'id':'fixture'}))
     customer.assert_not_called()
+
+
+def test_runtime_diagnostics_report_effective_flags_without_credentials(monkeypatch):
+    setup(monkeypatch,mode='live',key='sk_live_fixture')
+    monkeypatch.setenv('KAOS_STRIPE_CHECKOUT_ENABLED','true')
+    monkeypatch.setenv('KAOS_LOGIN_VALIDATION_MODE','false')
+    monkeypatch.setenv('KAOS_BILLING_POLICY_SOURCE','application-runtime-policy')
+    result=asyncio.run(runtime.availability())
+    assert result['checkoutEnabled'] is True
+    assert result['checkoutRequested'] is True
+    assert result['loginValidationMode'] is False
+    assert result['runtimeSource']=='application-runtime-policy'
+    assert 'sk_live_fixture' not in str(result) and 'whsec_fixture' not in str(result)
