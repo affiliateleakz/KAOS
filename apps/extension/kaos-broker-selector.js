@@ -17,7 +17,7 @@ async function choose(id){if(!authenticated)return;if(!brokerURLs[id])return;if(
   if(!r.ok){message(r.data?.detail||r.error||'Could not check Coinbase connection. Try again or open Broker Connections on the website.');return;}
   if(!(r.data?.saved||r.data?.connection?.saved)){document.dispatchEvent(new CustomEvent('kaos-coinbase-setup'));return;}
   const a=await send({type:'KAOS_BROKER_VAULT',method:'GET',path:'/broker-connections/coinbase/accounts'});
-  if(!a.ok){message('Your saved Coinbase connection needs attention. Reconnect it in KAOS account settings.');return;}
+  if(!a.ok){document.dispatchEvent(new CustomEvent('kaos-coinbase-setup'));return;}
   const preference=await send({type:'KAOS_BROKER_VAULT',method:'PUT',path:'/broker-selection',payload:{broker:id}});
   if(!preference.ok){message(preference.data?.detail||preference.error||'Could not save Coinbase broker preference');return;}
   selected=id;await chrome.storage.local.set({kaosSelectedBroker:id});window.KAOSCoinbaseBot?.open((await cloudState()).entitlements);document.dispatchEvent(new CustomEvent('kaos-selected-broker-changed'));hide();$('kaos-broker-switch').hidden=false;$('kaos-broker-switch').textContent='Broker: Coinbase · Change';

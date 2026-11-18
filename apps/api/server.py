@@ -97,8 +97,10 @@ for mod in (routes_auth, routes_strategies, routes_community, routes_billing,
         if r is not None:
             app.include_router(r)
 
+import coinbase_oauth
 import guest_checkout
 app.include_router(guest_checkout.router)
+app.include_router(coinbase_oauth.router)
 app.include_router(routes_coinbase.router)
 app.include_router(routes_coinbase_bot.router)
 app.include_router(routes_finbert.router)

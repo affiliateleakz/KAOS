@@ -993,7 +993,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   (async () => {
     try {
       const method = msg.method || 'GET';
-      if (!['GET','PUT','DELETE'].includes(method) || !['/broker-selection','/broker-connections','/broker-connections/coinbase','/broker-connections/coinbase/status','/broker-connections/coinbase/accounts','/broker-connections/coinbase/products'].includes(msg.path)) throw Error('Invalid broker request');
+      if (!['GET','PUT','DELETE','POST'].includes(method) || !['/broker-selection','/broker-connections','/broker-connections/coinbase','/broker-connections/coinbase/status','/broker-connections/coinbase/accounts','/broker-connections/coinbase/products','/broker-connections/coinbase/oauth/config','/broker-connections/coinbase/oauth/start'].includes(msg.path)) throw Error('Invalid broker request');
+      if(method==='POST'){
+        const expected=new URL(chrome.runtime.getURL('popup.html')),actual=new URL(sender?.url||'about:blank');
+        if(msg.path!=='/broker-connections/coinbase/oauth/start'||(actual.protocol!==expected.protocol||actual.host!==expected.host||actual.pathname!==expected.pathname))throw Error('OAuth connection must start in the KAOS app window');
+      }
       const response = await self.KaosCloud.authFetch(msg.path, {method, headers:{'Content-Type':'application/json'}, ...(method==='PUT'?{body:JSON.stringify(msg.payload)}:{})});
       const data=await response.json();
       sendResponse({ok:response.ok,data});

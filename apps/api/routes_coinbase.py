@@ -81,9 +81,13 @@ async def connection(user_id):
     if not row: raise HTTPException(403, "Verified Coinbase connection required")
     if not os.getenv("KAOS_BROKER_VAULT_KEY"):
         raise HTTPException(503, "Broker vault not configured")
-    return row
+    from coinbase_oauth import ready_connection
+    return await ready_connection(row)
 
 def make_client(row):
+    if row.get('auth_type') == 'oauth':
+        from coinbase_oauth import make_oauth_client
+        return make_oauth_client(row)
     from coinbase.rest import RESTClient
     cipher = vault()
     key = cipher.decrypt(row["key_name_enc"].encode()).decode()

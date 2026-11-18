@@ -61,6 +61,7 @@ def dictionary(value):
 
 def public(row):
     return {'broker': 'coinbase', 'saved': True, 'verified': row.get('verified') is True,
+            'auth_type': row.get('auth_type','api_key'), 'reconnect_required': row.get('oauth_reconnect_required',False),
             'key_hint': row.get('key_hint', ''), 'verified_at': row.get('verified_at'),
             'account_count': row.get('account_count', 0),
             'account_count_is_partial': row.get('account_count_is_partial', False),
@@ -76,6 +77,9 @@ async def connected_client(uid):
     row = await current(uid)
     if not row or row.get('verified') is not True:
         raise HTTPException(409, 'Verify and save Coinbase first')
+    if row.get('auth_type') == 'oauth':
+        from coinbase_oauth import ready_connection, make_oauth_client
+        return make_oauth_client(await ready_connection(row))
     try:
         v = vault()
         name = v.decrypt(row['key_name_enc'].encode()).decode()
@@ -142,8 +146,10 @@ async def save(request: Request, response: Response, user: dict = Depends(get_cu
     except Exception:
         raise HTTPException(502, 'Coinbase verification failed; check key permissions, IP allowlist and Coinbase availability') from None
     previous = await current(user['id'])
+    if previous and previous.get('auth_type') == 'oauth':
+        raise HTTPException(409,'Disconnect Coinbase OAuth before changing connection methods')
     identity = {'_id': previous['_id']} if previous else {'_id': user['id'] + ':coinbase'}
-    row = {'user_id': user['id'], 'broker': 'coinbase', 'verified': True,
+    row = {'user_id': user['id'], 'broker': 'coinbase', 'auth_type':'api_key', 'verified': True,
            'key_name_enc': v.encrypt(name.encode()).decode(), 'private_key_enc': v.encrypt(secret.encode()).decode(),
            'key_hint': name[-4:], 'verified_at': now_iso(), 'account_count': len(accounts['accounts']),
            'account_count_is_partial': accounts.get('has_next') is True,
@@ -165,7 +171,24 @@ async def disconnect(response: Response, user: dict = Depends(get_current_user))
         raise HTTPException(409, 'Pause the Coinbase live gateway before disconnecting')
     if await db.coinbase_active_slots.find_one({'user_id': user['id']}):
         raise HTTPException(409, 'Resolve active or uncertain Coinbase positions before disconnecting')
-    await db.broker_connections.delete_many({'user_id': user['id'], 'broker': 'coinbase'})
+    await db.coinbase_oauth_states.delete_many({'user_id':user['id']})
+    existing = await current(user['id'])
+    if existing and existing.get('auth_type') == 'oauth':
+        import httpx
+        from coinbase_oauth import settings
+        client_id, secret, _ = settings()
+        try:
+            token = vault().decrypt(existing['oauth_access_enc'].encode()).decode()
+            async with httpx.AsyncClient(timeout=12,follow_redirects=False) as client:
+                result = await client.post('https://login.coinbase.com/oauth2/revoke',
+                    data={'client_id':client_id,'client_secret':secret,'token':token})
+                result.raise_for_status()
+        except Exception:
+            raise HTTPException(502,'Coinbase revocation was not confirmed. Revoke KAOS in Coinbase account settings and retry.') from None
+        changed = await db.broker_connections.delete_one({'_id':existing['_id'],'oauth_refresh_enc':existing['oauth_refresh_enc']})
+        if changed.deleted_count != 1:raise HTTPException(409,'Connection changed during disconnect; refresh status')
+    else:
+        await db.broker_connections.delete_many({'user_id': user['id'], 'broker': 'coinbase'})
     return {'broker': 'coinbase', 'saved': False, 'live_order_authorized': False}
 
 

@@ -7,11 +7,14 @@ if(!overlay||!grid||!status)return;
 const pane=document.createElement('section');pane.id='kaos-coinbase-connect';pane.hidden=true;
 pane.innerHTML=`<h3>Connect Coinbase Advanced Trade</h3>
 <p>1. <a href="https://advanced.coinbase.com/join/8H6AVRJ" target="_blank" rel="noopener noreferrer">Sign up for Coinbase through KAOS</a></p>
+<button id="kaos-cb-oauth" type="button" disabled style="padding:12px">Connect Coinbase account</button>
+<p id="kaos-cb-oauth-info">Checking account authorization availability…</p>
+<details><summary>Advanced: connect with your own API key</summary>
 <p>2. <a href="https://portal.cdp.coinbase.com/" target="_blank" rel="noopener noreferrer">Create a CDP API key</a> with View and Trade permissions; disable Transfer. KAOS verifies account access before saving. Connecting does not start trading.</p>
 <label style="display:block;margin:8px 0">API Key Name<input id="kaos-cb-name" autocomplete="off" spellcheck="false" placeholder="organizations/.../apiKeys/..." style="width:100%;padding:10px;background:#151515;color:white;border:1px solid #826a36"></label>
 <label style="display:block;margin:8px 0">API Private Key<textarea id="kaos-cb-key" rows="5" autocomplete="off" spellcheck="false" placeholder="Paste Coinbase Ed25519 base64, PEM, or credentials JSON" style="width:100%;padding:10px;background:#151515;color:white;border:1px solid #826a36"></textarea></label>
-<button id="kaos-cb-connect" type="button" style="padding:12px">Connect Coinbase</button>
-<button id="kaos-cb-use" type="button" hidden style="padding:12px">Use Coinbase</button>
+<button id="kaos-cb-connect" type="button" style="padding:12px">Verify & save API key</button></details>
+<button id="kaos-cb-use" type="button" style="padding:12px">Check connection & use Coinbase</button>
 <button id="kaos-cb-back" type="button" style="padding:12px">Back</button>
 <div id="kaos-cb-result" style="margin-top:12px;white-space:pre-wrap"></div>`;
 grid.after(pane);
@@ -23,9 +26,19 @@ async function request(path,opts={}){
  if(!d?.ok)throw Error(d?.data?.detail||d?.error||'Broker connection failed');return d.data;
 }
 // Capture Coinbase selection before the foundation selector's handler, which otherwise shows 'pending'.
-document.addEventListener('kaos-coinbase-setup',()=>{grid.hidden=true;status.hidden=true;pane.hidden=false;overlay.classList.add('visible');});
+document.addEventListener('kaos-coinbase-setup',async()=>{grid.hidden=true;status.hidden=true;pane.hidden=false;overlay.classList.add('visible');
+ try{const config=await request('/oauth/config');el('kaos-cb-oauth').disabled=!config.available;el('kaos-cb-oauth-info').textContent=config.message;}
+ catch(e){el('kaos-cb-oauth').disabled=true;el('kaos-cb-oauth-info').textContent='Account authorization unavailable: '+e.message;}
+});
+el('kaos-cb-oauth').addEventListener('click',async()=>{
+ const btn=el('kaos-cb-oauth');btn.disabled=true;
+ try{const data=await request('/oauth/start',{method:'POST'});const url=new URL(data.authorizationUrl);
+  if(url.origin!=='https://login.coinbase.com'||url.pathname!=='/oauth2/auth')throw Error('Unexpected Coinbase authorization URL');
+  await chrome.tabs.create({url:url.href,active:true});el('kaos-cb-use').hidden=false;result.textContent='Complete approval on Coinbase, return here, then click Check connection & use Coinbase. No API key is needed for this connection method.';
+ }catch(e){result.textContent=e.message;}finally{btn.disabled=false;}
+});
 // Broker selection is handled by kaos-broker-selector.js after member authentication.
-el('kaos-cb-use').addEventListener('click',async()=>{pane.hidden=true;grid.hidden=false;await window.KAOSBroker?.choose('coinbase');});
+el('kaos-cb-use').addEventListener('click',async()=>{try{const current=await request('/status');if(!current.saved||!current.verified)throw Error('Complete Coinbase authorization first.');pane.hidden=true;grid.hidden=false;await window.KAOSBroker?.choose('coinbase');}catch(e){result.textContent=e.message;}});
 el('kaos-cb-back').addEventListener('click',()=>{pane.hidden=true;grid.hidden=false;result.textContent='';});
 el('kaos-cb-connect').addEventListener('click',async()=>{
  const btn=el('kaos-cb-connect');btn.disabled=true;el('kaos-cb-use').hidden=true;result.textContent='Verifying Coinbase through KAOS cloud...';

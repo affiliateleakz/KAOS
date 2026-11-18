@@ -97,7 +97,7 @@ def _get_app():
             coinbase_stop = request.method == "POST" and path == "/api/v1/coinbase-bot/stop"
             commission_setup = request.method == "PUT" and path in ("/api/admin/affiliate/commission-rates", "/api/admin/follow-us")
             payout_operation = request.method == "POST" and path in ("/api/admin/affiliate/payouts/release", "/api/admin/affiliate/payouts/requests", "/api/admin/affiliate/payouts/reconcile")
-            allowed_write = allowed_write or payout_operation or commission_setup or coinbase_stop or coinbase_live or broker_setup or bool(device_revoke) or commerce_setup or radar_setup or community_write or membership_setup or (request.method == "POST" and bool(re.fullmatch(r"/api/admin/ai/continuous/publish/[a-f0-9]{64}", path)))
+            allowed_write = allowed_write or (request.method == "POST" and path == "/api/v1/broker-connections/coinbase/oauth/start") or payout_operation or commission_setup or coinbase_stop or coinbase_live or broker_setup or bool(device_revoke) or commerce_setup or radar_setup or community_write or membership_setup or (request.method == "POST" and bool(re.fullmatch(r"/api/admin/ai/continuous/publish/[a-f0-9]{64}", path)))
             stripe_live = os.environ.get("KAOS_STRIPE_CHECKOUT_ENABLED") == "true" and os.environ.get("KAOS_LOGIN_VALIDATION_MODE") != "true"
             stripe_operation = stripe_live and ((request.method == "POST" and path in (
                 "/api/billing/guest-intent", "/api/billing/guest-checkout", "/api/billing/checkout", "/api/billing/portal", "/api/billing/cancel", "/api/stripe/webhook")) or

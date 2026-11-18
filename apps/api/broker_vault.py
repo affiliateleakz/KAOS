@@ -10,7 +10,7 @@ import os
 from cryptography.fernet import Fernet, MultiFernet
 from fastapi import HTTPException
 
-ENCRYPTED_FIELDS = ("key_name_enc", "private_key_enc")
+ENCRYPTED_FIELDS = ("key_name_enc", "private_key_enc", "oauth_access_enc", "oauth_refresh_enc")
 
 
 def vault() -> MultiFernet:
