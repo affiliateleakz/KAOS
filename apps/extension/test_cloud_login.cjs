@@ -163,3 +163,38 @@ test('an HTML 404 for the diagnostic route does not prevent a verified Google ex
  c.context.chrome.identity={getAuthToken:async()=>({token:'google-fixture'})};
  await c.api.googleLogin();assert.equal(c.storage.kaos_tokens.accessToken,'verified-kaos-token');
 });
+
+function edgeLogin(responses, reply) {
+ const c=cloud(responses);
+ Object.assign(c.context,{URL,URLSearchParams,navigator:{userAgent:'Mozilla/5.0 Edg/130.0'}});
+ c.context.chrome.identity={
+  getAuthToken:async()=>{throw Error('Edge must not call Chrome token API');},
+  getRedirectURL:path=>'https://gbobopmnjgeeegniphckfpalhnebapjm.chromiumapp.org/'+path,
+  launchWebAuthFlow:async({url})=>reply(new URL(url))
+ };
+ return c;
+}
+const edgeConfig={status:200,body:{configured:true,client_id:'fixture-client',web_client_id:'web-client'}};
+test('Edge browser OAuth exchanges a state-validated token without storing it',async()=>{
+ const c=edgeLogin([edgeConfig,{status:200,body:{accessToken:'kaos-access',user:{id:'u1'}}}],url=>{
+  assert.equal(url.searchParams.get('client_id'),'web-client');
+  return url.searchParams.get('redirect_uri')+'#'+new URLSearchParams({state:url.searchParams.get('state'),access_token:'edge-google-token',token_type:'Bearer'});
+ });
+ await c.api.googleLogin();
+ assert.equal(JSON.parse(c.calls[1].opts.body).access_token,'edge-google-token');
+ assert.equal(c.storage.kaos_tokens.accessToken,'kaos-access');
+ assert.ok(!JSON.stringify(c.storage).includes('edge-google-token'));
+});
+for(const failure of ['state','redirect','cancel']) test('Edge rejects '+failure+' before token exchange',async()=>{
+ const c=edgeLogin([edgeConfig],url=>{
+  if(failure==='cancel')throw Error('cancelled');
+  return (failure==='redirect'?'https://attacker.example/google':url.searchParams.get('redirect_uri'))+'#'+new URLSearchParams({state:failure==='state'?'wrong':url.searchParams.get('state'),access_token:'untrusted',token_type:'Bearer'});
+ });
+ await assert.rejects(c.api.googleLogin());
+ assert.equal(c.calls.length,1);assert.equal(c.storage.kaos_tokens,undefined);
+});
+test('Edge missing web client gives setup instruction without opening OAuth',async()=>{
+ const c=edgeLogin([{status:200,body:{configured:true,client_id:'fixture-client'}}],()=>{throw Error('must not open');});
+ await assert.rejects(c.api.googleLogin(),/KAOS_GOOGLE_BROWSER_CLIENT_ID/);
+ assert.equal(c.storage.kaos_tokens,undefined);
+});

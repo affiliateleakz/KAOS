@@ -95,3 +95,36 @@ GET returned 404, and an empty request to the existing Google exchange returned
 OAuth environment variable is set; no real token or account was used. Versions
 1.7.26–1.7.27 incorrectly treated that missing GET as a missing server setting.
 Version 1.7.28 fixes that compatibility error without weakening token verification.
+
+## Microsoft Edge support — 1.7.36
+
+Edge does not implement Chrome's `identity.getAuthToken`. This release uses
+`identity.launchWebAuthFlow` for Edge (also falls back when a browser explicitly
+reports that the Chrome API is unsupported). Chrome retains its manifest client.
+The official extension ID and public key are unchanged.
+
+Owner setup in Google Cloud Console:
+
+1. Create an OAuth **Web application** client in the existing Google project.
+2. Add this exact authorized redirect URI for the supplied store-ID build:
+   `https://gbobopmnjgeeegniphckfpalhnebapjm.chromiumapp.org/google`
+3. In the cPanel Python application's environment, set
+   `KAOS_GOOGLE_BROWSER_CLIENT_ID` to that web client's public Client ID and
+   restart the Python application after deploying `apps/api/routes_extension.py`.
+   Keep `KAOS_GOOGLE_EXTENSION_CLIENT_ID` unchanged for Chrome. No client secret
+   is needed or embedded for this browser token flow.
+4. Install extension 1.7.36, confirming its ID remains
+   `gbobopmnjgeeegniphckfpalhnebapjm`. An independently published Edge store item
+   can have a different ID and needs a separately supported redirect/identity;
+   this package does not claim to support an arbitrary store ID.
+
+The client pins the redirect origin/path and validates a fresh, unpredictable
+OAuth state before accepting a response. Google tokens are exchanged only with
+the configured KAOS API and never saved in extension storage. The backend
+verifies the token with Google, pins its audience to either configured client,
+and verifies email ownership before issuing KAOS tokens. Provider errors and
+cancellation cannot establish a KAOS session.
+
+Syntax and packaging checks completed. Live Edge consent remains unverified
+until the owner configures the web client and completes sign-in. This update
+places no orders, sends no payouts, and changes no trading permissions.

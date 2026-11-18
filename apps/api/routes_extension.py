@@ -113,6 +113,7 @@ async def extension_google_config():
     """Public OAuth client ID (not a secret); no tokens or private settings."""
     client=os.environ.get("KAOS_GOOGLE_EXTENSION_CLIENT_ID", "").strip()
     return {"configured":bool(client),"client_id":client or None,
+            "web_client_id":os.environ.get("KAOS_GOOGLE_BROWSER_CLIENT_ID", "").strip() or None,
             "store_item_id":"gbobopmnjgeeegniphckfpalhnebapjm"}
 
 
@@ -124,7 +125,9 @@ async def extension_google_access_token(request: Request):
     configured OAuth client ID, and email ownership is verified with Google.
     """
     expected_client = os.environ.get("KAOS_GOOGLE_EXTENSION_CLIENT_ID", "").strip()
-    if not expected_client:
+    browser_client = os.environ.get("KAOS_GOOGLE_BROWSER_CLIENT_ID", "").strip()
+    allowed_clients = {value for value in (expected_client, browser_client) if value}
+    if not allowed_clients:
         raise HTTPException(status_code=503, detail="Extension Google sign-in not configured")
     payload = await request.json()
     token = payload.get("access_token") if isinstance(payload, dict) else None
@@ -137,7 +140,7 @@ async def extension_google_access_token(request: Request):
             if info_response.status_code != 200:
                 raise HTTPException(status_code=401, detail="Invalid Google access token")
             info = info_response.json()
-            if info.get("aud") != expected_client and info.get("issued_to") != expected_client:
+            if (info.get("aud") or info.get("issued_to")) not in allowed_clients:
                 raise HTTPException(status_code=401, detail="Unrecognized Google OAuth client")
             profile_response = await client.get(
                 "https://openidconnect.googleapis.com/v1/userinfo",

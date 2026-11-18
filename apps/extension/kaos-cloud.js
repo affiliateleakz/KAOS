@@ -176,7 +176,9 @@
   }
 
   async function googleLogin() {
-    if (!chrome.identity || !chrome.identity.getAuthToken) throw new Error('Chrome Identity API is unavailable');
+    if (!chrome.identity) throw new Error('Browser Identity API is unavailable');
+    var useWebFlow=typeof navigator!=='undefined' && /Edg\//.test(navigator.userAgent||'');
+    var config=null;
     var storeItem='gbobopmnjgeeegniphckfpalhnebapjm';
     if (chrome.runtime.id && chrome.runtime.id!==storeItem) throw new Error('Google sign-in requires the official KAOS extension ID '+storeItem+'. For an unpacked build, use this listing’s public key; do not create another store item.');
     var base=await apiBase();
@@ -192,19 +194,46 @@
     // optional diagnostic endpoint. A missing diagnostic must not block sign-in.
     // Authentication still requires the same Google-verified server exchange.
     if (configResponse.status!==404) {
-      var config=await apiJson(configResponse,'KAOS Google configuration');
-      if (!configResponse.ok || !config.configured || !config.client_id) throw new Error('KAOS extension Google sign-in is not configured on the server. Contact KAOS support or use email sign-in.');
+      config=await apiJson(configResponse,'KAOS Google configuration');
+      if (!configResponse.ok || (!useWebFlow && (!config.configured || !config.client_id))) throw new Error('KAOS extension Google sign-in is not configured on the server. Contact KAOS support or use email sign-in.');
       var oauth=(chrome.runtime.getManifest()||{}).oauth2;
-      if (!oauth || oauth.client_id!==config.client_id) throw new Error('The KAOS server and extension use different Google OAuth clients. Contact KAOS support.');
+      if (!useWebFlow && (!oauth || oauth.client_id!==config.client_id)) throw new Error('The KAOS server and extension use different Google OAuth clients. Contact KAOS support.');
+    }
+    async function browserGoogleToken() {
+      if (!config || !config.web_client_id) throw new Error('Edge Google sign-in needs KAOS_GOOGLE_BROWSER_CLIENT_ID configured on the server. Use email sign-in until KAOS support completes setup.');
+      if (!chrome.identity.launchWebAuthFlow || !chrome.identity.getRedirectURL) throw new Error('This browser does not support web Google sign-in. Use email sign-in.');
+      var redirect=chrome.identity.getRedirectURL('google');
+      var state=crypto.randomUUID()+crypto.randomUUID();
+      var authorize=new URL('https://accounts.google.com/o/oauth2/v2/auth');
+      authorize.search=new URLSearchParams({client_id:config.web_client_id,redirect_uri:redirect,response_type:'token',scope:'openid email profile',state:state,prompt:'select_account'}).toString();
+      var callback;
+      try { callback=await chrome.identity.launchWebAuthFlow({url:authorize.href,interactive:true}); }
+      catch (_) { throw new Error('Google sign-in was cancelled or could not complete. Try again or use email sign-in.'); }
+      if (!callback) throw new Error('Google sign-in did not return a response');
+      var returned=new URL(callback), expected=new URL(redirect);
+      if (returned.origin!==expected.origin || returned.pathname!==expected.pathname) throw new Error('Google sign-in returned an unexpected redirect');
+      var params=new URLSearchParams(returned.hash.slice(1));
+      if (params.get('state')!==state) throw new Error('Google sign-in security check failed. Please try again.');
+      if (params.has('error')) throw new Error('Google sign-in was not approved. Try again or use email sign-in.');
+      var token=params.get('access_token');
+      if (!token || (params.get('token_type')||'').toLowerCase()!=='bearer') throw new Error('Google did not return an access token');
+      return token;
     }
     for (var attempt=0;attempt<2;attempt++) {
       var tokenResponse;
-      try { tokenResponse=await chrome.identity.getAuthToken({interactive:true}); }
+      try {
+        if (useWebFlow || !chrome.identity.getAuthToken) { useWebFlow=true; tokenResponse=await browserGoogleToken(); }
+        else tokenResponse=await chrome.identity.getAuthToken({interactive:true});
+      }
       catch (error) {
         var message=String(error&&error.message||error);
+        if (!useWebFlow && /not supported/i.test(message)) {
+          useWebFlow=true; tokenResponse=await browserGoogleToken();
+        } else {
         if (/cancel|did not approve|not grant/i.test(message)) throw new Error('Google sign-in was cancelled. Try again or use email sign-in.');
         if (/client|oauth|not signed in/i.test(message)) throw new Error('Chrome could not authorize Google sign-in. Check that you are signed into Chrome and contact KAOS support to verify the OAuth client for this extension ID.');
-        throw new Error('Chrome Google sign-in failed: '+message.slice(0,180));
+        throw new Error((useWebFlow?'Browser':'Chrome')+' Google sign-in failed: '+message.slice(0,180));
+        }
       }
       var accessToken=typeof tokenResponse==='string'?tokenResponse:tokenResponse&&tokenResponse.token;
       if (!accessToken) throw new Error('Google did not return an access token');
@@ -212,7 +241,7 @@
         method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({access_token:accessToken})
       });
       var data=await apiJson(res,'KAOS Google sign-in');
-      if (res.status===401 && attempt===0 && chrome.identity.removeCachedAuthToken) {
+      if (res.status===401 && attempt===0 && !useWebFlow && chrome.identity.removeCachedAuthToken) {
         await chrome.identity.removeCachedAuthToken({token:accessToken});
         continue;
       }
