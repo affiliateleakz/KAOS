@@ -3,6 +3,7 @@ import asyncio
 import hashlib
 import json
 import time
+from urllib.parse import urlencode
 from uuid import uuid4
 from contextlib import asynccontextmanager
 from pymongo.errors import DuplicateKeyError
@@ -57,6 +58,8 @@ LEGACY_PLAN_IDS = {"monthly": "pro", "yearly": "ultimate"}
 
 
 def find_plan(plans, plan_id):
+    direct = next((p for p in plans if p["id"] == plan_id), None)
+    if direct: return direct
     plan_id = LEGACY_PLAN_IDS.get(plan_id, plan_id)
     return next((p for p in plans if p["id"] == plan_id), None)
 
@@ -128,8 +131,11 @@ async def checkout(req: CheckoutReq,user:dict=Depends(get_current_user)):
             current=await _verified_subscription(user['stripe_subscription_id'],user.get('stripe_customer_id'))
             if current.get('status') not in ('canceled','incomplete_expired'):
                 raise HTTPException(409,'Manage the existing subscription in billing settings; a second subscription will not be created')
-        plan=next((p for p in await get_plans() if p.get('lookup_key')==req.lookup_key and p.get('enabled',True)),None)
-        if not plan or plan.get('amount',0)<=0:raise HTTPException(400,'Paid plan unavailable')
+        requested_id=getattr(req,'plan_id',None);lookup=getattr(req,'lookup_key',None)
+        plans=await get_plans()
+        plan=next((p for p in plans if (p.get('id')==requested_id if requested_id else lookup and p.get('lookup_key')==lookup) and p.get('enabled',True)),None)
+        if not plan or plan.get('amount',0)<=0 or (lookup and plan.get('lookup_key')!=lookup):
+            raise HTTPException(400,'Paid plan unavailable or selection does not match')
         existing=await db.subscriptions.find_one({'userId':user['id'],'state':'initiated'},sort=[('createdAt',-1)])
         if existing:
             if existing.get('stripe_mode',mode)!=mode:raise HTTPException(409,'Existing checkout belongs to another environment; use an isolated test database')
@@ -138,7 +144,9 @@ async def checkout(req: CheckoutReq,user:dict=Depends(get_current_user)):
                 raise HTTPException(409,'Existing checkout identity requires reconciliation')
             if old.get('status')=='complete':raise HTTPException(409,'The previous payment is being verified; refresh membership status')
             if old.get('status')=='open' and old.get('url'):
-                if existing.get('planId')==plan['id']:return {'checkout_url':old['url'],'session_id':old['id']}
+                if (existing.get('planId')==plan['id'] and existing.get('amount')==plan['amount']
+                        and existing.get('currency')==plan.get('currency','usd') and existing.get('interval')==plan.get('interval','month')):
+                    return {'checkout_url':old['url'],'session_id':old['id']}
                 await asyncio.to_thread(stripe.checkout.Session.expire,old['id'],api_key=config['key'])
             await db.subscriptions.update_one({'session_id':existing['session_id'],'userId':user['id']},{'$set':{'state':'expired','updatedAt':now_iso()}})
         customer=user.get('stripe_customer_id')
@@ -153,9 +161,9 @@ async def checkout(req: CheckoutReq,user:dict=Depends(get_current_user)):
         session=await asyncio.to_thread(stripe.checkout.Session.create,api_key=config['key'],idempotency_key='kaos-checkout-'+key,
             mode='subscription',customer=customer,line_items=[{'price':price,'quantity':1}],
             success_url=f"{os.environ['FRONTEND_URL'].rstrip('/')}/payment/success?session_id={{CHECKOUT_SESSION_ID}}",
-            cancel_url=f"{os.environ['FRONTEND_URL'].rstrip('/')}/payment/cancel",
+            cancel_url=f"{os.environ['FRONTEND_URL'].rstrip('/')}/payment/cancel?{urlencode({'plan':plan['id']})}",
             metadata={'user_id':user['id'],'plan_id':plan['id'],'lookup_key':plan['lookup_key']},subscription_data={'metadata':{'user_id':user['id'],'plan_id':plan['id']}})
-        await db.subscriptions.update_one({'session_id':session.id},{'$setOnInsert':{'id':new_id('sub'),'userId':user['id'],'session_id':session.id,'planId':plan['id'],'lookup_key':plan['lookup_key'],'amount':plan['amount'],'state':'initiated','stripe_customer_id':customer,'stripe_subscription_id':None,'stripe_mode':mode,'createdAt':now_iso(),'updatedAt':now_iso()}},upsert=True)
+        await db.subscriptions.update_one({'session_id':session.id},{'$setOnInsert':{'id':new_id('sub'),'userId':user['id'],'session_id':session.id,'planId':plan['id'],'lookup_key':plan['lookup_key'],'amount':plan['amount'],'currency':plan.get('currency','usd'),'interval':plan.get('interval','month'),'state':'initiated','stripe_customer_id':customer,'stripe_subscription_id':None,'stripe_mode':mode,'createdAt':now_iso(),'updatedAt':now_iso()}},upsert=True)
         return {'checkout_url':session.url,'session_id':session.id}
 
 

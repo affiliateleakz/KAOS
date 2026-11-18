@@ -1,23 +1,45 @@
-# Stripe membership setup
+# Stripe membership checkout
 
-Use Admin → Payments & payout setup (`/admin/commerce`). Select Stripe membership payments, choose Sandbox/test initially, and save the Payments secret key and Webhook signing secret in the private encrypted vault. Existing values are preserved when fields are left blank. Never paste secret keys into chat or commit them. Stripe Connect is separate, is not required for membership checkout, and does not become active by selecting affiliate payouts.
+The current flow is **choose a paid plan → sign up or sign in → Stripe Checkout → verified payment → paid membership**. It no longer sends a new paid buyer to the dashboard to choose/pay again. Signed-in buyers go directly to checkout for the selected plan. Free signup remains free and does not call Stripe.
 
-The application reads saved vault credentials per request. A successful Check API connection is a read-only account authentication check, not a successful checkout, webhook test or payout approval. Stripe billing readiness reports configured versus activated without returning credentials.
+## Activate the configured checkout on cPanel
 
-In the matching Stripe environment, create a webhook destination:
+The owner has requested paid membership checkout. Install the matching tested website/backend release first; the previous Passenger wrapper forced login-validation mode even when Stripe credentials were saved.
 
-`https://api.tradingwithkaos.com/api/stripe/webhook`
+In **cPanel → Setup Python App → api.tradingwithkaos.com → Environment variables**, set:
 
-Subscribe to checkout.session.completed, checkout.session.async_payment_succeeded, invoice.paid, invoice.payment_failed, customer.subscription.deleted, charge.refunded and charge.dispute.created. Store the destination-specific whsec_ signing secret in the same Stripe card. The API only processes a signed webhook after billing is explicitly activated. Current cPanel login-validation deployment blocks both checkout and webhook delivery; delivery retries may show 503 until a separately reviewed billing deployment is installed.
+```text
+KAOS_STRIPE_CHECKOUT_ENABLED=true
+KAOS_LOGIN_VALIDATION_MODE=false
+```
 
-Saving credentials never activates checkout. KAOS_STRIPE_CHECKOUT_ENABLED must explicitly equal true, provider mode must match the key, membership payments must be selected and a signing secret must be present. KAOS_LOGIN_VALIDATION_MODE=true always blocks billing even if saved credentials exist. The current cPanel entry point sets that validation marker. Do not remove it merely to make a connection check pass. A billing-capable deployment and test validation remain separate work; this change does not enable either live or sandbox checkout on the current hosting.
+Save and **restart the Python application**. These are nonsecret settings, not API keys. Setting only a shell variable in Terminal does not persist the Python app's environment. The updated wrapper also defaults validation off when checkout is explicitly requested and no validation override was set; an explicit `KAOS_LOGIN_VALIDATION_MODE=true` still blocks payments.
 
-Validate sandbox payments against a separate test database/accounts so test subscriptions cannot grant real member access or enter live affiliate accounting. Confirm the four plan amounts (Pro $29.95 monthly/$299.95 yearly; Ultimate $99.95 monthly/$995.95 yearly), signed delivery, retries, renewals, failed invoices, cancellation and refund reversals. Verify actual Stripe Checkout and customer portal configuration. Only then review a live deployment with the matching live keys and live webhook secret. Do not reuse sandbox Stripe customer/subscription IDs in live mode.
+The explicit flag enables only membership checkout, billing status/portal/cancellation and the signed Stripe webhook route through the hosting policy. Other trading, payouts, refunds and unrelated write permissions are not enabled by it. Saving a key or installing the files with the flag absent does not activate checkout or create a charge. Coinbase has its own flag and worker requirements.
 
-No payments, invoices, subscriptions, refunds, payouts or Stripe account settings were created by the repository tests. No real credential is present in the repository.
+In **Admin → Commerce Setup → Stripe**, confirm:
 
-## Credential and lifecycle update
+- Membership payments are selected.
+- The saved environment matches the payments key: Live uses `sk_live_` or a properly permitted `rk_live_`; sandbox uses the corresponding test key.
+- The signing secret belongs to that environment's webhook destination: `https://api.tradingwithkaos.com/api/stripe/webhook`.
+- Save before running the API connection check. Sandbox/live credentials are stored separately under the existing commerce vault key; do not replace that encryption key.
 
-Current setup stores sandbox and live Stripe values separately under the existing encrypted vault. Switching modes no longer reuses the other mode's values. Legacy settings are preserved by actual key prefix on save. Use the matching live/test signing secret from its own destination; `whsec_` alone does not identify its mode. The connection check prioritizes membership payments credentials, not a separate Connect key. Mode changes are blocked during activated checkout to avoid cross-environment customer reuse.
+Use `/api/billing/availability` or **Admin → Launch Status** to check that `checkoutEnabled` is true and the mode is the one intended. If `configurationReady` is false, resolve the saved provider selection/mode/key/signing-secret configuration first. The connection check does not prove inbound webhook delivery.
 
-The billing implementation now verifies real subscription periods, extends paid renewals, checks checkout/customer/subscription identities, journals initial payments by invoice, resolves dispute charges and keeps cancellation separate from refunds. Existing active subscribers cannot create a second checkout. Review BUSINESS_LAUNCH.md for sandbox and hosted acceptance steps; code changes do not remove the current validation deployment gate or activate funds.
+## Customer behavior
+
+Paid homepage and membership links open `/checkout?plan=<exact-plan-id>`, retaining monthly/yearly choice, referral and campaign. A new customer creates a sign-in on that checkout page, then proceeds automatically to Stripe; an existing customer signs in with the plan retained. No paid access is granted on account creation or session creation. Card details are entered at Stripe, not on a KAOS form.
+
+If checkout is disabled/unavailable when the page loads, paid signup/Google account creation is not offered. The customer sees an availability message and an explicit Free option rather than being registered and dropped into the dashboard. If the service fails after signup, the existing account remains unpaid and checkout offers a retry without another registration.
+
+The backend selects price/currency/billing interval from saved server plans using the exact selected plan ID; it ignores a browser-supplied price or redirect origin. Returning to an unchanged open checkout reuses it. An open session with superseded pricing is expired before replacing it. A completed payment waits for reconciliation rather than making a second subscription. Cancellation retains the chosen plan for returning to checkout. Failed/missing payment verification never displays “payment received” or grants membership just because the browser returned to a success URL.
+
+## Hosted acceptance still required
+
+Verify the four saved amounts: Pro $29.95/month or $299.95/year; Ultimate $99.95/month or $995.95/year. Existing subscriptions are not repriced automatically. Use an isolated sandbox website/API/database for test payments; test subscriptions must not grant production access or accrue production commissions.
+
+Then validate actual new email/Google buyer checkout, returning member sign-in, monthly/annual selection, cancellation/retry, signed webhook delivery, activation, renewals, failed invoices, refunds/disputes and affiliate invoice reconciliation. Existing active subscribers manage billing instead of creating a second subscription. Stripe portal plan-change/proration settings need their own account configuration.
+
+An external client has received **Bot Verification HTML** from the API hostname. This code cannot remove that hosting/security challenge. Resolve it for legitimate API clients and signed Stripe callbacks; see [API_HOSTING_HANDOFF.md](API_HOSTING_HANDOFF.md). Keep webhook signature validation and application authentication intact.
+
+All repository/browser checks use fixtures or mocked Stripe APIs. No real customer, Stripe checkout session, charge, refund or payout is created by those tests. This workspace has not changed live hosting environment settings or Stripe Dashboard settings.

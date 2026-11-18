@@ -325,3 +325,39 @@ def test_coinbase_live_enablement_is_explicit_and_does_not_enable_other_trading(
         assert client.post('/api/trading/execute').status_code==503
         assert client.post('/api/billing/checkout').status_code==503
         assert client.post('/api/v1/coinbase-live/arbitrary').status_code==503
+
+
+@pytest.mark.parametrize('enabled,validation',[(False,False),(True,False),(True,True)])
+def test_explicit_stripe_checkout_flag_reaches_only_billing_handlers(tmp_path,monkeypatch,enabled,validation):
+    from fastapi import FastAPI,Request,HTTPException
+    from fastapi.testclient import TestClient
+    from types import ModuleType
+    import os,sys
+    app=FastAPI()
+    for path in ('/api/billing/checkout','/api/billing/portal','/api/billing/cancel'):
+        app.add_api_route(path,lambda:{'fixture_only':True},methods=['POST'])
+    @app.get('/api/billing/status/{session_id}')
+    def owned_status(session_id:str):return {'state':'pending'}
+    @app.post('/api/stripe/webhook')
+    def webhook(request:Request):
+        if request.headers.get('Stripe-Signature')!='fixture-signed':raise HTTPException(400,'Signature required')
+        return {'fixture_only':True}
+    module=ModuleType('server');module.app=app;monkeypatch.setitem(sys.modules,'server',module)
+    monkeypatch.setenv('KAOS_STRIPE_CHECKOUT_ENABLED','true' if enabled else 'false')
+    monkeypatch.delenv('KAOS_LOGIN_VALIDATION_MODE',raising=False)
+    if validation:monkeypatch.setenv('KAOS_LOGIN_VALIDATION_MODE','true')
+    monkeypatch.setenv('STRIPE_SECRET_KEY','sk_test_fixture')
+    monkeypatch.setenv('STRIPE_WEBHOOK_SECRET','whsec_fixture')
+    scope={'__file__':str(tmp_path/'passenger_wsgi.py')}
+    exec(compile(activation.WRAPPER,'passenger_wsgi.py','exec'),scope);scope['_get_app']()
+    expected=200 if enabled and not validation else 503
+    with TestClient(app) as client:
+        for path in ('/api/billing/checkout','/api/billing/portal','/api/billing/cancel'):
+            assert client.post(path).status_code==expected
+        assert client.get('/api/billing/status/cs_fixture').status_code==expected
+        assert client.post('/api/stripe/webhook').status_code==(400 if expected==200 else 503)
+        assert client.post('/api/stripe/webhook',headers={'Stripe-Signature':'fixture-signed'}).status_code==expected
+        assert client.post('/api/trading/execute').status_code==503
+        assert client.post('/api/affiliate/connect/transfer').status_code==503
+        assert client.post('/api/billing/anything-else').status_code==503
+    assert os.environ['STRIPE_SECRET_KEY']==('sk_test_fixture' if enabled else '')

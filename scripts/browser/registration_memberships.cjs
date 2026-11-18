@@ -30,17 +30,19 @@ const plans=[{id:'free',name:'Free',amount:0,currency:'usd',interval:null,tier:'
   if(process.env.KAOS_CAPTURE_DIR&&!google)await page.screenshot({path:process.env.KAOS_CAPTURE_DIR+'/memberships-preview.png'});
   assert.ok((await page.getByTestId('membership-card-ultimate').textContent()).includes('50%'));
   await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
-  await page.getByTestId('choose-membership-'+planId).click();await page.getByTestId('registration-plan-summary').waitFor();
+  await page.getByTestId('choose-membership-'+planId).click();
+  if(planId!=='free'){await page.getByTestId('paid-checkout-unavailable').waitFor();assert.equal(payload,undefined);assert.equal(checkoutCalls,0);assert.equal(await page.getByTestId('register-email-input').count(),0);assert.deepEqual(errors,[]);await context.close();continue;}
+  await page.getByTestId('registration-plan-summary').waitFor();
   const current=new URL(page.url());assert.equal(current.searchParams.get('ref'),'KAOS-REF');assert.equal(current.searchParams.get('utm_source'),'campaign');
   assert.equal(tracks,1);
   assert.ok((await page.getByTestId('registration-plan-summary').textContent()).includes(planId==='pro'?'Pro':'Free'));
   if(google){await page.getByText('Continue with Google',{exact:true}).click();}
   else{await page.getByTestId('register-name-input').fill('New member');await page.getByTestId('register-email-input').fill('new@example.com');await page.getByTestId('register-password-input').fill('fixture-password');await page.getByTestId('register-submit-button').click();}
-  await page.waitForURL(google?'**/dashboard':'**/dashboard/subscription?plan=pro');
+  await page.waitForURL('**/dashboard');
   assert.equal(payload.planId,planId);assert.equal(payload.refCode,'KAOS-REF');assert.equal(checkoutCalls,0);
   if(!google){await page.getByTestId('subscribe-pro').waitFor();assert.equal(await page.getByTestId('subscribe-pro').isDisabled(),true);}
   assert.deepEqual(errors,[]);await context.close();
  }
- console.log('Membership-first signup, mobile comparison, referral retention, email/Google selection and no automatic checkout passed.');
+ console.log('Membership-first Free signup, mobile comparison, referral retention, Google selection and disabled paid checkout before account creation passed.');
  await browser.close();
 })().catch(error=>{console.error(error);process.exit(1)});

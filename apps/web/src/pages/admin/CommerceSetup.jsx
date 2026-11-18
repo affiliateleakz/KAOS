@@ -2,14 +2,14 @@ import React,{useEffect,useState} from 'react';
 import {api,errMsg} from '../../lib/api';
 
 const button='rounded-md border border-[#8a6b32] px-4 py-2 text-sm font-semibold text-[#e8c46f] disabled:opacity-50';
-function ProviderCard({provider,vaultReady,onChanged}){
+function ProviderCard({provider,vaultReady,onChanged,stripeReadiness}){
  const [form,setForm]=useState(provider),[secrets,setSecrets]=useState({}),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState('');
  // Metadata refreshes must not erase a credential being typed. Save clears it on success.
  useEffect(()=>{setForm(provider);},[provider]);
- async function save(){setBusy(true);setError('');setMessage('');try{await api.put(`/api/admin/commerce/providers/${provider.id}`,{mode:form.mode,paymentsSelected:form.paymentsSelected,payoutsSelected:form.payoutsSelected,cryptoAsset:form.cryptoAsset,credentials:secrets});setSecrets({});setMessage('Settings saved. Run a connection check next. No payments or payouts were enabled.');await onChanged();}catch(e){setError(errMsg(e));}finally{setBusy(false);}}
+ async function save(){setBusy(true);setError('');setMessage('');try{await api.put(`/api/admin/commerce/providers/${provider.id}`,{mode:form.mode,paymentsSelected:form.paymentsSelected,payoutsSelected:form.payoutsSelected,cryptoAsset:form.cryptoAsset,credentials:secrets});setSecrets({});setMessage('Settings saved. Review checkout status above and run a connection check. This does not send payouts.');await onChanged();}catch(e){setError(errMsg(e));}finally{setBusy(false);}}
  async function check(){setBusy(true);setError('');setMessage('');try{const {data}=await api.post(`/api/admin/commerce/providers/${provider.id}/test`);setMessage(data.message);await onChanged();}catch(e){setError(errMsg(e));await onChanged();}finally{setBusy(false);}}
  return <section className="rounded-xl border border-[#514027] bg-[#12100d] p-5 sm:p-7" data-testid={`provider-${provider.id}`}>
-  <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-2xl font-semibold text-[#efd28a]">{provider.name}</h2><span className="rounded border border-amber-700/50 px-3 py-1 text-xs text-amber-200">Setup only · not live</span></div>
+  <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-2xl font-semibold text-[#efd28a]">{provider.name}</h2><span className="rounded border border-amber-700/50 px-3 py-1 text-xs text-amber-200">{provider.id==='stripe'&&stripeReadiness?.checkoutEnabled?`Checkout enabled · ${stripeReadiness.mode}`:'Setup only · not live'}</span></div>
   <p className="mt-3 text-sm text-[#c4b89f]">{provider.description}</p>
   <a href={provider.dashboard} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block text-sm text-[#e8c46f] underline">Open {provider.name} dashboard ↗</a>
   <div className="my-5 grid gap-4 sm:grid-cols-2">
@@ -40,6 +40,6 @@ export default function CommerceSetup(){
   {data&&!data.vaultReady&&<section className="rounded-lg border border-amber-700/50 p-5 text-sm text-amber-200"><h2 className="font-semibold">Initialize your secure credential vault</h2><p className="mt-2">Create a dedicated encryption key in a private server folder outside your website. Existing keys are never replaced. Include the private key file in your secure hosting backup; losing or changing it makes stored credentials unreadable. Do not reuse the broker vault key. You can alternatively configure <code>KAOS_COMMERCE_VAULT_KEY</code> in hosting settings.</p><button onClick={initialize} className={`${button} mt-4`}>Initialize secure vault</button></section>}
   {data&&<p className="rounded-lg border border-[#514027] p-4 text-sm text-[#c4b89f]">{data.activationNote}</p>}
   {data?.stripeReadiness&&<section className="rounded-lg border border-[#514027] p-5 text-sm" data-testid="stripe-readiness"><h2 className="font-semibold text-[#efd28a]">Stripe billing readiness</h2><p className="mt-2">Environment: {data.stripeReadiness.mode} · Credentials: {data.stripeReadiness.configurationReady?'configured':'incomplete'} · Checkout: {data.stripeReadiness.checkoutEnabled?'activated':'disabled'}</p><p className="mt-2 text-[#c4b89f]">{data.stripeReadiness.note}</p><p className="mt-2 text-xs text-[#b5a487]">A successful API connection check does not verify webhook delivery. Connect is separate and is not required for membership checkout.</p></section>}
-  {data?.providers.map(provider=><ProviderCard key={provider.id} provider={provider} vaultReady={data.vaultReady} onChanged={load}/>)}
+  {data?.providers.map(provider=><ProviderCard key={provider.id} provider={provider} stripeReadiness={data.stripeReadiness} vaultReady={data.vaultReady} onChanged={load}/>)}
  </div>;
 }

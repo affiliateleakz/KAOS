@@ -29,8 +29,13 @@ class ProviderSettings(BaseModel):
 @router.get('/providers')
 async def get_providers(admin=Depends(owner)):
     from stripe_runtime import availability
-    return {'stripeReadiness': await availability(), 'vaultReady': providers.vault_ready(), 'providers': [await providers.public_provider(p) for p in providers.CATALOG],
-        'activationNote': 'Settings and connection checks do not enable checkout or transfer funds. Live adapters and financial launch checks remain required.'}
+    readiness=await availability()
+    methods=[await providers.public_provider(p) for p in providers.CATALOG]
+    for method in methods:
+        if method['id']=='stripe':method['paymentsLive']=readiness['checkoutEnabled'] and readiness['mode']=='live'
+    note=('Stripe membership checkout is enabled in '+readiness['mode']+' mode. Affiliate payouts remain separate; verify signed webhook delivery.'
+          if readiness['checkoutEnabled'] else 'Settings and connection checks do not enable checkout or transfer funds. Checkout activation remains separate.')
+    return {'stripeReadiness':readiness,'vaultReady':providers.vault_ready(),'providers':methods,'activationNote':note}
 
 
 @router.put('/providers/{provider}')

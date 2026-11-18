@@ -1,5 +1,7 @@
 # KAOS → Asura Hosting: one-time GitHub SSH setup
 
+Current paid-checkout activation and cPanel environment settings are in [STRIPE_SETUP.md](STRIPE_SETUP.md). Staging alone does not activate checkout.
+
 This is the simplest safe first step for the **existing domains**:
 
 - Website: `https://tradingwithkaos.com`

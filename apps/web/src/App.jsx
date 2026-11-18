@@ -58,6 +58,7 @@ function AppRouter() {
       <Route path="/register" element={<Memberships />} />
       <Route path="/memberships" element={<Memberships />} />
       <Route path="/register/account" element={<Register />} />
+      <Route path="/checkout" element={<Register purchase />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/community/:id" element={<CommunityDetail />} />

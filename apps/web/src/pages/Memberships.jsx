@@ -5,13 +5,10 @@ import React,{useEffect,useState} from 'react';
 import {Link,useSearchParams} from 'react-router-dom';
 import {Brand} from '../components/Brand';
 import {api} from '../lib/api';
+import {registrationLink} from '../lib/purchaseFlow';
 import {useReferralCapture} from '../lib/useReferralCapture';
 
-export function registrationLink(planId, search){
- const query=new URLSearchParams(search);query.set('plan',planId);
- if(planId.endsWith('_yearly'))query.set('billing','year');else query.delete('billing');
- return '/register/account?'+query.toString();
-}
+export {registrationLink};
 export function planPrice(plan){
  if(plan.id==='free')return '$0';
  try{return new Intl.NumberFormat('en-US',{style:'currency',currency:plan.currency||'usd',maximumFractionDigits:2}).format(plan.amount/100);}
@@ -50,7 +47,7 @@ export default function Memberships(){
       <Link data-testid={`choose-membership-${plan.id}`} to={registrationLink(plan.id,sp)} className="mt-auto rounded-md bg-[#d4af37] px-5 py-3 text-center font-semibold text-[#171207] hover:bg-[#e8c46f]">{plan.id==='free'?'Start free':`Choose ${plan.name}`}</Link><p className="mt-3 text-center text-xs text-[#b5a487]">{plan.id==='free'?'No card required.':'Create your account next. Paid access starts after confirmed payment.'}</p>
      </article>;
     })}</section>
-    {!catalog.checkoutEnabled&&<p role="status" className="rounded-lg border border-amber-700/50 p-4 text-sm text-amber-200">Paid checkout is not available yet. You can choose a preferred plan and create your account; paid features stay locked until payment is available and confirmed.</p>}
+    {!catalog.checkoutEnabled&&<p role="status" className="rounded-lg border border-amber-700/50 p-4 text-sm text-amber-200">Paid checkout is temporarily unavailable. You can still join Free; paid checkout will not create an account or start a payment while it is unavailable.</p>}
     <section className="rounded-xl border border-[#514027] bg-[#12100d] p-6 sm:p-8"><h2 className="text-2xl font-semibold">How the three-level affiliate program works</h2><ol className="mt-5 grid list-inside list-decimal gap-4 text-sm leading-relaxed text-[#c4b89f] sm:grid-cols-3"><li>Join KAOS, then optionally enroll in the affiliate program to get your referral link and promotion toolkit.</li><li>Your direct referrals are Level 1. Qualifying sales through the next two referral levels can count as Levels 2 and 3.</li><li>Your membership determines your rate at the time of payment. Commissions have a 30-day hold and refunds or chargebacks reverse them.</li></ol><p className="mt-5 text-sm text-[#b5a487]">Recruitment and unpaid signups do not earn commissions. Joining the affiliate program is optional; it is not required to use the trading tools.</p>{!catalog.affiliateEnrollmentEnabled&&<p className="mt-4 text-sm text-amber-200">Affiliate enrollment is currently paused.</p>}{!catalog.payoutsEnabled&&<p className="mt-4 text-sm text-amber-200">Cash payouts are not live yet. Commission examples and rates do not mean funds can currently be withdrawn.</p>}</section>
     <p className="text-xs leading-relaxed text-[#aa9a80]">Trading involves risk and can result in losses. A membership does not guarantee trading profits, affiliate income, provider availability or access to unvalidated AI execution. Market feeds require supported, configured providers. Selecting a paid plan does not charge you or activate paid access.</p>
    </>}

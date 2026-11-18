@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import CheckoutHandoff from "../components/CheckoutHandoff";
+import {registrationLink,purchaseLoginLink} from "../lib/purchaseFlow";
 import {planPrice} from './Memberships';
 import {useReferralCapture} from '../lib/useReferralCapture';
 import { api, errMsg } from "../lib/api";
@@ -41,6 +43,7 @@ function Shell({ title, subtitle, children }) {
 function GoogleButton({planId,refCode}={}) {
   const nav = useNavigate();
   const { setUser } = useAuth();
+  const [purchaseSearch] = useSearchParams();
   const [err, setErr] = useState("");
   const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID || "588189138338-oa8uu7k1dsrf40fj2tga7svqfus09tli.apps.googleusercontent.com";
 
@@ -54,7 +57,7 @@ function GoogleButton({planId,refCode}={}) {
             setErr("");
             const { data } = await api.post("/api/auth/google/credential", { credential, ...(planId?{planId,refCode}: {}) });
             setUser(data);
-            nav(planId ? (planId==='free'?'/dashboard':'/dashboard/subscription?plan='+encodeURIComponent(planId)) : ["moderator", "admin", "super_admin"].includes(data?.role) ? "/admin" : "/dashboard");
+            nav(planId ? (planId==='free'?'/dashboard':registrationLink(planId,purchaseSearch)) : ["moderator", "admin", "super_admin"].includes(data?.role) ? "/admin" : "/dashboard");
           } catch (e) { setErr(errMsg(e)); }
         }
       });
@@ -73,7 +76,7 @@ function GoogleButton({planId,refCode}={}) {
     script.addEventListener("error", onError);
     script.addEventListener("load", render);
     return () => { script?.removeEventListener("load", render); script?.removeEventListener("error", onError); };
-  }, [clientId, nav, setUser, planId, refCode]);
+  }, [clientId, nav, setUser, planId, refCode, purchaseSearch]);
 
   return <div className="mt-3"><div id="kaos-google-button" data-testid="google-login-button" className="flex justify-center" />{err && <p className="mt-2 text-sm text-[#C62828]">{err}</p>}</div>;
 }
@@ -81,6 +84,8 @@ function GoogleButton({planId,refCode}={}) {
 export function Login() {
   const nav = useNavigate();
   const { login } = useAuth();
+  const [sp] = useSearchParams();
+  const planId=sp.get("plan");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
@@ -90,7 +95,7 @@ export function Login() {
     try {
       const u = await login(email, password);
       const isAdmin = ["moderator", "admin", "super_admin"].includes(u?.role);
-      nav(isAdmin ? "/admin" : "/dashboard");
+      nav(planId&&planId!=="free"?registrationLink(planId,sp):(isAdmin ? "/admin" : "/dashboard"));
     }
     catch (e2) { setErr(errMsg(e2)); } finally { setBusy(false); }
   };
@@ -106,18 +111,18 @@ export function Login() {
         <Button data-testid="login-submit-button" disabled={busy} className="kaos-auth-submit w-full font-semibold">{busy ? "Signing in…" : "Sign In"}</Button>
       </form>
       <div className="kaos-auth-divider"><span>or continue with</span></div>
-      <GoogleButton />
+      <GoogleButton planId={planId||undefined} refCode={sp.get("ref")||undefined}/>
       <div className="mt-6 flex justify-between gap-3 text-sm">
         <Link to="/forgot-password" data-testid="forgot-password-link" className="text-slate-400 hover:text-[#D4AF37]">Forgot password?</Link>
-        <Link to="/register" data-testid="go-register-link" className="text-[#D4AF37] hover:underline">Join now</Link>
+        <Link to={planId?registrationLink(planId,sp):"/register"} data-testid="go-register-link" className="text-[#D4AF37] hover:underline">Join now</Link>
       </div>
     </Shell>
   );
 }
 
-export function Register() {
+export function Register({purchase=false}) {
   const nav = useNavigate();
-  const { register } = useAuth();
+  const { register,user,loading:authLoading } = useAuth();
   const [sp] = useSearchParams();
   useReferralCapture(sp);
   const planId=sp.get('plan');
@@ -125,7 +130,7 @@ export function Register() {
   const selectionQuery=new URLSearchParams(sp);selectionQuery.delete('plan');
   const selectionUrl='/register'+(selectionQuery.size?'?'+selectionQuery.toString():'');
   const selected=catalog?.plans?.find(plan=>plan.id===planId);
-  async function loadMembership(){setCatalogError('');try{const r=await api.get('/api/billing/memberships');setCatalog(r.data);}catch{setCatalogError('Cannot load your selected membership. Please retry.');}}
+  async function loadMembership(){setCatalogError('');try{const r=await api.get('/api/billing/memberships');if(!Array.isArray(r.data?.plans))throw Error('Invalid membership catalog');setCatalog(r.data);}catch{setCatalogError('Cannot load your selected membership. Please retry.');}}
   useEffect(()=>{if(planId)loadMembership();},[planId]);
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [err, setErr] = useState(""); const [busy, setBusy] = useState(false);
@@ -133,17 +138,23 @@ export function Register() {
     e.preventDefault(); setErr(""); setBusy(true);
     try {
       let refCode; try { refCode = sp.get("ref") || localStorage.getItem("kaos_ref") || undefined; } catch (e3) { refCode = sp.get("ref") || undefined; }
+      if(purchase&&!catalog?.checkoutEnabled)throw Error('Paid checkout is temporarily unavailable. Please retry later.');
       const data = await register({ ...form, refCode, planId:selected.id });
       if (data.verificationToken) sessionStorage.setItem("verifyToken", data.verificationToken);
-      toast.success(selected.id==='free'?'Your free account is ready.':'Account created. Review your selected membership to continue.');
-      nav(selected.id==='free'?'/dashboard':'/dashboard/subscription?plan='+encodeURIComponent(selected.id));
+      if(selected.id==='free'){toast.success('Your free account is ready.');nav('/dashboard');}
+      else if(!purchase)nav(registrationLink(selected.id,sp),{replace:true});
     } catch (e2) { setErr(errMsg(e2)); } finally { setBusy(false); }
   };
   if(!planId || (catalog&&!selected))return <Navigate to={selectionUrl} replace/>;
   if(!selected)return <Shell title="Your membership" subtitle="Confirming the current plan details."><p role={catalogError?'alert':'status'}>{catalogError||'Loading membership…'}</p>{catalogError&&<button onClick={loadMembership} className="mt-4 text-[#e8c46f] underline">Retry membership</button>}<Link to={selectionUrl} className="mt-4 block text-[#e8c46f]">Back to membership choices</Link></Shell>;
+  if(selected.id!=='free'&&!purchase)return <Navigate to={registrationLink(selected.id,sp)} replace/>;
+  if(purchase&&selected.id==='free')return <Navigate to={registrationLink('free',sp)} replace/>;
+  if(purchase&&authLoading)return <Shell title="Your secure checkout"><p role="status">Checking your account…</p></Shell>;
+  if(purchase&&!catalog.checkoutEnabled)return <Shell title="Checkout temporarily unavailable" subtitle="No payment has been started."><section data-testid="paid-checkout-unavailable"><p role="status" className="text-sm text-slate-300">We cannot accept membership payments right now. Please retry later or choose a Free membership. No paid membership has been activated.</p><button onClick={loadMembership} className="kaos-auth-submit mt-5 w-full">Retry payment availability</button><Link to={registrationLink('free',sp)} className="mt-4 block text-[#e8c46f] underline">Choose Free instead</Link><Link to={selectionUrl} className="mt-4 block text-[#e8c46f] underline">Back to memberships</Link>{user?.role==='super_admin'&&<Link to="/admin/commerce" className="mt-4 block text-[#e8c46f] underline">Review payment setup</Link>}</section></Shell>;
+  if(purchase&&user)return <Shell title="Secure membership checkout" subtitle={selected.name+' · '+planPrice(selected)+' / '+selected.interval}><CheckoutHandoff plan={selected} user={user}/></Shell>;
   let referral=sp.get('ref');try{referral=referral||localStorage.getItem('kaos_ref')||undefined;}catch{}
   return (
-    <Shell title="Create your account" subtitle="Step 2 · Your membership choice is saved with your account.">
+    <Shell title={purchase?"Complete your membership":"Create your account"} subtitle={purchase?"Create your sign-in, then continue directly to secure Stripe payment.":"Step 2 · Your membership choice is saved with your account."}>
       <p className="mb-4 text-xs leading-relaxed text-slate-400" data-testid="registration-learning-notice">Using KAOS includes de-identified settled trade and market data contributing to personal, shared and owner models. This is required service data use, not an optional setting. <a href="/privacy.html" className="text-[#e8c46f] underline">Privacy and data use</a>.</p>
       <section className="mb-6 rounded-lg border border-[#8a6b32] bg-[#d4af37]/5 p-4" data-testid="registration-plan-summary"><h2 className="font-semibold text-[#e8c46f]">{selected.name} · {planPrice(selected)}{selected.interval?' / '+selected.interval:''}</h2><p className="mt-2 text-xs text-[#c4b89f]">{selected.id==='free'?'No card required.':'No charge at signup. Paid features require a confirmed payment.'}</p><Link to={selectionUrl} className="mt-3 inline-block text-sm text-[#e8c46f] underline">Change membership</Link></section>
       <form onSubmit={submit} className="space-y-4">
@@ -155,10 +166,10 @@ export function Register() {
           <Input data-testid="register-password-input" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required minLength={8} className="kaos-auth-input mt-2" />
           <p className="mt-1 text-xs text-slate-500">At least 8 characters.</p></div>
         {err && <p data-testid="register-error" className="text-sm text-[#C62828]">{err}</p>}
-        <Button data-testid="register-submit-button" disabled={busy} className="kaos-auth-submit w-full font-semibold">{busy ? "Creating…" : "Create Account"}</Button>
+        <Button data-testid="register-submit-button" disabled={busy} className="kaos-auth-submit w-full font-semibold">{busy ? "Creating…" : purchase?"Continue to secure payment":"Create Account"}</Button>
       </form>
       <GoogleButton planId={selected.id} refCode={referral}/>
-      <p className="mt-4 text-center text-sm text-slate-400">Already a member? <Link to="/login" className="text-[#D4AF37] hover:underline">Sign in</Link></p>
+      <p className="mt-4 text-center text-sm text-slate-400">Already a member? <Link to={purchase?purchaseLoginLink(selected.id,sp):"/login"} className="text-[#D4AF37] hover:underline">Sign in</Link></p>
     </Shell>
   );
 }

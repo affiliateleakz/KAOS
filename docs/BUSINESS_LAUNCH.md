@@ -93,3 +93,7 @@ For a copyable hosting support request and the post-fix check, see [API_HOSTING_
 ## Coinbase follow-up
 
 The owner subsequently requested automatic live Coinbase trading using the existing bot controls. See [COINBASE_SETUP.md](COINBASE_SETUP.md) for the current candidate's exact scope, deployment order, worker requirements, settings mapping and limits. The updated wrapper honors an explicit Coinbase hosting flag while continuing to block billing/other order routes; defaults remain disabled. Repository work has not changed that live hosting flag or started a worker. Earlier descriptions of Coinbase as connection-only or of the wrapper unconditionally overriding its live flag describe the previous release.
+
+## Paid homepage checkout follow-up
+
+The owner requested that a paid homepage choice continue to payment rather than the member dashboard. The current `/checkout` flow retains the selected plan across email/Google signup or sign-in and opens Stripe automatically, while a disabled checkout prevents the paid signup form from creating an account. The new wrapper honors explicit `KAOS_STRIPE_CHECKOUT_ENABLED=true` with validation off for a narrow set of Stripe routes. This supersedes earlier unconditional validation-only descriptions. See [STRIPE_SETUP.md](STRIPE_SETUP.md) for cPanel settings, restart and hosted acceptance. No hosting flag, real Stripe transaction or payout was changed during repository work.

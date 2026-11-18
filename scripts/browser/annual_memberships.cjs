@@ -52,12 +52,10 @@ const assert=require('node:assert/strict');
  await page.getByTestId('choose-membership-pro_yearly').waitFor();
  await page.getByTestId('choose-membership-pro_yearly').click();
  await page.getByTestId('register-name-input').fill('Member');await page.getByTestId('register-email-input').fill('member@example.com');await page.getByTestId('register-password-input').fill('fixture-password');await page.getByTestId('register-submit-button').click();
- await page.waitForURL('**/dashboard/subscription?plan=pro_yearly');
- await page.getByTestId('subscribe-pro_yearly').waitFor();
- assert.equal(registered.requested_membership_plan,'pro_yearly');assert.equal(registered.membership_status,'EXPIRED');assert.equal(checkout.length,0);
- await page.getByTestId('subscribe-pro_yearly').click();
- await page.waitForFunction(()=>document.body.textContent.includes('Fixture: no payment provider contacted'));
- assert.equal(checkout.length,1);assert.equal(checkout[0].lookup_key,'membership_pro_yearly');
+ await page.getByRole('alert').getByText('Fixture: no payment provider contacted',{exact:true}).waitFor();
+ assert.equal(new URL(page.url()).pathname,'/checkout');
+ assert.equal(registered.requested_membership_plan,'pro_yearly');assert.equal(registered.membership_status,'EXPIRED');
+ assert.equal(checkout.length,1);assert.equal(checkout[0].plan_id,'pro_yearly');
  assert.deepEqual(errors,[]);
  console.log('Monthly/yearly pricing, annual savings, monthly recommendation, affiliate annual amounts, Free persistence, mobile signup and explicit annual checkout payload passed.');
  }finally{await browser.close();}
