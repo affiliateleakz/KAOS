@@ -202,7 +202,10 @@ async def intent(req: Intent, request: Request, response: Response):
         )
     pid = uuid4().hex
     secret = secrets.token_urlsafe(32)
+    from visitor_analytics import acquisition_for
+    acquisition=await acquisition_for(request)
     row = {
+        "analyticsAcquisition": acquisition,
         "_id": pid,
         "email": email,
         "name": req.name.strip(),
@@ -496,7 +499,8 @@ async def _fulfill(purchase, viewer=None):
         doc.update(
             _id="guest-user:" + purchase["_id"],
             checkout_purchase_id=purchase["_id"],
-            referredByCode=purchase.get("refCode"),
+            referredByCode=purchase.get("refCode") or (purchase.get("analyticsAcquisition") or {}).get("refCode"),
+            analyticsAcquisition=purchase.get("analyticsAcquisition"),
             requested_membership_plan=purchase["plan"]["id"],
         )
         try:

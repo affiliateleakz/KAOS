@@ -33,6 +33,9 @@ if _billing_policy.exists():
     _policy = json.loads(_billing_policy.read_text())
     if not isinstance(_policy, dict) or _policy.get("version") != 1 or type(_policy.get("stripeCheckoutEnabled")) is not bool:
         raise RuntimeError("Invalid billing runtime policy; repair it before restarting")
+    if "coinbaseLiveOrdersEnabled" in _policy:
+        if type(_policy["coinbaseLiveOrdersEnabled"]) is not bool:raise RuntimeError("Invalid live trading policy")
+        os.environ["KAOS_COINBASE_LIVE_ORDERS"] = "enabled" if _policy["coinbaseLiveOrdersEnabled"] else "disabled"
     _enabled = _policy["stripeCheckoutEnabled"]
     os.environ["KAOS_STRIPE_CHECKOUT_ENABLED"] = "true" if _enabled else "false"
     os.environ["KAOS_LOGIN_VALIDATION_MODE"] = "false" if _enabled else "true"
@@ -57,7 +60,7 @@ def _get_app():
         async def login_validation_only(request, call_next):
             path = request.url.path
             auth = path.startswith(("/api/auth/", "/api/v1/auth/"))
-            allowed_write = auth or path in (
+            allowed_write = auth or (request.method == "POST" and path == "/api/analytics/visit") or path in (
                 "/api/v1/devices/register", "/api/v1/extension/google/access-token",
                 "/api/v1/ai/learning-samples", "/api/v1/trading/events", "/api/v1/ai/training/train",
                 "/api/admin/ai/continuous/owner/train", "/api/admin/radar/offerings",
@@ -88,7 +91,9 @@ def _get_app():
             broker_setup = (request.method == "PUT" and path in ("/api/v1/broker-selection", "/api/v1/broker-connections/coinbase")) or (request.method == "DELETE" and path == "/api/v1/broker-connections/coinbase")
             coinbase_live = (os.environ.get("KAOS_COINBASE_LIVE_ORDERS") == "enabled" and request.method == "POST" and path in ("/api/v1/coinbase-bot/start", "/api/v1/coinbase-bot/stop", "/api/v1/coinbase-live/orders", "/api/v1/coinbase-live/reconcile"))
             coinbase_stop = request.method == "POST" and path == "/api/v1/coinbase-bot/stop"
-            allowed_write = allowed_write or coinbase_stop or coinbase_live or broker_setup or bool(device_revoke) or commerce_setup or radar_setup or community_write or membership_setup or (request.method == "POST" and bool(re.fullmatch(r"/api/admin/ai/continuous/publish/[a-f0-9]{64}", path)))
+            commission_setup = request.method == "PUT" and path in ("/api/admin/affiliate/commission-rates", "/api/admin/follow-us")
+            payout_operation = request.method == "POST" and path in ("/api/admin/affiliate/payouts/release", "/api/admin/affiliate/payouts/requests", "/api/admin/affiliate/payouts/reconcile")
+            allowed_write = allowed_write or payout_operation or commission_setup or coinbase_stop or coinbase_live or broker_setup or bool(device_revoke) or commerce_setup or radar_setup or community_write or membership_setup or (request.method == "POST" and bool(re.fullmatch(r"/api/admin/ai/continuous/publish/[a-f0-9]{64}", path)))
             stripe_live = os.environ.get("KAOS_STRIPE_CHECKOUT_ENABLED") == "true" and os.environ.get("KAOS_LOGIN_VALIDATION_MODE") != "true"
             stripe_operation = stripe_live and ((request.method == "POST" and path in (
                 "/api/billing/guest-intent", "/api/billing/guest-checkout", "/api/billing/checkout", "/api/billing/portal", "/api/billing/cancel", "/api/stripe/webhook")) or

@@ -1,4 +1,4 @@
-"""Persist the receiver-based 3-level ledger (packages/kaos-core) in Mongo. Accounting preview only: no payouts."""
+"""Persist the receiver-based 3-level ledger (packages/kaos-core) in Mongo. Accounting and balance snapshots; live transfers are handled separately by affiliate_payouts."""
 from datetime import datetime, timezone
 from decimal import Decimal
 
@@ -20,6 +20,9 @@ def plan_tier(plan):
 async def member_tier(user):
     if not user or user.get("membership_status") not in ACTIVE_STATES:
         return "free"
+    if user.get("membership_status")=="TRIAL":return "trial"
+    from affiliate_access import paid_member
+    if not paid_member(user):return "free"
     from routes_billing import get_plans, find_plan
     return plan_tier(find_plan(await get_plans(), user.get("membership_plan")))
 
@@ -92,13 +95,17 @@ async def record_payment(event_id, buyer_id, plan, amount_cents, kind="initial",
         if existing.get("buyer_id") != buyer_id or existing.get("kind") != kind or Decimal(existing.get("amount", "NaN")) != Decimal(amount_cents) / 100:
             raise RuntimeError("Affiliate payment event reused with mismatched financial details")
         return await _entries_for(event_id)
-    ledger = CommissionLedger(await _members(buyer_id))
+    from affiliate_rates import configuration
+    rate_config=await configuration(db)
+    ledger = CommissionLedger(await _members(buyer_id),rates=rate_config["rates"])
     at = at or datetime.now(timezone.utc)
     entries = ledger.record_payment(event_id, buyer_id, plan_tier(plan), Decimal(amount_cents) / 100, kind, at)
     p = ledger.payments[event_id]
     await write_payment({
         "event_id": event_id, "buyer_id": buyer_id, "plan": p.plan, "plan_id": (plan or {}).get("id"),
         "amount": str(p.amount), "kind": kind, "at": at.isoformat(),
+        "currency":str((plan or {}).get("currency","usd")).lower(),
+        "rate_revision":rate_config["revision"],"rates_snapshot":rate_config["rates"],
         "reversed_amount": "0"
     }, [_entry_doc(e) for e in entries], database=db)
     return entries
@@ -154,7 +161,8 @@ async def reverse_all_for_buyer(buyer_id, kind="refund", prefix="rev"):
 async def statement(affiliate_id, as_of=None):
     docs = await db.affiliate_ledger_entries.find({"affiliate_id": affiliate_id}, {"_id": 0}) \
         .sort("created_at", -1).to_list(1000)
-    ledger = CommissionLedger({}, entries=[_entry(d) for d in docs])
-    bal = {k: str(v) for k, v in ledger.balance(affiliate_id, as_of).items()}
-    return {"balance": bal, "entries": docs, "payoutsEnabled": False,
-            "note": "Preview only. Payouts are disabled pending compliance, KYC/tax and founder approval."}
+    from affiliate_payouts import balance,availability
+    bal=await balance(affiliate_id,as_of)
+    ready=await availability()
+    return {"balance":bal,"entries":docs,"payoutsEnabled":ready['payoutsEnabled'],
+            "note":"Transferred amounts are Stripe account transfers, not confirmation of a bank deposit. " + ready['note']}

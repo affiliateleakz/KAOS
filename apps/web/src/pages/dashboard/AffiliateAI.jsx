@@ -20,8 +20,8 @@ export function LedgerCard({ ledger }) {
         <span className="font-mono text-xs text-slate-500" data-testid="ledger-note">{ledger.note}</span>
       </div>
       <div className="grid grid-cols-2 gap-3 p-4 md:grid-cols-4">
-        <Stat l="In 30-day hold" v={`$${b.pending}`} /><Stat l="Available (preview)" v={`$${b.available}`} />
-        <Stat l="Reversed" v={`$${b.reversed}`} /><Stat l="Paid out" v={`$${b.paid}`} />
+        <Stat l="In 30-day hold" v={`$${b.pending}`} /><Stat l="Available after reservations" v={`$${b.available}`} />
+        <Stat l="Reversed" v={`$${b.reversed}`} /><Stat l="Transferred to Stripe" v={`$${b.paid}`} />
       </div>
       <Table><TableHeader><TableRow className="border-[#2E2E2E]"><TableHead>Date</TableHead><TableHead>Level</TableHead><TableHead>Your tier</TableHead><TableHead>Rate</TableHead><TableHead>Payment</TableHead><TableHead>Amount</TableHead><TableHead>Type</TableHead></TableRow></TableHeader>
         <TableBody>

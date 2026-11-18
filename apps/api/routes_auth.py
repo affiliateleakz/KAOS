@@ -120,7 +120,7 @@ async def requested_plan(plan_id):
 
 
 @router.post("/register")
-async def register(req: RegisterReq, response: Response):
+async def register(req: RegisterReq, response: Response, request: Request = None):
     email = req.email.lower()
     if await db.users.find_one({"email": email}):
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -129,7 +129,10 @@ async def register(req: RegisterReq, response: Response):
     # demo-mode email verification token returned in-app
     vtoken = gen_token()
     doc["verify_token"] = vtoken
-    doc["referredByCode"] = (req.refCode or None)  # affiliate attribution (server-persisted)
+    from visitor_analytics import acquisition_for
+    acquisition=await acquisition_for(request)
+    if acquisition:doc['analyticsAcquisition']=acquisition
+    doc["referredByCode"] = (req.refCode or (acquisition or {}).get('refCode') or None)  # affiliate attribution (server-persisted)
     doc['requested_membership_plan'] = selected_plan  # Preference only; no paid access before verified payment.
     await db.users.insert_one(dict(doc))
     at = create_access_token(doc["id"], email, 0)
@@ -282,7 +285,8 @@ async def _google_signin_identity(data: dict, registration: dict = None) -> dict
                                   provider="google", google_id=google_id,
                                   avatar=data.get("picture"), verified=True)
         if registration:
-            doc['requested_membership_plan'] = registration['planId']
+            doc['requested_membership_plan'] = registration.get('planId','free')
+            if registration.get('analyticsAcquisition'):doc['analyticsAcquisition']=registration['analyticsAcquisition']
             doc['referredByCode'] = registration.get('refCode')
         await db.users.insert_one(dict(doc))
         user = doc
@@ -319,6 +323,10 @@ async def google_credential(request: Request, response: Response):
         if ref is not None and (not isinstance(ref, str) or len(ref) > 128):
             raise HTTPException(400, 'Invalid referral code')
         registration = {'planId': plan_id, 'refCode': ref}
+    from visitor_analytics import acquisition_for
+    acquisition=await acquisition_for(request)
+    if acquisition:
+        registration={**(registration or {'planId':'free','refCode':acquisition.get('refCode')}),'analyticsAcquisition':acquisition}
     user = await _google_signin_identity(claims, registration) if registration else await _google_signin_identity(claims)
     tv = user.get("token_version", 0)
     set_auth_cookies(response, create_access_token(user["id"], user["email"], tv),

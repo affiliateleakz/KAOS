@@ -472,3 +472,15 @@ expiry, verify the reminder event, advance to expiry, and verify a successful
 paid invoice converts TRIAL to ACTIVE exactly once. Check failed payment access,
 repeat email eligibility and Ultimate's normal paid checkout. Automated repository
 tests mock Stripe/mail and cannot certify live email or webhook delivery.
+
+
+## Current visitor, affiliate and live-release controls
+
+See [VISITOR_AFFILIATE_AND_LIVE_RELEASE.md](VISITOR_AFFILIATE_AND_LIVE_RELEASE.md)
+for the new visitor reports, paid-only affiliate rules, percentage editor, Follow
+Us editor, Ultimate AI Signals restriction and live Stripe transfer controls.
+This supersedes older setup-only payout descriptions when the new release is
+installed and actual live Stripe release is enabled. Provider approval, user
+connections and hosting activation are still required; a badge or saved key does
+not move funds. The latest changes were built and syntax-checked; test runs were
+stopped at the owner's request.

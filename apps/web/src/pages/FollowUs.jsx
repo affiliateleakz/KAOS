@@ -1,0 +1,21 @@
+import React,{useEffect,useState} from 'react';
+import {Link} from 'react-router-dom';
+import {api,errMsg} from '../lib/api';
+const input='w-full rounded border border-[#66502a] bg-black p-3 text-[#e8d8b2]';
+export default function FollowUs({admin=false}){
+ const [data,setData]=useState(null),[error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false);
+ async function load(){setError('');try{const {data}=await api.get(admin?'/api/admin/follow-us':'/api/site/follow-us');setData(data);}catch(e){setError(errMsg(e));}}
+ useEffect(()=>{load();},[admin]);
+ function change(index,key,value){setData(current=>({...current,links:current.links.map((row,i)=>i===index?{...row,[key]:value}:row)}));}
+ function move(index,by){setData(current=>{const links=[...current.links],target=index+by;if(target>=0&&target<links.length)[links[index],links[target]]=[links[target],links[index]];return {...current,links};});}
+ async function save(e){e.preventDefault();setBusy(true);setNotice('');setError('');try{const {data:result}=await api.put('/api/admin/follow-us',{revision:data.revision,title:data.title,description:data.description,links:data.links});setData(result);setNotice('Follow Us links published.');}catch(e){setError(errMsg(e));}finally{setBusy(false);}}
+ return <main className={(admin?'':'min-h-screen bg-[#080808] px-5 py-10 ')+ 'text-[#e8d8b2]'} data-testid={admin?'follow-us-editor':'follow-us-page'}><section className="mx-auto max-w-4xl space-y-5 rounded-xl border border-[#66502a] bg-[#12100d] p-5 sm:p-9">
+ {!admin&&<Link to="/" className="text-[#e8c46f]">← KAOS Trading</Link>}<h1 className="text-3xl font-semibold text-[#e8c46f]">{admin?'Edit Follow Us':data?.title||'Follow KAOS'}</h1>
+ {error&&<p role="alert">{error} <button onClick={load} className="underline">Reload</button></p>}{notice&&<p role="status">{notice}</p>}
+ {!data&&!error&&<p role="status">Loading…</p>}
+ {data&&(admin?<form onSubmit={save} className="space-y-5"><label className="block">Page title<input required maxLength={100} className={input} value={data.title} onChange={e=>setData({...data,title:e.target.value})}/></label><label className="block">Introduction<textarea maxLength={500} className={input} value={data.description} onChange={e=>setData({...data,description:e.target.value})}/></label>
+ {data.links.map((row,index)=><fieldset key={index} className="space-y-3 rounded border border-[#514027] p-4"><legend>Link {index+1}</legend><label className="block">Label<input required maxLength={60} value={row.label} className={input} onChange={e=>change(index,'label',e.target.value)} placeholder="YouTube, X, Facebook, Discord…"/></label><label className="block">HTTPS URL<input required type="url" value={row.url} className={input} onChange={e=>change(index,'url',e.target.value)} placeholder="https://…"/></label><div className="flex flex-wrap gap-4"><label><input type="checkbox" checked={row.enabled} onChange={e=>change(index,'enabled',e.target.checked)}/> Visible</label><button type="button" onClick={()=>move(index,-1)} disabled={!index}>Move up</button><button type="button" onClick={()=>move(index,1)} disabled={index===data.links.length-1}>Move down</button><button type="button" onClick={()=>setData({...data,links:data.links.filter((_,i)=>i!==index)})}>Remove</button></div></fieldset>)}
+ <div className="flex flex-wrap gap-4"><button type="button" disabled={data.links.length>=20} onClick={()=>setData({...data,links:[...data.links,{label:'',url:'',enabled:true}]})} className="rounded border border-[#8a6b32] px-5 py-3">Add social link</button><button disabled={busy} className="rounded bg-[#d4af37] px-5 py-3 font-semibold text-black">{busy?'Publishing…':'Save Follow Us'}</button><Link to="/follow-us" className="px-3 py-3 text-[#e8c46f] underline">Open public page</Link></div>
+ </form>:<><p>{data.description}</p><div className="grid gap-4 sm:grid-cols-2">{data.links.map(link=><a key={link.url+link.label} href={link.url} target="_blank" rel="noopener noreferrer" className="rounded border border-[#8a6b32] bg-[#1b170e] p-5 text-lg font-semibold text-[#e8c46f]">{link.label} ↗</a>)}</div>{!data.links.length&&<p className="text-sm text-slate-400">Our official social links will appear here when published.</p>}</>)}
+ </section></main>;
+}

@@ -1,3 +1,5 @@
+import AffiliatePayoutControls from '../../components/AffiliatePayoutControls';
+import CommissionRates from '../../components/CommissionRates';
 import ContinuousTraining from './ContinuousTraining';
 import React, { useEffect, useState } from "react";
 import { api, errMsg } from "../../lib/api";
@@ -98,11 +100,11 @@ export function Affiliates() {
   const saveProg = async () => { try { await api.post("/api/admin/affiliate-program", prog); toast.success("Program saved"); } catch (e) { toast.error(errMsg(e)); } };
   const addMkt = async () => { try { await api.post("/api/admin/marketing-assets", mkt); toast.success("Asset added"); setMkt({ title: "", type: "banner", copy: "" }); } catch (e) { toast.error(errMsg(e)); } };
   return (
-    <div><H>Affiliates & Commissions</H>
-      {prog && <div className="card-surface mb-6 p-5"><h3 className="font-heading font-semibold">Commission Program (configurable)</h3>
+    <div><H>Affiliates & Commissions</H><CommissionRates/><AffiliatePayoutControls affiliates={accs}/>
+      {prog && <div className="card-surface mb-6 p-5"><h3 className="font-heading font-semibold">Program settings</h3><p className="mt-2 text-xs text-slate-400">Use the membership percentage table above for actual three-level commissions. The 30-day refund hold remains fixed; saving rates does not activate payouts.</p>
         <div className="mt-3 grid gap-3 md:grid-cols-4">
-          <div><label className="label-mono">Default rate %</label><Input data-testid="commission-rate-input" type="number" value={prog.defaultRatePct} onChange={(e) => setProg({ ...prog, defaultRatePct: parseInt(e.target.value) })} className="mt-1 bg-[#080808] border-[#3A3A3A] font-mono" /></div>
-          <div><label className="label-mono">Hold days</label><Input type="number" value={prog.holdDays} onChange={(e) => setProg({ ...prog, holdDays: parseInt(e.target.value) })} className="mt-1 bg-[#080808] border-[#3A3A3A] font-mono" /></div>
+
+          <div><label className="label-mono">Hold days</label><Input type="number" readOnly value={30} onChange={(e) => setProg({ ...prog, holdDays: parseInt(e.target.value) })} className="mt-1 bg-[#080808] border-[#3A3A3A] font-mono" /></div>
           <div><label className="label-mono">Min payout $</label><Input type="number" value={prog.minPayout} onChange={(e) => setProg({ ...prog, minPayout: parseInt(e.target.value) })} className="mt-1 bg-[#080808] border-[#3A3A3A] font-mono" /></div>
           <div className="flex items-end"><Button data-testid="save-program-button" onClick={saveProg} className="bg-[#22C55E] text-black">Save</Button></div>
         </div></div>}
@@ -114,7 +116,7 @@ export function Affiliates() {
           <Table><TableHeader><TableRow className="border-[#2E2E2E]"><TableHead>Amount</TableHead><TableHead>Status</TableHead><TableHead>Set</TableHead></TableRow></TableHeader>
             <TableBody>{comms.length === 0 && <TableRow><TableCell colSpan={3} className="py-6 text-center text-slate-500">None</TableCell></TableRow>}
               {comms.map((c) => (<TableRow key={c.id} className="border-[#2E2E2E]"><TableCell className="font-mono text-[#D4AF37]">${c.amount}</TableCell><TableCell><StatusBadge value={c.status} /></TableCell>
-                <TableCell><Select onValueChange={(s) => setStatus(c.id, s)}><SelectTrigger data-testid={`commission-status-${c.id}`} className="h-8 w-32 bg-[#080808] border-[#3A3A3A] text-xs"><SelectValue placeholder="Change" /></SelectTrigger><SelectContent className="bg-[#0F0F0F] text-white">{["APPROVED", "PAYABLE", "PAID", "REVERSED"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></TableCell></TableRow>))}</TableBody></Table></div>
+                <TableCell><Select onValueChange={(s) => setStatus(c.id, s)}><SelectTrigger data-testid={`commission-status-${c.id}`} className="h-8 w-32 bg-[#080808] border-[#3A3A3A] text-xs"><SelectValue placeholder="Change" /></SelectTrigger><SelectContent className="bg-[#0F0F0F] text-white">{["APPROVED", "PAYABLE"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></TableCell></TableRow>))}</TableBody></Table></div>
       </div>
       <div className="card-surface mt-6 p-5"><h3 className="font-heading font-semibold">Marketing Center</h3>
         <div className="mt-3 grid gap-3 md:grid-cols-3">

@@ -1,5 +1,6 @@
 import React,{useState,useEffect} from 'react';
 import {Link,useNavigate,useSearchParams} from 'react-router-dom';
+import {referralCode} from '../lib/visitorTracking';
 import {planPrice} from '../pages/Memberships';
 import {api,errMsg} from '../lib/api';
 import {stripeCheckoutUrl,purchaseLoginLink,registrationLink} from '../lib/purchaseFlow';
@@ -12,7 +13,7 @@ export default function GuestCheckout({plan,plans=[]}) {
  const alternatives=plans.filter(p=>(['pro','ultimate'].includes(p.tier)&&p.interval==='month')||p.id===plan.id);
  function choose(id){const next=new URLSearchParams(sp);if(id==='pro')next.set('trial','1');else next.delete('trial');nav(registrationLink(id,next));setError('');setSignin(false);}
  async function submit(e){e.preventDefault();setBusy(true);setError('');setSignin(false);
-  try {let refCode=sp.get('ref');try{refCode=refCode||localStorage.getItem('kaos_ref');}catch{}
+  try {const refCode=referralCode(sp);
    await api.post('/api/billing/guest-intent',{name,email,plan_id:plan.id,refCode,start_trial:trial});
    const {data}=await api.post('/api/billing/guest-checkout',{}, {timeout:60000});
    if(data.completed)nav('/payment/complete?session_id='+encodeURIComponent(data.session_id));
@@ -22,7 +23,7 @@ export default function GuestCheckout({plan,plans=[]}) {
   <label className="block">Name<input data-testid="checkout-name" required maxLength={120} autoComplete="name" value={name} onChange={e=>setName(e.target.value)} className="kaos-auth-input mt-2 w-full"/></label>
   <label className="block">Email<input data-testid="checkout-email" type="email" required autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} className="kaos-auth-input mt-2 w-full"/></label>
   <label className="block">Membership<select aria-label="Membership plan" value={plan.id} onChange={e=>choose(e.target.value)} className="kaos-auth-input mt-2 w-full">{alternatives.map(p=><option key={p.id} value={p.id}>{p.name} · {planPrice(p)} / {p.interval}{p.tier==='pro'&&p.interval==='month'?' · 7-day free trial available':''}</option>)}</select></label>
-  {trial?<section data-testid="trial-terms" className="rounded border border-[#8a6b32] p-4"><h2 className="text-lg text-[#e8c46f]">7-day Pro free trial</h2><p>All Pro features for 7 days. $0 today, then {price} / month unless canceled. One trial per customer email.</p><p>Stripe collects your payment details and shows the exact first charge date before you confirm. Cancel in Manage billing before the trial ends.</p></section>:<p>Stripe will show {price} / {plan.interval} and renewal terms before you pay. Only Pro monthly offers a free trial.</p>}
+  {trial?<section data-testid="trial-terms" className="rounded border border-[#8a6b32] p-4"><h2 className="text-lg text-[#e8c46f]">7-day Pro free trial</h2><p>Pro trading and website tools for 7 days. Affiliate access requires a paid membership. $0 today, then {price} / month unless canceled. One trial per customer email.</p><p>Stripe collects your payment details and shows the exact first charge date before you confirm. Cancel in Manage billing before the trial ends.</p></section>:<p>Stripe will show {price} / {plan.interval} and renewal terms before you pay. Only Pro monthly offers a free trial.</p>}
   <p className="text-sm text-slate-400">After Stripe confirms {trial?'your trial':'payment'}, we’ll email your secure account-setup link.</p>
   <p className="text-xs text-slate-400">Using KAOS includes the service data use described in our <a href="/privacy.html" className="underline">privacy policy</a>. Membership does not guarantee trading profits.</p>
   {error&&<p role="alert">{error}</p>}

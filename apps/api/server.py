@@ -14,6 +14,9 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from db import db, ensure_indexes
+import follow_us
+import affiliate_rates
+import visitor_analytics
 import routes_offerings
 import training_service
 import routes_research_models
@@ -34,6 +37,7 @@ import routes_radar_admin
 import routes_disclosures
 import routes_crypto_scanner
 import routes_commerce_admin
+import affiliate_payouts
 import routes_affiliate_connect
 import routes_stock_heatmap
 import routes_ai_outcomes
@@ -51,6 +55,9 @@ logger = logging.getLogger(__name__)
 
 limiter = Limiter(key_func=get_remote_address, default_limits=["600/minute"])
 app = FastAPI(title="KAOS Trading API")
+app.include_router(visitor_analytics.router)
+app.include_router(affiliate_rates.router)
+app.include_router(follow_us.router)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -102,6 +109,7 @@ app.include_router(routes_disclosures.router)
 app.include_router(routes_crypto_scanner.router)
 app.include_router(routes_stock_heatmap.router)
 app.include_router(routes_affiliate_connect.router)
+app.include_router(affiliate_payouts.router)
 app.include_router(routes_commerce_admin.router)
 app.include_router(routes_ai_outcomes.router)
 app.include_router(routes_owner_candles.router)

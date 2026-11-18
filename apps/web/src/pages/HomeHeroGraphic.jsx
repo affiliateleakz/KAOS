@@ -27,6 +27,6 @@ export default function HomeHeroGraphic({freeLink,onPreview}){
   </div>
   <div className="kh-reference-cards">{cards.map(card=><article className={'kh-reference-card kh-reference-card-'+card.id} key={card.id}><div className="kh-reference-card-title"><h2>{card.title}</h2><p>{card.subtitle}</p></div><a href="#kaos-bot" onClick={()=>onPreview(card.id)} aria-label={'Explore '+card.title}><img src={'/product-previews/'+card.image+'.png'} alt={card.alt+' — example data'}/></a></article>)}</div>
  </section>
- <div className="kh-reference-caption"><p>Current KAOS extension and website · labeled example data · charts remain on your broker · no performance results claimed.</p><div><Link className="kh-button" to={freeLink}>7-day free trial</Link><a href="#pricing" className="kh-button kh-button-outline">Memberships & benefits</a><a href="#affiliate" className="kh-button kh-button-outline">Affiliate earnings</a></div></div>
+ <div className="kh-reference-caption"><p>Current KAOS extension and website · labeled example data · charts remain on your broker · no performance results claimed.</p><div><Link className="kh-button" to={freeLink}>7-day free trial</Link><a href="#pricing" className="kh-button kh-button-outline">Memberships & benefits</a><a href="#affiliate" className="kh-button kh-button-outline">Affiliate earnings</a><Link to="/follow-us" className="kh-button kh-button-outline">Follow Us</Link></div></div>
  </>;
 }

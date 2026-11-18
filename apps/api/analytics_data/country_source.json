@@ -1,0 +1,14 @@
+{
+  "source": "DB-IP Lite via sapics/ip-location-db",
+  "sourceUrl": "https://db-ip.com/",
+  "upstreamRevision": "4bedcc44d9bad87a53771ff813bcb8ca8ee47f5d",
+  "upstreamUpdatedAt": "2026-11-02T00:52:40Z",
+  "builtAt": "2026-11-18T09:02:13.249206+00:00",
+  "license": "CC BY 4.0",
+  "attribution": "IP Geolocation by DB-IP",
+  "ranges": [
+    362984,
+    369794
+  ],
+  "bytes": 16202860
+}

@@ -5,6 +5,7 @@ import {api} from '../lib/api';
 
 const MembershipContext = createContext(null);
 export const FEATURE_ROUTES = {
+  signals: {key:'aiSignals',title:'AI Signals',description:'Find scored market setups with the Ultimate research toolkit.',includedWith:'Ultimate'},
   opportunities: {key:'scanners', title:'Opportunity Radar', description:'Organize market observations into one focused research workspace.'},
   'public-trades': {key:'scanners', title:'Political & Wall Street Trades', description:'Explore reported disclosures and institutional holdings in one place.'},
   'crypto-scanner': {key:'scanners', title:'Crypto Scanner & Heat Map', description:'Explore market pairs, filter opportunities and compare reported market activity.'},
@@ -31,7 +32,7 @@ export function MembershipProvider({children}) {
   return <MembershipContext.Provider value={{...result, retry:()=>setRevision(n=>n+1)}}>{children}</MembershipContext.Provider>;
 }
 
-export function UpgradeContent({title, description, compact=false}) {
+export function UpgradeContent({title, description, compact=false, includedWith='Pro and Ultimate'}) {
   return <section data-testid="membership-upgrade" className={`overflow-hidden rounded-xl border border-[#8a6b32]/60 bg-[#11100d] ${compact?'my-4':'mx-auto max-w-5xl'}`}>
     <div className="relative overflow-hidden px-6 py-9 sm:px-10">
       {!compact && <div aria-hidden="true" className="absolute inset-0 bg-[url('/kaos-cinematic-header.jpg')] bg-cover bg-center opacity-20" />}
@@ -39,7 +40,7 @@ export function UpgradeContent({title, description, compact=false}) {
         <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[.18em] text-[#e8c46f]"><LockKeyhole size={15}/> More room for your KAOS</span>
         <h1 className="mt-5 text-3xl font-semibold text-[#f4e6c6] sm:text-4xl">Unlock {title}</h1>
         <p className="mt-4 max-w-xl text-base leading-relaxed text-[#c4b89f]">{description}</p>
-        <p className="mt-3 text-sm text-[#c4b89f]">Included with Pro and Ultimate. Your current access does not include this tool.</p>
+        <p className="mt-3 text-sm text-[#c4b89f]">Included with {includedWith}. Your current access does not include this tool.</p>
         <div className="mt-6 flex flex-wrap gap-3">
           <Link data-testid="compare-memberships" to="/dashboard/subscription" className="inline-flex min-h-11 items-center gap-2 rounded-md bg-[#d4af37] px-5 py-3 font-semibold text-[#171207] hover:bg-[#e8c46f]">Compare memberships <ArrowUpRight size={16}/></Link>
           <Link to="/dashboard/trading" className="inline-flex min-h-11 items-center rounded-md border border-[#66502a] px-5 py-3 text-[#e8d8b2]">Keep using your current tools</Link>
@@ -64,5 +65,5 @@ export function FeatureGate({route, children}) {
     {access.status===401 && <Link to="/login" className="ml-4 underline">Sign in</Link>}
   </section>;
   if (access.entitlements[feature.key] === true) return children;
-  return <UpgradeContent title={feature.title} description={feature.description}/>;
+  return <UpgradeContent title={feature.title} description={feature.description} includedWith={feature.includedWith}/>;
 }

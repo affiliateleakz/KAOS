@@ -9,7 +9,7 @@ from pydantic import BaseModel,Field,ConfigDict
 from pymongo.errors import DuplicateKeyError
 from db import db
 from routes_radar import router
-from routes_opportunity import member
+from routes_opportunity import member,signal_member
 from kaos_opportunity import utc
 import radar_signals
 import kaos_radar_ai as native
@@ -150,7 +150,7 @@ async def collect_any(market,focus=None):
 
 
 @router.post('/signals/opportunities')
-async def opportunities(request:OpportunityInput,user=Depends(member)):
+async def opportunities(request:OpportunityInput,user=Depends(signal_member)):
     key=request.market+':'+(request.symbol or 'universe')+':'+request.timeframe
     now=datetime.now(timezone.utc);stamp=now.timestamp()
     cached=await db.kaos_opportunity_scans.find_one({'_id':key})

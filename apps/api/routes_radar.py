@@ -77,6 +77,9 @@ async def collect(assets,sources,settings):
 
 @router.post('/scan')
 async def scan(request:ScanInput,user=Depends(member)):
+ if request.include_ai:
+  from routes_opportunity import signal_member
+  await signal_member(user)
  assets=list({(a.symbol,a.asset_class):a.model_dump() for a in request.assets}.values());sources=list(dict.fromkeys(request.sources))
  if len({a['symbol'] for a in assets})!=len(assets):raise HTTPException(422,'Use each symbol once per scan')
  settings=dict(zip(radar_settings.VISIBLE_PROVIDERS,await asyncio.gather(*(radar_settings.settings(p) for p in radar_settings.VISIBLE_PROVIDERS))))
@@ -137,5 +140,7 @@ async def scan(request:ScanInput,user=Depends(member)):
 
 @router.get('/scan/latest')
 async def latest_scan(user=Depends(member)):
+ from routes_opportunity import signal_member
+ await signal_member(user)
  rows=await db.kaos_radar_scans.find({'user_id':user['id'],'result':{'$exists':True},'result.analysis_engine':'kaos-local-v1'},{'_id':0,'result':1}).sort('started_at',-1).limit(1).to_list(1)
  return {'scan':rows[0]['result'] if rows else None}

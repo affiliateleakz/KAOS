@@ -28,6 +28,8 @@ class Store:
 
 @pytest.fixture
 def db(monkeypatch):
+ import routes_opportunity
+ monkeypatch.setattr(routes_opportunity,"get_entitlements",AsyncMock(return_value={"scanners":True,"aiSignals":True}))
  value=SimpleNamespace(kaos_radar_scans=Store(),kaos_radar_limits=Store(),kaos_intelligence=Store(),kaos_social_mentions=Store(),kaos_radar_models=Store())
  monkeypatch.setattr(radar,'db',value)
  monkeypatch.setattr(radar_trending,'snapshot',AsyncMock(return_value={'state':'complete','fetched_at':'fixture','rankings':[]}))

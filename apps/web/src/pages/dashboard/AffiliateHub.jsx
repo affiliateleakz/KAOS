@@ -1,4 +1,5 @@
 import React,{useEffect,useState} from 'react';
+import TrafficAnalytics from '../../components/TrafficAnalytics';
 import {Link} from 'react-router-dom';
 import {api,errMsg} from '../../lib/api';
 import {marketingCopy,BANNER_FORMATS,downloadBanner,campaignLink} from '../../lib/affiliateKit';
@@ -24,19 +25,21 @@ export default function AffiliateHub(){
    <div className="relative max-w-2xl"><p className="text-xs font-semibold tracking-[.2em] text-[#e8c46f]">KAOS PARTNER DESK</p>
     <h1 className="mt-4 text-3xl font-semibold leading-tight text-[#f3ead8] sm:text-5xl">Share your KAOS.<br/>Build your community.</h1>
     <p className="mt-5 leading-relaxed text-[#c4b89f]">Introduce traders to a workspace you know. Get your referral link, choose ready-to-use creative, and track qualifying membership referrals in one place.</p>
-    {!active&&<button data-testid="affiliate-activate-button" disabled={busy||!program?.enrollmentEnabled} onClick={activate} className={`${button} mt-6 bg-[#d4af37] !text-[#171207]`}>{busy?'Creating your link…':program?.enrollmentEnabled?'Create my referral link':'Enrollment unavailable'}</button>}
+    {!active&&<button data-testid="affiliate-activate-button" disabled={busy||!program?.enrollmentEnabled} onClick={activate} className={`${button} mt-6 bg-[#d4af37] !text-[#171207]`}>{busy?'Creating your link…':program?.eligible===false?'Paid membership required':program?.enrollmentEnabled?'Create my referral link':'Enrollment unavailable'}</button>}
     {active&&<a href="#affiliate-toolkit" className={`${button} mt-6 bg-[#d4af37] !text-[#171207]`}>Open my promotion toolkit ↓</a>}
    </div>
   </section>
   {error&&<div role="alert" className={panel}><p>{error}</p><button onClick={load} className={`${button} mt-3`}>Retry account details</button></div>}
   {!program&&!error&&<p role="status">Loading your partner desk…</p>}
   {notice&&<p role="status" className="rounded border border-[#8a6b32] p-3 text-[#efd28a]">{notice}</p>}
+  {program?.eligible===false&&<section className={panel}><h2 className="text-xl text-[#e8c46f]">Affiliate access starts with a paid membership</h2><p className="mt-3 text-sm text-[#c4b89f]">Free and trial accounts cannot enroll, promote with an affiliate account or earn commissions. Activate a paid Pro or Ultimate membership to join.</p><Link to="/dashboard/subscription" className={`${button} mt-4`}>Compare paid memberships</Link></section>}
   {program&&!program.payoutsEnabled&&<p className="rounded-lg border border-amber-700/40 bg-amber-950/20 p-4 text-sm text-amber-200">Promotion and commission accounting are separate from cash payouts. Payouts are not live yet. Recorded balances are not funds available to withdraw.</p>}
   {active&&<section className={panel}>
    <h2 className="text-xl font-semibold">Your referral link</h2><p className="mt-2 text-sm text-[#bcac8e]">Campaign copy below includes this link automatically.</p>
    <div className="mt-4 flex flex-wrap gap-3"><input aria-label="Your referral link" data-testid="affiliate-link" readOnly value={link} className="min-w-0 flex-1 rounded border border-[#66502a] bg-black p-3 text-sm text-[#e8c46f]"/><button data-testid="copy-affiliate-link" onClick={()=>copy(link)} className={button}>Copy link</button></div>
    <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">{[['Link clicks',overview.clicks],['Signups',overview.signups],['Paid referrals',overview.payingReferrals],['Pending commission',`$${Number(overview.pending||0).toFixed(2)}`]].map(([label,value])=><div key={label}><p className="text-xs text-[#bcac8e]">{label}</p><p className="mt-2 text-2xl text-[#e8c46f]">{value??0}</p></div>)}</div>
   </section>}
+  {active&&<TrafficAnalytics />}
   <section className={panel}><h2 className="text-xl font-semibold">Three levels. Real membership referrals.</h2>
    <p className="mt-3 text-sm leading-relaxed text-[#bcac8e]">Level 1 is your direct referral. Levels 2 and 3 are qualifying membership purchases referred through the next two levels below you. Each recipient’s membership tier determines their rate at the time of payment. Recruitment alone earns no commission.</p>
    {program&&<div className="mt-5 overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr>{['Your affiliate tier','Level 1','Level 2','Level 3'].map(x=><th key={x} className="p-3 text-[#e8c46f]">{x}</th>)}</tr></thead><tbody>{Object.entries(program.rates||{}).map(([tier,rates])=><tr key={tier} className={`border-t border-[#514027] ${program.tier===tier?'bg-[#d4af37]/10':''}`}><th className="p-3 capitalize">{tier}{program.tier===tier?' · Your tier':''}</th>{rates.map((rate,index)=><td key={index} className="p-3">{rate?`${rate}%`:'—'}</td>)}</tr>)}</tbody></table></div>}

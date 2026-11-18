@@ -5,7 +5,7 @@ from datetime import datetime, timezone, timedelta
 import httpx
 from fastapi import Depends
 from routes_radar import router, ScanInput
-from routes_opportunity import member
+from routes_opportunity import member,signal_member
 from db import db
 from pymongo.errors import DuplicateKeyError
 from kaos_opportunity import utc
@@ -111,7 +111,7 @@ async def market(asset, timeframe='intraday'):
 
 
 @router.post('/signals/market')
-async def market_signals(req: ScanInput, user=Depends(member)):
+async def market_signals(req: ScanInput, user=Depends(signal_member)):
     from routes_radar import scan
     report = await scan(req.model_copy(update={'include_ai':True}), user)
     assets = report['ai'].get('report',{}).get('assets',[])

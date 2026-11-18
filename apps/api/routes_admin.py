@@ -313,7 +313,7 @@ async def get_settings(admin: dict = Depends(admin_dep)):
             "planDefaults": DEFAULT_PLANS,
             "freePlan": {"id": "free", "tier": "free", "name": "Free", "amount": 0,
                          "currency": "usd", "interval": None, "entitlements": dict(FREE_ENTITLEMENTS)},
-            "affiliateRates": {tier: list(rates) for tier, rates in RATES.items()}}
+            "affiliateRates": await __import__("affiliate_rates").rates()}
 
 
 @router.post("/settings")

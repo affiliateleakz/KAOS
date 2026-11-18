@@ -8,6 +8,7 @@ const TOOLS=[
  ['Community, profiles & following',e=>e.community],
  ['Market scanners & heatmaps',e=>e.scanners],
  ['AI research insights',e=>e.aiInsights],
+ ['AI Signals',e=>e.aiSignals],
  ['Private AI training · starts untrained',e=>e.aiTraining],
  ['Published pretrained bot models',e=>e.pretrainedModels],
  ['Cloud strategies',e=>e.cloudStrategies],
@@ -21,7 +22,7 @@ export default function HomeMembershipBenefits({catalog}){
  <tr><th scope="row">Broker chart slots</th>{plans.map(p=><td key={p.id}>{Math.min(4,Number(p.entitlements?.chartLimit)||1)}</td>)}</tr>
  <tr><th scope="row">Devices</th>{plans.map(p=><td key={p.id}>{Number(p.entitlements?.deviceLimit)||1}</td>)}</tr>
  {TOOLS.map(([name,included])=><tr key={name}><th scope="row">{name}</th>{plans.map(p=><td key={p.id}>{included(p.entitlements||{})?'Included':'Not included'}</td>)}</tr>)}
- <tr><th scope="row">Affiliate link & promotion toolkit</th>{plans.map(p=><td key={p.id}>Optional enrollment</td>)}</tr>
+ <tr><th scope="row">Affiliate link & promotion toolkit</th>{plans.map(p=><td key={p.id}>{["pro","ultimate"].includes(p.tier)?"Paid membership required":"Not included"}</td>)}</tr>
  {[0,1,2].map(level=><tr key={level}><th scope="row">Affiliate Level {level+1}</th>{plans.map(p=>{const rate=catalog.affiliateRates?.[p.tier]?.[level];return <td key={p.id}>{typeof rate==='number'?(rate?rate+'%':'Not included'):'Unavailable'}</td>;})}</tr>)}
  </tbody></table></div><p className="kh-note">AI research and AI-controlled execution are separate. AI-mode eligibility requires independent model validation and account authorization. Provider availability still applies. Paid checkout or affiliate payouts are not enabled by choosing a membership.</p></div>;
 }

@@ -1,10 +1,18 @@
 import axios from "axios";
+import {storedTrackingIds} from "./visitorTracking";
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL;
 
 export const api = axios.create({
   baseURL: BACKEND,
   withCredentials: true,
+});
+
+api.interceptors.request.use(config=>{
+ if(typeof config.url==='string'&&config.url.startsWith('/api/')){
+  const ids=storedTrackingIds();if(ids){config.headers['X-KAOS-Visitor']=ids.visitorId;config.headers['X-KAOS-Session']=ids.sessionId;}
+ }
+ return config;
 });
 
 export function apiHtmlProblem(data) {

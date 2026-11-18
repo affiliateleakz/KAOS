@@ -1,3 +1,4 @@
+import {FeatureGate} from '../../components/MembershipAccess';
 import Offerings from './Offerings';
 import React,{useEffect,useRef,useState} from 'react';
 import {api,errMsg} from '../../lib/api';
@@ -18,7 +19,7 @@ export default function OpportunityRadar(){
  {tab==='news'&&<RadarNews/>}
  {tab==='offerings'&&<Offerings/>}
  {tab==='research'&&<TrendingStocks selection={selection} backLabel={researchOrigin==='ai'?'← Back to AI Signal':'← Back to trending'} onSelect={asset=>{setSelection(asset);if(!asset&&researchOrigin==='ai')setTab('ai');if(asset)setResearchOrigin('trending');}}/>}
- {tab==='ai'&&<OpportunityScanner initialTimeframe={scannerPreferences.timeframe} initialMarket={scannerPreferences.market} initialLimit={scannerPreferences.limit} onPreferences={setScannerPreferences} onResearch={asset=>{setSelection(asset);setResearchOrigin('ai');setTab('research');}}/>}
+ {tab==='ai'&&<FeatureGate route="signals"><OpportunityScanner initialTimeframe={scannerPreferences.timeframe} initialMarket={scannerPreferences.market} initialLimit={scannerPreferences.limit} onPreferences={setScannerPreferences} onResearch={asset=>{setSelection(asset);setResearchOrigin('ai');setTab('research');}}/></FeatureGate>}
  {tab==='bot'&&<section className="space-y-4"><div className="flex flex-wrap items-center gap-3"><p className="text-sm text-slate-400">Recent entries from your connected extension. These expire in seconds.</p><button disabled={busy} onClick={refreshBot} className="rounded bg-[#d4af37] px-5 py-3 font-semibold text-black">{busy?'Refreshing…':'Refresh entries'}</button></div>{error&&<p role="alert">{error}</p>}{bot&&!signals.length&&<p role="status">No fresh bot entries.</p>}{signals.map(row=><article key={row.id} className="card-surface p-5"><h2 className="text-xl text-[#e8c46f]">{row.asset} · {row.direction}</h2><p className="mt-2 text-sm text-slate-400">{row.platform} · {row.expiration} · {row.signalTimestamp||row.createdAt}</p></article>)}</section>}
  </div>;
 }

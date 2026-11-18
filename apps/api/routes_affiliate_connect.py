@@ -1,4 +1,4 @@
-"""Stripe Connect onboarding only. Transfers remain disabled until launch readiness."""
+"""Stripe Connect onboarding/status. Live transfers are controlled by affiliate_payouts."""
 import asyncio
 import os
 from urllib.parse import urlsplit
@@ -8,6 +8,7 @@ from auth import get_current_user
 from db import db, now_iso
 from routes_affiliate import referral_link, get_program
 import commerce_providers
+from affiliate_access import require_paid_member
 
 router = APIRouter(prefix='/api/affiliate/connect', tags=['affiliate-connect'])
 
@@ -34,6 +35,7 @@ async def resolved_connect_key():
 
 
 async def active_affiliate(user):
+    require_paid_member(user)
     if user.get('account_status', 'active') in ('suspended', 'banned'):
         raise HTTPException(403, 'Account access is restricted')
     acc = await db.affiliate_accounts.find_one({'userId': user['id']})
@@ -73,6 +75,9 @@ async def status(user=Depends(get_current_user)):
         raise
     except stripe.StripeError as exc:
         raise HTTPException(503, 'Cannot check Stripe onboarding right now') from exc
+    from affiliate_payouts import availability
+    ready=await availability()
+    result['transfersEnabled']=ready['payoutsEnabled'] and bool(account.get('payouts_enabled')) and (account.get('capabilities') or {}).get('transfers')=='active'
     return {**result, 'connected': True, 'detailsSubmitted': bool(account.get('details_submitted')),
             'payoutsReady': bool(account.get('payouts_enabled')),
             'requirementsDue': bool((account.get('requirements') or {}).get('currently_due'))}

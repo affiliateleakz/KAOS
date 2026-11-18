@@ -31,6 +31,7 @@ const NAV = [
   ["devices", "Devices", MonitorSmartphone],
   ["downloads", "Downloads", Download],
   ["account", "Account", Settings],
+  ["follow-us", "Follow Us", Users],
   ["support", "Support", LifeBuoy],
 ];
 

@@ -5,6 +5,9 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import AuthCallback from "./components/AuthCallback";
 import {MembershipProvider, FeatureGate} from "./components/MembershipAccess";
 
+import VisitorTracker from "./components/VisitorTracker";
+import TrafficAnalytics from "./components/TrafficAnalytics";
+import FollowUs from "./pages/FollowUs";
 import Landing from "./pages/Landing";
 import RadarSources from "./pages/admin/RadarSources";
 import Privacy from "./pages/Privacy";
@@ -53,6 +56,7 @@ function AppRouter() {
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
+      <Route path="/follow-us" element={<FollowUs />} />
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/privacy/" element={<Privacy />} />
       <Route path="/login" element={<Login />} />
@@ -82,6 +86,7 @@ function AppRouter() {
         <Route path="paper" element={<PaperTrading />} />
         <Route path="kaos-ai" element={<FeatureGate route="kaos-ai"><AIPage /></FeatureGate>} />
         <Route path="affiliate" element={<AffiliatePage />} />
+        <Route path="follow-us" element={<FollowUs />} />
         <Route path="strategies" element={<FeatureGate route="strategies"><DP.MyStrategies /></FeatureGate>} />
         <Route path="community" element={<DP.CommunityFeed />} />
         <Route path="indicators" element={<DP.Indicators />} />
@@ -100,6 +105,8 @@ function AppRouter() {
         <Route index element={<AP.AdminDashboard />} />
         <Route path="trading-ops" element={<TradingOps />} />
         <Route path="kaos-ai" element={<AICenter />} />
+        <Route path="follow-us" element={<Protected role="super_admin"><FollowUs admin /></Protected>} />
+        <Route path="analytics" element={<Protected role="admin"><TrafficAnalytics admin /></Protected>} />
         <Route path="affiliates" element={<Affiliates />} />
         <Route path="radar" element={<Protected role="super_admin"><RadarSources /></Protected>} />
         <Route path="launch" element={<Protected role="super_admin"><LaunchReadiness /></Protected>} />
@@ -127,6 +134,7 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Toaster theme="dark" position="top-right" richColors />
+        <VisitorTracker />
         <AppRouter />
       </BrowserRouter>
     </AuthProvider>

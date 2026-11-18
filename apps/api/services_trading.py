@@ -80,7 +80,7 @@ async def get_trading_config():
 FREE_ENTITLEMENTS = {
     "botAccess": True, "modes": ["STRATEGY"], "connectors": ["pocket_option"], "scanners": False,
     "aiInsights": False, "cloudStrategies": False, "community": True, "premiumTools": False, "deviceLimit": 1,
-    "chartLimit": 1, "aiTraining": False, "pretrainedModels": False,
+    "chartLimit": 1, "aiTraining": False, "pretrainedModels": False, "aiSignals": False,
     "tier": "free",
 }
 
@@ -94,7 +94,7 @@ async def get_entitlements(user: dict) -> dict:
             and not user.get("extension_access_revoked")):
         return device_entitlements(user, await apply_ai_execution_lock({
             "botAccess": True, "modes": list(TRADING_MODES), "connectors": ["pocket_option"],
-            "scanners": True, "aiInsights": True, "aiTraining": True, "pretrainedModels": True, "cloudStrategies": True,
+            "scanners": True, "aiInsights": True, "aiTraining": True, "pretrainedModels": True, "aiSignals": True, "cloudStrategies": True,
             "community": True, "premiumTools": True, "chartLimit": 4,
             "deviceLimit": None, "tier": "ultimate", "roleGranted": True,
         }))
@@ -115,8 +115,8 @@ async def _membership_entitlements(user: dict) -> dict:
     ent = (plan or {}).get("entitlements")
     if not ent:
         return {**DEFAULT_ENTITLEMENTS, "botAccess": True, "modes": ["STRATEGY"], "connectors": ["pocket_option"],
-                "cloudStrategies": True, "scanners": True, "aiInsights": True, "aiTraining": True, "pretrainedModels": False, "tier": "pro"}
-    return await apply_ai_execution_lock({"scanners": True, "aiInsights": True, **ent, "aiTraining": True, "pretrainedModels": plan.get("tier", "pro") == "ultimate", "tier": plan.get("tier", "pro")})
+                "cloudStrategies": True, "scanners": True, "aiInsights": True, "aiTraining": True, "pretrainedModels": False, "aiSignals": False, "tier": "pro"}
+    return await apply_ai_execution_lock({"scanners": True, "aiInsights": True, **ent, "aiTraining": True, "pretrainedModels": plan.get("tier", "pro") == "ultimate", "aiSignals": plan.get("tier", "pro") == "ultimate", "tier": plan.get("tier", "pro")})
 
 
 def _pseudo(*parts) -> int:

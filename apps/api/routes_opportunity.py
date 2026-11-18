@@ -31,6 +31,12 @@ async def member(user=Depends(get_current_user)):
         raise HTTPException(403,'Scanners require a Pro or Ultimate membership')
     return user
 
+async def signal_member(user=Depends(get_current_user)):
+    ent=await get_entitlements(user)
+    if not ent.get('scanners') or not ent.get('aiSignals'):
+        raise HTTPException(403,'AI Signals require an Ultimate membership')
+    return user
+
 @router.post('/ingest')
 async def ingest(items: list[Observation], x_kaos_collector_key: str | None=Header(default=None)):
     from secrets import compare_digest

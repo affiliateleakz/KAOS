@@ -56,6 +56,8 @@ async def report():
     legacy_key=os.getenv('EMERGENT_EMAIL_KEY','');legacy_email=bool(legacy_key and not legacy_key.startswith('{'))
     google=bool(os.getenv('KAOS_GOOGLE_WEB_CLIENT_ID'))
     extension_google=bool(os.getenv('KAOS_GOOGLE_EXTENSION_CLIENT_ID'))
+    from affiliate_payouts import availability as payout_availability
+    payout_status=await payout_availability()
     checks=[
         check('plans','Membership catalog','configured' if pricing else 'needs_review','Current target: Free $0; Pro $29.95/month or $299.95/year; Ultimate $99.95/month or $995.95/year.','In Settings, choose Use current KAOS plans, review prices and tools, then Save Plans. Existing subscriptions are not repriced.','/admin/settings'),
         check('stripe_config','Stripe credentials','configured' if stripe.get('configurationReady') else 'blocked',stripe.get('note','Not configured'),'Save matching payments key and signing secret.','/admin/commerce'),
@@ -65,7 +67,7 @@ async def report():
         check('google','Google sign-in','configured_unverified' if google and extension_google else 'needs_review','Installed extension ID must remain gbobopmnjgeeegniphckfpalhnebapjm.','Verify website and official-extension sign-in after deployment.','/admin/extension'),
         check('worker','AI training worker','heartbeat_seen' if 0<=time.time()-worker.get('heartbeat',0)<900 else 'not_running','Website requests never start training. Worker hosting is still a separate owner decision.','Choose dedicated worker hosting before promising continuously running training.','/admin/kaos-ai'),
         check('models','Published pretrained models','available_unverified' if published else 'not_available','Experimental research artifacts are not production pretrained member models.','Validate models and their actual execution scope before publication.','/admin/kaos-ai'),
-        check('payouts','Affiliate payout release','disabled','Commission accounting and provider setup do not mean real payouts are connected or enabled.','Verify hold/refund accounting, provider approval and payout reconciliation before release.','/admin/affiliates'),
+        check('payouts','Affiliate payout release','live_enabled' if payout_status['payoutsEnabled'] else 'disabled',payout_status['note'],'Manage live release, connected profiles, matured balances and transfer reconciliation.','/admin/affiliates'),
     ]
     return {'checkedAt':now_iso(),'installedRelease':installed_release(),'checks':checks,'stripeMode':stripe['mode'],'recentProcessedWebhookEvidence':events,
             'publishedModels':published,'activationPerformed':False,'launchCertified':False,
