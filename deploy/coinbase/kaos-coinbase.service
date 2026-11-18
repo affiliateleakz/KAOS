@@ -1,0 +1,31 @@
+[Unit]
+Description=KAOS Coinbase automatic spot execution (not AI training)
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=kaos
+Group=kaos
+WorkingDirectory=/opt/KAOS
+EnvironmentFile=/etc/kaos/coinbase.env
+Environment=PYTHONUNBUFFERED=1
+Environment=OMP_NUM_THREADS=1
+Environment=OPENBLAS_NUM_THREADS=1
+ExecStartPre=/opt/KAOS/.venv/bin/python /opt/KAOS/scripts/run_coinbase_worker.py --check
+ExecStart=/opt/KAOS/.venv/bin/python /opt/KAOS/scripts/run_coinbase_worker.py
+Restart=on-failure
+RestartSec=15
+TimeoutStopSec=45
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+MemoryMax=1G
+TasksMax=64
+
+[Install]
+WantedBy=multi-user.target

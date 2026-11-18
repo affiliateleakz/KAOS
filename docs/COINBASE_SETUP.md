@@ -34,3 +34,49 @@ Tests use generated temporary keys, fake provider responses and fixture candles;
 Credentials are encrypted at rest and not returned to the website or extension. The read-only account/product connection endpoints remain available. A verified connection badge is timestamped evidence, not continuous proof of connectivity. Existing holdings from outside KAOS are never adopted or sold automatically. Ambiguous submissions, partial fills, mismatched quantities/fees and unsupported reconciliation cases require review rather than a replacement order.
 
 Local MongoDB integration tests additionally race two products for a single remaining notional allocation and verify that only one reservation succeeds. A separate isolated test database exercises Start → reserved BUY → verified fills → SELL → released exposure → Stop with a fake Coinbase provider. Neither test uses a real exchange key or order. The account reservation and fill ledger use natural unique Mongo IDs, so protection does not depend on Passenger running ASGI startup index creation.
+
+## Execution service package (independent of AI training)
+
+Coinbase execution uses `deploy/coinbase/kaos-coinbase.service`; the AI trainer
+uses a different service and is not a prerequisite for deterministic KAOS Strategy.
+The extension supplies the controls while the execution process manages the run.
+This is the existing server-execution architecture: no broker keys or database
+credentials should be copied into the extension.
+
+The execution process can share infrastructure with the API if the hosting plan
+supports a supervised persistent Python process. A cPanel Python/Passenger web
+application alone does not provide that supervision. Ask Asura whether your plan
+supports a persistent, supervised process running
+`python scripts/run_coinbase_worker.py` separately from Passenger. Do not add it
+to `passenger_wsgi.py`, a request handler, or a repeated cron job. Resource limits
+still apply if both processes share the same cPanel account.
+
+For a Linux host with systemd:
+
+1. Use a dedicated `kaos` system user. Install this same revision at `/opt/KAOS`,
+   create `/opt/KAOS/.venv`, and install `apps/api/requirements.txt` there.
+2. Privately copy `deploy/coinbase/coinbase.env.example` to
+   `/etc/kaos/coinbase.env`, root-owned with mode 0600. Replace the placeholders
+   using the API's existing database and broker-vault values. Do not use the
+   separate commerce vault key. Allow the host's IP in MongoDB/Coinbase as needed.
+3. Install `deploy/coinbase/kaos-coinbase.service` at
+   `/etc/systemd/system/kaos-coinbase.service`. Inspect paths/user before use.
+4. Explicitly enable the API gateway using the existing cPanel runtime command
+   `python scripts/cpanel_billing_runtime.py --enable-stripe --enable-trading`
+   with the cPanel virtualenv Python, then restart the API app.
+5. Run `sudo systemctl daemon-reload` and
+   `sudo systemctl enable --now kaos-coinbase` on the execution host.
+   Inspect `sudo systemctl status kaos-coinbase` and
+   `sudo journalctl -u kaos-coinbase -n 50 --no-pager`.
+
+The service validates required configuration without printing secret values before
+starting. It does not create a member session. The member must connect Coinbase
+and explicitly press Start with valid settings. A fresh worker heartbeat is
+required. The initial ~25-minute candle warmup still applies. `--check` only
+validates local settings: it is not proof of exchange/database connectivity or
+successful trading. No service has been installed or started by preparing these
+files. Closing the browser does not stop an accepted server-owned run.
+
+Stopping the service does not liquidate positions. Existing in-flight Coinbase
+requests can still complete; inspect Coinbase directly and retain the same database
+and vault so reservations and fills can be reconciled on recovery.
