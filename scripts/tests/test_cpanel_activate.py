@@ -125,6 +125,11 @@ def test_validation_wrapper_blocks_orders_and_billing(monkeypatch, tmp_path):
     @app.post('/api/admin/commerce/vault/initialize')
     def commerce_vault():
         return {'vaultReady': True}
+    @app.put('/api/v1/broker-selection')
+    @app.put('/api/v1/broker-connections/coinbase')
+    @app.delete('/api/v1/broker-connections/coinbase')
+    def broker_setup():
+        return {'live_order_authorized': False}
     @app.delete('/api/v1/devices/device-1')
     def revoke_member_device():
         return {'revoked': True}
@@ -172,6 +177,12 @@ def test_validation_wrapper_blocks_orders_and_billing(monkeypatch, tmp_path):
     assert os.environ['STRIPE_SECRET_KEY'] == ''
     client = TestClient(app)
     assert client.get('/api').status_code == 200
+    for path in ('/api/v1/broker-selection','/api/v1/broker-connections/coinbase'):
+        assert client.put(path).json()=={'live_order_authorized': False}
+    assert client.delete('/api/v1/broker-connections/coinbase').status_code==200
+    assert client.put('/api/v1/broker-connections/unknown').status_code==503
+    assert client.post('/api/v1/coinbase-live/orders').status_code==503
+    assert client.delete('/api/v1/broker-selection').status_code==503
     assert client.post('/api/v1/auth/login').status_code == 200
     for path in ('/api/v1/ai/learning-samples','/api/v1/trading/events','/api/v1/ai/training/train','/api/admin/ai/continuous/owner/train','/api/admin/radar/offerings'):
         assert client.post(path).status_code == 200

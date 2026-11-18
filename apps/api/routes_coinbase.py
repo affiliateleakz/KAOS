@@ -10,7 +10,7 @@ import re
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Literal, Optional
-from cryptography.fernet import Fernet
+from broker_vault import vault
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from pymongo.errors import DuplicateKeyError
@@ -76,9 +76,9 @@ async def connection(user_id):
 
 def make_client(row):
     from coinbase.rest import RESTClient
-    vault = Fernet(os.environ["KAOS_BROKER_VAULT_KEY"].encode())
-    key = vault.decrypt(row["key_name_enc"].encode()).decode()
-    secret = vault.decrypt(row["private_key_enc"].encode()).decode()
+    cipher = vault()
+    key = cipher.decrypt(row["key_name_enc"].encode()).decode()
+    secret = cipher.decrypt(row["private_key_enc"].encode()).decode()
     return RESTClient(api_key=key, api_secret=secret, timeout=12)
 
 def asdict(value):

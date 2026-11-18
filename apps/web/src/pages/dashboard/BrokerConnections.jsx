@@ -28,6 +28,13 @@ export default function BrokerConnections() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [markets, setMarkets] = useState(null);
+  async function checkMarkets() {
+    setBusy(true); setError("");
+    try { setMarkets((await api.get("/api/v1/broker-connections/coinbase/products")).data); }
+    catch(e) { setError(`Coinbase markets unavailable: ${errMsg(e)}`); }
+    finally { setBusy(false); }
+  }
   const load = useCallback(async () => {
     try {
       const r = await api.get("/api/v1/broker-connections");
@@ -40,7 +47,7 @@ export default function BrokerConnections() {
     try {
       await api.put("/api/v1/broker-connections/coinbase", form);
       setForm({key_name:"", private_key:""});
-      setNotice("Coinbase verified and saved to your KAOS account.");
+      setMarkets(null); setNotice("Coinbase read access verified and encrypted credentials saved. Live trading remains disabled.");
       await load();
     } catch(e) { setError(`Coinbase connection failed: ${errMsg(e)}`); }
     finally { setBusy(false); }
@@ -48,7 +55,7 @@ export default function BrokerConnections() {
   async function disconnect() {
     if (!window.confirm("Disconnect Coinbase from your KAOS account?")) return;
     setBusy(true); setError("");
-    try { await api.delete("/api/v1/broker-connections/coinbase"); await load(); setNotice("Coinbase disconnected."); }
+    try { await api.delete("/api/v1/broker-connections/coinbase"); await load(); setMarkets(null); setNotice("Coinbase disconnected."); }
     catch(e) { setError(errMsg(e)); }
     finally { setBusy(false); }
   }
@@ -71,13 +78,16 @@ export default function BrokerConnections() {
     </div>)}</div>
     <div className="rounded-lg border border-slate-700 bg-[#111] p-5"><h2 className="mb-2 text-xl font-semibold">Coinbase Advanced API</h2>
       <p className="mb-4 text-sm text-slate-400">{saved.coinbase?.saved ? `Saved key ending ${saved.coinbase.key_hint || "••••"}. Update it below or disconnect.` : "Enter your Coinbase Consumer / Advanced Trade CDP credentials once."}</p>
+      <p className="mb-4 text-sm text-[#D4AF37]">Read-only setup · no orders or transfers. Account verification does not certify the trading bot for Coinbase.</p>
+      {saved.coinbase?.saved && <div className="mb-4 space-y-2"><p className="text-xs text-slate-400">Last verified: {saved.coinbase.verified_at ? new Date(saved.coinbase.verified_at).toLocaleString() : 'Not recorded'}. Saved verification is not a continuous connection check.</p><button type="button" disabled={busy} onClick={checkMarkets} className="rounded border border-[#8b6b32] px-4 py-2 text-[#D4AF37] disabled:opacity-50">Check Coinbase markets</button></div>}
+      {markets && <div className="mb-4 rounded border border-[#66512d] p-3" data-testid="coinbase-markets"><p className="text-sm text-[#D4AF37]">USD spot market sample · read-only</p><p className="mt-2 text-sm">{markets.products?.map(p=>p.product_id).join(', ') || 'No USD spot products in this sample.'}</p><p className="mt-2 text-xs text-slate-400">This is a partial catalog, not a buy signal or trading permission.</p></div>}
       <form onSubmit={save} className="space-y-3">
-        <label className="block text-sm">API key name<input autoComplete="off" required value={form.key_name} onChange={e=>setForm({...form,key_name:e.target.value})} placeholder="organizations/.../apiKeys/..." className="mt-1 w-full rounded border border-slate-600 bg-[#080808] p-3 text-white" /></label>
-        <label className="block text-sm">Private key<textarea autoComplete="off" required value={form.private_key} onChange={e=>setForm({...form,private_key:e.target.value})} rows={4} placeholder="Paste the original Coinbase key" className="mt-1 w-full rounded border border-slate-600 bg-[#080808] p-3 text-white" /></label>
+        <label className="block text-sm">API key name (optional with credentials JSON)<input autoComplete="off" value={form.key_name} onChange={e=>setForm({...form,key_name:e.target.value})} placeholder="organizations/.../apiKeys/..." className="mt-1 w-full rounded border border-slate-600 bg-[#080808] p-3 text-white" /></label>
+        <label className="block text-sm">Private key<textarea autoComplete="off" required value={form.private_key} onChange={e=>setForm({...form,private_key:e.target.value})} rows={4} placeholder="Paste the original Coinbase private key or credentials JSON" className="mt-1 w-full rounded border border-slate-600 bg-[#080808] p-3 text-white" /></label>
         <button disabled={busy} className="rounded bg-[#D4AF37] px-4 py-2 font-semibold text-black disabled:opacity-50">{busy ? "Verifying…" : "Verify & save Coinbase"}</button>
         {saved.coinbase?.saved && <button type="button" disabled={busy} onClick={disconnect} className="ml-3 rounded border border-red-700 px-4 py-2 text-red-300 disabled:opacity-50">Disconnect</button>}
       </form>
-      <p className="mt-4 text-xs text-slate-400">Use View + Trade permissions; disable transfers. Never include keys in diagnostic exports.</p>
+      <p className="mt-4 text-xs text-slate-400">Start with View permission only and disable Transfer. Trade permission is not required for this connection check. Saving a key never authorizes live orders. Never share API keys in chat or diagnostic exports.</p>
     </div>
     <p className="text-xs text-slate-400">Broker names marked “Adapter pending” are not available for automated trading yet. Selecting a broker does not imply that live trading is supported.</p>
   </section>;

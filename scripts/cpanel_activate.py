@@ -66,7 +66,8 @@ def _get_app():
                     membership_setup = isinstance(payload, dict) and payload.get("key") == "plans"
                 except ValueError:
                     pass
-            allowed_write = allowed_write or bool(device_revoke) or commerce_setup or radar_setup or community_write or membership_setup or (request.method == "POST" and bool(re.fullmatch(r"/api/admin/ai/continuous/publish/[a-f0-9]{64}", path)))
+            broker_setup = (request.method == "PUT" and path in ("/api/v1/broker-selection", "/api/v1/broker-connections/coinbase")) or (request.method == "DELETE" and path == "/api/v1/broker-connections/coinbase")
+            allowed_write = allowed_write or broker_setup or bool(device_revoke) or commerce_setup or radar_setup or community_write or membership_setup or (request.method == "POST" and bool(re.fullmatch(r"/api/admin/ai/continuous/publish/[a-f0-9]{64}", path)))
             pricing_read = path in ("/api/billing/plans", "/api/billing/availability", "/api/billing/memberships") and request.method in ("GET", "HEAD", "OPTIONS")
             if ((path.startswith("/api/billing") and not pricing_read) or
                     (request.method not in ("GET", "HEAD", "OPTIONS") and not allowed_write)):
