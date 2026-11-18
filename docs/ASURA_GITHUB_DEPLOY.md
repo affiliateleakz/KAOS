@@ -344,3 +344,48 @@ The GitHub workflow also retains a `kaos-cpanel-<full-commit-SHA>` Actions artif
 A separately supplied `KAOS-Website-Backend-<short-SHA>.zip` is an outer upload bundle whose top-level directory is the full commit SHA and includes the verified `COMPLETE` marker. Upload this outer bundle to `/home/itsabout/`, outside the web document root. Extract it under `/home/itsabout/kaos_cpanel_releases/` only when that revision directory does not already exist; do not overwrite a previously prepared revision. Then run the existing installer with `--revision <full-SHA>` **without** `--activate` first to check the checksums and package layout. This check does not change live files. Adding `--activate` is the separate live installation step; the existing login-validation/payment and order restrictions remain in effect. Restart the Python app only after an authorized installation.
 
 Prebuilt files reduce hosting build work; they do not repair the API hostname's verification page, change saved catalog prices, install missing Python dependencies or configure a payment provider. Use the corresponding launch checks for those items.
+
+### Payment before account creation
+
+Paid homepage choices now open `/checkout?plan=...` with only a receipt email.
+KAOS does **not** create an account or ask for a password before Stripe payment.
+Existing email addresses must sign in first to protect their account and avoid
+creating duplicate subscriptions; the selected plan is retained.
+
+After Stripe confirms payment, a cookie-protected receipt handler or signed
+webhook creates the new account, attaches the verified subscription and emails
+an expiring, one-use password-setup link. A Checkout session ID or receipt cookie
+never logs a buyer in or sets a password. Free signup remains free signup.
+Account setup mail must work: configure the existing secure SMTP settings
+(`SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURITY`, `SMTP_USER`, `SMTP_PASSWORD`,
+`SMTP_FROM`) or existing email integration, plus HTTPS `FRONTEND_URL`.
+New-account checkout stays unavailable without configured account mail.
+Never put SMTP/Stripe credentials in Git or paste them into chat.
+
+In **cPanel → Setup Python App → api.tradingwithkaos.com**, save these non-secret
+runtime variables after installing this release, then restart the Python app:
+
+```
+KAOS_STRIPE_CHECKOUT_ENABLED=true
+KAOS_LOGIN_VALIDATION_MODE=false
+```
+
+This requires the saved Stripe payment credentials, matching live/sandbox mode
+and webhook secret in the private commerce settings. No keys change by setting
+these flags. Neither flag enables trading or affiliate payouts. Confirm your
+Stripe webhook points to `https://api.tradingwithkaos.com/api/stripe/webhook`
+and verify actual delivery in Stripe; do not rely only on the health check.
+
+Read-only checks:
+
+```
+curl -sS --max-time 20 https://api.tradingwithkaos.com/api
+curl -sS --max-time 20 https://api.tradingwithkaos.com/api/billing/availability
+```
+
+The first should return the KAOS service status. The second should show
+`checkoutEnabled: true` and `guestCheckoutEnabled: true` before accepting new
+buyers. `/` on the API hostname intentionally has no route and may return
+`{"detail":"Not Found"}`. HTML verification pages are hosting responses, not
+Stripe status. An `EXPIRED` account without a confirmed paid subscription must
+not be promoted to paid membership manually as a workaround.

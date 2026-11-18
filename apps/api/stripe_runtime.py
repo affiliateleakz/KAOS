@@ -26,7 +26,8 @@ async def availability():
     except HTTPException:
         return {'checkoutEnabled': False, 'mode': 'unconfigured', 'configurationReady': False,
                 'note': 'Stripe configuration is unavailable. Check the private commerce vault.'}
-    return {'checkoutEnabled': config['enabled'], 'mode': config['mode'],
+    from mail_delivery import account_mail_ready
+    return {'guestCheckoutEnabled': config['enabled'] and account_mail_ready(), 'checkoutEnabled': config['enabled'], 'mode': config['mode'],
             'configurationReady': config['ready'],
             'note': 'Login-validation hosting blocks billing and webhook delivery.' if config['validation'] else
                     'Stripe setup saved; checkout remains disabled until separately activated.' if not config['enabled'] else

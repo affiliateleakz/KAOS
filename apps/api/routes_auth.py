@@ -27,11 +27,12 @@ from mail_delivery import smtp_ready, send_smtp
 from login_policy import MAX_LOGIN_ATTEMPTS as MAX_ATTEMPTS, LOGIN_LOCK_MINUTES as LOCK_MINUTES
 
 
-async def send_password_reset_email(to_email: str, token: str) -> bool:
+async def send_password_reset_email(to_email: str, token: str, account_setup: bool = False) -> bool:
     base = os.environ.get("FRONTEND_URL", "").rstrip("/")
     link = f"{base}/reset-password?token={token}"
+    if account_setup: link = f"{base}/reset-password#token={token}&setup=checkout"
     if (not smtp_ready() and (not EMAIL_KEY or EMAIL_KEY.startswith("{"))) or not base.startswith("https://"):
-        if urlparse(base).hostname in ("localhost", "127.0.0.1", "::1"):
+        if not account_setup and urlparse(base).hostname in ("localhost", "127.0.0.1", "::1"):
             logger.warning("Email not configured; password reset link: %s", link)
         else:
             logger.error("Password reset email not configured")
@@ -41,18 +42,22 @@ async def send_password_reset_email(to_email: str, token: str) -> bool:
             f'<p>We received a request to reset your {brand} password.</p>'
             f'<p><a href="{escape(link)}">Reset your password</a></p>'
             f'<p>This link expires in 1 hour and can be used once.</p></td></tr></table>')
+    subject = f"Reset your {EMAIL_FROM_NAME} password"
+    if account_setup:
+        subject = "Finish your paid KAOS account setup"
+        html = html.replace("We received a request to reset your", "Payment confirmed. Set up your").replace("Reset your password", "Create your password")
     if smtp_ready():
-        return await send_smtp(to_email,f"Reset your {EMAIL_FROM_NAME} password",html)
+        return await send_smtp(to_email,subject,html)
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(f"{EMAIL_BASE_URL}/api/v1/email/send",
                                      headers={"X-Email-Key": EMAIL_KEY},
-                                     json={"to": [to_email], "subject": f"Reset your {EMAIL_FROM_NAME} password",
+                                     json={"to": [to_email], "subject": subject,
                                            "html": html, "from_name": EMAIL_FROM_NAME})
         resp.raise_for_status()
         return True
     except Exception as e:
-        logger.error(f"Password reset email failed: {e}")
+        logger.error("Password reset email failed (%s)", type(e).__name__)
         return False
 
 
@@ -240,8 +245,12 @@ async def reset_password(req: ResetReq):
         {"$set": {"used": True}})
     if not doc:
         raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+    changes = {"password_hash": hash_password(req.password), "updated_at": now_iso()}
+    if doc.get('checkout_setup'):
+        pending = await db.users.find_one({'id': doc['user_id'], 'auth_provider': 'stripe_checkout'})
+        if pending: changes.update(email_verified=True, auth_provider='password')
     await db.users.update_one({"id": doc["user_id"]},
-                              {"$set": {"password_hash": hash_password(req.password), "updated_at": now_iso()},
+                              {"$set": changes,
                                "$inc": {"token_version": 1}})
     await db.password_reset_tokens.delete_many({"user_id": doc["user_id"], "used": False})
     await db.login_attempts.delete_many({"email": doc["email"]})

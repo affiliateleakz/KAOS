@@ -13,11 +13,12 @@ const assert=require('node:assert/strict');
  await page.route('**/*',r=>r.request().url().startsWith(BASE+'/')?r.continue():r.abort());
  await page.route('**/api/**',r=>{const req=r.request(),p=new URL(req.url()).pathname;
  if(p==='/api/auth/me')return r.fulfill(registered?{json:registered}:{status:401,json:{detail:'Not signed in'}});
- if(p==='/api/billing/memberships')return r.fulfill({json:{plans,affiliateRates:{free:[10,0,0],pro:[30,15,0],ultimate:[50,25,5]},affiliateHoldDays:30,affiliateEnrollmentEnabled:true,payoutsEnabled:false,checkoutEnabled:true}});
+ if(p==='/api/billing/memberships')return r.fulfill({json:{plans,affiliateRates:{free:[10,0,0],pro:[30,15,0],ultimate:[50,25,5]},affiliateHoldDays:30,affiliateEnrollmentEnabled:true,payoutsEnabled:false,checkoutEnabled:true,guestCheckoutEnabled:true}});
  if(p==='/api/billing/plans')return r.fulfill({json:paid});
- if(p==='/api/billing/availability')return r.fulfill({json:{checkoutEnabled:true,mode:'test'}});
+ if(p==='/api/billing/availability')return r.fulfill({json:{checkoutEnabled:true,guestCheckoutEnabled:true,mode:'test'}});
  if(p==='/api/auth/register'){const data=req.postDataJSON();registered={id:'fixture',role:'user',name:'Member',requested_membership_plan:data.planId,membership_status:'EXPIRED'};return r.fulfill({json:registered});}
- if(p==='/api/billing/checkout'){checkout.push(req.postDataJSON());return r.fulfill({status:503,json:{detail:'Fixture: no payment provider contacted'}});}
+ if(p==='/api/billing/guest-intent')return r.fulfill({json:{ready:true}});
+ if(p==='/api/billing/guest-checkout'){checkout.push({plan_id:'pro_yearly'});return r.fulfill({status:503,json:{detail:'Fixture: no payment provider contacted'}});}
  if(p==='/api/notifications')return r.fulfill({json:[]});
  if(p==='/api/aff/track')return r.fulfill({json:{ok:true}});
  if(p==='/api/v1/trading/config')return r.fulfill({json:{entitlements:{tier:'free',chartLimit:1}}});
@@ -51,10 +52,10 @@ const assert=require('node:assert/strict');
  await page.getByRole('link',{name:'Change membership',exact:true}).click();
  await page.getByTestId('choose-membership-pro_yearly').waitFor();
  await page.getByTestId('choose-membership-pro_yearly').click();
- await page.getByTestId('register-name-input').fill('Member');await page.getByTestId('register-email-input').fill('member@example.com');await page.getByTestId('register-password-input').fill('fixture-password');await page.getByTestId('register-submit-button').click();
+ await page.getByTestId('checkout-email').fill('member@example.com');await page.getByRole('button',{name:'Continue to secure payment'}).click();
  await page.getByRole('alert').getByText('Fixture: no payment provider contacted',{exact:true}).waitFor();
  assert.equal(new URL(page.url()).pathname,'/checkout');
- assert.equal(registered.requested_membership_plan,'pro_yearly');assert.equal(registered.membership_status,'EXPIRED');
+ assert.equal(registered,null);
  assert.equal(checkout.length,1);assert.equal(checkout[0].plan_id,'pro_yearly');
  assert.deepEqual(errors,[]);
  console.log('Monthly/yearly pricing, annual savings, monthly recommendation, affiliate annual amounts, Free persistence, mobile signup and explicit annual checkout payload passed.');

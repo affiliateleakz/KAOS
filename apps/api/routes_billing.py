@@ -199,8 +199,13 @@ async def _checkout_invoice(session_id,user_id,plan_id,customer,sub_id):
     config=await active_configuration()
     session=await asyncio.to_thread(stripe.checkout.Session.retrieve,session_id,api_key=config['key'])
     metadata=session.get('metadata') or {}
+    owner_matches=metadata.get('user_id')==user_id
+    if not owner_matches and metadata.get('guest_purchase_id'):
+        guest=await db.guest_purchases.find_one({'_id':metadata['guest_purchase_id'], 'user_id':user_id,
+            'session_id':session_id, 'customer_id':customer, 'plan.id':plan_id, 'stripe_mode':config['mode']})
+        owner_matches=bool(guest)
     if (session.get('payment_status')!='paid' or session.get('status')!='complete' or identity(session.get('customer'))!=customer
-        or identity(session.get('subscription'))!=sub_id or metadata.get('user_id')!=user_id or metadata.get('plan_id')!=plan_id):
+        or identity(session.get('subscription'))!=sub_id or not owner_matches or metadata.get('plan_id')!=plan_id):
         raise HTTPException(409,'Checkout payment identity does not match the membership')
     invoice_id=identity(session.get('invoice'))
     if not invoice_id:raise HTTPException(503,'Checkout invoice is not ready; retry')
@@ -353,7 +358,10 @@ async def stripe_webhook(request: Request):
         meta = obj.get("metadata", {})
         # A completed Checkout can still be unpaid for delayed payment methods.
         # Only the paid transition may grant membership/affiliate commission.
-        if meta.get("user_id") and obj.get("payment_status") == "paid" and obj.get("status") == "complete":
+        if meta.get('guest_purchase_id') and obj.get('payment_status')=='paid' and obj.get('status')=='complete':
+            from guest_checkout import from_webhook
+            await from_webhook(obj['id'])
+        elif meta.get("user_id") and obj.get("payment_status") == "paid" and obj.get("status") == "complete":
             await _activate(meta["user_id"], meta.get("plan_id"), obj.get("customer"), obj.get("subscription"), obj["id"])
     elif t in ('invoice.payment_failed','customer.subscription.deleted'):
         customer=identity(obj.get('customer'))
@@ -369,7 +377,8 @@ async def stripe_webhook(request: Request):
         # Cancellation stops future access/renewals, not an already-earned commission.
         # Only an actual refund or dispute reverses the payment ledger.
     elif t == 'invoice.paid':
-        await _paid_invoice(obj)
+        from guest_checkout import guest_invoice
+        if not await guest_invoice(obj): await _paid_invoice(obj)
     elif t=='charge.dispute.created':
         charge_id=identity(obj.get('charge'))
         if not charge_id:raise HTTPException(503,'Dispute charge identity unavailable')

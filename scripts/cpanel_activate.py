@@ -75,8 +75,10 @@ def _get_app():
             allowed_write = allowed_write or coinbase_stop or coinbase_live or broker_setup or bool(device_revoke) or commerce_setup or radar_setup or community_write or membership_setup or (request.method == "POST" and bool(re.fullmatch(r"/api/admin/ai/continuous/publish/[a-f0-9]{64}", path)))
             stripe_live = os.environ.get("KAOS_STRIPE_CHECKOUT_ENABLED") == "true" and os.environ.get("KAOS_LOGIN_VALIDATION_MODE") != "true"
             stripe_operation = stripe_live and ((request.method == "POST" and path in (
-                "/api/billing/checkout", "/api/billing/portal", "/api/billing/cancel", "/api/stripe/webhook")) or
+                "/api/billing/guest-intent", "/api/billing/guest-checkout", "/api/billing/checkout", "/api/billing/portal", "/api/billing/cancel", "/api/stripe/webhook")) or
                 (request.method == "GET" and bool(re.fullmatch(r"/api/billing/status/[^/]+", path))))
+            receipt_operation = (request.method == "GET" and bool(re.fullmatch(r"/api/billing/guest-status/[^/]+", path))) or (request.method == "POST" and bool(re.fullmatch(r"/api/billing/guest-resend/[^/]+", path)))
+            stripe_operation = stripe_operation or receipt_operation
             allowed_write = allowed_write or stripe_operation
             pricing_read = path in ("/api/billing/plans", "/api/billing/availability", "/api/billing/memberships") and request.method in ("GET", "HEAD", "OPTIONS")
             if ((path.startswith("/api/billing") and not pricing_read and not stripe_operation) or

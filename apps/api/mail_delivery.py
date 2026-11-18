@@ -36,3 +36,8 @@ async def send_smtp(to,subject,html):
     except Exception as exc:
         log.error('SMTP delivery failed (%s)',type(exc).__name__)
         return False
+
+
+def account_mail_ready():
+    key=os.getenv('EMERGENT_EMAIL_KEY','')
+    return os.getenv('FRONTEND_URL','').startswith('https://') and (smtp_ready() or bool(key and not key.startswith('{')))

@@ -334,10 +334,13 @@ def test_explicit_stripe_checkout_flag_reaches_only_billing_handlers(tmp_path,mo
     from types import ModuleType
     import os,sys
     app=FastAPI()
-    for path in ('/api/billing/checkout','/api/billing/portal','/api/billing/cancel'):
+    for path in ('/api/billing/guest-intent','/api/billing/guest-checkout','/api/billing/checkout','/api/billing/portal','/api/billing/cancel'):
         app.add_api_route(path,lambda:{'fixture_only':True},methods=['POST'])
     @app.get('/api/billing/status/{session_id}')
     def owned_status(session_id:str):return {'state':'pending'}
+    @app.get('/api/billing/guest-status/{session_id}')
+    @app.post('/api/billing/guest-resend/{session_id}')
+    def private_receipt(session_id:str):raise HTTPException(403,'Receipt cookie required')
     @app.post('/api/stripe/webhook')
     def webhook(request:Request):
         if request.headers.get('Stripe-Signature')!='fixture-signed':raise HTTPException(400,'Signature required')
@@ -352,9 +355,11 @@ def test_explicit_stripe_checkout_flag_reaches_only_billing_handlers(tmp_path,mo
     exec(compile(activation.WRAPPER,'passenger_wsgi.py','exec'),scope);scope['_get_app']()
     expected=200 if enabled and not validation else 503
     with TestClient(app) as client:
-        for path in ('/api/billing/checkout','/api/billing/portal','/api/billing/cancel'):
+        for path in ('/api/billing/guest-intent','/api/billing/guest-checkout','/api/billing/checkout','/api/billing/portal','/api/billing/cancel'):
             assert client.post(path).status_code==expected
         assert client.get('/api/billing/status/cs_fixture').status_code==expected
+        assert client.get('/api/billing/guest-status/cs_fixture').status_code==403
+        assert client.post('/api/billing/guest-resend/cs_fixture').status_code==403
         assert client.post('/api/stripe/webhook').status_code==(400 if expected==200 else 503)
         assert client.post('/api/stripe/webhook',headers={'Stripe-Signature':'fixture-signed'}).status_code==expected
         assert client.post('/api/trading/execute').status_code==503

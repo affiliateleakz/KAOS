@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import GuestCheckout from '../components/GuestCheckout';
 import CheckoutHandoff from "../components/CheckoutHandoff";
 import {registrationLink,purchaseLoginLink} from "../lib/purchaseFlow";
 import {planPrice} from './Memberships';
@@ -57,7 +58,7 @@ function GoogleButton({planId,refCode}={}) {
             setErr("");
             const { data } = await api.post("/api/auth/google/credential", { credential, ...(planId?{planId,refCode}: {}) });
             setUser(data);
-            nav(planId ? (planId==='free'?'/dashboard':registrationLink(planId,purchaseSearch)) : ["moderator", "admin", "super_admin"].includes(data?.role) ? "/admin" : "/dashboard");
+            nav(purchaseSearch.get('purchase')?'/payment/complete?session_id='+encodeURIComponent(purchaseSearch.get('purchase')):planId ? (planId==='free'?'/dashboard':registrationLink(planId,purchaseSearch)) : ["moderator", "admin", "super_admin"].includes(data?.role) ? "/admin" : "/dashboard");
           } catch (e) { setErr(errMsg(e)); }
         }
       });
@@ -95,7 +96,7 @@ export function Login() {
     try {
       const u = await login(email, password);
       const isAdmin = ["moderator", "admin", "super_admin"].includes(u?.role);
-      nav(planId&&planId!=="free"?registrationLink(planId,sp):(isAdmin ? "/admin" : "/dashboard"));
+      nav(sp.get('purchase')?'/payment/complete?session_id='+encodeURIComponent(sp.get('purchase')):planId&&planId!=="free"?registrationLink(planId,sp):(isAdmin ? "/admin" : "/dashboard"));
     }
     catch (e2) { setErr(errMsg(e2)); } finally { setBusy(false); }
   };
@@ -138,11 +139,9 @@ export function Register({purchase=false}) {
     e.preventDefault(); setErr(""); setBusy(true);
     try {
       let refCode; try { refCode = sp.get("ref") || localStorage.getItem("kaos_ref") || undefined; } catch (e3) { refCode = sp.get("ref") || undefined; }
-      if(purchase&&!catalog?.checkoutEnabled)throw Error('Paid checkout is temporarily unavailable. Please retry later.');
       const data = await register({ ...form, refCode, planId:selected.id });
       if (data.verificationToken) sessionStorage.setItem("verifyToken", data.verificationToken);
       if(selected.id==='free'){toast.success('Your free account is ready.');nav('/dashboard');}
-      else if(!purchase)nav(registrationLink(selected.id,sp),{replace:true});
     } catch (e2) { setErr(errMsg(e2)); } finally { setBusy(false); }
   };
   if(!planId || (catalog&&!selected))return <Navigate to={selectionUrl} replace/>;
@@ -152,9 +151,10 @@ export function Register({purchase=false}) {
   if(purchase&&authLoading)return <Shell title="Your secure checkout"><p role="status">Checking your account…</p></Shell>;
   if(purchase&&!catalog.checkoutEnabled)return <Shell title="Checkout temporarily unavailable" subtitle="No payment has been started."><section data-testid="paid-checkout-unavailable"><p role="status" className="text-sm text-slate-300">We cannot accept membership payments right now. Please retry later or choose a Free membership. No paid membership has been activated.</p><button onClick={loadMembership} className="kaos-auth-submit mt-5 w-full">Retry payment availability</button><Link to={registrationLink('free',sp)} className="mt-4 block text-[#e8c46f] underline">Choose Free instead</Link><Link to={selectionUrl} className="mt-4 block text-[#e8c46f] underline">Back to memberships</Link>{user?.role==='super_admin'&&<Link to="/admin/commerce" className="mt-4 block text-[#e8c46f] underline">Review payment setup</Link>}</section></Shell>;
   if(purchase&&user)return <Shell title="Secure membership checkout" subtitle={selected.name+' · '+planPrice(selected)+' / '+selected.interval}><CheckoutHandoff plan={selected} user={user}/></Shell>;
+  if(purchase)return <Shell title="Secure membership checkout" subtitle={selected.name+' · '+planPrice(selected)+' / '+selected.interval}><section data-testid="registration-plan-summary" className="mb-4"><h2>{selected.name+' · '+planPrice(selected)+' / '+selected.interval}</h2><Link to={selectionUrl} className="text-[#e8c46f] underline">Change membership</Link></section>{catalog.guestCheckoutEnabled?<GuestCheckout plan={selected}/>:<><p>New account checkout is temporarily unavailable. Existing members can sign in to continue.</p><Link to={purchaseLoginLink(selected.id,sp)} className="text-[#e8c46f] underline">Sign in</Link></>}</Shell>;
   let referral=sp.get('ref');try{referral=referral||localStorage.getItem('kaos_ref')||undefined;}catch{}
   return (
-    <Shell title={purchase?"Complete your membership":"Create your account"} subtitle={purchase?"Create your sign-in, then continue directly to secure Stripe payment.":"Step 2 · Your membership choice is saved with your account."}>
+    <Shell title="Create your account" subtitle="Your Free membership is ready to set up.">
       <p className="mb-4 text-xs leading-relaxed text-slate-400" data-testid="registration-learning-notice">Using KAOS includes de-identified settled trade and market data contributing to personal, shared and owner models. This is required service data use, not an optional setting. <a href="/privacy.html" className="text-[#e8c46f] underline">Privacy and data use</a>.</p>
       <section className="mb-6 rounded-lg border border-[#8a6b32] bg-[#d4af37]/5 p-4" data-testid="registration-plan-summary"><h2 className="font-semibold text-[#e8c46f]">{selected.name} · {planPrice(selected)}{selected.interval?' / '+selected.interval:''}</h2><p className="mt-2 text-xs text-[#c4b89f]">{selected.id==='free'?'No card required.':'No charge at signup. Paid features require a confirmed payment.'}</p><Link to={selectionUrl} className="mt-3 inline-block text-sm text-[#e8c46f] underline">Change membership</Link></section>
       <form onSubmit={submit} className="space-y-4">
@@ -166,7 +166,7 @@ export function Register({purchase=false}) {
           <Input data-testid="register-password-input" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required minLength={8} className="kaos-auth-input mt-2" />
           <p className="mt-1 text-xs text-slate-500">At least 8 characters.</p></div>
         {err && <p data-testid="register-error" className="text-sm text-[#C62828]">{err}</p>}
-        <Button data-testid="register-submit-button" disabled={busy} className="kaos-auth-submit w-full font-semibold">{busy ? "Creating…" : purchase?"Continue to secure payment":"Create Account"}</Button>
+        <Button data-testid="register-submit-button" disabled={busy} className="kaos-auth-submit w-full font-semibold">{busy ? "Creating…" : "Create Account"}</Button>
       </form>
       <GoogleButton planId={selected.id} refCode={referral}/>
       <p className="mt-4 text-center text-sm text-slate-400">Already a member? <Link to={purchase?purchaseLoginLink(selected.id,sp):"/login"} className="text-[#D4AF37] hover:underline">Sign in</Link></p>
@@ -201,19 +201,21 @@ export function ForgotPassword() {
 }
 
 export function ResetPassword() {
+  const [setup]=useState(()=>new URLSearchParams(window.location.hash.slice(1)));
+  useEffect(()=>{if(setup.get('token'))window.history.replaceState(null,'',window.location.pathname);},[setup]);
   const [params] = useSearchParams();
   const nav = useNavigate();
   const [password, setPassword] = useState(""); const [err, setErr] = useState(""); const [busy, setBusy] = useState(false);
   const submit = async (e) => {
     e.preventDefault(); setErr(""); setBusy(true);
     try {
-      await api.post("/api/auth/reset-password", { token: params.get("token"), password });
+      await api.post("/api/auth/reset-password", { token: setup.get("token") || params.get("token"), password });
       toast.success("Password reset. Please sign in.");
       nav("/login");
     } catch (e2) { setErr(errMsg(e2)); } finally { setBusy(false); }
   };
   return (
-    <Shell title="Set a new password">
+    <Shell title={setup.get("setup")==="checkout"?"Finish your paid account setup":"Set a new password"}>
       <form onSubmit={submit} className="space-y-4">
         <div><Label className="label-mono">New password</Label>
           <Input data-testid="reset-password-input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} className="kaos-auth-input mt-2" /></div>

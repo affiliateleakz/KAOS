@@ -8,6 +8,7 @@ import {MembershipProvider, FeatureGate} from "./components/MembershipAccess";
 import Landing from "./pages/Landing";
 import RadarSources from "./pages/admin/RadarSources";
 import Privacy from "./pages/Privacy";
+import {PaymentComplete} from './components/GuestCheckout';
 import { Login, Register, ForgotPassword, ResetPassword } from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import Memberships from "./pages/Memberships";
@@ -64,6 +65,7 @@ function AppRouter() {
       <Route path="/community/:id" element={<CommunityDetail />} />
       <Route path="/u/:username" element={<Profile />} />
       <Route path="/s/:id" element={<SharePage />} />
+      <Route path="/payment/complete" element={<PaymentComplete />} />
       <Route path="/payment/success" element={<PaymentSuccess />} />
       <Route path="/payment/cancel" element={<PaymentCancel />} />
 
