@@ -11,8 +11,10 @@ function hide(){brokerScreen()?.classList.remove('visible');chooserOpen=false;}
 function message(text,link){const el=$('kaos-broker-status');el.replaceChildren();el.hidden=false;const p=document.createElement('p');p.textContent=text;el.append(p);if(link){const a=document.createElement('a');a.href=link;a.target='_blank';a.rel='noopener noreferrer';a.textContent='Open broker website';el.append(a);}}
 async function choose(id){if(!authenticated)return;if(!brokerURLs[id])return;if(typeof state!=='undefined'&&state.running){message('Stop the running bot before changing brokers.');return;}
  if(id==='coinbase'){
+  message('Checking your Coinbase connection…');
   const r=await send({type:'KAOS_BROKER_VAULT',method:'GET',path:'/broker-connections/coinbase/status'});
-  if(!r.ok||!(r.data?.saved||r.data?.connection?.saved)){document.dispatchEvent(new CustomEvent('kaos-coinbase-setup'));return;}
+  if(!r.ok){message(r.data?.detail||r.error||'Could not check Coinbase connection. Try again or open Broker Connections on the website.');return;}
+  if(!(r.data?.saved||r.data?.connection?.saved)){document.dispatchEvent(new CustomEvent('kaos-coinbase-setup'));return;}
   const a=await send({type:'KAOS_BROKER_VAULT',method:'GET',path:'/broker-connections/coinbase/accounts'});
   if(!a.ok){message('Your saved Coinbase connection needs attention. Reconnect it in KAOS account settings.');return;}
   const preference=await send({type:'KAOS_BROKER_VAULT',method:'PUT',path:'/broker-selection',payload:{broker:id}});

@@ -168,13 +168,28 @@
     var res = await send({ type: 'KAOS_GET_PLATFORMS' });
     var plats = (res && res.platforms) || [{ id: 'pocket_option', name: 'Pocket Option', status: 'SUPPORTED' }];
     plats.forEach(function (p) {
-      var supported = (p.status || 'SUPPORTED') === 'SUPPORTED';
+      var coinbase = p.id === 'coinbase';
+      var supported = coinbase || (p.status || 'SUPPORTED') === 'SUPPORTED';
       var rowc = el('div', 'kaos-plat' + (supported ? '' : ' kaos-plat-soon'));
       rowc.appendChild(el('div', 'kaos-plat-name', p.name || p.id));
-      var connect = el('button', 'kaos-btn kaos-btn-green', supported ? 'CONNECT' : 'COMING SOON');
+      var connect = el('button', 'kaos-btn kaos-btn-green', coinbase ? 'SET UP COINBASE' : supported ? 'CONNECT' : 'COMING SOON');
       connect.disabled = !supported;
       connect.setAttribute('data-testid', 'kaos-connect-' + (p.id || 'platform'));
       connect.onclick = async function () {
+        if (coinbase) {
+          if (window.KAOSBroker) {
+            clear();
+            await window.KAOSBroker.refresh();
+            window.KAOSBroker.show();
+            await window.KAOSBroker.choose('coinbase');
+          } else {
+            connect.disabled = true;
+            var opened = await send({type:'KAOS_OPEN_APP_WINDOW'});
+            connect.disabled = false;
+            connect.textContent = opened.ok ? 'CONTINUE IN KAOS WINDOW' : 'RETRY OPENING KAOS';
+          }
+          return;
+        }
         connect.disabled = true; connect.textContent = 'CONNECTING…';
         var r = await send({ type: 'KAOS_CONNECT_PLATFORM', platform: p.id, remember: cb.checked });
         if (!r || !r.ok) {
