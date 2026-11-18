@@ -166,7 +166,7 @@ def test_validation_wrapper_blocks_orders_and_billing(monkeypatch, tmp_path):
     server.app = app
     monkeypatch.setitem(sys.modules, 'server', server)
     monkeypatch.setattr(sys, 'path', list(sys.path))
-    monkeypatch.setenv('KAOS_COINBASE_LIVE_ORDERS', 'enabled')
+    monkeypatch.delenv('KAOS_COINBASE_LIVE_ORDERS', raising=False)
     monkeypatch.setenv('STRIPE_SECRET_KEY', 'test-value')
     monkeypatch.setenv('STRIPE_WEBHOOK_SECRET', 'test-value')
     scope = {'__file__': str(tmp_path / 'passenger_wsgi.py')}
@@ -300,3 +300,28 @@ def test_full_install_records_verified_revision_only_after_files_install(tmp_pat
     assert marker.stat().st_mode & 0o777==0o600
     with pytest.raises(ValueError):activation.install(site,web,backend,'invalid')
     assert json.loads(marker.read_text())['revision']=='a'*40
+
+
+@pytest.mark.parametrize('enabled',[False,True])
+def test_coinbase_live_enablement_is_explicit_and_does_not_enable_other_trading(tmp_path,monkeypatch,enabled):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from types import ModuleType
+    import sys
+    app=FastAPI()
+    for path in ('/api/v1/coinbase-bot/start','/api/v1/coinbase-bot/stop','/api/v1/coinbase-live/orders','/api/v1/coinbase-live/reconcile'):
+        app.add_api_route(path,lambda:{'fixture_only':True},methods=['POST'])
+    server=ModuleType('server');server.app=app
+    monkeypatch.setitem(sys.modules,'server',server)
+    if enabled:monkeypatch.setenv('KAOS_COINBASE_LIVE_ORDERS','enabled')
+    else:monkeypatch.delenv('KAOS_COINBASE_LIVE_ORDERS',raising=False)
+    scope={'__file__':str(tmp_path/'passenger_wsgi.py')}
+    exec(compile(activation.WRAPPER,'passenger_wsgi.py','exec'),scope)
+    scope['_get_app']()
+    with TestClient(app) as client:
+        assert client.post('/api/v1/coinbase-bot/stop').status_code==200
+        for path in ('/api/v1/coinbase-bot/start','/api/v1/coinbase-live/orders','/api/v1/coinbase-live/reconcile'):
+            assert client.post(path).status_code==(200 if enabled else 503)
+        assert client.post('/api/trading/execute').status_code==503
+        assert client.post('/api/billing/checkout').status_code==503
+        assert client.post('/api/v1/coinbase-live/arbitrary').status_code==503

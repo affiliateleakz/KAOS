@@ -24,7 +24,7 @@ def setup(monkeypatch):
     secret = ec.generate_private_key(ec.SECP256R1()).private_bytes(serialization.Encoding.PEM,
         serialization.PrivateFormat.PKCS8, serialization.NoEncryption()).decode()
     payload = {'key_name': 'organizations/test-org/apiKeys/test-key', 'private_key': secret}
-    connections = SimpleNamespace(find_one=AsyncMock(return_value=None), update_one=AsyncMock(), delete_many=AsyncMock())
+    connections = SimpleNamespace(find_one=AsyncMock(return_value=None), update_one=AsyncMock(), insert_one=AsyncMock(), delete_many=AsyncMock())
     database = SimpleNamespace(broker_connections=connections, coinbase_active_slots=SimpleNamespace(find_one=AsyncMock(return_value=None)))
     provider = SimpleNamespace(get_api_key_permissions=lambda: {'can_view': True, 'can_trade': False, 'can_transfer': False},
         get_accounts=lambda **kw: {'accounts': [{'currency': 'USD', 'uuid': 'private-account-id'}], 'has_next': True},
@@ -98,7 +98,9 @@ def test_status_disconnect_and_accounts_are_member_scoped(setup):
 
 @pytest.mark.parametrize('live,slot', [(True,None), (False,{'product_id': 'BTC-USD'})])
 def test_key_changes_are_blocked_when_gateway_or_positions_are_active(setup, monkeypatch, live, slot):
-    if live: monkeypatch.setenv('KAOS_COINBASE_LIVE_ORDERS', 'enabled')
+    if live:
+        monkeypatch.setenv('KAOS_COINBASE_LIVE_ORDERS', 'enabled')
+        setup.connections.find_one.return_value={'_id':'existing','user_id':'member-a','broker':'coinbase'}
     setup.database.coinbase_active_slots.find_one.return_value = slot
     assert save(setup).status_code == 409
     assert setup.client.delete('/api/v1/broker-connections/coinbase').status_code == 409
@@ -148,3 +150,18 @@ def test_oversized_payload_is_rejected_and_invalid_vault_is_sanitized(setup, mon
     monkeypatch.setenv('KAOS_BROKER_VAULT_KEY', 'invalid-vault-key')
     response = save(setup)
     assert response.status_code == 503 and 'invalid-vault-key' not in response.text
+
+
+def test_initial_connection_can_be_created_live_without_overwriting_an_existing_key(setup,monkeypatch):
+    monkeypatch.setenv('KAOS_COINBASE_LIVE_ORDERS','enabled')
+    assert save(setup).status_code==200
+    setup.connections.update_one.assert_not_awaited()
+    assert setup.connections.insert_one.call_args.args[0]['_id']=='member-a:coinbase'
+
+
+def test_concurrent_initial_live_connection_is_not_an_overwrite(setup,monkeypatch):
+    from pymongo.errors import DuplicateKeyError
+    monkeypatch.setenv('KAOS_COINBASE_LIVE_ORDERS','enabled')
+    setup.connections.insert_one.side_effect=DuplicateKeyError('already saved')
+    assert save(setup).status_code==409
+    setup.connections.update_one.assert_not_awaited()

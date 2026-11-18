@@ -21,6 +21,7 @@ import launch_readiness
 import routes_auth, routes_strategies, routes_community, routes_billing, routes_extension, routes_admin, routes_trading, routes_affiliate, routes_botsync, routes_ai
 import seed
 import routes_coinbase
+import routes_coinbase_bot
 import routes_finbert
 import routes_opportunity
 import routes_radar
@@ -90,6 +91,7 @@ for mod in (routes_auth, routes_strategies, routes_community, routes_billing,
             app.include_router(r)
 
 app.include_router(routes_coinbase.router)
+app.include_router(routes_coinbase_bot.router)
 app.include_router(routes_finbert.router)
 app.include_router(routes_opportunity.router)
 app.include_router(routes_radar.router)

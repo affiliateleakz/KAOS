@@ -30,7 +30,7 @@ el('kaos-cb-connect').addEventListener('click',async()=>{
  try{const d=await request('',{method:'PUT',body:JSON.stringify({key_name:el('kaos-cb-name').value,private_key:el('kaos-cb-key').value})});
  el('kaos-cb-key').value='';el('kaos-cb-name').value='';
  const products=await request('/products');
- result.textContent=`Coinbase authenticated and saved to your KAOS website account.  ${d.account_count} account(s) and ${products.products?.length||0} market(s) retrieved. Read-only connection verified. Automated orders are NOT enabled.`;
+ result.textContent=`Coinbase authenticated and saved to your KAOS website account.  ${d.account_count} account(s) and ${products.products?.length||0} market(s) retrieved. Read access verified. No bot session was started; review Coinbase controls in the main bot tab.`;
  }catch(e){result.textContent='Connection failed: '+e.message;}
  finally{btn.disabled=false;}
 });

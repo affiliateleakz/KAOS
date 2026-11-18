@@ -849,7 +849,7 @@ async function kaosOnTradeEvent(type, trade) {
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (!msg || typeof msg.type !== 'string' || msg.type.indexOf('KAOS_') !== 0 || ['KAOS_BROKER_VAULT','KAOS_PO_ENSURE_ATTACH','KAOS_OPEN_APP_WINDOW','KAOS_KEEP_PO_ACTIVE','KAOS_RESIZE_APP','KAOS_EXPIRY_LABEL_BATCH','KAOS_EXPIRY_TRAIN_COLLECTED','KAOS_TRAIN_SPECIALISTS'].includes(msg.type)) return false; // Dedicated listeners own these response channels
+  if (!msg || typeof msg.type !== 'string' || msg.type.indexOf('KAOS_') !== 0 || ['KAOS_COINBASE_BOT','KAOS_BROKER_VAULT','KAOS_PO_ENSURE_ATTACH','KAOS_OPEN_APP_WINDOW','KAOS_KEEP_PO_ACTIVE','KAOS_RESIZE_APP','KAOS_EXPIRY_LABEL_BATCH','KAOS_EXPIRY_TRAIN_COLLECTED','KAOS_TRAIN_SPECIALISTS'].includes(msg.type)) return false; // Dedicated listeners own these response channels
   (async () => {
     try {
       switch (msg.type) {
@@ -986,11 +986,28 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   (async () => {
     try {
       const method = msg.method || 'GET';
-      if (!['GET','PUT','DELETE'].includes(method) || !['/broker-connections','/broker-connections/coinbase','/broker-connections/coinbase/status','/broker-connections/coinbase/accounts','/broker-connections/coinbase/products'].includes(msg.path)) throw Error('Invalid broker request');
+      if (!['GET','PUT','DELETE'].includes(method) || !['/broker-selection','/broker-connections','/broker-connections/coinbase','/broker-connections/coinbase/status','/broker-connections/coinbase/accounts','/broker-connections/coinbase/products'].includes(msg.path)) throw Error('Invalid broker request');
       const response = await self.KaosCloud.authFetch(msg.path, {method, headers:{'Content-Type':'application/json'}, ...(method==='PUT'?{body:JSON.stringify(msg.payload)}:{})});
       const data=await response.json();
       sendResponse({ok:response.ok,data});
     } catch (e) {sendResponse({ok:false,error:String(e.message||e)});}
   })();
   return true;
+});
+
+// Coinbase session controls: only explicit Start/Stop, never a raw order proxy.
+chrome.runtime.onMessage.addListener((msg,sender,sendResponse)=>{
+  if(msg?.type!=='KAOS_COINBASE_BOT')return;
+  (async()=>{
+    try{
+      const expected=new URL(chrome.runtime.getURL('popup.html')),actual=new URL(sender?.url||'about:blank');
+      if(actual.protocol!==expected.protocol||actual.host!==expected.host||actual.pathname!==expected.pathname)throw Error('Coinbase controls require the KAOS app window');
+      const methods={status:'GET',start:'POST',stop:'POST'};
+      if(!Object.hasOwn(methods,msg.action))throw Error('Invalid Coinbase bot action');
+      if(msg.action==='start'&&botState.running)throw Error('Stop Pocket Option before starting Coinbase');
+      const r=await self.KaosCloud.authFetch('/coinbase-bot/'+msg.action,{method:methods[msg.action],headers:{'Content-Type':'application/json'},...(msg.action==='start'?{body:JSON.stringify(msg.payload)}:{})});
+      if(!r.headers?.get('content-type')?.includes('application/json'))throw Error('KAOS API returned a web page; check hosting verification and routing');
+      const data=await r.json();sendResponse({ok:r.ok,data,httpStatus:r.status});
+    }catch(e){sendResponse({ok:false,error:String(e.message||e)});}
+  })();return true;
 });

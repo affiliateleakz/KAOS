@@ -40,12 +40,19 @@ jobs:
         with: { node-version: "20", cache: npm, cache-dependency-path: apps/web/package-lock.json }
       - run: npm ci --no-audit --no-fund
       - run: npm test
-      - run: npm run build
+      - name: Build for isolated browser fixtures
+        run: npm run build
+        env:
+          CI: "false"
+          REACT_APP_BACKEND_URL: ""
+      - name: Browser checks with fixture accounts and candles
+        run: node ../../scripts/browser/run.cjs
+      # Publish a separate production build, never the relative-URL fixture build.
+      - name: Build website for the hosted API
+        run: npm run build
         env:
           CI: "false"
           REACT_APP_BACKEND_URL: "https://api.tradingwithkaos.com"
-      - name: Browser checks with fixture accounts and candles
-        run: node ../../scripts/browser/run.cjs
       - name: Archive built KAOS website
         uses: actions/upload-artifact@v4
         with:
@@ -120,6 +127,7 @@ jobs:
           node --check apps/extension/popup.js
           node --check apps/extension/kaos-chart-session.js
           node --check apps/extension/kaos-broker-selector.js
+          node --check apps/extension/kaos-coinbase-bot.js
           node --check apps/extension/po-bridge.js
 
   release-packages:

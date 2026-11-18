@@ -189,6 +189,8 @@ $('recheck-btn').addEventListener('click', () => {
 // ════════════════════════════════════════════════════════════
 
 async function startFlow() {
+  const selected = await chrome.storage.local.get("kaosSelectedBroker");
+  if (selected.kaosSelectedBroker === "coinbase") return; // Coinbase is opened by authenticated broker selection, never PO detection.
   if(window.__kaosChartSessionInitialized && window.__kaosChartSessionAuthorized===true){kaosStartChartFeed();return;}
   if (window.__kaosStartFlowRunning) return;
   window.__kaosStartFlowRunning = true;
@@ -533,9 +535,9 @@ function loadSettings() {
   martOn = true; compoundOn = false; martDir = 'opposite'; autoCdOn = true;
   applyMultiUI(); applyMartUI(); applyCompoundUI();
 
-  chrome.storage.local.get('settings', (data) => {
+  return new Promise(resolve => chrome.storage.local.get('settings', (data) => {
     const s = data.settings;
-    if (!s) return; // keep defaults above
+    if (!s) { resolve(); return; } // keep defaults above
     if (s.timeframe) {
       document.querySelectorAll('.tf-btn').forEach(b => {
         b.classList.toggle('active', parseInt(b.dataset.tf) === s.timeframe);
@@ -575,7 +577,9 @@ function loadSettings() {
     sv('anti-steps', s.antiSteps);
     sv('step-mult',  s.stepMult);
     sv('step-steps', s.stepSteps);
-  });
+    if ($('kaos-amount-input')) $('kaos-amount-input').value = $('amount-input').value;
+    resolve();
+  }));
 }
 
 // Auto-save on input change
@@ -831,6 +835,7 @@ function renderDebug(s) {
 }
 
 function pollStatus() {
+  if (window.KAOSCoinbaseBot?.selected()) return;
   refreshPocketFlowLiveMeter();
   getKAOSTargetTab().then(tab => {
     if (!tab) return;
@@ -857,7 +862,20 @@ $('start-btn').addEventListener('click', () => {
   state.running ? stopBot() : startBot();
 });
 
-function startBot() {
+async function startBot() {
+  const brokerChoice = await chrome.storage.local.get('kaosSelectedBroker');
+  if (brokerChoice.kaosSelectedBroker === 'coinbase') {
+    if (!window.KAOSCoinbaseBot) { setStatus('idle', 'Coinbase controls unavailable'); return; }
+    await window.KAOSCoinbaseBot.ready();
+    await window.KAOSCoinbaseBot.start({
+      amount: Number($('amount-input').value),
+      martingale: martOn, compound: compoundOn, autoCooldownOn: autoCdOn,
+      profitTarget: Number($('profit-target').value), dailyLossLimit: Number($('daily-loss-limit').value),
+      maxLossStreak: Number($('max-loss-streak').value), cooldownAfterLoss: Number($('cooldown-loss').value),
+      ...getStrategyBuilderStartConfig()
+    });
+    return;
+  }
   if (KAOS_AUDIT_READ_ONLY) {
     setStatus('idle', 'CHART AUDIT · TRADING DISABLED');
     return;
@@ -911,6 +929,7 @@ function startBot() {
 }
 
 function stopBot() {
+  if (window.KAOSCoinbaseBot?.selected()) { window.KAOSCoinbaseBot.stop(); return; }
   state.running = false;
   setRunningUI(false);
   setStatus('idle', 'IDLE · READY');

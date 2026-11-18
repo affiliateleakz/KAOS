@@ -41,7 +41,7 @@ function picker(state, result) {
     document:{getElementById:id=>nodes[id]||(nodes[id]=node()),createElement:node,querySelectorAll:()=>[],
       addEventListener:(type,cb)=>handlers[type]=cb,dispatchEvent:event=>handlers[event.type]?.(event)},
     chrome:{runtime:{sendMessage:(msg,cb)=>{calls.push(msg);cb(msg.type==='KAOS_STARTUP'?{ok:true,state}:result);}},
-      storage:{local:{set:async obj=>Object.assign(saved,obj)}},tabs:{create:async()=>{throw Error('Must use authorized background connect');}}}};
+      storage:{local:{get:async()=>saved,set:async obj=>Object.assign(saved,obj)}},tabs:{create:async()=>{throw Error('Must use authorized background connect');}}}};
   vm.runInNewContext(fs.readFileSync(__dirname+'/kaos-broker-selector.js','utf8'),context);
   return {init:()=>handlers.DOMContentLoaded(),choose:()=>context.window.KAOSBroker.choose('pocketoption'),calls,saved,nodes};
 }
@@ -107,10 +107,19 @@ test('chart feed starts with authorized session and stops on sign-out',()=>{
   const events={},messages=[];let started=0,stopped=0;
   const context={window:{},document:{addEventListener:(name,cb)=>events[name]=cb},
     startFlow(){},kaosStartChartFeed:()=>started++,kaosStopChartFeed:()=>stopped++,
-    chrome:{runtime:{sendMessage:(msg,cb)=>{messages.push(msg);cb({ok:true,state:connected});}}}};
+    chrome:{storage:{local:{get:(_,cb)=>cb({})}},runtime:{sendMessage:(msg,cb)=>{messages.push(msg);cb({ok:true,state:connected});}}}};
   vm.runInNewContext(fs.readFileSync(__dirname+'/kaos-chart-session.js','utf8'),context);
   events['kaos-cloud-state-changed']({detail:{state:connected}});
   assert.equal(started,1);assert.equal(context.window.__kaosChartSessionAuthorized,true);
   events['kaos-cloud-state-changed']({detail:{state:{step:'LOGIN'}}});
   assert.equal(stopped,1);assert.equal(context.window.__kaosChartSessionAuthorized,false);
+});
+
+test('remembered Coinbase session never attaches the Pocket Option chart engine',()=>{
+ const events={},calls=[];
+ const context={window:{},document:{addEventListener:(name,cb)=>events[name]=cb},
+  chrome:{storage:{local:{get:(_,cb)=>cb({kaosSelectedBroker:'coinbase'})}},runtime:{sendMessage:msg=>calls.push(msg)}}};
+ vm.runInNewContext(fs.readFileSync(__dirname+'/kaos-chart-session.js','utf8'),context);
+ events['kaos-cloud-state-changed']({detail:{state:connected}});
+ assert.equal(calls.length,0);assert.equal(context.window.__kaosChartSessionAuthorized,false);
 });

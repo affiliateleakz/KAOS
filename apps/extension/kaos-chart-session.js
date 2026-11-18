@@ -33,11 +33,14 @@
     });
   }
   document.addEventListener('kaos-cloud-state-changed', function (event) {
+    chrome.storage.local.get('kaosSelectedBroker', function(saved) {
+      if (saved.kaosSelectedBroker === 'coinbase') {ready=false;attached=false;connecting=false;generation++;window.__kaosChartSessionAuthorized=false;if(typeof kaosStopChartFeed==='function')kaosStopChartFeed();return;}
     var detail = event.detail || {};
     ready = verified(detail.state);
     if (!ready) { attached = false; connecting = false; generation++; window.__kaosChartSessionInitialized = false; window.__kaosChartSessionAuthorized = false; if(typeof kaosStopChartFeed === 'function')kaosStopChartFeed(); return; }
     if (detail.brokerAttached) attached = true;
     connect();
+    });
   });
   if (chrome.tabs && chrome.tabs.onUpdated) {
     chrome.tabs.onUpdated.addListener(function (tabId, change) {

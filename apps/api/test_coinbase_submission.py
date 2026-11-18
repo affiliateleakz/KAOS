@@ -73,3 +73,17 @@ def test_definitive_buy_rejection_releases_reserved_slot(setup):
     result=asyncio.run(routes.order(order_request(),setup.request,{'id':'member-a'}))
     assert result['state']=='REJECTED'
     setup.slots.delete_one.assert_awaited_once()
+
+
+def test_stopped_bot_can_reduce_verified_positions_but_cannot_open_new_ones(monkeypatch):
+    from datetime import datetime,timezone
+    consent={'user_id':'u','enabled':False,'expires_at':datetime(2000,1,1,tzinfo=timezone.utc),
+             'bot_settings':{'chartCount':4}}
+    monkeypatch.setenv('KAOS_COINBASE_LIVE_ORDERS','enabled')
+    monkeypatch.setattr(routes,'get_entitlements',AsyncMock(return_value={'botAccess':False,'chartLimit':1}))
+    monkeypatch.setattr(routes,'db',SimpleNamespace(coinbase_live_consent=SimpleNamespace(find_one=AsyncMock(return_value=consent)),
+        coinbase_emergency_stops=SimpleNamespace(find_one=AsyncMock(return_value=None))))
+    request=SimpleNamespace(headers={'authorization':'Bearer fixture'})
+    user={'id':'u','membership_status':'EXPIRED'}
+    assert asyncio.run(routes.authorized(request,user,risk_reducing=True))==consent
+    with pytest.raises(HTTPException):asyncio.run(routes.authorized(request,user))

@@ -23,7 +23,7 @@ from starlette.responses import JSONResponse
 
 ROOT = Path(__file__).resolve().parent
 load_dotenv(ROOT / ".env", override=False)
-os.environ["KAOS_COINBASE_LIVE_ORDERS"] = "disabled"
+os.environ.setdefault("KAOS_COINBASE_LIVE_ORDERS", "disabled")
 os.environ["KAOS_LOGIN_VALIDATION_MODE"] = "true"
 os.environ["STRIPE_SECRET_KEY"] = ""
 os.environ["STRIPE_WEBHOOK_SECRET"] = ""
@@ -67,7 +67,9 @@ def _get_app():
                 except ValueError:
                     pass
             broker_setup = (request.method == "PUT" and path in ("/api/v1/broker-selection", "/api/v1/broker-connections/coinbase")) or (request.method == "DELETE" and path == "/api/v1/broker-connections/coinbase")
-            allowed_write = allowed_write or broker_setup or bool(device_revoke) or commerce_setup or radar_setup or community_write or membership_setup or (request.method == "POST" and bool(re.fullmatch(r"/api/admin/ai/continuous/publish/[a-f0-9]{64}", path)))
+            coinbase_live = (os.environ.get("KAOS_COINBASE_LIVE_ORDERS") == "enabled" and request.method == "POST" and path in ("/api/v1/coinbase-bot/start", "/api/v1/coinbase-bot/stop", "/api/v1/coinbase-live/orders", "/api/v1/coinbase-live/reconcile"))
+            coinbase_stop = request.method == "POST" and path == "/api/v1/coinbase-bot/stop"
+            allowed_write = allowed_write or coinbase_stop or coinbase_live or broker_setup or bool(device_revoke) or commerce_setup or radar_setup or community_write or membership_setup or (request.method == "POST" and bool(re.fullmatch(r"/api/admin/ai/continuous/publish/[a-f0-9]{64}", path)))
             pricing_read = path in ("/api/billing/plans", "/api/billing/availability", "/api/billing/memberships") and request.method in ("GET", "HEAD", "OPTIONS")
             if ((path.startswith("/api/billing") and not pricing_read) or
                     (request.method not in ("GET", "HEAD", "OPTIONS") and not allowed_write)):
@@ -250,7 +252,7 @@ def main():
     else:
         install(site, web, backend, sha)
     print('Files installed. Restart the API in cPanel, then check /api and extension sign-in.')
-    print('Payments and live orders remain disabled; member research and community actions are permitted.')
+    print('Payments remain disabled. Coinbase orders require explicit hosting enablement, member Start and server risk checks.')
     print('Legacy wsgi_app.py remains available; no database migration or full backup was performed.')
 
 

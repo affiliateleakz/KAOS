@@ -109,8 +109,9 @@ async def status(response: Response, user: dict = Depends(get_current_user)):
 @router.put('/coinbase')
 async def save(request: Request, response: Response, user: dict = Depends(get_current_user)):
     private(response)
-    if os.getenv('KAOS_COINBASE_LIVE_ORDERS', 'disabled') == 'enabled':
-        raise HTTPException(409, 'Pause the Coinbase live gateway before changing broker credentials')
+    live_enabled = os.getenv('KAOS_COINBASE_LIVE_ORDERS', 'disabled') == 'enabled'
+    if live_enabled and await current(user['id']):
+        raise HTTPException(409, 'Pause the Coinbase live gateway before replacing broker credentials')
     # Bound and sanitize validation: errors never echo the submitted key material.
     body = bytearray()
     async for chunk in request.stream():
@@ -147,7 +148,13 @@ async def save(request: Request, response: Response, user: dict = Depends(get_cu
            'key_hint': name[-4:], 'verified_at': now_iso(), 'account_count': len(accounts['accounts']),
            'account_count_is_partial': accounts.get('has_next') is True,
            'permissions': {k: permissions.get(k) is True for k in ('can_view', 'can_trade', 'can_transfer')}}
-    await db.broker_connections.update_one(identity, {'$set': row}, upsert=True)
+    if live_enabled:
+        if previous:raise HTTPException(409, 'A Coinbase key was saved concurrently; pause the gateway before replacing it')
+        from pymongo.errors import DuplicateKeyError
+        try:await db.broker_connections.insert_one({'_id':user['id']+':coinbase',**row})
+        except DuplicateKeyError:raise HTTPException(409, 'Coinbase is already saved; refresh connection status') from None
+    else:
+        await db.broker_connections.update_one(identity, {'$set': row}, upsert=True)
     return public(row)
 
 

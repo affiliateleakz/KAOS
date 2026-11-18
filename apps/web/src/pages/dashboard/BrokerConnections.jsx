@@ -87,7 +87,7 @@ export default function BrokerConnections() {
         <button disabled={busy} className="rounded bg-[#D4AF37] px-4 py-2 font-semibold text-black disabled:opacity-50">{busy ? "Verifying…" : "Verify & save Coinbase"}</button>
         {saved.coinbase?.saved && <button type="button" disabled={busy} onClick={disconnect} className="ml-3 rounded border border-red-700 px-4 py-2 text-red-300 disabled:opacity-50">Disconnect</button>}
       </form>
-      <p className="mt-4 text-xs text-slate-400">Start with View permission only and disable Transfer. Trade permission is not required for this connection check. Saving a key never authorizes live orders. Never share API keys in chat or diagnostic exports.</p>
+      <p className="mt-4 text-xs text-slate-400">View permission is enough for connection verification. Automatic Coinbase trading requires View + Trade with Transfer disabled and an explicit Start in the bot. Saving a key never starts orders. Never share API keys in chat or diagnostic exports.</p>
     </div>
     <p className="text-xs text-slate-400">Broker names marked “Adapter pending” are not available for automated trading yet. Selecting a broker does not imply that live trading is supported.</p>
   </section>;
