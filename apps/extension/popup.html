@@ -4150,6 +4150,8 @@ body.kaos-fullpage #screen-main.view-dashboard #kaos-dashboard-live{
 #kaos-broker-overlay p{color:#b8aa91;margin:0 0 24px}
 #kaos-broker-overlay .broker-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 #kaos-broker-overlay button{background:#17120b;border:1px solid #5b4725;border-radius:10px;color:#f3ead8;padding:23px 15px;text-align:left;cursor:pointer;font-size:17px;font-weight:700}
+#kaos-broker-overlay button:disabled{opacity:.5;cursor:not-allowed}
+#kaos-broker-overlay h3{color:#d4af37;margin:24px 0 10px}
 #kaos-broker-overlay button:hover{border-color:#d4af37}
 #kaos-broker-overlay button small{display:block;color:#b8aa91;font-size:11px;font-weight:400;margin-top:8px}
 #kaos-broker-overlay .broker-status{border:1px solid #5b4725;padding:15px;border-radius:8px;margin-top:22px;line-height:1.7}
@@ -4896,17 +4898,20 @@ body.kaos-fullpage #screen-main.view-dashboard #kaos-dashboard-live{
     <button id="kim-close" type="button" disabled>CLOSE</button>
   </div>
 </div>
-<div id="kaos-broker-overlay" aria-label="Choose trading broker"><div class="broker-wrap"><h2>KAOS Trading · Select Broker</h2><p>Choose the trading platform you want to use.</p><div class="broker-grid">
-<button data-kaos-broker="pocketoption">Pocket Option<small>Existing KAOS connection</small></button>
-<button data-kaos-broker="coinbase">Coinbase Advanced<small>Connect your Coinbase account · USD spot markets</small></button>
-<button data-kaos-broker="kraken">Kraken<small>Crypto · connector pending</small></button>
-<button data-kaos-broker="ibkr">Interactive Brokers<small>Stocks, futures, forex · connector pending</small></button>
-<button data-kaos-broker="alpaca">Alpaca<small>Stocks · integration pending</small></button>
-<button data-kaos-broker="oanda">OANDA<small>Forex · integration pending</small></button>
-<button data-kaos-broker="tradier">Tradier<small>Stocks and options · integration pending</small></button>
-<button data-kaos-broker="tastytrade">tastytrade<small>Options and futures · integration pending</small></button>
-<button data-kaos-broker="binanceus">Binance.US<small>Crypto · integration pending</small></button>
-<button data-kaos-broker="schwab">Charles Schwab<small>Stocks and options · integration pending</small></button>
+<div id="kaos-broker-overlay" aria-label="Choose trading broker"><div class="broker-wrap"><h2>KAOS Trading · Select Broker</h2><p>Choose a connection method. Setup never starts trading.</p>
+<h3>Browser connection</h3><div class="broker-grid">
+<button type="button" data-kaos-broker="pocketoption">Pocket Option<small>Connect to your broker charts · no API key entry</small></button>
+</div><h3>API-key brokers</h3><p>Set up these connections securely on the KAOS API page.</p><div class="broker-grid">
+<button type="button" data-kaos-broker="coinbase">Coinbase Advanced<small>Open KAOS API setup · USD spot markets</small></button>
+<button type="button" disabled>Kraken<small>Not active · integration pending</small></button>
+<button type="button" disabled>Binance.US<small>Not active · integration pending</small></button>
+</div><h3>Other broker connections · coming soon</h3><p>These integrations are not active. Connection methods will be confirmed before release.</p><div class="broker-grid">
+<button type="button" disabled>Interactive Brokers<small>Integration pending</small></button>
+<button type="button" disabled>Alpaca<small>Integration pending</small></button>
+<button type="button" disabled>OANDA<small>Integration pending</small></button>
+<button type="button" disabled>Tradier<small>Integration pending</small></button>
+<button type="button" disabled>tastytrade<small>Integration pending</small></button>
+<button type="button" disabled>Charles Schwab<small>Integration pending</small></button>
 </div><div id="kaos-broker-status" class="broker-status" hidden></div></div></div><button id="kaos-broker-switch" type="button" hidden>Change Broker</button>
 <script src="kaos-coinbase-spot.js"></script>
 <script src="kaos-coinbase-bot.js"></script>

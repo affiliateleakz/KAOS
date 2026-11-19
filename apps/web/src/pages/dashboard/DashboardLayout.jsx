@@ -18,6 +18,7 @@ const NAV = [
   ["crypto-scanner", "Crypto Scanner & Heat Map", Activity],
   ["stock-heatmap", "Stock Heat Map", LineChart],
   ["brokers", "Broker Connections", MonitorSmartphone],
+  ["api", "KAOS API Setup", MonitorSmartphone],
   ["kaos-ai", "KAOS AI", Activity],
   ["strategies", "My Strategies", Boxes],
   ["community", "Community", Users],

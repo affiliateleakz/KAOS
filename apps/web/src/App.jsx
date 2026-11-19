@@ -39,10 +39,15 @@ import { AICenter, Affiliates } from "./pages/admin/AICenter";
 import ExtensionSimulator from "./pages/admin/ExtensionSimulator";
 
 function Protected({ children, role }) {
+  const protectedLocation = useLocation();
   const { user, loading } = useAuth();
   if (loading || user === undefined)
     return <div className="flex min-h-screen items-center justify-center font-mono text-sm text-slate-400">Loading…</div>;
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) {
+    const brokerSetup = protectedLocation.pathname === '/dashboard/api';
+    const broker = new URLSearchParams(protectedLocation.search).get('broker');
+    return <Navigate to={brokerSetup ? '/login?brokerSetup=1' + (broker==='coinbase'?'&broker=coinbase':'') : '/login'} replace />;
+  }
   if (role) {
     const rank = { user: 0, moderator: 1, admin: 2, super_admin: 3 };
     if ((rank[user.role] || 0) < rank[role]) return <Navigate to="/dashboard" replace />;
@@ -83,6 +88,7 @@ function AppRouter() {
         <Route path="crypto-scanner" element={<FeatureGate route="crypto-scanner"><CryptoScanner /></FeatureGate>} />
         <Route path="stock-heatmap" element={<FeatureGate route="stock-heatmap"><StockHeatmap /></FeatureGate>} />
         <Route path="brokers" element={<BrokerConnections />} />
+        <Route path="api" element={<BrokerConnections />} />
         <Route path="paper" element={<PaperTrading />} />
         <Route path="kaos-ai" element={<FeatureGate route="kaos-ai"><AIPage /></FeatureGate>} />
         <Route path="affiliate" element={<AffiliatePage />} />

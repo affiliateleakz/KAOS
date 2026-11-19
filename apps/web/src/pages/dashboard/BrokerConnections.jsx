@@ -1,3 +1,4 @@
+import { Link, useLocation, useSearchParams, useNavigate } from "react-router-dom";
 import React, { useCallback, useEffect, useState } from "react";
 import { api, errMsg } from "../../lib/api";
 
@@ -14,6 +15,12 @@ const BROKERS = [
   ["schwab", "Charles Schwab", "https://www.schwab.com/", "Adapter pending"],
 ];
 export default function BrokerConnections() {
+  const location=useLocation();
+  const navigate=useNavigate();
+  const [params]=useSearchParams();
+  const setupMode=location.pathname==='/dashboard/api';
+  const requestedBroker=params.get('broker');
+
   const [oauth, setOauth] = useState(null);
   useEffect(()=>{api.get("/api/v1/broker-connections/coinbase/oauth/config").then(r=>setOauth(r.data)).catch(()=>setOauth({available:false,message:"Coinbase account authorization is not available on this server."}));},[]);
   const [preferredBroker, setPreferredBroker] = useState("");
@@ -22,6 +29,7 @@ export default function BrokerConnections() {
     try {
       await api.put("/api/v1/broker-selection", { broker });
       setPreferredBroker(broker);
+      if(broker==="coinbase")navigate("/dashboard/api?broker=coinbase");
       setNotice("Preferred broker saved. This does not enable trading or verify an account.");
     } catch (e) { setError(errMsg(e)); }
   };
@@ -71,22 +79,25 @@ export default function BrokerConnections() {
     finally { setBusy(false); }
   }
   return <section className="mx-auto max-w-4xl space-y-6 text-white" data-testid="member-broker-connections">
-    <div><h1 className="text-2xl font-bold">KAOS Broker Connections</h1><p className="mt-2 text-sm text-slate-400">Manage broker access for your KAOS membership. Saved credentials remain encrypted on the website backend and are not returned to your extension.</p></div>
+    <div><h1 className="text-2xl font-bold">{setupMode ? "KAOS API Setup" : "KAOS Broker Connections"}</h1><p className="mt-2 text-sm text-slate-400">Manage broker access for your KAOS membership. Saved credentials remain encrypted on the website backend and are not returned to your extension.</p></div>
+    {setupMode && <div className="card-surface p-4"><h2 className="font-semibold">Secure broker setup</h2><p className="mt-2 text-sm text-slate-400">Connect below, then return to the extension and choose “Continue with saved Coinbase connection.” Setup does not place orders.</p>{requestedBroker && requestedBroker!=="coinbase" && <p role="status" className="mt-2 text-[#D4AF37]">This broker is not active for API setup yet.</p>}</div>}
     <div className="card-surface p-4">
       <label htmlFor="preferred-broker" className="mb-2 block text-sm font-semibold">Your selected broker</label>
       <select id="preferred-broker" value={preferredBroker} onChange={e => selectPreferredBroker(e.target.value)}
         className="w-full rounded border border-slate-600 bg-[#111] p-2 text-sm">
         <option value="" disabled>Select a broker</option>
-        {BROKERS.map(([id,name]) => <option key={id} value={id}>{name}</option>)}
+        {BROKERS.map(([id,name]) => <option key={id} value={id} disabled={!["coinbase","pocketoption"].includes(id)}>{name}{!["coinbase","pocketoption"].includes(id)?" · coming soon":""}</option>)}
       </select>
       <p className="mt-2 text-xs text-slate-400">Selection is saved to your KAOS account; available trading features depend on a verified broker integration. Live orders require separate consent.</p>
     </div>
     {error && <p role="alert" className="rounded border border-red-600 p-3 text-red-300">{error}</p>}
     {notice && <p role="status" className="rounded border border-green-700 p-3 text-green-300">{notice}</p>}
-    <div className="grid gap-3 md:grid-cols-2">{BROKERS.map(([id,name,url,status]) => <div key={id} className="rounded-lg border border-slate-700 bg-[#111] p-4">
-      <div className="flex items-center justify-between gap-2"><h2 className="font-semibold">{name}</h2><span className="text-xs text-slate-400">{saved[id]?.verified ? "Verified & saved" : saved[id]?.saved ? "Saved" : status}</span></div>
-      <a href={url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-sm text-[#D4AF37]">Open broker website ↗</a>
-    </div>)}</div>
+    <div className="card-surface p-4"><h2 className="text-lg font-semibold">Browser connection</h2><p className="mt-2 text-sm text-slate-400">Pocket Option · connect through the KAOS extension. No API-key form is required.</p></div>
+    <div className="card-surface p-4"><h2 className="text-lg font-semibold">API-key brokers</h2><div className="mt-3 grid gap-3 md:grid-cols-2">
+      <div className="rounded border border-[#66512d] p-3"><b>Coinbase Advanced</b><p className="my-2 text-sm text-slate-400">{saved.coinbase?.verified ? "Verified connection saved" : "API setup available"}</p><Link to="/dashboard/api?broker=coinbase" className="text-[#D4AF37]">Open KAOS API setup →</Link></div>
+      {["Kraken","Binance.US"].map(name=><div key={name} className="rounded border border-slate-700 p-3 opacity-60"><b>{name}</b><p className="mt-2 text-sm text-slate-400">Not active · integration pending</p></div>)}
+    </div></div>
+    <details className="card-surface p-4"><summary className="cursor-pointer font-semibold">Other broker connections · coming soon</summary><p className="my-2 text-sm text-slate-400">Connection methods will be confirmed when integrations are released.</p>{BROKERS.filter(([id])=>!["coinbase","pocketoption","kraken","binanceus"].includes(id)).map(([id,name])=><p key={id} className="py-1 text-sm text-slate-400">{name} · not active</p>)}</details>
     <div className="rounded-lg border border-slate-700 bg-[#111] p-5"><h2 className="mb-2 text-xl font-semibold">Connect Coinbase</h2>
       <p className="mb-3 text-sm text-slate-400">Authorize your account directly with Coinbase. KAOS never asks for your Coinbase password. Connecting does not start trades.</p>
       <button type="button" disabled={busy||!oauth?.available} onClick={connectOAuth} className="rounded bg-[#D4AF37] px-4 py-2 font-semibold text-black disabled:opacity-50">Connect Coinbase account</button>
@@ -95,7 +106,7 @@ export default function BrokerConnections() {
       <p className="mb-4 text-sm text-[#D4AF37]">Read-only setup · no orders or transfers. Account verification does not certify the trading bot for Coinbase.</p>
       {saved.coinbase?.saved && <div className="mb-4 space-y-2"><p className="text-xs text-slate-400">Last verified: {saved.coinbase.verified_at ? new Date(saved.coinbase.verified_at).toLocaleString() : 'Not recorded'}. Saved verification is not a continuous connection check.</p><button type="button" disabled={busy} onClick={checkMarkets} className="rounded border border-[#8b6b32] px-4 py-2 text-[#D4AF37] disabled:opacity-50">Check Coinbase markets</button></div>}
       {markets && <div className="mb-4 rounded border border-[#66512d] p-3" data-testid="coinbase-markets"><p className="text-sm text-[#D4AF37]">USD spot market sample · read-only</p><p className="mt-2 text-sm">{markets.products?.map(p=>p.product_id).join(', ') || 'No USD spot products in this sample.'}</p><p className="mt-2 text-xs text-slate-400">This is a partial catalog, not a buy signal or trading permission.</p></div>}
-      <details><summary className="mb-3 cursor-pointer text-[#D4AF37]">Advanced: use your own API key</summary><form onSubmit={save} className="space-y-3">
+      <details open={setupMode && requestedBroker === "coinbase"}><summary className="mb-3 cursor-pointer text-[#D4AF37]">API key setup</summary><form onSubmit={save} className="space-y-3">
         <label className="block text-sm">API key name (optional with credentials JSON)<input autoComplete="off" value={form.key_name} onChange={e=>setForm({...form,key_name:e.target.value})} placeholder="organizations/.../apiKeys/..." className="mt-1 w-full rounded border border-slate-600 bg-[#080808] p-3 text-white" /></label>
         <label className="block text-sm">Private key<textarea autoComplete="off" required value={form.private_key} onChange={e=>setForm({...form,private_key:e.target.value})} rows={4} placeholder="Paste the original Coinbase private key or credentials JSON" className="mt-1 w-full rounded border border-slate-600 bg-[#080808] p-3 text-white" /></label>
         <button disabled={busy} className="rounded bg-[#D4AF37] px-4 py-2 font-semibold text-black disabled:opacity-50">{busy ? "Verifying…" : "Verify & save Coinbase"}</button>

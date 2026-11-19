@@ -58,7 +58,7 @@ function GoogleButton({planId,refCode}={}) {
             setErr("");
             const { data } = await api.post("/api/auth/google/credential", { credential, ...(planId?{planId,refCode}: {}) });
             setUser(data);
-            nav(purchaseSearch.get('purchase')?'/payment/complete?session_id='+encodeURIComponent(purchaseSearch.get('purchase')):planId ? (planId==='free'?'/dashboard':registrationLink(planId,purchaseSearch)) : ["moderator", "admin", "super_admin"].includes(data?.role) ? "/admin" : "/dashboard");
+            nav(purchaseSearch.get('brokerSetup')==='1'?'/dashboard/api'+(purchaseSearch.get('broker')==='coinbase'?'?broker=coinbase':''):purchaseSearch.get('purchase')?'/payment/complete?session_id='+encodeURIComponent(purchaseSearch.get('purchase')):planId ? (planId==='free'?'/dashboard':registrationLink(planId,purchaseSearch)) : ["moderator", "admin", "super_admin"].includes(data?.role) ? "/admin" : "/dashboard");
           } catch (e) { setErr(errMsg(e)); }
         }
       });
@@ -96,7 +96,7 @@ export function Login() {
     try {
       const u = await login(email, password);
       const isAdmin = ["moderator", "admin", "super_admin"].includes(u?.role);
-      nav(sp.get('purchase')?'/payment/complete?session_id='+encodeURIComponent(sp.get('purchase')):planId&&planId!=="free"?registrationLink(planId,sp):(isAdmin ? "/admin" : "/dashboard"));
+      nav(sp.get('brokerSetup')==='1'?'/dashboard/api'+(sp.get('broker')==='coinbase'?'?broker=coinbase':''):sp.get('purchase')?'/payment/complete?session_id='+encodeURIComponent(sp.get('purchase')):planId&&planId!=="free"?registrationLink(planId,sp):(isAdmin ? "/admin" : "/dashboard"));
     }
     catch (e2) { setErr(errMsg(e2)); } finally { setBusy(false); }
   };

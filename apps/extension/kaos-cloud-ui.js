@@ -167,6 +167,10 @@
     remember.appendChild(cb); remember.appendChild(el('span', null, 'Remember My Platform'));
     var res = await send({ type: 'KAOS_GET_PLATFORMS' });
     var plats = (res && res.platforms) || [{ id: 'pocket_option', name: 'Pocket Option', status: 'SUPPORTED' }];
+    var groups={};
+    [['direct','Browser connections'],['keys','API-key brokers'],['upcoming','Other brokers · coming soon']].forEach(function(entry){
+      listWrap.appendChild(el('h3','kaos-step',entry[1]));var box=el('div','kaos-platforms');groups[entry[0]]=box;listWrap.appendChild(box);
+    });
     plats.forEach(function (p) {
       var coinbase = p.id === 'coinbase';
       var supported = coinbase || (p.status || 'SUPPORTED') === 'SUPPORTED';
@@ -183,10 +187,8 @@
             window.KAOSBroker.show();
             await window.KAOSBroker.choose('coinbase');
           } else {
-            connect.disabled = true;
-            var opened = await send({type:'KAOS_OPEN_APP_WINDOW'});
-            connect.disabled = false;
-            connect.textContent = opened.ok ? 'CONTINUE IN KAOS WINDOW' : 'RETRY OPENING KAOS';
+            window.open('https://tradingwithkaos.com/dashboard/api?broker=coinbase','_blank','noopener,noreferrer');
+            connect.textContent = 'OPEN KAOS API SETUP';
           }
           return;
         }
@@ -200,7 +202,8 @@
         route(next);
       };
       rowc.appendChild(connect);
-      listWrap.appendChild(rowc);
+      var group=coinbase||['kraken','binanceus','binance_us'].includes(p.id)?'keys':supported?'direct':'upcoming';
+      groups[group].appendChild(rowc);
     });
     card.appendChild(remember);
   }
