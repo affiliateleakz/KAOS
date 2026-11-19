@@ -17,16 +17,17 @@ def fetch(job):
         digest=hashlib.sha256(raw).hexdigest()
         if digest!=expected:raise ValueError('Checksum mismatch')
         if not path.exists():path.write_bytes(raw)
-    rows=[]
+    rows=[];rejected=[]
     with zipfile.ZipFile(io.BytesIO(raw)) as z:
         files=[i for i in z.infolist() if i.filename.endswith('.csv')]
         if len(files)!=1 or files[0].file_size>5_000_000:raise ValueError('Unexpected archive')
         with z.open(files[0]) as handle:
             for r in csv.reader(io.TextIOWrapper(handle)):
                 ts=int(r[0]);ts=ts//1000 if ts>=10**14 else ts;o,h,l,close=map(float,r[1:5])
-                if ts%3600000 or not np.isfinite([o,h,l,close]).all() or not 0<l<=min(o,close)<=max(o,close)<=h:raise ValueError('Invalid bar')
+                if ts%3600000 or not np.isfinite([o,h,l,close]).all() or not 0<l<=min(o,close)<=max(o,close)<=h:
+                    rejected.append({'ts':ts,'reason':'unaligned_or_invalid_OHLC'});continue
                 if int(r[8])>0:rows.append((ts,o,h,l,close))
-    return asset,rows,{'asset':asset,'year':year,'month':month,'url':url,'sha256':digest,'bars':len(rows),'checksumVerified':True}
+    return asset,rows,{'asset':asset,'year':year,'month':month,'url':url,'sha256':digest,'bars':len(rows),'checksumVerified':True,'rejectedBars':rejected}
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--out',type=Path,required=True);p.add_argument('--cache',type=Path,required=True);p.add_argument('--start-year',type=int,default=2021);p.add_argument('--end-year',type=int,default=2025);a=p.parse_args();a.out.mkdir(parents=True,exist_ok=True);a.cache.mkdir(parents=True,exist_ok=True)
