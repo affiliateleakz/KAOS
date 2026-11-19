@@ -1,0 +1,2837 @@
+{
+  "plan_sha256": "67dbae0a58b48722d1036c76c6b66e72e3d0b89f25c97ec80dde9321c59c7615",
+  "runner_sha256": "d7bbd5484bf29366052affab937eaa8eedb2cc37c883b33212066d5372c51a8f",
+  "engine_sha256": "0b10bbf04c861e740d95f33277f99cf73193b0b13d0b1512c7db4fe732178f21",
+  "prior_engine_sha256": "7e381b44cc3f29dffb77fb93d9ed7760f05f588fa3ac0001ef88190c064734c4",
+  "sources": {
+    "files": [
+      {
+        "asset": "DOGEUSDT",
+        "year": 2021,
+        "month": 1,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2021-01.zip",
+        "sha256": "88aaaa60e0ef2fc00b484bf70e39c251a549715081cf04df27c258ab3865dbab",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2021,
+        "month": 2,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2021-02.zip",
+        "sha256": "7412710e3a36d4094589468433d6fc602de56834eae347cc9e12186c5890e0e5",
+        "bars": 670,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2021,
+        "month": 3,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2021-03.zip",
+        "sha256": "e3d5c2b7c9c56b91243995060e4d66d43cedc66b8e6f43ca9089c74631a0c031",
+        "bars": 743,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2021,
+        "month": 4,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2021-04.zip",
+        "sha256": "c425d82ec2b08ad2c71e8c6f001163db4cff059dfd0c4e94004ad3f5f89b760f",
+        "bars": 715,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2021,
+        "month": 5,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2021-05.zip",
+        "sha256": "ef8f7b42261662befa971a6190129866cdb77ecf72bc3650fa0d28849e296631",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2021,
+        "month": 6,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2021-06.zip",
+        "sha256": "7c6707ba5a06571fb52a065c237f7950f6a75c3eea02ae75c93788c8aa0b278a",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2021,
+        "month": 7,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2021-07.zip",
+        "sha256": "bae7abe6c08eabc06eed943971fc18647ecd7112e3a7a61b5f235551ac896356",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2021,
+        "month": 8,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2021-08.zip",
+        "sha256": "5dfa72df4dd5c3e749d7c55f8c393874cd37242fbcf6aa5bf13d75ecf898a114",
+        "bars": 740,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2021,
+        "month": 9,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2021-09.zip",
+        "sha256": "344075723caf8ef1fde3e02ebcbfeca8cdbec73f60073381da15dae68488555f",
+        "bars": 718,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2021,
+        "month": 10,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2021-10.zip",
+        "sha256": "78dacb5b135d357d128bf279813df1b70f3f6a2d1925f7f8a82569277714f78c",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2021,
+        "month": 11,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2021-11.zip",
+        "sha256": "e29ec2e5b96cc8891a81c39cc1bb90836841e29a9bd117dbd2203c19abd5126e",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2021,
+        "month": 12,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2021-12.zip",
+        "sha256": "ed88cd69397807248e11b5d88452ed234a1bc142ec552659eef9497fef9d8195",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2022,
+        "month": 1,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2022-01.zip",
+        "sha256": "88facccb3ca642e4d35466a9582fdb26daedfbc7212fe8fa96ff92a2955a00e2",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2022,
+        "month": 2,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2022-02.zip",
+        "sha256": "fcdc748a12a11532b483764bf2e1c6b16e1190c6f505e6bdea74e2143d057ef5",
+        "bars": 672,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2022,
+        "month": 3,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2022-03.zip",
+        "sha256": "9a50c0659470dfe01bd00c289c7911845c9315787770b5a3a7115be051a8917e",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2022,
+        "month": 4,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2022-04.zip",
+        "sha256": "2fc52be02b99ba599c1be52948c380df7393001efbe91d7f63a1bac6cb1a96f3",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2022,
+        "month": 5,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2022-05.zip",
+        "sha256": "521c98bd23222666c45d6b160750077d4bb595d6327ed5847a1b929dd649c9fc",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2022,
+        "month": 6,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2022-06.zip",
+        "sha256": "a0ce87bd06c0e27afbd0500d8bee96b13cb95f4c22ae24b6bf05f2e7f9401cff",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2022,
+        "month": 7,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2022-07.zip",
+        "sha256": "394f6821f9116043f254ba84164dba4ee65e78e72da0ee7ee52e833a84f3df6a",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2022,
+        "month": 8,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2022-08.zip",
+        "sha256": "3f5d5e8bb08a6f6bf4e65c583106613d192423f3a5a97afb83506171ef894f7b",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2022,
+        "month": 9,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2022-09.zip",
+        "sha256": "9208aa1391740c039624c939cf679438c9311433cfd0ea809a916b064578c19a",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2022,
+        "month": 10,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2022-10.zip",
+        "sha256": "e82cd8f8e4a715343aa51b2db6bfb0364043ab002bf5d269ba398dd66a9e2112",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2022,
+        "month": 11,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2022-11.zip",
+        "sha256": "c9ead67955dfaf773030c17a452cb90642748d06f9f7cce04db423fc0ba7ff63",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2022,
+        "month": 12,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2022-12.zip",
+        "sha256": "6bd543de72fe15f34e700729ac89ccc58297c739f739d20c96a33111fcfe270c",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2023,
+        "month": 1,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2023-01.zip",
+        "sha256": "e2268e2e5e0c4f2f6dfe4c4b266efe1462199d27f2ae30680de9b085246dc7c3",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2023,
+        "month": 2,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2023-02.zip",
+        "sha256": "955e493be9285e91e08940dd85114b9effc150f1409f95c89e34534a7a16fa8d",
+        "bars": 672,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2023,
+        "month": 3,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2023-03.zip",
+        "sha256": "02ace49d8d4859b18a1c76ae49f123e8bbf7d6bd2f4ec3e0fdc760846398d2d6",
+        "bars": 742,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2023,
+        "month": 4,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2023-04.zip",
+        "sha256": "679eb560f012a1ffaf4d4ec6d5c67e5be4e985847922e2167b73e3bf8b609e23",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2023,
+        "month": 5,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2023-05.zip",
+        "sha256": "e644ec6833f638b234340eb213399b098bd7f3ad584a5f90ca55e664c9aeb144",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2023,
+        "month": 6,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2023-06.zip",
+        "sha256": "4558abf6d805775018c492c7262087de5134556bb9aea8095ef2a198e3cb6674",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2023,
+        "month": 7,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2023-07.zip",
+        "sha256": "b7f300d3230eb92fc0a053c4f486035c2894c80a79feb20f9894770d3ee5601a",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2023,
+        "month": 8,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2023-08.zip",
+        "sha256": "78f82eba2cf2973f0718c99de1e7814f3c98517c2bca2ca9c9e37414e6306586",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2023,
+        "month": 9,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2023-09.zip",
+        "sha256": "4213c127128398d1a9f39123f89f63d112b69cc8646354787e2bc341667daef1",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2023,
+        "month": 10,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2023-10.zip",
+        "sha256": "ba035b6ef397298a426c18e56515ea3a011df19235cd2dd63ef0ddd58a892390",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2023,
+        "month": 11,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2023-11.zip",
+        "sha256": "41a0d21b18e6e68fb19ecbcd7a59247b01549f7c6ec87814d8bcea4a6695342a",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2023,
+        "month": 12,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2023-12.zip",
+        "sha256": "5b9694ba219be166073375f83546859b528dfec5e7f215cd95252aff7de40564",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2024,
+        "month": 1,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2024-01.zip",
+        "sha256": "e78fe79bde16446bf807f238a23370e152350918a54245ccac693d7b60954f30",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2024,
+        "month": 2,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2024-02.zip",
+        "sha256": "170a2625ba3f9dda464064f8541cf5d6fc6ff89b7c4c5f6b6cb1d851f1bfff4b",
+        "bars": 696,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2024,
+        "month": 3,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2024-03.zip",
+        "sha256": "a5a9d991a50eeee0e308e7ff501b1147503c910ffa8d355b03bb64edea504b81",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2024,
+        "month": 4,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2024-04.zip",
+        "sha256": "3687f21e9cf02f4483e39aa10d4d4bc712730460d766e0f95d9776d9e5912a91",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2024,
+        "month": 5,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2024-05.zip",
+        "sha256": "d654dde92a9b66244713f94cb16aaf7c25b4f18eda9636e27c2a6e0b98735d48",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2024,
+        "month": 6,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2024-06.zip",
+        "sha256": "1494326c6d0743286befcd35ab33cd64568dccb8c1c287c6c58cb4454dd01619",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2024,
+        "month": 7,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2024-07.zip",
+        "sha256": "7b400c33bcd274dd3f88d350bd838108b05472a76445e53fb391af5093497da4",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2024,
+        "month": 8,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2024-08.zip",
+        "sha256": "400789c4b9e8ec19c7f4a1c9f2371e9c407566b766e1eaf9c1282ff7efabce27",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2024,
+        "month": 9,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2024-09.zip",
+        "sha256": "71b1bc2692af1c48f71113f45847f3e15025546d3f07de4d82bec8f1e6057a03",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2024,
+        "month": 10,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2024-10.zip",
+        "sha256": "141feebde550cf88cc5bc73d571d3a8980642ccdc6bcfb87948aed5880fbbdbd",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2024,
+        "month": 11,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2024-11.zip",
+        "sha256": "08e12031d541d424e6ed64bdd28e08fdda063fb82c86d27168980f23a4b16b58",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2024,
+        "month": 12,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2024-12.zip",
+        "sha256": "de8180d361a49ce9b2906a106823f61f199638dbaa0f02ca1ed1c3916ea2c02b",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2025,
+        "month": 1,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2025-01.zip",
+        "sha256": "2a3be49b5e91ff396eac54b91114360586699a393d0d6178a767c41a5860de99",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2025,
+        "month": 2,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2025-02.zip",
+        "sha256": "2175e7d1dd69c4349d1b45d427d43871492b8da141e398f01432db636949c7af",
+        "bars": 672,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2025,
+        "month": 3,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2025-03.zip",
+        "sha256": "f60d351e755a03e4f1af3ed1eac8d15df8ffd31061824d571972b739eed83402",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2025,
+        "month": 4,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2025-04.zip",
+        "sha256": "104604f7d287e5b1a856b6d0795f38d0a8e1cf56c902ba0c926d462441a2ac52",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2025,
+        "month": 5,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2025-05.zip",
+        "sha256": "f5da2cbc4b23de2cbdd5513c27e081595535ff49e7f133ef2f687b6316e59ce7",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2025,
+        "month": 6,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2025-06.zip",
+        "sha256": "1822cbf2d40ca371e441219d082042cbf55ed415c3c8fb3b99fa040d538afc07",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2025,
+        "month": 7,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2025-07.zip",
+        "sha256": "2f089b8d4e9cbbd0b1ebd79f5639dc2b0165c8c16303bc06a054947c8531b036",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2025,
+        "month": 8,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2025-08.zip",
+        "sha256": "20bc76ffb6c56632f2edc6d0ed8b010a660156cb65f4d07596cd751087c6d793",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2025,
+        "month": 9,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2025-09.zip",
+        "sha256": "f8e656ae978eba09aa8980bdc5dc8912e4c5eb0311aa0b2cb4eee9feda6080ac",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2025,
+        "month": 10,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2025-10.zip",
+        "sha256": "0ef51b722646174c57641fe6603a05b130afbe2f47df695f0f1d4c21ca04ca80",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2025,
+        "month": 11,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2025-11.zip",
+        "sha256": "d576e47a290c7992a6392b7a3c3b3acc04427299f73cf95fd6894e4ddd75cff4",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2025,
+        "month": 12,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2025-12.zip",
+        "sha256": "01c3cf92a955ea881cb0266a407a57e9cc082c2b1de24e6d5296ced7fc765f63",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2026,
+        "month": 1,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2026-01.zip",
+        "sha256": "85a12aeff573262ae189ac7fff4e54f5513fefbfa67622d0b9e0f8b63f11fe86",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2026,
+        "month": 2,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2026-02.zip",
+        "sha256": "e2bae3f3bda30259f64489e91c5b27af7fb5fd3e7c933a5c8424fbbc725f195e",
+        "bars": 672,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2026,
+        "month": 3,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2026-03.zip",
+        "sha256": "11dfbfb5950e2677444bc930f7fe54ffa455602c3faa75267fc267be38f52c6f",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2026,
+        "month": 4,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2026-04.zip",
+        "sha256": "bc53491c0dba0281dd0f4d169276fa6d54129ab32beb6e60bb9b634f748cf136",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2026,
+        "month": 5,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2026-05.zip",
+        "sha256": "4bf9c05d5c36690932f5bee4d90e6ac36ad977d540f1e3ac10bf84a3f456b478",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2026,
+        "month": 6,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2026-06.zip",
+        "sha256": "5a158fea8c3fee7a105445ecb9cfba6e8a2750d2fcf849677059b8f50ac84119",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2026,
+        "month": 7,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2026-07.zip",
+        "sha256": "137c377cfe9d813f2abd6f416c584c85627ce8cc80b539912dd92b27cabf4dee",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2026,
+        "month": 8,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2026-08.zip",
+        "sha256": "802b00c4ad87451236c912823e807eb5803d066c3403cc0202cc9af68929eda4",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2026,
+        "month": 9,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2026-09.zip",
+        "sha256": "e2b23f627c05cfb11de42391ceb77f0232806636b13735b78413a868c08acfba",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "DOGEUSDT",
+        "year": 2026,
+        "month": 10,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/DOGEUSDT/1h/DOGEUSDT-1h-2026-10.zip",
+        "sha256": "6ed0d13a64172d7a0e21b3dfa559e810b385996fad04623a66c4bd24d98ca273",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2021,
+        "month": 1,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2021-01.zip",
+        "sha256": "642062570108e0548d04e8a7919f4a77df5f8eb5d645b70b5f890ef6d7aa4294",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2021,
+        "month": 2,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2021-02.zip",
+        "sha256": "b2c9f8eec684488469d7c01110ab314f029782739b8555c41119f4f9db209011",
+        "bars": 670,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2021,
+        "month": 3,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2021-03.zip",
+        "sha256": "f61dea2032da0f79b1ac43ccc4670d92a95dfbd8423ade291e954cb555dad743",
+        "bars": 743,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2021,
+        "month": 4,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2021-04.zip",
+        "sha256": "0e2a358866f150f414c36a8a9ec316a45d8c0e849018792038f64d3dc652d85a",
+        "bars": 715,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2021,
+        "month": 5,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2021-05.zip",
+        "sha256": "1aa462b92b56938fb2acb8bbb74c36196adcfa53e7c7284d53a62e9f45bbc698",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2021,
+        "month": 6,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2021-06.zip",
+        "sha256": "be8bddedd584a84edfe39ec5f6fee138a424853827a056ea0a57162af190e24e",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2021,
+        "month": 7,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2021-07.zip",
+        "sha256": "52d5957a5435ac5f7778f93d3bf0a912ad0301f343e1416606125494c2f4f2ef",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2021,
+        "month": 8,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2021-08.zip",
+        "sha256": "496b4d45cfa44246d21520028f50bc976b554eaf31602e330600e90648fdbd8f",
+        "bars": 740,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2021,
+        "month": 9,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2021-09.zip",
+        "sha256": "49a78fe70f766ca2963601b0ad5cb4d28e7da0837fd8b7b3fa7d74e61cfee5e9",
+        "bars": 718,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2021,
+        "month": 10,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2021-10.zip",
+        "sha256": "8b7a5b9b5f4521240a8660ec0791246f72d3524ae4ad3aef16b13f1f93ae3125",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2021,
+        "month": 11,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2021-11.zip",
+        "sha256": "1e40819b58a25c9061ec97fc71404e588d7b328180ee109d06c9ea610275ab46",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2021,
+        "month": 12,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2021-12.zip",
+        "sha256": "ad3840b810283687ac0f4871530ae0267ed01f29ce6f5f6364217cd6bcf8d8f7",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2022,
+        "month": 1,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2022-01.zip",
+        "sha256": "3a9794415a86c3e7f9fb64506d7f68c6e0fff6eefeaa8a6a6e944cd4c2d868b0",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2022,
+        "month": 2,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2022-02.zip",
+        "sha256": "1858d0bbd5f1ed4e11328187a1f83bd206e3c799b40a8df8ad2f0e54ed4af0f5",
+        "bars": 672,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2022,
+        "month": 3,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2022-03.zip",
+        "sha256": "1854a03e7dbdce45f55ebe22b7f33e9c4c87c674d86a0d3b57c7751dce86b6f0",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2022,
+        "month": 4,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2022-04.zip",
+        "sha256": "8167347902d9f416ed7ed164a3fa62d900ef0d1a62e011903b6d737e1c9f5a17",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2022,
+        "month": 5,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2022-05.zip",
+        "sha256": "5d34f20edbbf5accb7638b585d5dda472543a252c913f5258a04a21c7b5adfb0",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2022,
+        "month": 6,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2022-06.zip",
+        "sha256": "0f092d78868513cfc6a95e082953992364de16ca001c25a77e6810fd4d5afc2e",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2022,
+        "month": 7,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2022-07.zip",
+        "sha256": "a409659bef4d8bf70f3b891e9f2cc74f713252ac957ae1d494a1927f273ffca0",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2022,
+        "month": 8,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2022-08.zip",
+        "sha256": "bc5832e0cfdb42328ec45a9257600fc27f4b984aa8469da3ca047a1db86829c9",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2022,
+        "month": 9,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2022-09.zip",
+        "sha256": "d26bba7a68e8ee6d68c2a1e479e6b53255daba21e5150aa052aeaff49b63bb41",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2022,
+        "month": 10,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2022-10.zip",
+        "sha256": "ec82cc7b50b83a3978bffa178f562b49b391dce386fbf7c3b90317cb54faffb9",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2022,
+        "month": 11,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2022-11.zip",
+        "sha256": "5487333e47823fa73235add9f52f4510658e1f322179ba911f9e42815aa6500c",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2022,
+        "month": 12,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2022-12.zip",
+        "sha256": "1df478e5dfa58d8621f58d6d3e83729f40a009e547d97a716fd80f6b386ca5d7",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2023,
+        "month": 1,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2023-01.zip",
+        "sha256": "8274e95f747c09e8572f2b82a0f9cf83107bf35021a9ce52a49570f9d5ae5be9",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2023,
+        "month": 2,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2023-02.zip",
+        "sha256": "d5fb0a883ddeec1edd671020d938a575ce17f60a7dbbd9f5fe9dddf44d942a5f",
+        "bars": 672,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2023,
+        "month": 3,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2023-03.zip",
+        "sha256": "5bff0aabf51ebfd217fcf43554bc800fe986bcaac29b62f38e5d2901464a7610",
+        "bars": 742,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2023,
+        "month": 4,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2023-04.zip",
+        "sha256": "0d064be091fe9d0bf8ba464547c7b308da967ccbc16f262c9cf3631971e6011c",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2023,
+        "month": 5,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2023-05.zip",
+        "sha256": "e76604a9576263a64741c26859d96f913f0094276ce54fafe690d0443330d19c",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2023,
+        "month": 6,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2023-06.zip",
+        "sha256": "761347afb2e4d99d376bbb29a633934345c43702aa70df14f6d0b1c5cc24045d",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2023,
+        "month": 7,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2023-07.zip",
+        "sha256": "189cdd64a6a086e07a8f295146b0527eaeb019a505394104d51dee087c00bb54",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2023,
+        "month": 8,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2023-08.zip",
+        "sha256": "b6e7eeba84992fb4a51deea895642ce4946b3ae7ae21dded0442dadd04d56953",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2023,
+        "month": 9,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2023-09.zip",
+        "sha256": "77d3467fc451be1b734e15ea319f7e22d57acece06a101bcca992ca25502ee0f",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2023,
+        "month": 10,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2023-10.zip",
+        "sha256": "17eb8956bd6da099a87badad8fe9f4dade02f4eebc340c7a1195fe7290c30f31",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2023,
+        "month": 11,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2023-11.zip",
+        "sha256": "1101148d0cc2d689297f140dc14443ff75ceacb04ff0da15268e0f7aa1256410",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2023,
+        "month": 12,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2023-12.zip",
+        "sha256": "749a7f2f87c7899536e44169855fd90e024907fd119a228db593298c4192996f",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2024,
+        "month": 1,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2024-01.zip",
+        "sha256": "3e1f6528cbb332217299c7680695fe38dfeeebedcdfbcc2afabbf298a8d3987f",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2024,
+        "month": 2,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2024-02.zip",
+        "sha256": "a424af8884ee0b62ee995fc22300bf42ce39ae349a86a6d2b84d504f89aef55c",
+        "bars": 696,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2024,
+        "month": 3,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2024-03.zip",
+        "sha256": "0bc58cdd72250228cebf36930360c7a78bc01648e539eaf88ce64902dd035785",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2024,
+        "month": 4,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2024-04.zip",
+        "sha256": "50491d3d4f990e442f2f39c4dde466c758553212ebeb84fd30af5d21af4b1c82",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2024,
+        "month": 5,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2024-05.zip",
+        "sha256": "ffad9fb08f17e39c25ebec05b694832b0f991dd46a27e5e44ffc499ffb6f83dd",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2024,
+        "month": 6,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2024-06.zip",
+        "sha256": "40d412a612d4802e5f9b2b536197b83790293f4cfb1923df9c1f7428ab108036",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2024,
+        "month": 7,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2024-07.zip",
+        "sha256": "cfa1c2aa2b1fb47d742b6f2a3f01db275b9d5d4fe71f2820438707fdee2ecc3c",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2024,
+        "month": 8,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2024-08.zip",
+        "sha256": "a0127b390cb3fcb5701f870d418051d1ef34c108b5b98bbb1a34de92028e45cb",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2024,
+        "month": 9,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2024-09.zip",
+        "sha256": "842c111facb472c619d73a5946e116e83db055f57c66562789697166060d9327",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2024,
+        "month": 10,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2024-10.zip",
+        "sha256": "fc7cc2e09dc6330296856c3530014278ddbe824dc048f6f9c2e14a6388f92be4",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2024,
+        "month": 11,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2024-11.zip",
+        "sha256": "bb95fd8e06f8826dce2e9cb9b8cb1f4840fc6ef79e6c9f27fa13a541118f6fa9",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2024,
+        "month": 12,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2024-12.zip",
+        "sha256": "9b877c51f01fba9a13dd7b5c97bf5db8da598167f4b6a7d6eeb58d746a16f015",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2025,
+        "month": 1,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2025-01.zip",
+        "sha256": "e872d2f5bc4b7b2aa5c7b5d4613facf20f31ce4df342b051882cba6ab2873cf3",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2025,
+        "month": 2,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2025-02.zip",
+        "sha256": "477269b99dac81eec10191d1d98ed8b4a49f0a4a33997f63deaaf26b672f06f8",
+        "bars": 672,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2025,
+        "month": 3,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2025-03.zip",
+        "sha256": "98d3cc44952068ca2e9d0398ed57201dd0db53a16f34311b518619da3d227404",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2025,
+        "month": 4,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2025-04.zip",
+        "sha256": "2feb416d8b9bd134703d885fa77eec1891fc1097c738f8a871fa225d88e7c8db",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2025,
+        "month": 5,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2025-05.zip",
+        "sha256": "1710d42839224f4df475720411219665b420f2a98caa3ca2a4b2f4e18457a106",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2025,
+        "month": 6,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2025-06.zip",
+        "sha256": "bcd7756e50669acf8259213bf762a0f60b7aeaf5a0c8b55562221fe601f65a4c",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2025,
+        "month": 7,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2025-07.zip",
+        "sha256": "5aa3b3eec29dcfc696afe45c03582d3d0e7e85ad7824d19d336bd671e6ec0e2a",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2025,
+        "month": 8,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2025-08.zip",
+        "sha256": "542a9187114a0ff4c48fc0f8c075e6e0e5c39671e6e6b0d6434dc16d91a3955e",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2025,
+        "month": 9,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2025-09.zip",
+        "sha256": "d81bce0b2ae704930451716099d0acdec2f0771f652af431c7dc03cf26d8bbbe",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2025,
+        "month": 10,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2025-10.zip",
+        "sha256": "33391e7e5ca9c80be67040c92c7100b70fb51881ba134fa906e8d47d9faed925",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2025,
+        "month": 11,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2025-11.zip",
+        "sha256": "ec496aa2ee14ce171a74d403b3b7048feb01b06a567ae973834a807920c17baa",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2025,
+        "month": 12,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2025-12.zip",
+        "sha256": "0680ac6f30d020f32b747842a25e21ac103bca70a947afb5798ea53edaa90297",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2026,
+        "month": 1,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2026-01.zip",
+        "sha256": "e163f350baa16c769c8caf87e05d5c357bf62bbd107d12ef4ccefcd35ccfe964",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2026,
+        "month": 2,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2026-02.zip",
+        "sha256": "fe2ea05349107052f3128b802c14a4a8ac1543b5c168a49d779700fc17a37ec9",
+        "bars": 672,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2026,
+        "month": 3,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2026-03.zip",
+        "sha256": "1704f5cb1dc93b145d96eec6fab3e60daab431f5da5779e54cf1bb6de696e1fe",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2026,
+        "month": 4,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2026-04.zip",
+        "sha256": "3396a18ce755da3c452150e271a28d133b21d495c995852edb5f8314c54167dc",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2026,
+        "month": 5,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2026-05.zip",
+        "sha256": "14f743de326d900334f6bdd5984d8055b262c6414f007430969100c5ddc32d5e",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2026,
+        "month": 6,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2026-06.zip",
+        "sha256": "6b3de54096ef9201b80603fc8ebc125fa23a8f3f9030822b7cd81649dc1d69d0",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2026,
+        "month": 7,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2026-07.zip",
+        "sha256": "eb4257eae8ea08174631a7afe8e3dea082c1859d040d0b1f3474325f8191a4e7",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2026,
+        "month": 8,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2026-08.zip",
+        "sha256": "7a068c002a33318c338ec4b2e68d8897efae1f25e45ba761edc7232a138198fb",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2026,
+        "month": 9,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2026-09.zip",
+        "sha256": "8be381f2699daba216f6aa7374baa45f568be7a4459d822816ed194518aa6e4d",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LTCUSDT",
+        "year": 2026,
+        "month": 10,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LTCUSDT/1h/LTCUSDT-1h-2026-10.zip",
+        "sha256": "5179f896e4f4d2d2ae05c7454c13df95f88342d969452b0c0e73dae12dec789d",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2021,
+        "month": 1,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2021-01.zip",
+        "sha256": "84f5cb9004a29d318fbbba80c318626f7e5057449609b6825851f933005b1ba8",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2021,
+        "month": 2,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2021-02.zip",
+        "sha256": "c9f104837f1b74f27c079ee4e2e90efeeeba7e89e89c3824a969300671704190",
+        "bars": 670,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2021,
+        "month": 3,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2021-03.zip",
+        "sha256": "67772529781940d76ca74ecdce8f034cc17d18ed41b8278e936cd191624e947d",
+        "bars": 743,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2021,
+        "month": 4,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2021-04.zip",
+        "sha256": "54aa1132d22715ada63d6ab598666322a1e8483a9749fa664a7edc07dea8a550",
+        "bars": 715,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2021,
+        "month": 5,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2021-05.zip",
+        "sha256": "2fefbde92344e02db9580afda4b552bc7a56bfb0620b19666d80d81ba60347f4",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2021,
+        "month": 6,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2021-06.zip",
+        "sha256": "9d9ece6b5102dc6b214c133dd8d064ea5815063a675ad973a75ba5aa24daa265",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2021,
+        "month": 7,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2021-07.zip",
+        "sha256": "f20f6b1550b58d1e1ad79a26a42c21aa7ad1ca843229d1d405a479893763df73",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2021,
+        "month": 8,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2021-08.zip",
+        "sha256": "2cc2c50421c90f1c7c5c861b8ea870be077b3555f394ea0030188034adb42caf",
+        "bars": 740,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2021,
+        "month": 9,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2021-09.zip",
+        "sha256": "a5c8f039fcb54bfb727f24a358ca830375b036c11efc8cf1479647da81f0dda6",
+        "bars": 718,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2021,
+        "month": 10,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2021-10.zip",
+        "sha256": "73f07c095711baf09fcc0b318d827f96c2f7c38f72f8e2d85c5faa4056c5dce6",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2021,
+        "month": 11,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2021-11.zip",
+        "sha256": "c6f696abb67542cb1a17adb7c2f97a3b0ab8be95f67f4188bd61c16ab77b55f0",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2021,
+        "month": 12,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2021-12.zip",
+        "sha256": "f392d562afa3caa6096ccbc39b27360f5a0b1814f3f93ff3977dc0b90fe2d49d",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2022,
+        "month": 1,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2022-01.zip",
+        "sha256": "e175720debbde2715fadf1764ba3befee542a7aac28c03bc0a8afeaf7969263e",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2022,
+        "month": 2,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2022-02.zip",
+        "sha256": "4a56550c4c38117e5144643a598dc5178f7ba3307fe98e1b97101b126ce5e3b6",
+        "bars": 672,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2022,
+        "month": 3,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2022-03.zip",
+        "sha256": "451635e223e3ca61a8e69542fbfc6622bf1c3d199b7838662107a40bfe558d24",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2022,
+        "month": 4,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2022-04.zip",
+        "sha256": "c7f9b42a7b3d0d89db2b632b35f5411b9b5679a5c2f076556bfa763a23d30af1",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2022,
+        "month": 5,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2022-05.zip",
+        "sha256": "ded10c8d5d9467288193547c75f80bb360e257539a70140769f711915d5804fc",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2022,
+        "month": 6,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2022-06.zip",
+        "sha256": "6bcbcdecf621b21f56cf89a9dd7a56d8b9571078a03ba400896d5683cec42f8d",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2022,
+        "month": 7,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2022-07.zip",
+        "sha256": "4aeb499146fd8d60e27b8e9eb7ab6091960cfeceb7008513002f6b68c3352a97",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2022,
+        "month": 8,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2022-08.zip",
+        "sha256": "38e7cfec7db4b001b210ec08ad87029a5eece1854236adaa831c623532b87bb4",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2022,
+        "month": 9,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2022-09.zip",
+        "sha256": "55b88696abb180769f83c0ea1d41a6cc3d560d7a0cccbfd5490928b6096ce8c8",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2022,
+        "month": 10,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2022-10.zip",
+        "sha256": "6ada8dbf3efe06bce441c5586523942a02c0d0f6923ab094bdc24af0a8606765",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2022,
+        "month": 11,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2022-11.zip",
+        "sha256": "36cdd0281fb2d2d35bca060f97e450b018fb195f93b62c1cf7edfa1e2ca81331",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2022,
+        "month": 12,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2022-12.zip",
+        "sha256": "37153bc0c583e905d21a9475ecaaaa0e8456560c361eea2115f2688d62f0b657",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2023,
+        "month": 1,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2023-01.zip",
+        "sha256": "67ab94f8ed330bceaf5281730ba18b625443231391484e06ec1c806d9572971c",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2023,
+        "month": 2,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2023-02.zip",
+        "sha256": "3e1f995c0739dd18a90898dd548e040f76e721f19720b27d30a66b0246c73a1f",
+        "bars": 672,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2023,
+        "month": 3,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2023-03.zip",
+        "sha256": "1402b8c7068945f51d84293ce15626b4d2721510322214d34ab6f50959a6e229",
+        "bars": 742,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2023,
+        "month": 4,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2023-04.zip",
+        "sha256": "856b36e5fb904c9b352f6bc8069c20ff848df5735b84600062038e2d03ab274b",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2023,
+        "month": 5,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2023-05.zip",
+        "sha256": "df807f085376fe7ab69b746f55325f372225612007785f4b6919c5c974fb85ba",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2023,
+        "month": 6,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2023-06.zip",
+        "sha256": "da3eead782447a5afc15991ddb5042cacc978f9a887f8c1c20f78a6567efd665",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2023,
+        "month": 7,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2023-07.zip",
+        "sha256": "39dfc47fffcfae0ec1d8a3c2a76e4e85f4e8530eefc0c64da9a0b91ff5fee29e",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2023,
+        "month": 8,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2023-08.zip",
+        "sha256": "f09a2535d77883a170170384de91de3c8e4c9013ba7d024ecb74f61eac9f8455",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2023,
+        "month": 9,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2023-09.zip",
+        "sha256": "394c2fd04c3da621ad28cfc089f69cb319f36170166735e3642d95ec08749f2d",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2023,
+        "month": 10,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2023-10.zip",
+        "sha256": "0ff89ccf6bca3b422f411b35490612e10e71ba8fafb60c4417b4a60b42b448f4",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2023,
+        "month": 11,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2023-11.zip",
+        "sha256": "34dd10448bf4d6ecb6bb8494ac9c2f42b1ab36305e5ed33300e52656d2ceb2c9",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2023,
+        "month": 12,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2023-12.zip",
+        "sha256": "f74f19c98fbd135ff3153c7411e76cea97f87035fb9c546960bacb7308ab73f2",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2024,
+        "month": 1,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2024-01.zip",
+        "sha256": "6b51a1a3515f1ed10c163301a05a67b1d6418edc1ece5126d62413bf79af2239",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2024,
+        "month": 2,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2024-02.zip",
+        "sha256": "464d24506b15009111d3fd0b35135980d3aa5b2820d689853776420866872b23",
+        "bars": 696,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2024,
+        "month": 3,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2024-03.zip",
+        "sha256": "d9b858bfdb71d4dc214b5ef7c2e7fc06c0fe7eae20f87359d0b319f699e29c97",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2024,
+        "month": 4,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2024-04.zip",
+        "sha256": "87d33c5eda1744fe52a88de1c0c1600b9ab9e44e8654722369b9e4fa451d6546",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2024,
+        "month": 5,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2024-05.zip",
+        "sha256": "5e855c04f61be1c705d18b11e52bd93edcea7400f5f577876525c9479fcae1bf",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2024,
+        "month": 6,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2024-06.zip",
+        "sha256": "be103fe4dc46059d51efd8564ca444342a05f62042c530ddd4908753ffc30217",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2024,
+        "month": 7,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2024-07.zip",
+        "sha256": "8df65ec85239a360a08742d6545ecf9088318f80e3c3bd302406071b5791542c",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2024,
+        "month": 8,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2024-08.zip",
+        "sha256": "8c7e1b50eba0c2aa86157c509830509b4e6b4cbf275fb4e0c59586265a0fb71b",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2024,
+        "month": 9,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2024-09.zip",
+        "sha256": "b911cb9ddcd47aa5eeff1ac8474565625d72f333c20c5e26e9c602963e3f22c1",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2024,
+        "month": 10,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2024-10.zip",
+        "sha256": "95a4cfbcc3a99b0772e36c9d70e1d6ad10339e5a7beaf07d46f5b87fd814913c",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2024,
+        "month": 11,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2024-11.zip",
+        "sha256": "46330477ee33935adfe21766e49ca6a23a02022ba2c7ebe38adb95827f607b68",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2024,
+        "month": 12,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2024-12.zip",
+        "sha256": "ec977e8140a0c30a0df1b20917143c5005f5beacdd7a683f1d68f48aa2bf0d99",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2025,
+        "month": 1,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2025-01.zip",
+        "sha256": "c97c6edf01bf557ba2b8ecd5a0bbd4d98dc24249fda8c7581903b707573f3fae",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2025,
+        "month": 2,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2025-02.zip",
+        "sha256": "c992844208760f0c80d8077879fda06e63a39a909b1e252ab8b4c8b59de2bc17",
+        "bars": 672,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2025,
+        "month": 3,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2025-03.zip",
+        "sha256": "562371d04ee2d58cef061e6bfc26e9af9f0e343839e5123bb76a4fe47fb8fc6e",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2025,
+        "month": 4,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2025-04.zip",
+        "sha256": "b1bde4d6ccc2309928a81bfcf1ce7a01364a6f1c6f4900792dee5be9b82c520a",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2025,
+        "month": 5,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2025-05.zip",
+        "sha256": "c6132d1a0a7c7804b652e7eee6778aac8a450d407fe9609bd2a9dfb6669c22b3",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2025,
+        "month": 6,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2025-06.zip",
+        "sha256": "a35a349d477a4a5a97408b778b856fb648cfb464fd97f7f952cdd688e44e7fce",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2025,
+        "month": 7,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2025-07.zip",
+        "sha256": "2941b47fba2bbe3e0037c9b5d18eb533d68a8afe0bb9b8a694a2aae5b3667dbe",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2025,
+        "month": 8,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2025-08.zip",
+        "sha256": "508f07182a223446d51ef6b0eba5a900f8994cf6b9e229ebd1448022ed12d908",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2025,
+        "month": 9,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2025-09.zip",
+        "sha256": "a4905ef32106ced5672a57d0ac3f39a214b19cfa3cdc3b14b81f7125ae8b1fdc",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2025,
+        "month": 10,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2025-10.zip",
+        "sha256": "bdd75eafc2d8227447684808526c0a000ccdacf692b7878059989280e3a180cd",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2025,
+        "month": 11,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2025-11.zip",
+        "sha256": "37dc85162deab1937365e23620d9e667f3e6e015293d5e5b5916fe5ba60fb51b",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2025,
+        "month": 12,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2025-12.zip",
+        "sha256": "6f765d386af02310046113a24b7c5d42096f8a23175fc97b41afda8cc6ce394b",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2026,
+        "month": 1,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2026-01.zip",
+        "sha256": "ad831a83d13ab26ea717575c826046712ac105d9468ac76c91d9e0dec74e4f4e",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2026,
+        "month": 2,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2026-02.zip",
+        "sha256": "1cc7ceee84ab77d025cec91704d50b5ca6df9824ad88478ec1b28426bbd12c19",
+        "bars": 672,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2026,
+        "month": 3,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2026-03.zip",
+        "sha256": "83f9d351208b709d4d9549d0c42b6b35e94c8437b8c8e187298c6f806cd48035",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2026,
+        "month": 4,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2026-04.zip",
+        "sha256": "818f16b5bbc12385752cf58d087f86ec8fc428bedbc92e27c9832642bff25c2f",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2026,
+        "month": 5,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2026-05.zip",
+        "sha256": "0534ec30207efdb505d706f121d955d8af7da21afed9ae7d695cda7e7deea6f0",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2026,
+        "month": 6,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2026-06.zip",
+        "sha256": "721a4a6ec6d483e744bb4ee9ae15c707a40a7302745bde76d30cf92832681090",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2026,
+        "month": 7,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2026-07.zip",
+        "sha256": "fb305b15d2c180d3046c77a101ad89d5e6c139557fa2f5deb8824d3cadb2ea8c",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2026,
+        "month": 8,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2026-08.zip",
+        "sha256": "b41a1fd47dd5b11cbb5c163e35edd63b77af2635f3f948939b7533dcc49f8077",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2026,
+        "month": 9,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2026-09.zip",
+        "sha256": "3300d4a09247514a4dce5b551d38237625fec29c876a1ba8a96cb38198da7497",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "LINKUSDT",
+        "year": 2026,
+        "month": 10,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/LINKUSDT/1h/LINKUSDT-1h-2026-10.zip",
+        "sha256": "fec2c60bd81be2dcbb04888dc8876e4857ecb124816e76557c0534549935ed41",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2021,
+        "month": 1,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2021-01.zip",
+        "sha256": "406b58e6f8516fe8b98db8e22a30227fb9aa614cadfb31f5b6f881fa7f1f2ada",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2021,
+        "month": 2,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2021-02.zip",
+        "sha256": "85eb41d471b6ff68c5e8f0819d462e6b8b6c056d912fa3455fff3613488166be",
+        "bars": 670,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2021,
+        "month": 3,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2021-03.zip",
+        "sha256": "c998addefa5e68abda1f8da48fa77b6d1834516953770f144752ae0d75a5869d",
+        "bars": 743,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2021,
+        "month": 4,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2021-04.zip",
+        "sha256": "87150b7df69354e2c68bf5954d1050f83964b06477f667fc2b695407952bd060",
+        "bars": 715,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2021,
+        "month": 5,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2021-05.zip",
+        "sha256": "ef58e273ff03b38511a8b985f778eb672d4bc417696b880e6cb6530819ecf008",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2021,
+        "month": 6,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2021-06.zip",
+        "sha256": "05af11335a419aef17281fdd1b32de5999e8461542bf94db9b6e32b62607a462",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2021,
+        "month": 7,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2021-07.zip",
+        "sha256": "552ef1877d7c8741fa8e23848856f5f098363885466bfb329feffb5c35d115b5",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2021,
+        "month": 8,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2021-08.zip",
+        "sha256": "c6a6290a8895eb8a53fc68e214fa9c5435faef40c45757d738187845d25bca35",
+        "bars": 740,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2021,
+        "month": 9,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2021-09.zip",
+        "sha256": "dc5a520bbbe7d9b3a0dba43670d868f325a97f79c73fdf1c193b681ad905b625",
+        "bars": 718,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2021,
+        "month": 10,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2021-10.zip",
+        "sha256": "f62223ff25a886080bd859476731db84c3b2f379916597d2461733d4390f6b86",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2021,
+        "month": 11,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2021-11.zip",
+        "sha256": "8c69465a8029b153339249a70ae3a44533d9b5b07f175af301247965321c7864",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2021,
+        "month": 12,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2021-12.zip",
+        "sha256": "49e8a313cd5181db4860eedca56995ab003499852c240017bede6df89d70b23d",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2022,
+        "month": 1,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2022-01.zip",
+        "sha256": "25f317cd6be7eae005db1bd163ae0d1edd48ad28bcb632127f960eca9d9b3490",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2022,
+        "month": 2,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2022-02.zip",
+        "sha256": "7df0bc26f2a2242969adf5a0f8cd8a8872ff621e3450555cd41082250f6069e9",
+        "bars": 672,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2022,
+        "month": 3,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2022-03.zip",
+        "sha256": "4723753c4f7e48916e36b9f66988e8738864208ee4688816677ae78a03836801",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2022,
+        "month": 4,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2022-04.zip",
+        "sha256": "24d0fb51cbdb2a627f5af24755e1b5f2a88ff3702cedffde3d7da241e63de4dd",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2022,
+        "month": 5,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2022-05.zip",
+        "sha256": "c9379d68e796700d9e6651ed58c033cde54df16b60acf63270aa55b1bc854d52",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2022,
+        "month": 6,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2022-06.zip",
+        "sha256": "3a342cd4c542baffa66462b6fd89bbb4acf6d634eb1f51dba8739d2e16012c61",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2022,
+        "month": 7,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2022-07.zip",
+        "sha256": "0c9a1b7990c0ed027a5e6335686037b0dae1b176a5c4529a99d29766ece6c5f5",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2022,
+        "month": 8,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2022-08.zip",
+        "sha256": "958a8af792a4296d72021bc0b508bca7e5a939d61100075acf3a0afc73c1eb43",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2022,
+        "month": 9,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2022-09.zip",
+        "sha256": "6b74e06b7f53964943199cc078b364a96195851b00f9a0184d488be5613a8ede",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2022,
+        "month": 10,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2022-10.zip",
+        "sha256": "ea2bd27ed8ec3fa436c9edb7bb4195a282dbdec83c2bd097689ab8ed8ee594ff",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2022,
+        "month": 11,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2022-11.zip",
+        "sha256": "3510837d34c43f4d349e38a5e480799ddde79e2e9303b8c1dd5bb5bf920e2385",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2022,
+        "month": 12,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2022-12.zip",
+        "sha256": "96631dad08759962cbb359aa4871222ce6d68e7974ae586262a580aeae4b021a",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2023,
+        "month": 1,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2023-01.zip",
+        "sha256": "fbf418f8691d7755351f8ab7975eec14e5dd912f8771ed7556a3514167402aea",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2023,
+        "month": 2,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2023-02.zip",
+        "sha256": "a232638bc6a5288f7dd4f32ac730366b33a292e537ed1d7aff4b975cbd7b81a5",
+        "bars": 672,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2023,
+        "month": 3,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2023-03.zip",
+        "sha256": "5d5a13ec85cfbd8c5636105bbb57027a6d9c7d3973d8a7c1d25dde95b64e1ad0",
+        "bars": 742,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2023,
+        "month": 4,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2023-04.zip",
+        "sha256": "b9fbf8e824e7ad71462c5c21830d3094e69376c7c4926422ce975a0fcdda735d",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2023,
+        "month": 5,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2023-05.zip",
+        "sha256": "1fa45a1af826b19047c6574261017a1d171b9ae2f10f3c8c6dc979c4a7bcb4f3",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2023,
+        "month": 6,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2023-06.zip",
+        "sha256": "fd487436121e3e2b60621fc8cc423288a32437747845093f773fbbe9dea3add2",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2023,
+        "month": 7,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2023-07.zip",
+        "sha256": "a1437ec03e2569e528e6b67c0ff1e8e15cbdcdac71f25775a7b0a7ce9f105ec7",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2023,
+        "month": 8,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2023-08.zip",
+        "sha256": "e5e2c5c16f3b5774fcd78a41b742d4c3024df75793da23158a7452767090f76b",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2023,
+        "month": 9,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2023-09.zip",
+        "sha256": "320645d21dee6ca9d1ed107373620d75dda6a1882638a120f95c3b6047d24679",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2023,
+        "month": 10,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2023-10.zip",
+        "sha256": "d30d5dca830097530de0d274a8a5c6e553e3ed88ab0b6ee5135d6f28a07cffe4",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2023,
+        "month": 11,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2023-11.zip",
+        "sha256": "5edfabd104c86109208cc69993da27a4ae2e60154827523d917bd2fe9573d2d6",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2023,
+        "month": 12,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2023-12.zip",
+        "sha256": "8f163621f0e29d637d3057502c57fc10070eba257116d5ee261b37d56b72d850",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2024,
+        "month": 1,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2024-01.zip",
+        "sha256": "6ed35e2b38d39eb2290064d284c21f9cea0a153ef45c8846993ab77bdbfb6ff6",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2024,
+        "month": 2,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2024-02.zip",
+        "sha256": "a37f404d063dbdb4b25d04e8debbce678230027d50b91c458a06e46eb80791d8",
+        "bars": 696,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2024,
+        "month": 3,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2024-03.zip",
+        "sha256": "d2123e08eaa40f0bce8e15904afc2d5ea953669c9a6cff8929bd4b2f4c1acade",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2024,
+        "month": 4,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2024-04.zip",
+        "sha256": "4d2397ea31aeb8e7d551da91cedad0a8ec9cbbec1b2a56f7bb8d3c505bf73f77",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2024,
+        "month": 5,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2024-05.zip",
+        "sha256": "e8447946f0e305fd59c92e964152de82672337e06e01a18bc7f3af532901afe7",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2024,
+        "month": 6,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2024-06.zip",
+        "sha256": "3dc2d94d4e71d4149a2892a6ed7a81bba977c29d4c2b702b2d24e5ba481df200",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2024,
+        "month": 7,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2024-07.zip",
+        "sha256": "f12adc0f202f89f374bde4c2e82f67d28141f3f775fc99a75d7662f6f95c8930",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2024,
+        "month": 8,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2024-08.zip",
+        "sha256": "9695cd082c0586d15cd2f189a1aef2f7c388ecf78ed483be14739fd5170409cd",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2024,
+        "month": 9,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2024-09.zip",
+        "sha256": "209f30c97fd18159e7a64b69dc6ced5ec6b0c3af5b9deb0f99d6792c76d1ab63",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2024,
+        "month": 10,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2024-10.zip",
+        "sha256": "f3a4b69f1b2a1be98a4c11949efa1ab6e8b986227f33fe671d10054533203987",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2024,
+        "month": 11,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2024-11.zip",
+        "sha256": "e694d94c8747a08f3bb4cac2d74ea5f86484d20c56722995db9cc50ff38de4cf",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2024,
+        "month": 12,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2024-12.zip",
+        "sha256": "3e0943a0d7d049d2cd6a2ea3012d73888e95ac93ee87a03908fb8269e50a5832",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2025,
+        "month": 1,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2025-01.zip",
+        "sha256": "a12e4aca1acd2cbb93238c85054a39d6a96f3bced3da317a6011dd29a05b682c",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2025,
+        "month": 2,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2025-02.zip",
+        "sha256": "055267d5154cae2c387f47f64f82135a51ae42bda0c4bb198a4446371d19c811",
+        "bars": 672,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2025,
+        "month": 3,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2025-03.zip",
+        "sha256": "541301af9dc0487779691ce7ae79be21fcf60aad793b32d0a1fd822b670152a4",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2025,
+        "month": 4,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2025-04.zip",
+        "sha256": "9df45f1b5b42c53302b7eb3394bbe1a7f9a992d0e91e6c78870eb63c3a0e93db",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2025,
+        "month": 5,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2025-05.zip",
+        "sha256": "eda629638093ea6a6e5b719ff650624976773a72962309d903fa459db9695d84",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2025,
+        "month": 6,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2025-06.zip",
+        "sha256": "8e40811059d938c5712025a8b4da934a547e30d2321ca7798741167c54f39505",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2025,
+        "month": 7,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2025-07.zip",
+        "sha256": "418fee86ca2982601ea984410ae704dae45be9996f1d62d2a08956c0f373cdbd",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2025,
+        "month": 8,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2025-08.zip",
+        "sha256": "62ec1683dcf0547aec1c8783b8a487691b63514b60fc1ea6887cf80e12c59c4f",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2025,
+        "month": 9,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2025-09.zip",
+        "sha256": "6f9fa62b8c64dff5a53ca7dfd89279dab579d77628131584a408d361a4ccb507",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2025,
+        "month": 10,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2025-10.zip",
+        "sha256": "43157d188aa8b4e9256e57e726fa6392281d96e887d1953a2d4be3e6ba32cb31",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2025,
+        "month": 11,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2025-11.zip",
+        "sha256": "c7ae344aa41e5b34b56ea5fab523a5e6e7215c414fc5fa4a4e539f34ee8725cb",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2025,
+        "month": 12,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2025-12.zip",
+        "sha256": "ac6fe1099f55e662a3f397c5a648bd1d4bed64912b87d008f5298edfb938a8de",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2026,
+        "month": 1,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2026-01.zip",
+        "sha256": "07cdad4f3bb353884e58cc11a25d71390b6e3f5ffad7369caf163fbe790e011a",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2026,
+        "month": 2,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2026-02.zip",
+        "sha256": "2834e667ffe2fbeeadb084ecb9a017c3f13ebd7600db422f082e32426dfa73f0",
+        "bars": 672,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2026,
+        "month": 3,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2026-03.zip",
+        "sha256": "c8b548e7e2e82f748c5755241089a4ecb2bf622dccfde60faa929ca28ac2a285",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2026,
+        "month": 4,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2026-04.zip",
+        "sha256": "e60fdbc7d9adca7c9f7aadfeee2223fe405ba6789f38896f90bdfc8dd55a3793",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2026,
+        "month": 5,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2026-05.zip",
+        "sha256": "8193a3b0bf233fe579d0cdc28b29e94fba328d16b3272670e4760ac2d1aec6fb",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2026,
+        "month": 6,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2026-06.zip",
+        "sha256": "cb246283db51b26687b5b87027f0a554b5f504b63524779f32a2a73937b26126",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2026,
+        "month": 7,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2026-07.zip",
+        "sha256": "c62e46b3ac2c31f2555a46ab9bf583f1dfd308a47cfc967db8245a5946526a33",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2026,
+        "month": 8,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2026-08.zip",
+        "sha256": "3a2a6f44e4ea17454ffc5973ae11a7098219c0a5d1c8aab72f907db6cdcfe7b3",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2026,
+        "month": 9,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2026-09.zip",
+        "sha256": "329fc3e11ef3a851fc407c29e463cfdfbcf25078b0141d22f6383706bd0d63ce",
+        "bars": 720,
+        "checksumVerified": true,
+        "rejectedBars": []
+      },
+      {
+        "asset": "AVAXUSDT",
+        "year": 2026,
+        "month": 10,
+        "url": "https://data.binance.vision/data/spot/monthly/klines/AVAXUSDT/1h/AVAXUSDT-1h-2026-10.zip",
+        "sha256": "91604ae22a1472488caed1dd5d9be652c54a34b3862109beb2baf67ddbb95322",
+        "bars": 744,
+        "checksumVerified": true,
+        "rejectedBars": []
+      }
+    ],
+    "assets": {
+      "DOGEUSDT": {
+        "file": "DOGEUSDT.npy",
+        "bars": 51104,
+        "sha256": "44d85ae30de515bce6989e79211139b3dd2a14c4553a7edbc9385b4d394ce394"
+      },
+      "LTCUSDT": {
+        "file": "LTCUSDT.npy",
+        "bars": 51104,
+        "sha256": "708bd618cc8e50c81798f2e2827ab9920cf62794eabe24e0157409557f475abd"
+      },
+      "LINKUSDT": {
+        "file": "LINKUSDT.npy",
+        "bars": 51104,
+        "sha256": "1f82838e7d4a7dece7137dcc15fa6a6372b1d6fd225650594a7cb63ccdf2884c"
+      },
+      "AVAXUSDT": {
+        "file": "AVAXUSDT.npy",
+        "bars": 51104,
+        "sha256": "f48369e45bf64e750aae655b0eecdeffeb50afc0dc4fa29cc4fcfcf4154482ac"
+      }
+    },
+    "source": "Binance public spot1h",
+    "executionEnabled": false
+  },
+  "single_configuration": true,
+  "adaptive_external_asset_diagnostic": true,
+  "executionEnabled": false
+}
