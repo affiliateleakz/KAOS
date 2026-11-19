@@ -86,3 +86,7 @@ Use the existing collector with `--start 2026-11-08 --days 7` to reproduce the f
 Checks: `python -m pytest -q scripts/tests/test_video_strategy_replay.py scripts/tests/test_uploaded_bundle_replay.py` —6passed. These cover payout/ties, aggregation, causal signals, next-open settlement, gap handling, source CCI formulation and doji handling. No real orders were placed.
 
 Plan SHA-256: `6237b58a03ff8b37114a00d6899c8856860e30098fa75325ec102a09a6bb8118`.
+
+## Operational scope
+
+Only the two closed-candle decision rules are reproduced. The bundle’s global deal limit, current payout filter, symbol eligibility, capability service, manual entries, account balance stops and real/demo routing are not reproduced by the replay. Missing historical payout/forecast/permission data cannot be inferred. Pooled per-asset unit totals are not a shared-account equity curve.

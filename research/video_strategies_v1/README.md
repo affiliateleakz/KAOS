@@ -91,3 +91,7 @@ Extension1.7.41 changes the visible `HOLD · CANDIDATE 7B · ...` and controller
 The subsequent `content-main.js` upload was reviewed and its reproducible rules tested separately on a new reserved week. See [uploaded-bundle research](../uploaded_bundle_v1/README.md). It did not change this video plan, parameters or evaluated results.
 
 At92% payout, delayed MA/MACD/RSI and primary Supertrend/SAR proxy replays remain positive in raw units (+89.12 and +107.68), but their delayed Wilson lower bounds (51.64% and51.79%) remain below the52.08% break-even threshold; the broker-export checks are negative even at92%. This sensitivity is disclosed rather than treated as proof.
+
+## Portfolio scope
+
+These are pooled per-asset signal-quality replays, not a four-chart account simulation. A four-chart simultaneous-slot limit, global capital allocation, discretionary symbol switching and the video’s session take-profit/stop-loss calculator are not modeled. Pooled unit totals cannot be presented as an achievable shared-account equity curve.
