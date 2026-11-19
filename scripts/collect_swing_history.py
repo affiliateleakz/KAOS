@@ -30,8 +30,8 @@ def fetch(job):
     return asset,rows,{'asset':asset,'year':year,'month':month,'url':url,'sha256':digest,'bars':len(rows),'checksumVerified':True,'rejectedBars':rejected}
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--out',type=Path,required=True);p.add_argument('--cache',type=Path,required=True);p.add_argument('--start-year',type=int,default=2021);p.add_argument('--end-year',type=int,default=2025);a=p.parse_args();a.out.mkdir(parents=True,exist_ok=True);a.cache.mkdir(parents=True,exist_ok=True)
-    jobs=[(asset,y,m,a.cache) for asset in ASSETS for y in range(a.start_year,a.end_year+1) for m in range(1,13)];data={s:[] for s in ASSETS};manifest={'files':[],'assets':{},'source':'Binance public spot1h','executionEnabled':False}
+    p=argparse.ArgumentParser();p.add_argument('--out',type=Path,required=True);p.add_argument('--cache',type=Path,required=True);p.add_argument('--start-year',type=int,default=2021);p.add_argument('--end-year',type=int,default=2025);p.add_argument('--end-month',type=int,choices=range(1,13),default=12);p.add_argument('--symbols',nargs='+',choices=ASSETS+['DOGEUSDT','LTCUSDT','LINKUSDT','AVAXUSDT'],default=ASSETS);a=p.parse_args();a.out.mkdir(parents=True,exist_ok=True);a.cache.mkdir(parents=True,exist_ok=True)
+    jobs=[(asset,y,m,a.cache) for asset in a.symbols for y in range(a.start_year,a.end_year+1) for m in range(1,(a.end_month if y==a.end_year else 12)+1)];data={s:[] for s in a.symbols};manifest={'files':[],'assets':{},'source':'Binance public spot1h','executionEnabled':False}
     with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:
         for count,(asset,rows,meta) in enumerate(pool.map(fetch,jobs),1):
             data[asset].extend(rows);manifest['files'].append(meta)

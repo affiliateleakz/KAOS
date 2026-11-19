@@ -1,0 +1,12 @@
+{
+ "version":1,
+ "purpose":"Single locked transfer test of the previously observed four-hour breakout family, plus preparation for prospective public-quote paper observations. No parameter search or live execution.",
+ "config":{"timeframe_seconds":14400,"family":"breakout20","stop_atr":3,"min_risk_fraction":0.01,"max_hold_days":7},
+ "assets":["DOGEUSDT","LTCUSDT","LINKUSDT","AVAXUSDT"],
+ "data":"New checksum-verified Binance public1h series January2021-October2026, complete UTC resampling and gap resets. Same prior swing engine, costs, one-hour delayed/high-cost stress, risk normalization and matched baselines. Context before2025 only; do not report or optimize on its outcomes.",
+ "evaluation":["2025-01-01","2026-11-01"],
+ "test":"One configuration on a fixed four-market set, never replace a losing market or change any entry/exit/filter. Require>=150trades,>=90activeUTCdays,PF>=1.15,>=3profitablemarkets,positive lower weeklyclusterbootstrap mean at.05/15 (12original+2backfills+1transfer),positive combinedstress,meanR above both identical-exit baselines. This is an adaptive external-asset diagnostic; earlier studies still failed their gates. No statistical correction here erases the hundreds of earlier trials or correlated shared market regimes.",
+ "reserved":"Do not score the earlier reserved2025BNB/XRP/ADA,September-October2026old3assets,orPocketOption periods. New four-asset quotes have not been scored in the latest research, but share previously seen crypto regimes. Not prospective proof.",
+ "report":"All four market results, active-day/trade counts, baseline comparison, combinedstress, riskunits not equityreturns. Regardless of result no automatic production promotion. No extra configurations in this transfer round.",
+ "forward_paper":"Prepare transactional/idempotent timestamped observation/event/position storage, fixed strategy hash, separate replay and forward journals, fresh public bid/ask simulated fills and fees, gap/staleness controls. No broker credentials, order APIs or hosting deployment. Historical replay must never be reported as prospective observations. Record missed coverage rather than inventing a past stop fill."
+}
