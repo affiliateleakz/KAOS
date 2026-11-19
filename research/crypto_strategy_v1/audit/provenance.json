@@ -1,0 +1,31 @@
+{
+  "plan_sha256": "74c8cba73a626589992d65176e26ab13d4e691fcd97448fc797f713546113b99",
+  "runner_sha256": "4da8179e4e91397a1f66251a7879ce7895b219daed27db40b60bd0fc08eff18a",
+  "source_manifest_sha256": "eba69a8def2d467a212d519054f35cca729cc396ea76bc53a6af0562502602c5",
+  "markets": {
+    "BTCUSDT": {
+      "bars": 120918,
+      "start_ts": 1790812800000,
+      "end_ts": 1791417595000,
+      "file": "BTCUSDT_5s.json",
+      "sha256": "ed1cb7ca0c39f701fa00235cebe1217df68c6ce8bcb46d0458e2211fa0ba5a37"
+    },
+    "ETHUSDT": {
+      "bars": 118814,
+      "start_ts": 1790812800000,
+      "end_ts": 1791417595000,
+      "file": "ETHUSDT_5s.json",
+      "sha256": "2438cf1a35d0dd36a3f4081aea6c0c747560d59b1742e3743fe40b680c44e115"
+    },
+    "SOLUSDT": {
+      "bars": 117902,
+      "start_ts": 1790812800000,
+      "end_ts": 1791417595000,
+      "file": "SOLUSDT_5s.json",
+      "sha256": "72c34be357c336b3aee3878c176fd912c5d90c165646aed03eff4f557d6c4cf4"
+    }
+  },
+  "feature_rows": 172119,
+  "warmup_bars": 300,
+  "live_approved": false
+}

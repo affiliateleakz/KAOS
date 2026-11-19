@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import CommunityHub,{CommunityPeople} from "./dashboard/CommunityHub";
+import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { api } from "../lib/api";
+import { api, errMsg } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { Brand } from "../components/Brand";
 import { StrategyCard } from "../components/StrategyCard";
@@ -11,20 +12,23 @@ export default function Profile() {
   const { username } = useParams();
   const nav = useNavigate();
   const { user } = useAuth();
+  const profileVersion=useRef(0),currentUsername=useRef(username);currentUsername.current=username;
   const [p, setP] = useState(null);
+  const [tab,setTab]=useState("posts"),[error,setError]=useState(""),[busy,setBusy]=useState(false);
 
-  const load = () => api.get(`/api/profiles/${username}`).then((r) => setP(r.data)).catch(() => setP(null));
-  useEffect(() => { load(); }, [username]);
+  const load = () => {const version=++profileVersion.current;return api.get(`/api/profiles/${encodeURIComponent(username)}`).then(r=>{if(version===profileVersion.current){setP(r.data);setError("");}}).catch(e=>{if(version===profileVersion.current)setError(errMsg(e));});};
+  useEffect(() => {setP(null);setError("");setTab("posts");load();return()=>{profileVersion.current++;};}, [username]);
 
   const toggleFollow = async () => {
     if (!user) return nav("/login");
-    try {
-      p.isFollowing ? await api.delete(`/api/users/${username}/follow`) : await api.post(`/api/users/${username}/follow`);
-      load();
-    } catch { toast.error("Error"); }
+    setBusy(true);try {
+      p.isFollowing ? await api.delete(`/api/users/${encodeURIComponent(username)}/follow`) : await api.post(`/api/users/${encodeURIComponent(username)}/follow`);
+      if(currentUsername.current===username)await load();
+    } catch(e) { toast.error(errMsg(e)); } finally {setBusy(false);}
   };
 
-  if (!p) return <div className="flex min-h-screen items-center justify-center bg-[#080808] text-slate-400">Profile not found.</div>;
+  if(error)return <div className="p-8 text-amber-200" role="alert">{error} <button onClick={load}>Retry profile</button></div>;
+  if (!p) return <div className="flex min-h-screen items-center justify-center bg-[#080808] text-slate-400">Loading profile…</div>;
 
   return (
     <div className="min-h-screen bg-[#080808] text-white">
@@ -42,7 +46,7 @@ export default function Profile() {
             <p className="mt-1 text-sm text-slate-400">{p.bio || "No bio yet."}</p>
           </div>
           {user && user.username !== username && (
-            <Button data-testid="profile-follow-button" onClick={toggleFollow} className={p.isFollowing ? "bg-[#1A1A1A] text-white border border-[#3A3A3A]" : "bg-[#22C55E] text-black font-semibold"}>
+            <Button data-testid="profile-follow-button" disabled={busy} onClick={toggleFollow} className={p.isFollowing ? "bg-[#1A1A1A] text-white border border-[#3A3A3A]" : "bg-[#d4af37] text-black font-semibold"}>
               {p.isFollowing ? "Following" : "Follow"}
             </Button>
           )}
@@ -55,10 +59,11 @@ export default function Profile() {
             </div>
           ))}
         </div>
-        <h2 className="mt-8 font-heading text-xl font-semibold">Strategies</h2>
-        <div className="mt-4 grid gap-6 md:grid-cols-2">
-          {(p.strategies || []).map((s) => <StrategyCard key={s.id} s={s} onChange={load} />)}
-        </div>
+        <nav aria-label="Member profile sections" className="my-6 flex flex-wrap gap-2">{["posts","strategies","followers","following"].map(value=><button key={value} onClick={()=>setTab(value)} aria-current={tab===value?"page":undefined} className={"rounded border border-[#70582d] px-4 py-2 capitalize "+(tab===value?"bg-[#d4af37] text-black":"text-[#e8c46f]")}>{value}</button>)}</nav>
+        {tab==="posts"&&<CommunityHub key={username} author={username} embedded/>}
+        {tab==="strategies"&&<div className="grid gap-6 md:grid-cols-2">{(p.strategies||[]).map(s=><StrategyCard key={s.id} s={s} onChange={load}/>)}</div>}
+        {["followers","following"].includes(tab)&&(user?<CommunityPeople username={username} connection={tab} onFollow={load}/>:<Link to="/login">Sign in to see this trading circle</Link>)}
+
       </div>
     </div>
   );

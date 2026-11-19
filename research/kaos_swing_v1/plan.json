@@ -1,0 +1,29 @@
+{
+  "version":1,
+  "purpose":"Longer-horizon cost-aware research after intraday fee failures. Two bounded tracks; no production changes or real orders.",
+  "data":"Checksum-verified Binance spot1h January2021-December2025: BTCUSDT ETHUSDT SOLUSDT BNBUSDT XRPUSDT ADAUSDT. Complete UTC aggregation, no fabricated candles. Some past daily/coarser histories/regimes were previously studied: no pristine market-regime or prospective claim.",
+  "development":"2021-2022 supplies past indicator context; fixed rules, no fitted model",
+  "validation":["2023-01-01","2025-01-01"],
+  "confirmation":["2025-01-01","2026-01-01"],
+  "confirmation_assets":["BNBUSDT","XRPUSDT","ADAUSDT"],
+  "reserved_recent":"Do not evaluate September-October2026 or previously reserved PocketOption outcomes. Newly collected BNB/XRP/ADA2025 hourly outcomes have not been scored in the latest studies; related crypto regimes and oldBTC/ETH/SOL prices have been seen.",
+  "total_candidates":12,
+  "swing":{
+    "timeframes_seconds":[3600,14400],"families":["breakout20","pullback20"],"stop_atr":[3,4],"candidates":8,
+    "rules":"Same causal EMA20/50/200 trend breakout/pullback signals as kaos_candidate_v1;250closed-bar warmup; initial riskstop3or4WilderATR14; require riskdistance>=1% of observed entry price (fixed fee-budget filter). No fixed target. Maxhold7calendar days. Raise stop only AFTER a completed requested candle: max(oldstop,highestclose20 - stopMultiple*currentATR). Close below EMA50 or prior10candlelow schedules next observed hourlyopen exit. Entry next observed hourlyopen. No overlap or same-hour re-entry. Pending stop gaps fill at worse open; minute execution cannot be inferred fromhourbars. Full7day horizon mustfitinsidecontinuoussource/split.",
+    "stress":"Entry delayed1hour; fees20bps+slippage4bps per side vsbase10bps+2bps. Stop and trail never update retroactively within signal bar. Exit scheduled at nextopen, continuous protective stop still active; gapthroughstop has priority.",
+    "accounting":"Constant original1R per trade; allasset sums are independent normalized risks, not equity/accountreturns. Costs may exceed1Rstop. No compounding/martingale/shorts.",
+    "benchmarks":"Alwayslong andEMA200trendlong with identical fee-budgetfilter,trailing,stops,holdingduration,costs andpositionrules pertimeframe/ATRmultiple.",
+    "selection":"Validation>=150trades,>=90activeUTCdays,PF>=1.15,netR>0,>=4profitableassets,positive multiplicity-adjusted lower WEEK-clusterbootstrap mean netR(.05/12,5000resamples),combinedstressnetR>0,meanR/trade exceeds both matched benchmarks. Rank lowerbootstrap thenID; freeze at most1 before final.",
+    "final_gate":"Only selected config on2025new3assets:>=60trades,>=40activeUTCdays,PF>=1.10,positive95%lowerweeklybootstrap mean,>=2profitableassets,positivecombinedstress,meanR above both matched benchmarks. No reselection."
+  },
+  "momentum":{
+    "lookback_days":[20,60],"top_n":[1,2],"candidates":4,
+    "rules":"Long-only unlevered spot basket. At Monday00UTC, use strictly completed previous UTC daily candles: rank trailing20/60daily close returns; require positive return and close>EMA200 (250dailybar warmup). Allocate up to1/N equity to each topN eligible positive asset; missing slots cashUSDT assumedzero yield. Weekly rebalance only, no stops/borrowing. Market universefixed6assets; final fixed new3assets. No survivor-free universe or risk-free stablecoin assumption claimed.",
+    "accounting":"Hourlymark-to-market cash+quantity ledger. Rebalance at actual observed Mondayhourlyopen; planned targets based on pre-costequity. Match sellproceeds/buyspending including fees/slippage; scale buys if necessary, no negativecash. Basecost12bps per traded dollar(each buy/sell),stress24bps andweeklyrebalance delayed1hour. Flatten at split-end lastobservedhourclose with costs. Finalholdings not carried fromvalidation.",
+    "benchmark":"Fixed equal-weight sameuniverse, weeklyrebalance to EXACT same strategy targetgross exposure, samefees/slippage/delay. Fullyinvested equalweight also reported. Excessreturn comparison is to exposurematched benchmark, not cash or a retrospectively chosen coin. Costs charged proportional traded notional, fractionalunits allowed.",
+    "selection":"Validation>=52weekly observations,netreturn>0,maxhourlydrawdown<=25%,profit inboth2023and2024,positive combinedstressnetreturn,netreturn exceeds exposurematchedbaseline,positive multiplicity-adjusted lower4weekmoving-blockbootstrap mean WEEKLY EXCESS RETURN(.05/12,5000samples). Rank lowerexcessbootstrap thenID. Freezeatmost1 beforefinal.",
+    "final_gate":"Selected only2025new3assets:>=40weeklyobservations,netreturn>0,drawdown<=25%,positivecombinedstress,netreturnaboveexposurematchedbaseline,positive95%lower4weekblockbootstrap meanweeklyexcess. No reselection."
+  },
+  "limitations":"Rule research, not trained AI. Crossasset correlations, fixed surviving universe, OHLCapproximation, assumed fees/stablecoinvalue, and repeatedresearch can biasresults. Goodhistoricalresults would support paper testing only, never promiseprofit or liveapproval."
+}

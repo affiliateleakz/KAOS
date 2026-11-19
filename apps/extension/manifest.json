@@ -6,50 +6,12 @@
       "48": "kaos_icon_48.png",
       "128": "kaos_icon_128.png"
     },
-    "default_title": "KAOS Trading Bot — Trade With KAOS"
+    "default_title": "KAOS Trading Bot \u2014 Trade With KAOS"
   },
   "background": {
     "service_worker": "background.js"
   },
-  "content_scripts": [
-    {
-      "js": [
-        "po-bridge.js"
-      ],
-      "matches": [
-        "https://*.pocketoption.com/*",
-        "https://p.finance/*",
-        "https://platform58.po2.capital/*",
-        "https://po.company/*",
-        "https://po1.capital/*",
-        "https://pocket-link22.co/*",
-        "https://pocketoption.com/*"
-      ],
-      "run_at": "document_start",
-      "world": "MAIN"
-    },
-    {
-      "js": [
-        "candidate7b_strategy.js",
-        "kaos_expiry_collector.js",
-        "content.js",
-        "kaos-cloud-ui.js"
-      ],
-      "matches": [
-        "https://*.pocketoption.com/*",
-        "https://p.finance/*",
-        "https://platform58.po2.capital/*",
-        "https://po.company/*",
-        "https://po1.capital/*",
-        "https://pocket-link22.co/*",
-        "https://pocketoption.com/*"
-      ],
-      "run_at": "document_idle",
-      "css": [
-        "kaos-cloud-ui.css"
-      ]
-    }
-  ],
+  "content_scripts": [],
   "description": "KAOS specialist reversal runner breakout per-expiry training research",
   "host_permissions": [
     "https://pocketoption.com/*",
@@ -65,7 +27,8 @@
     "https://tradewithkaos.com/*",
     "https://*.tradewithkaos.com/*",
     "http://127.0.0.1:8765/*",
-    "http://127.0.0.1:8766/*"
+    "http://127.0.0.1:8766/*",
+    "https://api.exchange.coinbase.com/*"
   ],
   "icons": {
     "16": "kaos_icon_16.png",
@@ -86,24 +49,9 @@
     "nativeMessaging",
     "identity"
   ],
-  "version": "1.7.11",
-  "version_name": "1.7.11 · AI BOOTSTRAP ACCESS",
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "kaos_pretrained_bootstrap.json"
-      ],
-      "matches": [
-        "https://*.pocketoption.com/*",
-        "https://pocketoption.com/*",
-        "https://p.finance/*",
-        "https://platform58.po2.capital/*",
-        "https://po.company/*",
-        "https://po1.capital/*",
-        "https://pocket-link22.co/*"
-      ]
-    }
-  ],
+  "version": "1.7.41",
+  "version_name": "1.7.41 \u00b7 KAOS STRATEGY LABEL",
+  "web_accessible_resources": [],
   "oauth2": {
     "client_id": "588189138338-nmcjdlvabq878ovasphf309bu4ii2r02.apps.googleusercontent.com",
     "scopes": [
@@ -112,5 +60,9 @@
       "profile"
     ]
   },
-  "homepage_url": "https://chromewebstore.google.com/detail/gbobopmnjgeeegniphckfpalhnebapjm"
+  "homepage_url": "https://chromewebstore.google.com/detail/gbobopmnjgeeegniphckfpalhnebapjm",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnwSV5C2ORieokxn2cldjHEr0sHlFRtWdVnVphkTSxi5aIY1TVztKw66hf04+XFnAL8wqAk+KB9dDPjjZO6HhpgXjUCv8Gw/Jf4+WhurnTBwrGVdz/1jIXfI2pXfummJ8utmLaphI9K/bnVX1SVvB21eNnsF/NtGSN0tJEMF3k9DlmMjTA0Sk2n2YsZbEgegLlAC5nnGq4HtMVd7pVVI5BsN90l8iCDAAsd/+Ar41Mmy/+g53fTOoXM1KS5Ywd3X/9WXskZVmmP+se/lGYVTsRpGS024IiAos5RAMwrPQF3YgLVR3d1vmkgKvVMt2m5lrufBwLDMT2RSTGzNei7sCLwIDAQAB",
+  "optional_host_permissions": [
+    "https://data-api.binance.vision/*"
+  ]
 }

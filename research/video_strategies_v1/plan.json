@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "frozen_before_replay": true,
+  "focus": "Pocket Option-style fixed-expiry direction replay; public crypto is auxiliary price proxy only",
+  "video2": {
+    "observed": "Narration 0-4s:10-second candles; 12-17s MACD10/15/5;26s RSI10;47s and119s expiry3minutes; MACD and RSI50 crossings.",
+    "primary": {
+      "family": "macd_rsi",
+      "tf": 10,
+      "expiry": 180,
+      "variant": "recent2"
+    },
+    "assumption": "Two crossovers agree within two completed indicator bars, one crossover on current bar; same-bar strict crossover is declared sensitivity."
+  },
+  "video3": {
+    "observed": "MACD10/20/9 at30s; RSI14 at50s; overbought80/oversold20; example expiry60s; moving-average periods/types not legible",
+    "primary": {
+      "family": "ma_macd_rsi",
+      "tf": 5,
+      "expiry": 60,
+      "variant": "ema5_20"
+    },
+    "assumption": "moving-average crossover plus MACD and RSI directional confirmation; test EMA5/20,EMA10/20,SMA5/20; NOT claimed exact video replication"
+  },
+  "video4": {
+    "observed": "spoken five-second candles, thirty-second expiry, Supertrend buy/sell flip confirmed by Parabolic SAR side; wait candle close; default indicator settings unspecified",
+    "primary": {
+      "family": "sar_supertrend",
+      "tf": 5,
+      "expiry": 30,
+      "variant": "10_3"
+    },
+    "assumption": "SAR start/increment .02 max .2; Supertrend ATR10 multiplier3; sensitivity ATR7/3,10/2,14/3"
+  },
+  "sensitivity": {
+    "timeframes_seconds": [
+      5,
+      10,
+      15,
+      30
+    ],
+    "expiries_seconds": [
+      15,
+      30,
+      60,
+      180
+    ],
+    "variants_per_family": [
+      2,
+      3,
+      4
+    ],
+    "total_configurations": 144
+  },
+  "entry": "signal computed from closed complete candles; enter next observed five-second open; settle exact expiry later at observed open; no gaps or within-asset overlap; 300 indicator-bar warmup per contiguous segment",
+  "payouts": [
+    0.7,
+    0.8,
+    0.9,
+    0.92
+  ],
+  "ties": "stake refunded, zero PnL; excluded from directional win rate",
+  "latency_stress_seconds": 5,
+  "selection": "PO old reserved final period remains untouched. Public Oct1-4 development and Oct5-7 validation. At most one sensitivity candidate selected using validation >=200 decided trades,>=3 UTC days,Wilson lower bound>80% payout break-even,Bonferroni p<.05/144,positive day-cluster-bootstrap lower mean PnL,at least2 profitable assets; rank Wilson lower bound then stable config ID",
+  "fresh_proxy_confirmatory": "newly downloaded Nov1-7 BTC/ETH/SOL: evaluate three fixed primary interpretations regardless of validation plus at most one qualifying selected sensitivity; Bonferroni .05/4; never tune after seeing this sample",
+  "success": "fresh proxy >=200 decided,>=5 UTC days, Wilson lower bound>80% break-even,Bonferroni p<.05/4,positive day-cluster-bootstrap lower PnL,at least2 profitable assets,positive 5s-latency stress; does not establish OTC execution edge",
+  "benchmarks": "always CALL, always PUT and previous-candle-direction on the same primary signal timestamps; diagnostic only, not strategy selection",
+  "limits": "videos are selected examples, not complete results; synthetic OTC and broker payout/latency/rejection not verified; member export labels inconsistent so ignored; reused October/PO development data; serial/cross-asset dependence limits binomial/Wilson interpretation; at most one new selection, no repeated holdout fishing; no live deployment or trades",
+  "pre_replay_correction": "Audio transcription completed before any replay: video2 explicitly uses 10s candles and 180s expiry; corrected initial visual estimate. Original plan hash ba00640767080ef331d2a6994424858ced0bc008e0bb60ddb80d3471fb2ebd7d."
+}

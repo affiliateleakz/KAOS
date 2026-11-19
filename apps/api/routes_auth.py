@@ -20,17 +20,19 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 EMAIL_BASE_URL = (os.environ.get("INTEGRATION_PROXY_URL") or "").strip().rstrip("/") or "https://integrations.emergentagent.com"
 EMAIL_KEY = os.environ.get("EMERGENT_EMAIL_KEY", "")
-EMAIL_FROM_NAME = os.environ.get("EMAIL_FROM_NAME") or "Trading Platform"
+EMAIL_FROM_NAME = os.environ.get("EMAIL_FROM_NAME") or "KAOS Trading"
 
-MAX_ATTEMPTS = 5
-LOCK_MINUTES = 15
+from mail_delivery import smtp_ready, send_smtp
+
+from login_policy import MAX_LOGIN_ATTEMPTS as MAX_ATTEMPTS, LOGIN_LOCK_MINUTES as LOCK_MINUTES
 
 
-async def send_password_reset_email(to_email: str, token: str) -> bool:
+async def send_password_reset_email(to_email: str, token: str, account_setup: bool = False) -> bool:
     base = os.environ.get("FRONTEND_URL", "").rstrip("/")
     link = f"{base}/reset-password?token={token}"
-    if not EMAIL_KEY or EMAIL_KEY.startswith("{") or not base.startswith("https://"):
-        if urlparse(base).hostname in ("localhost", "127.0.0.1", "::1"):
+    if account_setup: link = f"{base}/reset-password#token={token}&setup=checkout"
+    if (not smtp_ready() and (not EMAIL_KEY or EMAIL_KEY.startswith("{"))) or not base.startswith("https://"):
+        if not account_setup and urlparse(base).hostname in ("localhost", "127.0.0.1", "::1"):
             logger.warning("Email not configured; password reset link: %s", link)
         else:
             logger.error("Password reset email not configured")
@@ -40,23 +42,37 @@ async def send_password_reset_email(to_email: str, token: str) -> bool:
             f'<p>We received a request to reset your {brand} password.</p>'
             f'<p><a href="{escape(link)}">Reset your password</a></p>'
             f'<p>This link expires in 1 hour and can be used once.</p></td></tr></table>')
+    subject = f"Reset your {EMAIL_FROM_NAME} password"
+    if account_setup:
+        subject = "Finish your KAOS account setup"
+        html = html.replace("We received a request to reset your", "Membership confirmed. Set up your").replace("Reset your password", "Create your password")
+    if smtp_ready():
+        return await send_smtp(to_email,subject,html)
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(f"{EMAIL_BASE_URL}/api/v1/email/send",
                                      headers={"X-Email-Key": EMAIL_KEY},
-                                     json={"to": [to_email], "subject": f"Reset your {EMAIL_FROM_NAME} password",
+                                     json={"to": [to_email], "subject": subject,
                                            "html": html, "from_name": EMAIL_FROM_NAME})
         resp.raise_for_status()
         return True
     except Exception as e:
-        logger.error(f"Password reset email failed: {e}")
+        logger.error("Password reset email failed (%s)", type(e).__name__)
         return False
 
 
+# Public account responses use an explicit allowlist. Mongo documents also contain
+# authentication, verification, Stripe, licensing and administrative fields.
+PUBLIC_ACCOUNT_FIELDS = frozenset({
+    "id", "email", "name", "username", "role", "avatar", "bio",
+    "email_verified", "auth_provider", "account_status", "onboarding_step",
+    "affiliate_status", "affiliate_ref", "membership_status", "membership_plan",
+    "membership_expires_at", "is_demo", "created_at", "updated_at", "requested_membership_plan",
+})
+
 def _user_public(user: dict) -> dict:
-    u = clean(dict(user))
-    u.pop("password_hash", None)
-    return u
+    safe = clean(dict(user))
+    return {key: safe[key] for key in PUBLIC_ACCOUNT_FIELDS if key in safe}
 
 
 async def _new_user_doc(email, name, username=None, password=None, provider="password",
@@ -74,6 +90,7 @@ async def _new_user_doc(email, name, username=None, password=None, provider="pas
         "avatar": avatar,
         "bio": "",
         "auth_provider": provider,
+        "bot_trial_required": True,
         "google_id": google_id,
         "account_status": "active",
         "onboarding_step": 1,
@@ -92,22 +109,41 @@ async def _new_user_doc(email, name, username=None, password=None, provider="pas
     }
 
 
+async def requested_plan(plan_id):
+    if plan_id is None or plan_id == 'free': return 'free'
+    if not isinstance(plan_id, str) or len(plan_id) > 64:
+        raise HTTPException(400, 'Choose a valid membership')
+    from routes_billing import get_plans
+    if not any(plan.get('id') == plan_id and plan.get('enabled', True) is True for plan in await get_plans()):
+        raise HTTPException(400, 'This membership is unavailable. Choose a current plan.')
+    return plan_id
+
+
 @router.post("/register")
-async def register(req: RegisterReq, response: Response):
+async def register(req: RegisterReq, response: Response, request: Request = None):
     email = req.email.lower()
     if await db.users.find_one({"email": email}):
         raise HTTPException(status_code=400, detail="Email already registered")
+    selected_plan = await requested_plan(req.planId)
     doc = await _new_user_doc(email, req.name, req.username, req.password)
     # demo-mode email verification token returned in-app
     vtoken = gen_token()
     doc["verify_token"] = vtoken
-    doc["referredByCode"] = (req.refCode or None)  # affiliate attribution (server-persisted)
+    from visitor_analytics import acquisition_for
+    acquisition=await acquisition_for(request)
+    if acquisition:doc['analyticsAcquisition']=acquisition
+    doc["referredByCode"] = (req.refCode or (acquisition or {}).get('refCode') or None)  # affiliate attribution (server-persisted)
+    doc['requested_membership_plan'] = selected_plan  # Preference only; no paid access before verified payment.
     await db.users.insert_one(dict(doc))
     at = create_access_token(doc["id"], email, 0)
     rt = create_refresh_token(doc["id"], 0)
     set_auth_cookies(response, at, rt)
     out = _user_public(doc)
-    out["verificationToken"] = vtoken  # DEMO MODE only
+    # Registration must not let a user verify an unowned email address.
+    # The demo token is available only in development; production requires a
+    # separately authenticated email delivery/verification flow.
+    if os.environ.get("KAOS_ENV", "production").lower() in ("development", "dev", "test"):
+        out["verificationToken"] = vtoken
     return out
 
 
@@ -160,7 +196,7 @@ async def logout(response: Response):
 
 @router.get("/me")
 async def me(user: dict = Depends(get_current_user)):
-    return user
+    return _user_public(user)
 
 
 @router.post("/refresh")
@@ -177,6 +213,8 @@ async def refresh(request: Request, response: Response):
     user = await db.users.find_one({"id": payload["sub"]})
     if not user or payload.get("ver", 0) != user.get("token_version", 0):
         raise HTTPException(status_code=401, detail="Session expired")
+    if user.get("account_status", "active") != "active" or user.get("extension_access_revoked"):
+        raise HTTPException(status_code=403, detail="Account access disabled")
     tv = user.get("token_version", 0)
     at = create_access_token(user["id"], user["email"], tv)
     rt = create_refresh_token(user["id"], tv)
@@ -211,12 +249,89 @@ async def reset_password(req: ResetReq):
         {"$set": {"used": True}})
     if not doc:
         raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+    changes = {"password_hash": hash_password(req.password), "updated_at": now_iso()}
+    if doc.get('checkout_setup'):
+        pending = await db.users.find_one({'id': doc['user_id'], 'auth_provider': 'stripe_checkout'})
+        if pending: changes.update(email_verified=True, auth_provider='password')
     await db.users.update_one({"id": doc["user_id"]},
-                              {"$set": {"password_hash": hash_password(req.password), "updated_at": now_iso()},
+                              {"$set": changes,
                                "$inc": {"token_version": 1}})
     await db.password_reset_tokens.delete_many({"user_id": doc["user_id"], "used": False})
     await db.login_attempts.delete_many({"email": doc["email"]})
     return {"ok": True}
+
+
+# ---- Direct Google Identity Services credential sign-in ----
+# This route is distinct from the legacy Emergent OAuth session integration.
+# Audience must come from the server configuration, never from the caller.
+async def _google_signin_identity(data: dict, registration: dict = None) -> dict:
+    email = str(data.get("email") or "").lower().strip()
+    google_id = str(data.get("sub") or "").strip()
+    if not email or not google_id or data.get("email_verified") not in (True, "true", "True"):
+        raise HTTPException(status_code=401, detail="Google email identity not verified")
+    user = await db.users.find_one({"email": email})
+    if user:
+        if user.get("google_id") and user.get("google_id") != google_id:
+            raise HTTPException(status_code=403, detail="Google account does not match linked identity")
+        if user.get("account_status", "active") in ("suspended", "banned", "deleted") or user.get("extension_access_revoked"):
+            raise HTTPException(status_code=403, detail="Account access disabled")
+        await db.users.update_one({"id": user["id"]}, {"$set": {
+            "google_id": google_id,
+            "email_verified": True,
+            "avatar": user.get("avatar") or data.get("picture"),
+        }})
+    else:
+        doc = await _new_user_doc(email, data.get("name") or email, None, None,
+                                  provider="google", google_id=google_id,
+                                  avatar=data.get("picture"), verified=True)
+        if registration:
+            doc['requested_membership_plan'] = registration.get('planId','free')
+            if registration.get('analyticsAcquisition'):doc['analyticsAcquisition']=registration['analyticsAcquisition']
+            doc['referredByCode'] = registration.get('refCode')
+        await db.users.insert_one(dict(doc))
+        user = doc
+    return user
+
+
+@router.post("/google/credential")
+async def google_credential(request: Request, response: Response):
+    """Verify Google ID token; exchange it for first-party HttpOnly session cookies."""
+    from google.oauth2 import id_token
+    from google.auth.transport.requests import Request as GoogleRequest
+    import asyncio
+
+    client_id = os.environ.get("KAOS_GOOGLE_WEB_CLIENT_ID", "").strip()
+    if not client_id:
+        raise HTTPException(status_code=503, detail="Google sign-in is not configured")
+    body = await request.json()
+    credential = body.get("credential") if isinstance(body, dict) else None
+    if not isinstance(credential, str) or not credential or len(credential) > 8192:
+        raise HTTPException(status_code=400, detail="Google credential required")
+    try:
+        claims = await asyncio.to_thread(
+            id_token.verify_oauth2_token, credential, GoogleRequest(), client_id
+        )
+    except Exception as exc:
+        logger.warning("Google ID-token verification failed: %s", type(exc).__name__)
+        raise HTTPException(status_code=401, detail="Invalid Google credential") from exc
+    if claims.get("iss") not in ("accounts.google.com", "https://accounts.google.com"):
+        raise HTTPException(status_code=401, detail="Invalid Google issuer")
+    registration = None
+    if body.get('planId') is not None:
+        plan_id = await requested_plan(body.get('planId'))
+        ref = body.get('refCode')
+        if ref is not None and (not isinstance(ref, str) or len(ref) > 128):
+            raise HTTPException(400, 'Invalid referral code')
+        registration = {'planId': plan_id, 'refCode': ref}
+    from visitor_analytics import acquisition_for
+    acquisition=await acquisition_for(request)
+    if acquisition:
+        registration={**(registration or {'planId':'free','refCode':acquisition.get('refCode')}),'analyticsAcquisition':acquisition}
+    user = await _google_signin_identity(claims, registration) if registration else await _google_signin_identity(claims)
+    tv = user.get("token_version", 0)
+    set_auth_cookies(response, create_access_token(user["id"], user["email"], tv),
+                     create_refresh_token(user["id"], tv))
+    return _user_public(user)
 
 
 # ---- Emergent Google OAuth ----
@@ -277,6 +392,15 @@ async def export_data(user: dict = Depends(get_current_user)):
 async def delete_account(response: Response, user: dict = Depends(get_current_user)):
     # defined deletion workflow: anonymize account, remove private data, keep attribution shells
     await db.strategies.delete_many({"ownerUserId": user["id"], "visibility": {"$ne": "PUBLIC"}})
+    await db.community_posts.update_many({"authorId": user["id"]}, {"$set": {"hidden": True}})
+    await db.community_comments.update_many({"authorId": user["id"]}, {"$set": {"hidden": True}})
+    await db.community_reactions.delete_many({"userId": user["id"]})
+    await db.follows.delete_many({"$or": [{"followerId": user["id"]}, {"followingId": user["id"]}]})
+    from training_service import contributor
+    who=contributor(user)
+    await db.ai_training_samples.delete_many({"contributor":who})
+    await db.ai_training_jobs.delete_many({"owner":who})
+    await db.ai_training_models.update_many({"$or":[{"owner":who},{"contributors":who}]},{"$set":{"state":"retired","retiredReason":"contributor_deleted"}})
     await db.devices.delete_many({"userId": user["id"]})
     await db.sessions.delete_many({"user_id": user["id"]})
     await db.users.update_one({"id": user["id"]}, {

@@ -40,6 +40,10 @@ class Tests(unittest.TestCase):
         def fail(*a,**k):raise RuntimeError('Unavailable')
         items,issues=run(['GME'],now=NOW,opener=fail)
         self.assertEqual(items,[]);self.assertEqual(issues[0]['provider'],'bluesky_search')
+    def test_indexing_an_old_post_does_not_make_it_a_fresh_mention(self):
+        item=post(minute=180)
+        item['indexedAt']=NOW.isoformat()
+        self.assertIsNone(summarize_search('GME',[item],now=NOW))
     def test_no_invalid_symbol(self):
         with self.assertRaises(ValueError):fetch_search('../SECRET')
 

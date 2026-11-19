@@ -1,0 +1,64 @@
+{
+  "source": {
+    "SPY": {
+      "normalized_sha256": "5ba1a15d6d3e07c784037991689576f581912746c9c1269d53b0c4e6241049d0",
+      "original_sha256": "8e77aebd7c08fd0237a6739ab323a2822a5a9dacead8e80bd1111720a93ee5dc",
+      "calendar_sessions": 471,
+      "complete_sessions": 454,
+      "incomplete_or_missing_sessions": 17
+    },
+    "QQQ": {
+      "normalized_sha256": "275f74d2f8651c933b0d51c7141afc0912ed814730ab76970e6624ecb4ec7343",
+      "original_sha256": "f2c543c5db6bb3a826371f90f2f83dc69563113b25e0e872224ed936065f064e",
+      "calendar_sessions": 471,
+      "complete_sessions": 454,
+      "incomplete_or_missing_sessions": 17
+    },
+    "IWM": {
+      "normalized_sha256": "875b5eab95411eb46a06b7bad12a3ccbf50c08cfd36e959a75551e60fe0de03b",
+      "original_sha256": "8ec04fb24870cf0530c7518a2e7ea3ad3a07ca89c5653d01e2a212e950e5aa6d",
+      "calendar_sessions": 471,
+      "complete_sessions": 454,
+      "incomplete_or_missing_sessions": 17
+    },
+    "DIA": {
+      "normalized_sha256": "b4edc3925543e47fdfb2a45ba88768374628758e56e8f7b966e380008e096161",
+      "original_sha256": "cacf471c575b9aeb14bdfe00269c6ef1ae0ad00e82e4fbba5d2161c04616e780",
+      "calendar_sessions": 471,
+      "complete_sessions": 454,
+      "incomplete_or_missing_sessions": 17
+    },
+    "AAPL": {
+      "normalized_sha256": "378e32d0315da37052a35ae73b40217934df28553df10415b2b0e9439530a103",
+      "original_sha256": "6cebeb4ec12f2072233fb453bcdcccc88b3fb7fb64f9146f1f71b70f70e8b3ab",
+      "calendar_sessions": 473,
+      "complete_sessions": 454,
+      "incomplete_or_missing_sessions": 19
+    },
+    "MSFT": {
+      "normalized_sha256": "dcdc5649aef03512cf709720603851f14c051ab8b2b457525670aaefdc340d8c",
+      "original_sha256": "176313709ee708293f8522e843624d4a1d457fc15701c5d5f913f767b1051dc5",
+      "calendar_sessions": 473,
+      "complete_sessions": 454,
+      "incomplete_or_missing_sessions": 19
+    },
+    "NVDA": {
+      "normalized_sha256": "8096e68ece70c9114b910a370178972e00a8277b8f9034754d190cb6f2c81660",
+      "original_sha256": "718b7182a63743ae91e4e39662066074dd5661da93bb4d91ca1ef43cd57948d5",
+      "calendar_sessions": 473,
+      "complete_sessions": 454,
+      "incomplete_or_missing_sessions": 19
+    },
+    "TSLA": {
+      "normalized_sha256": "e55fbb90b049d274cc9938fee380113d9bf26edce12f71e11cede59646366744",
+      "original_sha256": "b2ce1bf1de49255f4b1a276cbd0036315b057fd96d8d52e0e6b3ae6b76152dc9",
+      "calendar_sessions": 473,
+      "complete_sessions": 454,
+      "incomplete_or_missing_sessions": 19
+    }
+  },
+  "plan_sha256": "3c6e62a99f5d35171b028e50f7278ac31c6daddec73591487179b88c4a5d48dc",
+  "runner_sha256": "f99ace05829d886974e9efceeeccf87375b110fb5890d45ade82353a44a0b6f1",
+  "independent_new_market_regime": false,
+  "production_release": false
+}

@@ -1,14 +1,7 @@
-"""KAOS Berserker — the REAL current signature strategy (server-side port).
+"""Legacy C9.0 two-candle research implementation, retained for old data compatibility.
 
-Faithful port of the authoritative KAOS Trading Bot source `candidate7b_strategy.js` (v C9.0):
-a deterministic TWO_CANDLE_CONTINUATION strategy — an established directional move, EXACTLY TWO
-counter-trend pullback candles, a continuation-confirmation candle, next-candle entry, 45s expiry.
-
-Internal engine identifier stays `TWO_CANDLE_CONTINUATION` (legacy export name `AlphaBotCandidate7B`)
-for bot compatibility; the USER-FACING strategy name is "KAOS Berserker".
-
-Execution authority is deterministic. AI is learning/reporting only — it never creates/vetoes signals.
-The old REVERSAL/RUNNER/BREAKOUT code in kaos_strategy.py is LEGACY research, NOT Berserker.
+The current KAOS Strategy execution authority is SR1.1 in kaos_signature.py,
+matching apps/extension/candidate7b_strategy.js. This module is not the current bot.
 """
 from __future__ import annotations
 import math

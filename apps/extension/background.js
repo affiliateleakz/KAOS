@@ -1,8 +1,9 @@
 let kaosExpiryStorageQueue = Promise.resolve();
 // Pocket Option Auto Trader — background.js v5.2.0
 // KAOS cloud clients are loaded alongside the existing bot worker (broker execution untouched).
-importScripts('kaos-sync-client.js', 'kaos-learning-client.js', 'kaos-cloud.js');
+importScripts('kaos-membership-lease.js','kaos-sync-client.js', 'kaos-learning-client.js', 'kaos-cloud.js');
 
+const KAOS_AUDIT_READ_ONLY = false;
 let botState = { running: false, tabId: null, config: null };
 
 // ── Automatic XGBoost trainer bridge ─────────────────────────────
@@ -250,11 +251,14 @@ function v219Stop(){
 }
 
 chrome.runtime.onStartup.addListener(() => {
+  // Registrations are non-persistent; signed-out browser startups never hook broker traffic.
+  kaosAuthorizedPo = false;
   botState = { running: false, tabId: null, config: null };
   chrome.storage.local.set({ botRunning: false });
 });
 
 chrome.runtime.onInstalled.addListener(() => {
+  kaosAuthorizedPo = false;
   botState = { running: false, tabId: null, config: null };
   chrome.storage.local.set({ botRunning: false });
 });
@@ -263,6 +267,7 @@ chrome.alarms.create('keepAlive', { periodInMinutes: 0.5 });
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name !== 'keepAlive') return;
   if (!botState.running || !botState.tabId) return;
+  kaosRefreshTrialLease().catch(()=>{});
   chrome.tabs.sendMessage(botState.tabId, { type: 'PING' }, (resp) => {
     if (chrome.runtime.lastError || !resp) {
       // content.js is declared in manifest.json and is injected automatically.
@@ -309,7 +314,7 @@ async function kaosOpenSingleAppWindow(){
   for(const t of kaosTabs) try{await chrome.tabs.remove(t.id);}catch(_){}
 
   const w=await chrome.windows.create({
-    url:appUrl,type:'popup',focused:true,width:1280,height:900
+    url:appUrl+'?kaosApp=1',type:'popup',focused:true,width:430,height:800
   });
   return {ok:true,created:true,windowId:w.id};
   })();
@@ -320,8 +325,13 @@ async function kaosOpenSingleAppWindow(){
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // KAOS_* messages are owned by the dedicated KAOS cloud listener below — ignore here so the
   // existing bot handler never hijacks their sendResponse channel.
-  if (msg && typeof msg.type === 'string' && msg.type.indexOf('KAOS_') === 0) return false;
+  if (msg && typeof msg.type === 'string' && msg.type.indexOf('KAOS_') === 0 &&
+      !['KAOS_EXPIRY_LABEL_BATCH','KAOS_EXPIRY_TRAIN_COLLECTED','KAOS_TRAIN_SPECIALISTS'].includes(msg.type)) return false;
   if (msg.type === 'START_BOT') {
+    if (KAOS_AUDIT_READ_ONLY) { sendResponse({ok:false,error:'Trading is disabled during the release audit; chart data remains available'}); return false; }
+    if (!kaosAuthorizedPo) { sendResponse({ok:false,error:'KAOS sign-in and broker connection required'}); return false; }
+    if(!self.KaosMembershipLease.allowed(kaosTrialExpiresAt)){sendResponse({ok:false,error:'Your trial has expired. Manage your KAOS membership to start new entries.'});return false;}
+    msg.kaosTrialExpiresAt=kaosTrialExpiresAt;
     botState.running = true;
     botState.tabId   = msg.tabId;
     botState.config  = msg;
@@ -550,27 +560,113 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 });
 
 
-// KAOS 1.6.7 — attach to an already-open Pocket Option page without requiring F5.
-const kaosPoReloadStamp=new Map();
-async function kaosEnsurePoAttached(tabId){
-  if(!tabId)return {ok:false,reason:'NO_TAB'};
+// KAOS broker isolation: no Pocket Option page scripts are registered at install.
+// A member must authenticate and explicitly connect to Pocket Option first.
+const KAOS_PO_PATTERNS = [
+  'https://pocketoption.com/*', 'https://*.pocketoption.com/*',
+  'https://platform58.po2.capital/*', 'https://p.finance/*',
+  'https://po.company/*', 'https://po1.capital/*', 'https://pocket-link22.co/*'
+];
+const KAOS_PO_BRIDGE_SCRIPT = 'kaos-authorized-po-bridge';
+const KAOS_PO_ENGINE_SCRIPT = 'kaos-authorized-po-engine';
+const KAOS_PO_SCRIPT_IDS = [KAOS_PO_BRIDGE_SCRIPT, KAOS_PO_ENGINE_SCRIPT];
+let kaosAuthorizedPo = false;
+let kaosTrialExpiresAt = null;
+let kaosTrialRefresh = null;
+let kaosBrokerGeneration = 0;
+const kaosAttachedTabIds = new Set();
+const kaosAttachAttemptAt = new Map();
+
+async function kaosStopBrokerIntegration() {
+  kaosBrokerGeneration++;
+  kaosAuthorizedPo = false;
+  botState.running = false;
+  botState.config = null;
+  await chrome.storage.local.set({botRunning:false, kaosPoAttached:false});
+  const existing = await chrome.scripting.getRegisteredContentScripts({ids:KAOS_PO_SCRIPT_IDS});
+  if (existing.length) await chrome.scripting.unregisterContentScripts({ids:existing.map(s=>s.id)});
+  // A MAIN-world wrapper persists until the document is unloaded. Reload only
+  // documents to which KAOS attached, restoring the broker's native WebSocket.
+  const tabs = [...kaosAttachedTabIds];
+  kaosAttachedTabIds.clear();
+  kaosAttachAttemptAt.clear();
+  for(const id of tabs) {
+    try { await chrome.tabs.reload(id, {bypassCache:false}); } catch (_) {}
+  }
+}
+
+async function kaosPermitBrokerIntegration() {
+  const generation = kaosBrokerGeneration;
+  const state = await self.KaosCloud.startup();
+  if (generation !== kaosBrokerGeneration) throw new Error('KAOS session changed during broker connection');
+  const broker = String(state.platform || '').toLowerCase();
+  if (state.step !== 'DASHBOARD' || state.status !== 'CONNECTED' ||
+      !state.license?.authorized ||
+      (broker !== 'pocketoption' && broker !== 'pocket_option')) {
+    throw new Error('Sign in to KAOS and select Pocket Option before attaching broker scripts');
+  }
+  const existing = await chrome.scripting.getRegisteredContentScripts({ids:KAOS_PO_SCRIPT_IDS});
+  if (generation !== kaosBrokerGeneration) throw new Error('KAOS session changed during broker connection');
+  if (existing.length) await chrome.scripting.unregisterContentScripts({ids:existing.map(x=>x.id)});
+  if (generation !== kaosBrokerGeneration) throw new Error('KAOS session changed during broker connection');
+  await chrome.scripting.registerContentScripts([
+    {id:KAOS_PO_BRIDGE_SCRIPT, matches:KAOS_PO_PATTERNS,
+     js:['po-bridge.js'], runAt:'document_start', world:'MAIN', persistAcrossSessions:false},
+    {id:KAOS_PO_ENGINE_SCRIPT, matches:KAOS_PO_PATTERNS,
+     js:['kaos-membership-lease.js','candidate7b_strategy.js','kaos_expiry_collector.js','content.js','kaos-cloud-ui.js'],
+     css:['kaos-cloud-ui.css'], runAt:'document_idle', world:'ISOLATED', persistAcrossSessions:false}
+  ]);
+  if (generation !== kaosBrokerGeneration) {
+    await chrome.scripting.unregisterContentScripts({ids:KAOS_PO_SCRIPT_IDS});
+    throw new Error('KAOS session changed during broker connection');
+  }
+  kaosTrialExpiresAt=self.KaosMembershipLease.fromLicense(state.license);
+  if(!self.KaosMembershipLease.allowed(kaosTrialExpiresAt))throw new Error('Your trial has expired. Manage your KAOS membership.');
+  kaosAuthorizedPo = true;
+  return state;
+}
+
+async function kaosEnsurePoAttached(tabId, allowReload = true) {
+  if(!tabId) return {ok:false,reason:'NO_TAB'};
+  if(!kaosAuthorizedPo) return {ok:false,reason:'KAOS_AUTH_REQUIRED'};
+  const tab = await chrome.tabs.get(tabId);
+  if(!kaosIsSupportedPoUrl(tab.url))return {ok:false,reason:'NOT_POCKET_OPTION'};
   try{
-    const pong=await chrome.tabs.sendMessage(tabId,{type:'KAOS_PO_PING'}).catch(()=>null);
-    if(pong&&pong.ok)return {ok:true,alreadyAttached:true};
+    const pong=await new Promise(resolve=>{
+      const timer=setTimeout(()=>resolve(null),2000);
+      chrome.tabs.sendMessage(tabId,{type:'GET_COMPANION_STATUS'}).then(
+        response=>{clearTimeout(timer);resolve(response);},()=>{clearTimeout(timer);resolve(null);});
+    });
+    if(!kaosAuthorizedPo)return {ok:false,reason:'KAOS_AUTH_REQUIRED'};
+    if(pong?.ok&&(pong.engineReady===true||Array.isArray(pong.markets))){kaosAttachedTabIds.add(tabId);return {ok:true,alreadyAttached:true};}
   }catch(_){}
-  // Do NOT execute candidate7b_strategy.js/content.js manually. They contain the
-  // live chart/candle stores and are manifest-managed. A second isolated-world
-  // injection can redeclare top-level engine identifiers and leave Charts dead.
-  const now=Date.now(),last=kaosPoReloadStamp.get(tabId)||0;
-  if(now-last<15000)return {ok:false,reason:'WAITING_FOR_MANIFEST_CONTENT'};
-  kaosPoReloadStamp.set(tabId,now);
+  const now = Date.now(), last = kaosAttachAttemptAt.get(tabId) || 0;
+  if(!kaosAuthorizedPo)return {ok:false,reason:'KAOS_AUTH_REQUIRED'};
+  if (!allowReload || now - last < 15000) return {ok:false,reason:'BROKER_LOADING',retryAfterMs:Math.max(400,15000-(now-last))};
+  kaosAttachAttemptAt.set(tabId, now);
+  kaosAttachedTabIds.add(tabId);
   try{
     await chrome.tabs.reload(tabId,{bypassCache:false});
-    return {ok:true,reloaded:true,reason:'MANIFEST_REATTACH'};
+    return {ok:true,reloaded:true,reason:'AUTHORIZED_ATTACH'};
   }catch(e){return {ok:false,reason:'RELOAD_FAILED',error:String(e&&e.message||e)};}
 }
-async function kaosEnsureAnyPoAttached(){
-  const tabs=await chrome.tabs.query({url:['https://pocketoption.com/*','https://*.pocketoption.com/*','https://platform58.po2.capital/*','https://p.finance/*','https://po.company/*','https://po1.capital/*','https://pocket-link22.co/*']});
+async function kaosWaitForPoAttached(tabId) {
+  const generation = kaosBrokerGeneration;
+  const deadline = Date.now() + 20000;
+  let result = await kaosEnsurePoAttached(tabId);
+  while (true) {
+    if (!kaosAuthorizedPo || generation !== kaosBrokerGeneration) return {ok:false,reason:'KAOS_AUTH_REQUIRED'};
+    if (result.alreadyAttached) return result;
+    if (!result.reloaded && result.reason !== 'BROKER_LOADING') return result;
+    if (Date.now() >= deadline) return {ok:false,reason:'Pocket Option is still loading. Keep its tab open and try Connect again.'};
+    await new Promise(resolve => setTimeout(resolve, 400));
+    result = await kaosEnsurePoAttached(tabId, false);
+  }
+}
+async function kaosEnsureAnyPoAttached(tabId){
+  if(!kaosAuthorizedPo)await kaosPermitBrokerIntegration();
+  if(Number.isInteger(tabId))return kaosEnsurePoAttached(tabId);
+  const tabs=await chrome.tabs.query({url:KAOS_PO_PATTERNS});
   if(!tabs?.length)return {ok:false,reason:'NO_PO_TAB'};
   return kaosEnsurePoAttached(tabs[0].id);
 }
@@ -669,9 +765,22 @@ chrome.runtime.onMessage.addListener((msg,sender,sendResponse)=>{
   if(!msg || msg.type!=='KAOS_RESIZE_APP') return;
   (async()=>{
     try{
-      const dims = msg.mode==='mini' ? {width:520,height:720} : {width:1500,height:940};
-      const win = await chrome.windows.getCurrent();
-      await chrome.windows.update(win.id,Object.assign({focused:true},dims));
+      // A service worker's getCurrent() can be the broker window. Only resize
+      // the verified extension sender's popup window, never Pocket Option.
+      if (!String(sender.url||sender.tab?.url||'').startsWith(chrome.runtime.getURL('popup.html'))) throw Error('Open KAOS in its app window');
+      const windowId=sender.tab?.windowId ?? msg.windowId;
+      if(!Number.isInteger(windowId))throw Error('KAOS app window is unavailable');
+      const win = await chrome.windows.get(windowId);
+      if(win.type!=='popup')throw Error('KAOS companion requires an app window');
+      const ownTabs=await chrome.tabs.query({windowId});
+      if(!ownTabs.some(tab=>String(tab.url||'').startsWith(chrome.runtime.getURL('popup.html'))))throw Error('Not a KAOS app window');
+      const saved = await chrome.storage.local.get(['KAOSTargetWindowId']);
+      let broker = null;
+      if(saved.KAOSTargetWindowId && saved.KAOSTargetWindowId!==win.id)try{broker=await chrome.windows.get(saved.KAOSTargetWindowId);}catch(_){}
+      const width=msg.mode==='mini'?430:1280, height=msg.mode==='mini'?Math.min(800,Math.max(500,broker?.height||720)):900;
+      const dims={state:'normal',width,height,focused:true};
+      if(msg.mode==='mini'&&broker){dims.left=Math.max(broker.left||0,(broker.left||0)+(broker.width||width)-width);dims.top=broker.top||0;}
+      await chrome.windows.update(win.id,dims);
       if(msg.mode==='max') await kaosKeepPocketOptionActive(true);
       sendResponse({ok:true});
     }catch(e){ sendResponse({ok:false,error:String(e&&e.message||e)}); }
@@ -714,7 +823,7 @@ async function kaosLearn() {
   _kaosLearn = self.KaosLearningClient.createKaosLearningClient({
     apiBase: await kaosApiBase(),
     getAuth: kaosAuth,
-    hasConsent: async () => (await chrome.storage.local.get('collectiveLearning')).collectiveLearning === true,
+    hasConsent: async () => true,
     botVersion: (chrome.runtime.getManifest && chrome.runtime.getManifest().version) || '1.0'
   });
   return _kaosLearn;
@@ -734,24 +843,25 @@ async function kaosOnTradeEvent(type, trade) {
   if (type === 'TRADE_RESULT' && trade.featureVector && trade.outcome) {
     try {
       (await kaosLearn()).emit({
-        sampleType: trade.paper ? 'PAPER' : 'REAL',
+        sampleType: trade.sampleType || (trade.paper ? 'PAPER' : 'UNKNOWN'), accountMode: trade.accountMode || 'UNKNOWN',
         platform: trade.platform || 'pocket_option',
         asset: trade.asset, timeframe: trade.timeframe || '5s', expiration: trade.expiration,
         strategy: trade.engine || trade.strategy || 'KAOS_STRATEGY', strategyVersion: trade.strategyVersion || null, direction: trade.direction,
         aiPrediction: trade.aiPrediction, aiConfidence: trade.aiConfidence, aiModelVersion: trade.aiModelVersion,
         entryPrice: trade.entryPrice, settlementPrice: trade.settlementPrice, outcome: trade.outcome,
-        featureVector: trade.featureVector, sampleId: trade.tradeId
+        featureVector: trade.featureVector, sampleId: trade.tradeId, decisionAt: trade.decisionAt, settledAt: trade.settledAt
       });
     } catch (_) {}
   }
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (!msg || typeof msg.type !== 'string' || msg.type.indexOf('KAOS_') !== 0 || msg.type === 'KAOS_BROKER_VAULT') return false; // broker vault has its own async listener below
+  if (!msg || typeof msg.type !== 'string' || msg.type.indexOf('KAOS_') !== 0 || ['KAOS_COINBASE_BOT','KAOS_BROKER_VAULT','KAOS_PO_ENSURE_ATTACH','KAOS_OPEN_APP_WINDOW','KAOS_KEEP_PO_ACTIVE','KAOS_RESIZE_APP','KAOS_EXPIRY_LABEL_BATCH','KAOS_EXPIRY_TRAIN_COLLECTED','KAOS_TRAIN_SPECIALISTS'].includes(msg.type)) return false; // Dedicated listeners own these response channels
   (async () => {
     try {
       switch (msg.type) {
         case 'KAOS_HEALTH': sendResponse({ ok:true, health:await self.KaosCloud.health() }); break;
+        case 'KAOS_SESSION_STATUS': sendResponse({ok:true,state:await self.KaosCloud.sessionStatus()}); break;
         case 'KAOS_STARTUP': sendResponse({ ok: true, state: await self.KaosCloud.startup() }); break;
         case 'KAOS_LOGIN': {
           await self.KaosCloud.login(msg.email, msg.password);
@@ -769,7 +879,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           catch (startupError) { state = {status:'OFFLINE', authenticated:true, detail:String(startupError?.message || startupError)}; }
           sendResponse({ ok: true, state }); break;
         }
-        case 'KAOS_LOGOUT': await self.KaosCloud.logout(); sendResponse({ ok: true }); break;
+        case 'KAOS_LOGOUT': await kaosStopBrokerIntegration(); await self.KaosCloud.logout(); sendResponse({ ok: true }); break;
+        case 'KAOS_GET_RESEARCH_MODEL': {
+          const response=await self.KaosCloud.authFetch('/ai/research/micro-reversion',{method:'GET',cache:'no-store'});
+          sendResponse(response.ok?{ok:true,data:await response.json()}:{ok:false,error:'Owner research model unavailable. Sign in as super admin and update the website backend.'});break;
+        }
+        case 'KAOS_GET_TRAINED_MODEL': {
+          const scope=typeof msg.scope==='string'&&/^pocket_option:binary:5s:(15|20|25|30|45|60)s:(real|paper)$/.test(msg.scope)?msg.scope:'pocket_option:binary:5s:20s:real';
+          const response = await self.KaosCloud.authFetch('/ai/training/bundle?scope='+encodeURIComponent(scope), {method:'GET'});
+          sendResponse(response.ok ? {ok:true,data:await response.json()} : {ok:false,error:'Model access is unavailable'}); break;
+        }
         case 'KAOS_GET_PLATFORMS': sendResponse({ ok: true, platforms: await self.KaosCloud.platforms() }); break;
         case 'KAOS_SELECT_PLATFORM':
           await self.KaosCloud.selectPlatform(msg.platform, msg.remember);
@@ -795,6 +914,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             await chrome.tabs.update(poTab.id, { active: true });
             if (poTab.windowId != null) await chrome.windows.update(poTab.windowId, { focused: true });
           }
+          // No page injection until the KAOS session, membership/device and
+          // selected broker are accepted by the server.
+          await kaosPermitBrokerIntegration();
+          const attached = await kaosWaitForPoAttached(poTab.id);
+          if (!attached.ok) throw new Error('Pocket Option charts could not attach: ' + attached.reason);
           await chrome.storage.local.set({ KAOSTargetTabId: poTab.id, KAOSTargetWindowId: poTab.windowId, kaosPoAttached: true });
           KAOS_FLOATING_WINDOW.targetTabId = poTab.id;
           KAOS_FLOATING_WINDOW.targetWindowId = poTab.windowId;
@@ -840,15 +964,15 @@ function kaosIsSupportedPoUrl(url){
   try{const h=new URL(url||'').hostname.toLowerCase();return h==='pocketoption.com'||h.endsWith('.pocketoption.com')||h==='platform58.po2.capital'||h==='p.finance'||h==='po.company'||h==='po1.capital'||h==='pocket-link22.co';}catch(_){return false;}
 }
 chrome.tabs.onUpdated.addListener((tabId,changeInfo,tab)=>{
-  if(tab&&kaosIsSupportedPoUrl(tab.url)&&(changeInfo.status==='complete'||changeInfo.url)) kaosEnsurePoAttached(tabId).catch(()=>{});
+  if(kaosAuthorizedPo&&tab&&kaosIsSupportedPoUrl(tab.url)&&(changeInfo.status==='complete'||changeInfo.url)) kaosEnsurePoAttached(tabId).catch(()=>{});
 });
 chrome.tabs.onActivated.addListener(async({tabId})=>{
-  try{const tab=await chrome.tabs.get(tabId);if(kaosIsSupportedPoUrl(tab.url))await kaosEnsurePoAttached(tabId);}catch(_){}
+  try{const tab=await chrome.tabs.get(tabId);if(kaosAuthorizedPo&&kaosIsSupportedPoUrl(tab.url))await kaosEnsurePoAttached(tabId);}catch(_){}
 });
 
 chrome.runtime.onMessage.addListener((msg,_sender,sendResponse)=>{
   if(msg?.type!=='KAOS_PO_ENSURE_ATTACH')return;
-  kaosEnsureAnyPoAttached().then(sendResponse).catch(e=>sendResponse({ok:false,error:String(e)}));
+  kaosEnsureAnyPoAttached(msg.tabId).then(sendResponse).catch(e=>sendResponse({ok:false,error:String(e)}));
   return true;
 });
 
@@ -869,7 +993,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   (async () => {
     try {
       const method = msg.method || 'GET';
-      if (!['GET','PUT','DELETE'].includes(method) || !['/broker-connections','/broker-connections/coinbase','/broker-connections/coinbase/status','/broker-connections/coinbase/accounts','/broker-connections/coinbase/products'].includes(msg.path)) throw Error('Invalid broker request');
+      if (!['GET','PUT','DELETE','POST'].includes(method) || !['/broker-selection','/broker-connections','/broker-connections/coinbase','/broker-connections/coinbase/status','/broker-connections/coinbase/accounts','/broker-connections/coinbase/products','/broker-connections/coinbase/oauth/config','/broker-connections/coinbase/oauth/start'].includes(msg.path)) throw Error('Invalid broker request');
+      if(method==='POST'){
+        const expected=new URL(chrome.runtime.getURL('popup.html')),actual=new URL(sender?.url||'about:blank');
+        if(msg.path!=='/broker-connections/coinbase/oauth/start'||(actual.protocol!==expected.protocol||actual.host!==expected.host||actual.pathname!==expected.pathname))throw Error('OAuth connection must start in the KAOS app window');
+      }
       const response = await self.KaosCloud.authFetch(msg.path, {method, headers:{'Content-Type':'application/json'}, ...(method==='PUT'?{body:JSON.stringify(msg.payload)}:{})});
       const data=await response.json();
       sendResponse({ok:response.ok,data});
@@ -877,3 +1005,42 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   })();
   return true;
 });
+
+// Coinbase session controls: only explicit Start/Stop, never a raw order proxy.
+chrome.runtime.onMessage.addListener((msg,sender,sendResponse)=>{
+  if(msg?.type!=='KAOS_COINBASE_BOT')return;
+  (async()=>{
+    try{
+      const expected=new URL(chrome.runtime.getURL('popup.html')),actual=new URL(sender?.url||'about:blank');
+      if(actual.protocol!==expected.protocol||actual.host!==expected.host||actual.pathname!==expected.pathname)throw Error('Coinbase controls require the KAOS app window');
+      const methods={status:'GET',snapshot:'GET',start:'POST',stop:'POST','browser-order':'POST'};
+      if(!Object.hasOwn(methods,msg.action))throw Error('Invalid Coinbase bot action');
+      if(msg.action==='start'&&botState.running)throw Error('Stop Pocket Option before starting Coinbase');
+      const r=await self.KaosCloud.authFetch('/coinbase-bot/'+msg.action,{method:methods[msg.action],headers:{'Content-Type':'application/json'},...(methods[msg.action]==='POST'?{body:JSON.stringify(msg.payload||{})}:{})});
+      if(!r.headers?.get('content-type')?.includes('application/json'))throw Error('KAOS API returned a web page; check hosting verification and routing');
+      const data=await r.json();sendResponse({ok:r.ok,data,httpStatus:r.status});
+    }catch(e){sendResponse({ok:false,error:String(e.message||e)});}
+  })();return true;
+});
+
+// Refresh only near a running trial's deadline, not on every market tick.
+async function kaosRefreshTrialLease(){
+ if(!botState.running||!kaosTrialExpiresAt||Date.parse(kaosTrialExpiresAt)-Date.now()>70000)return;
+ if(kaosTrialRefresh)return kaosTrialRefresh;
+ kaosTrialRefresh=(async()=>{
+  try{
+   const state=await self.KaosCloud.sessionStatus();
+   if(state.license?.authorized&&state.entitlements?.botAccess){
+    kaosTrialExpiresAt=self.KaosMembershipLease.fromLicense(state.license);
+    if(botState.config)botState.config.kaosTrialExpiresAt=kaosTrialExpiresAt;
+    if(botState.tabId)await chrome.tabs.sendMessage(botState.tabId,{type:'KAOS_MEMBERSHIP_LEASE',expiresAt:kaosTrialExpiresAt});
+   }
+  }catch(_){} // The content engine still enforces the original deadline offline.
+  if(!self.KaosMembershipLease.allowed(kaosTrialExpiresAt)){
+   v219Stop();botState.running=false;botState.config=null;
+   await chrome.storage.local.set({botRunning:false});
+   if(botState.tabId)await chrome.tabs.sendMessage(botState.tabId,{type:'STOP_BOT'}).catch(()=>{});
+  }
+ })().finally(()=>{kaosTrialRefresh=null;});
+ return kaosTrialRefresh;
+}

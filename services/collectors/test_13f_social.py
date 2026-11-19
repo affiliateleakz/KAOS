@@ -107,6 +107,10 @@ class NewCollectorTests(unittest.TestCase):
         self.assertIn('2 public author(s)',gme['summary'])
         self.assertNotIn('acceleration',gme['summary'].split('NOT')[0])
         self.assertEqual(len(obs),2)
+    def test_new_index_time_does_not_refresh_old_monitored_account_post(self):
+        item=post('one.bsky.social','old1','$GME',minutes=180)
+        item['post']['indexedAt']=NOW.isoformat()
+        self.assertEqual(observe_accounts({'one.bsky.social':[item]},['GME'],NOW),[])
     def test_social_failure_not_faked(self):
         with patch('bluesky_social.fetch_feed',side_effect=PermissionError('403')):
             result,issues=run_social(['test.bsky.social'],['GME'],now=NOW,pause_seconds=0)

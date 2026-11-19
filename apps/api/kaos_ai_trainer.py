@@ -215,7 +215,24 @@ def fit_lightgbm_rows(rows, target_horizon_ms, now_ms=0):
 def main(msg):
     if not isinstance(msg, dict) or msg.get('type') != 'train_xgboost':
         return {'ok': False, 'error': 'invalid training request'}
+    # Legacy model has one fixed 30-second target. Reject other horizons
+    # instead of silently training a mislabeled global classifier.
+    target = int(msg.get('targetHorizonMs', 30000))
+    if target != 30000:
+        return {'ok': False, 'error': 'legacy_trainer_requires_30s_horizon'}
     raw = msg.get('samples') or []
+    # This compatibility trainer must never mix explicit sources/timeframes.
+    # Mixed training belongs to the versioned multi-horizon research pipeline.
+    scopes = set()
+    for sample in raw:
+        if not isinstance(sample, dict):
+            continue
+        if sample.get('targetHorizonMs') not in (None, 30000):
+            return {'ok': False, 'error': 'sample_horizon_mismatch'}
+        scopes.add((str(sample.get('source', 'legacy')),
+                    str(sample.get('timeframe', 'legacy'))))
+    if len(scopes) > 1:
+        return {'ok': False, 'error': 'mixed_source_or_timeframe'}
     rows = []
     seen = set()
     rejected_feature_lengths = {}

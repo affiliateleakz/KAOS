@@ -1,0 +1,236 @@
+{
+  "crypto": {
+    "3600": {
+      "BTCUSDT": {
+        "segments": 8,
+        "requested_history_bars": 43808,
+        "ready_60": 43336,
+        "ready_250": 41944
+      },
+      "ETHUSDT": {
+        "segments": 8,
+        "requested_history_bars": 43808,
+        "ready_60": 43336,
+        "ready_250": 41944
+      },
+      "SOLUSDT": {
+        "segments": 8,
+        "requested_history_bars": 43808,
+        "ready_60": 43336,
+        "ready_250": 41944
+      },
+      "BNBUSDT": {
+        "segments": 8,
+        "requested_history_bars": 43808,
+        "ready_60": 43336,
+        "ready_250": 41944
+      },
+      "XRPUSDT": {
+        "segments": 8,
+        "requested_history_bars": 43808,
+        "ready_60": 43336,
+        "ready_250": 41944
+      },
+      "ADAUSDT": {
+        "segments": 8,
+        "requested_history_bars": 43808,
+        "ready_60": 43336,
+        "ready_250": 41944
+      }
+    },
+    "14400": {
+      "BTCUSDT": {
+        "segments": 7,
+        "requested_history_bars": 10916,
+        "ready_60": 10503,
+        "ready_250": 9289
+      },
+      "ETHUSDT": {
+        "segments": 7,
+        "requested_history_bars": 10916,
+        "ready_60": 10503,
+        "ready_250": 9289
+      },
+      "SOLUSDT": {
+        "segments": 7,
+        "requested_history_bars": 10916,
+        "ready_60": 10503,
+        "ready_250": 9289
+      },
+      "BNBUSDT": {
+        "segments": 7,
+        "requested_history_bars": 10916,
+        "ready_60": 10503,
+        "ready_250": 9289
+      },
+      "XRPUSDT": {
+        "segments": 7,
+        "requested_history_bars": 10916,
+        "ready_60": 10503,
+        "ready_250": 9289
+      },
+      "ADAUSDT": {
+        "segments": 7,
+        "requested_history_bars": 10916,
+        "ready_60": 10503,
+        "ready_250": 9289
+      }
+    }
+  },
+  "stocks": {
+    "3600": {
+      "SPY": {
+        "segments": 5,
+        "requested_history_bars": 3191,
+        "ready_60": 2896,
+        "ready_250": 2160
+      },
+      "QQQ": {
+        "segments": 5,
+        "requested_history_bars": 3192,
+        "ready_60": 2897,
+        "ready_250": 2160
+      },
+      "IWM": {
+        "segments": 5,
+        "requested_history_bars": 3191,
+        "ready_60": 2896,
+        "ready_250": 2160
+      },
+      "DIA": {
+        "segments": 5,
+        "requested_history_bars": 3191,
+        "ready_60": 2896,
+        "ready_250": 2160
+      },
+      "AAPL": {
+        "segments": 5,
+        "requested_history_bars": 3192,
+        "ready_60": 2897,
+        "ready_250": 2160
+      },
+      "MSFT": {
+        "segments": 5,
+        "requested_history_bars": 3192,
+        "ready_60": 2897,
+        "ready_250": 2160
+      },
+      "NVDA": {
+        "segments": 5,
+        "requested_history_bars": 3192,
+        "ready_60": 2897,
+        "ready_250": 2160
+      },
+      "TSLA": {
+        "segments": 5,
+        "requested_history_bars": 3192,
+        "ready_60": 2897,
+        "ready_250": 2160
+      }
+    },
+    "14400": {
+      "SPY": {
+        "segments": 3,
+        "requested_history_bars": 829,
+        "ready_60": 652,
+        "ready_250": 128
+      },
+      "QQQ": {
+        "segments": 3,
+        "requested_history_bars": 829,
+        "ready_60": 652,
+        "ready_250": 128
+      },
+      "IWM": {
+        "segments": 3,
+        "requested_history_bars": 829,
+        "ready_60": 652,
+        "ready_250": 128
+      },
+      "DIA": {
+        "segments": 3,
+        "requested_history_bars": 829,
+        "ready_60": 652,
+        "ready_250": 128
+      },
+      "AAPL": {
+        "segments": 3,
+        "requested_history_bars": 829,
+        "ready_60": 652,
+        "ready_250": 128
+      },
+      "MSFT": {
+        "segments": 3,
+        "requested_history_bars": 829,
+        "ready_60": 652,
+        "ready_250": 128
+      },
+      "NVDA": {
+        "segments": 3,
+        "requested_history_bars": 829,
+        "ready_60": 652,
+        "ready_250": 128
+      },
+      "TSLA": {
+        "segments": 3,
+        "requested_history_bars": 829,
+        "ready_60": 652,
+        "ready_250": 128
+      }
+    }
+  },
+  "forex": {
+    "3600": {
+      "EURUSD=X": {
+        "segments": 6,
+        "requested_history_bars": 11278,
+        "ready_60": 10924,
+        "ready_250": 9934
+      },
+      "GBPUSD=X": {
+        "segments": 6,
+        "requested_history_bars": 11274,
+        "ready_60": 10920,
+        "ready_250": 9930
+      },
+      "USDJPY=X": {
+        "segments": 7,
+        "requested_history_bars": 11210,
+        "ready_60": 10797,
+        "ready_250": 9618
+      },
+      "AUDUSD=X": {
+        "segments": 6,
+        "requested_history_bars": 11332,
+        "ready_60": 10978,
+        "ready_250": 9971
+      }
+    },
+    "14400": {
+      "EURUSD=X": {
+        "segments": 5,
+        "requested_history_bars": 2721,
+        "ready_60": 2426,
+        "ready_250": 1476
+      },
+      "GBPUSD=X": {
+        "segments": 5,
+        "requested_history_bars": 2721,
+        "ready_60": 2426,
+        "ready_250": 1476
+      },
+      "USDJPY=X": {
+        "segments": 6,
+        "requested_history_bars": 2721,
+        "ready_60": 2367,
+        "ready_250": 1329
+      },
+      "AUDUSD=X": {
+        "segments": 5,
+        "requested_history_bars": 2729,
+        "ready_60": 2434,
+        "ready_250": 1484
+      }
+    }
+  }
+}

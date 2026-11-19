@@ -1,0 +1,7 @@
+{
+  "selected": "xgb_15_0.6",
+  "eligible_candidates": 12,
+  "selection_rule": "validation minimum200 decided, two dates, two assets; positive pnl both dates; rank Wilson lower bound; if none eligible no final test; else freeze one best eligible candidate before final evaluation",
+  "trials": 42,
+  "frozen_before_final_evaluation": true
+}

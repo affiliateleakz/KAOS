@@ -1,0 +1,28 @@
+{
+  "coinbase_one_shot": {
+    "closedPaperTrades": 0,
+    "closedTradesWithCoverageIssues": 0,
+    "coverageGaps": 0,
+    "eligibleForPerformanceClaims": false,
+    "executionEnabled": false,
+    "identity": {
+      "config": "4h:breakout20:3ATR:7d:1pct_min_risk",
+      "engine_sha256": "f3733752f792529d00d638bcef34334a0b4f42cab1ff69c96947962ac3a9b1ac",
+      "fee_bps_per_side": 60.0,
+      "feed": "coinbase_public",
+      "mode": "forward_public_quote",
+      "slippage_bps_per_side": 2.0
+    },
+    "notPortfolioReturn": true,
+    "observations": 1,
+    "openPaperPositions": [],
+    "sumClosedRiskUnits": 0
+  },
+  "continuous_worker_deployed": false,
+  "live_orders_submitted": false,
+  "binance_attempt": {
+    "httpStatus": 451,
+    "observationsCommitted": 0
+  },
+  "offline_verification_tests": 30
+}

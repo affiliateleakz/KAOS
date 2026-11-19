@@ -1,0 +1,117 @@
+{
+  "base": {
+    "trades": 113,
+    "days": 80,
+    "weeks": 42,
+    "netR": 8.655753682592758,
+    "meanR": 0.07659959011144034,
+    "PF": 1.2063414081637336,
+    "asset_netR": {
+      "DOGEUSDT": -3.1964642355956974,
+      "LTCUSDT": 0.20984479387908733,
+      "LINKUSDT": 8.122973431635515,
+      "AVAXUSDT": 3.519399692673853
+    },
+    "lower_week_mean": -0.8038462853227782
+  },
+  "stress": {
+    "trades": 113,
+    "days": 80,
+    "weeks": 42,
+    "netR": 0.5392369819117229,
+    "meanR": 0.004772008689484273,
+    "PF": 1.0115473379906599,
+    "asset_netR": {
+      "DOGEUSDT": -4.038955955363383,
+      "LTCUSDT": -4.5224823473970694,
+      "LINKUSDT": 6.453255860347029,
+      "AVAXUSDT": 2.6474194243251437
+    },
+    "lower_week_mean": -0.7172844228553026
+  },
+  "benchmarks": {
+    "always_long": {
+      "trades": 5107,
+      "days": 597,
+      "weeks": 95,
+      "netR": -192.30136829407098,
+      "meanR": -0.03765446804270041,
+      "PF": 0.6651426396938978,
+      "asset_netR": {
+        "DOGEUSDT": -48.30119369233695,
+        "LTCUSDT": -54.42269090511778,
+        "LINKUSDT": -39.59508519152412,
+        "AVAXUSDT": -49.98239850509207
+      },
+      "lower_week_mean": -3.024686628936185
+    },
+    "trend_long": {
+      "trades": 1171,
+      "days": 305,
+      "weeks": 72,
+      "netR": -37.5055538283725,
+      "meanR": -0.03202865399519428,
+      "PF": 0.7987434032395123,
+      "asset_netR": {
+        "DOGEUSDT": -1.2809943304942137,
+        "LTCUSDT": -15.432451192965797,
+        "LINKUSDT": -10.006734784556954,
+        "AVAXUSDT": -10.78537352035553
+      },
+      "lower_week_mean": -1.3961703142547055
+    }
+  },
+  "diagnostic_gate_passed": false,
+  "executionEnabled": false,
+  "original_studies_passed": false,
+  "by_asset": {
+    "DOGEUSDT": {
+      "trades": 26,
+      "days": 26,
+      "weeks": 25,
+      "netR": -3.196464235595697,
+      "meanR": -0.12294093213829603,
+      "PF": 0.7518621466514084,
+      "asset_netR": {
+        "DOGEUSDT": -3.1964642355956974
+      },
+      "lower_week_mean": -0.5688919324291333
+    },
+    "LTCUSDT": {
+      "trades": 28,
+      "days": 28,
+      "weeks": 26,
+      "netR": 0.20984479387908755,
+      "meanR": 0.007494456924253127,
+      "PF": 1.022448972016899,
+      "asset_netR": {
+        "LTCUSDT": 0.20984479387908733
+      },
+      "lower_week_mean": -0.3140861033855615
+    },
+    "LINKUSDT": {
+      "trades": 34,
+      "days": 34,
+      "weeks": 29,
+      "netR": 8.122973431635515,
+      "meanR": 0.2389109832833975,
+      "PF": 1.6912268637886103,
+      "asset_netR": {
+        "LINKUSDT": 8.122973431635515
+      },
+      "lower_week_mean": -0.23010265431219287
+    },
+    "AVAXUSDT": {
+      "trades": 25,
+      "days": 25,
+      "weeks": 24,
+      "netR": 3.519399692673853,
+      "meanR": 0.14077598770695413,
+      "PF": 1.441706922835794,
+      "asset_netR": {
+        "AVAXUSDT": 3.519399692673853
+      },
+      "lower_week_mean": -0.2979001510181524
+    }
+  }
+}

@@ -38,7 +38,7 @@ class Entry:
     buyer_id: str
     level: int
     recipient_tier: str
-    rate_pct: int
+    rate_pct: float
     base_amount: Decimal
     amount: Decimal
     kind: str
@@ -64,6 +64,7 @@ class CommissionLedger:
     entries: list = field(default_factory=list)
     payments: dict = field(default_factory=dict)
     reversals: set = field(default_factory=set)
+    rates: dict | None = None
 
     def upline(self, buyer_id):
         if buyer_id not in self.members:
@@ -96,12 +97,12 @@ class CommissionLedger:
             return []
         created = []
         for level, aff in enumerate(self.upline(buyer_id), start=1):
-            rate = RATES[aff.tier][level - 1]
+            rate = Decimal(str((self.rates if self.rates is not None else RATES).get(aff.tier, (0,0,0))[level - 1]))
             if not rate:
                 continue
             entry = Entry(
                 entry_id=f"{event_id}:L{level}", event_id=event_id, affiliate_id=aff.id,
-                buyer_id=buyer_id, level=level, recipient_tier=aff.tier, rate_pct=rate,
+                buyer_id=buyer_id, level=level, recipient_tier=aff.tier, rate_pct=float(rate),
                 base_amount=base, amount=_money(base * rate / 100), kind=kind,
                 created_at=at, available_at=at + timedelta(days=self.hold_days))
             self.entries.append(entry)
@@ -130,7 +131,7 @@ class CommissionLedger:
                 entry_id=f"{reversal_id}:L{orig.level}", event_id=reversal_id,
                 affiliate_id=orig.affiliate_id, buyer_id=orig.buyer_id, level=orig.level,
                 recipient_tier=orig.recipient_tier, rate_pct=orig.rate_pct,
-                base_amount=-reverse, amount=-_money(reverse * orig.rate_pct / 100),
+                base_amount=-reverse, amount=-_money(reverse * Decimal(str(orig.rate_pct)) / 100),
                 kind=kind, created_at=at, available_at=at)
             self.entries.append(entry)
             created.append(entry)

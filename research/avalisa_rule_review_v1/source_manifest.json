@@ -1,0 +1,42 @@
+{
+  "overlayView.js": {
+    "sha256": "09ba2c5344034da4998a08b6038a71663fbf0f8ef0c651bd66d29c46a5f9cd33",
+    "bytes": 19911
+  },
+  "poDom.js": {
+    "sha256": "d0165b4a4a744623162aaaf93c691d7c30a9a7fa01d8065840f170b0aaea1c7c",
+    "bytes": 27637
+  },
+  "storage.js": {
+    "sha256": "6f42b514e15392ab20dbf809b308057f126ce06b150e4201d6ee19d42f4f16f7",
+    "bytes": 2081
+  },
+  "telemetry.js": {
+    "sha256": "31b75f473881e562d11c3d704976b10c60cb3fb6c61350db7e5cc0236f3de8df",
+    "bytes": 8357
+  },
+  "tradeResult.js": {
+    "sha256": "2fbe722c4e3302437de0359f398fd8c739d49c474c619a94faf5bcc13cc6b900",
+    "bytes": 14191
+  },
+  "popup.js": {
+    "sha256": "635366ca439265f5a385c60e1a11d7fc526c404a469651d0c673b1848dad85eb",
+    "bytes": 935
+  },
+  "signalEngine.js": {
+    "sha256": "ceb25f9036059af6a600021535f978f25fff6b4660df8e04f09d62bedd02f7cc",
+    "bytes": 9341
+  },
+  "state.js": {
+    "sha256": "c7de16225d5b4294e01bade148509a0d36007443fd18f2891bfe6cf11689c0be",
+    "bytes": 4408
+  },
+  "indicators.js": {
+    "sha256": "ca29fb420286ace07aa2852d34b5b8cf8a62b7f5e66000a5527d8eee67a1aa13",
+    "bytes": 3377
+  },
+  "content.js": {
+    "sha256": "927af41c86950179b23d5b394cfa06626759cae19f5df4be3541736b477a24b4",
+    "bytes": 111318
+  }
+}

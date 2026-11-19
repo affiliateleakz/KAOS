@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "purpose": "New bounded, distinct spot and binary strategies; research/paper only; no broker integration or live execution",
+  "crypto": {
+    "assets": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT"],
+    "fresh_asset_series": ["BNBUSDT", "XRPUSDT", "ADAUSDT"],
+    "data": "Checksum verified Binance monthly spot 1m January2025-October2026; complete UTC resampling; gap resets; no volume assumption",
+    "development": ["2025-01-01", "2026-01-01"],
+    "validation": ["2026-01-01", "2026-09-01"],
+    "confirmation": ["2026-09-01", "2026-11-01"],
+    "confirmation_scope": "Only newly collected BNB XRP ADA, and only the validation-selected global configuration. Existing BTC ETH SOL dates were already evaluated elsewhere. Correlated new assets are retrospective transfer evidence, not independent prospective proof.",
+    "families": ["breakout20", "pullback20", "trend_cross"],
+    "timeframes_seconds": [300, 900],
+    "target_risk_multiples": [1.5, 2.0],
+    "total_candidates": 12,
+    "rules": "Long-only. All require EMA50>EMA200 and close>EMA200. breakout20: close crosses above previous20-bar high. pullback20: previous low touches previous EMA20 and previous close<=EMA20, current close crosses above EMA20 with green body. trend_cross: EMA20 crosses above EMA50 with green body. Warmup250 closed requested candles; indicator state resets on gaps.",
+    "execution": "Decision after close; entry next observed minute open. Stop2ATR14 below observed entry; target1.5R/2R above. ATR is Wilder14. Max12 requested candles held. Check minute OHLC, gap through stop fills at open, adverse stop-first if both touched. Target fills at limit, never favorable gap-price improvement. No same-minute entry after exit; no overlaps per asset, flat original risk1unit per trade, no compounding/shared-equity claim. Exit before split/gap/end; reject trades lacking full holding horizon inside split and contiguous source.",
+    "costs": {"base_fee_bps_per_side":10,"base_slippage_bps_per_side":2,"stress_fee_bps_per_side":20,"stress_slippage_bps_per_side":4,"delay_stress_minutes":1},
+    "benchmarks": "Same execution, costs, ATR, exits and no-overlap rules for always-long and EMA200 trend-long entries for each timeframe/target. Buy-and-hold net period return also disclosed but is not risk matched.",
+    "selection": "Validation>=200trades,>=30activeUTCdays,profitfactor>=1.10,netR>0,positive netR in>=4of6assets,Bonferroni-adjusted lower day-cluster-bootstrap mean>0 using5000 resamples/12 candidates,positive combined delayed+high-cost stress netR, outperform both risk-matched benchmarks in mean netR/trade. Rank adjusted bootstrap lower then config ID. Freeze one choice before any confirmation evaluation; do not replace if final fails.",
+    "confirmation_gate": "Only selected config on new3assets;>=100trades,>=20activeUTCdays,PF>=1.10,positive 95% day-cluster-bootstrap lower mean,positive net in>=2assets,positive combined stress,meanR/trade above both risk-matched baselines. Otherwise no qualified model. No tuning after final."
+  },
+  "pocket_option": {
+    "source": "Existing user's complete5s OHLC archive; observed historically; no pristine or executable quote claim",
+    "families": ["breakout20", "pullback20", "range_reclaim"],
+    "timeframes_seconds": [60,300],
+    "expiry_candles": [1,3],
+    "total_candidates":12,
+    "rules": "EMA20/50, ATR14,60bar warmup. breakout20: closed break of prior20high/low alignedEMA20/50. pullback20: closed reclaim/cross ofEMA20 after prior wick touch alignedEMA20/50. range_reclaim: prior close outside SMA20 +/-2populationSD, current close back inside with reversal body and abs(EMA20-EMA50)<ATR14. Mirrored CALL/PUT. Exact next observed5s open, no overlaps, no gap/split crossing, ties refund, fixed1unit stake.",
+    "evaluation": ["2026-09-27", "2026-10-05 18:10:50"],
+    "reserved": "Do not evaluate previously reserved period after2026-10-05T18:10:50Z in this round. Even a promising historical candidate requires new prospective broker quotes/payouts over>=30days.",
+    "payouts": [0.7,0.8,0.9,0.92],
+    "stress": "Combined entry delayed5s AND adverse entry1bp; expiry follows actual entry; exactobserved settlement",
+    "historical_gate": ">=200decidedtrades,>=3days,Wilsonlower>55.56%,nominal binomialp<.05/12,adjusted lower daily-bootstrap mean80>0,positive combinedstress80,>=2profitableassets. Rank adjusted bootstrap lower. Historical pass is not live approval."
+  },
+  "prohibited_claims": ["guaranteed profit", "prospective/unseen market regime from correlated assets", "live-tested", "all broker portability", "trained AI model from deterministic rules"],
+  "deployment": "No production strategy changes, extension upload, live hosting changes or real orders. Save results and a paper-only causal signal interface."
+}

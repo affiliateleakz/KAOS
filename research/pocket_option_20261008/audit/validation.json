@@ -1,0 +1,1316 @@
+[
+  {
+    "candidate": "momentum_15",
+    "expiry": 15,
+    "trades": 3623,
+    "decided": 3559,
+    "wins": 1782,
+    "losses": 1777,
+    "ties": 64,
+    "win_rate": 0.500702444506884,
+    "wilson_lower_95": 0.4842834172199199,
+    "break_even_payout": 0.9971941638608305,
+    "pnl_at_payout": {
+      "0.7": -529.6,
+      "0.8": -351.4,
+      "0.9": -173.2
+    },
+    "days": 1,
+    "daily_pnl": {
+      "2026-10-05": -351.3999999999883
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9999999999768763,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "AEDCNY_otc": {
+        "wins": 586,
+        "losses": 609,
+        "pnl": -140.20000000000033
+      },
+      "AUDCHF_otc": {
+        "wins": 585,
+        "losses": 589,
+        "pnl": -121.00000000000101
+      },
+      "AUDUSD_otc": {
+        "wins": 611,
+        "losses": 579,
+        "pnl": -90.20000000000034
+      }
+    }
+  },
+  {
+    "candidate": "momentum_30",
+    "expiry": 30,
+    "trades": 2417,
+    "decided": 2392,
+    "wins": 1217,
+    "losses": 1175,
+    "ties": 25,
+    "win_rate": 0.5087792642140468,
+    "wilson_lower_95": 0.4887467497103695,
+    "break_even_payout": 0.9654889071487264,
+    "pnl_at_payout": {
+      "0.7": -323.1,
+      "0.8": -201.4,
+      "0.9": -79.7
+    },
+    "days": 1,
+    "daily_pnl": {
+      "2026-10-05": -201.39999999999702
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9999980096390212,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "AEDCNY_otc": {
+        "wins": 407,
+        "losses": 396,
+        "pnl": -70.40000000000092
+      },
+      "AUDCHF_otc": {
+        "wins": 395,
+        "losses": 395,
+        "pnl": -79.00000000000054
+      },
+      "AUDUSD_otc": {
+        "wins": 415,
+        "losses": 384,
+        "pnl": -52.00000000000024
+      }
+    }
+  },
+  {
+    "candidate": "momentum_60",
+    "expiry": 60,
+    "trades": 1460,
+    "decided": 1446,
+    "wins": 715,
+    "losses": 731,
+    "ties": 14,
+    "win_rate": 0.49446749654218536,
+    "wilson_lower_95": 0.46874626061528635,
+    "break_even_payout": 1.0223776223776224,
+    "pnl_at_payout": {
+      "0.7": -230.5,
+      "0.8": -159.0,
+      "0.9": -87.5
+    },
+    "days": 1,
+    "daily_pnl": {
+      "2026-10-05": -158.9999999999984
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9999986101413177,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "AEDCNY_otc": {
+        "wins": 251,
+        "losses": 236,
+        "pnl": -35.19999999999992
+      },
+      "AUDCHF_otc": {
+        "wins": 236,
+        "losses": 247,
+        "pnl": -58.20000000000027
+      },
+      "AUDUSD_otc": {
+        "wins": 228,
+        "losses": 248,
+        "pnl": -65.60000000000024
+      }
+    }
+  },
+  {
+    "candidate": "pullback_15",
+    "expiry": 15,
+    "trades": 1566,
+    "decided": 1538,
+    "wins": 776,
+    "losses": 762,
+    "ties": 28,
+    "win_rate": 0.5045513654096229,
+    "wilson_lower_95": 0.4795832628023842,
+    "break_even_payout": 0.9819587628865979,
+    "pnl_at_payout": {
+      "0.7": -218.8,
+      "0.8": -141.2,
+      "0.9": -63.6
+    },
+    "days": 1,
+    "daily_pnl": {
+      "2026-10-05": -141.20000000000024
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9999732623596554,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "AUDCHF_otc": {
+        "wins": 256,
+        "losses": 257,
+        "pnl": -52.20000000000034
+      },
+      "AUDUSD_otc": {
+        "wins": 245,
+        "losses": 242,
+        "pnl": -46.00000000000006
+      },
+      "AEDCNY_otc": {
+        "wins": 275,
+        "losses": 263,
+        "pnl": -43.000000000000185
+      }
+    }
+  },
+  {
+    "candidate": "pullback_30",
+    "expiry": 30,
+    "trades": 1270,
+    "decided": 1251,
+    "wins": 631,
+    "losses": 620,
+    "ties": 19,
+    "win_rate": 0.504396482813749,
+    "wilson_lower_95": 0.4767190292093648,
+    "break_even_payout": 0.9825673534072901,
+    "pnl_at_payout": {
+      "0.7": -178.3,
+      "0.8": -115.2,
+      "0.9": -52.1
+    },
+    "days": 1,
+    "daily_pnl": {
+      "2026-10-05": -115.20000000000142
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9998738510285974,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "AUDCHF_otc": {
+        "wins": 206,
+        "losses": 218,
+        "pnl": -53.2000000000003
+      },
+      "AUDUSD_otc": {
+        "wins": 205,
+        "losses": 193,
+        "pnl": -28.999999999999908
+      },
+      "AEDCNY_otc": {
+        "wins": 220,
+        "losses": 209,
+        "pnl": -32.9999999999999
+      }
+    }
+  },
+  {
+    "candidate": "pullback_60",
+    "expiry": 60,
+    "trades": 942,
+    "decided": 928,
+    "wins": 462,
+    "losses": 466,
+    "ties": 14,
+    "win_rate": 0.4978448275862069,
+    "wilson_lower_95": 0.4657503139137312,
+    "break_even_payout": 1.0086580086580086,
+    "pnl_at_payout": {
+      "0.7": -142.6,
+      "0.8": -96.4,
+      "0.9": -50.2
+    },
+    "days": 1,
+    "daily_pnl": {
+      "2026-10-05": -96.40000000000113
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.999814926383995,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "AUDCHF_otc": {
+        "wins": 149,
+        "losses": 161,
+        "pnl": -41.8000000000001
+      },
+      "AUDUSD_otc": {
+        "wins": 152,
+        "losses": 148,
+        "pnl": -26.39999999999996
+      },
+      "AEDCNY_otc": {
+        "wins": 161,
+        "losses": 157,
+        "pnl": -28.199999999999893
+      }
+    }
+  },
+  {
+    "candidate": "breakout_15",
+    "expiry": 15,
+    "trades": 2060,
+    "decided": 2025,
+    "wins": 1023,
+    "losses": 1002,
+    "ties": 35,
+    "win_rate": 0.5051851851851852,
+    "wilson_lower_95": 0.4834193848550087,
+    "break_even_payout": 0.9794721407624634,
+    "pnl_at_payout": {
+      "0.7": -285.9,
+      "0.8": -183.6,
+      "0.9": -81.3
+    },
+    "days": 1,
+    "daily_pnl": {
+      "2026-10-05": -183.59999999999775
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9999975755973908,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "AUDCHF_otc": {
+        "wins": 345,
+        "losses": 343,
+        "pnl": -67.00000000000028
+      },
+      "AEDCNY_otc": {
+        "wins": 365,
+        "losses": 322,
+        "pnl": -30.00000000000002
+      },
+      "AUDUSD_otc": {
+        "wins": 313,
+        "losses": 337,
+        "pnl": -86.60000000000036
+      }
+    }
+  },
+  {
+    "candidate": "breakout_30",
+    "expiry": 30,
+    "trades": 1544,
+    "decided": 1528,
+    "wins": 784,
+    "losses": 744,
+    "ties": 16,
+    "win_rate": 0.5130890052356021,
+    "wilson_lower_95": 0.48802561480771567,
+    "break_even_payout": 0.9489795918367347,
+    "pnl_at_payout": {
+      "0.7": -195.2,
+      "0.8": -116.8,
+      "0.9": -38.4
+    },
+    "days": 1,
+    "daily_pnl": {
+      "2026-10-05": -116.80000000000072
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9996082038973854,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "AUDCHF_otc": {
+        "wins": 267,
+        "losses": 244,
+        "pnl": -30.399999999999928
+      },
+      "AEDCNY_otc": {
+        "wins": 270,
+        "losses": 247,
+        "pnl": -30.999999999999936
+      },
+      "AUDUSD_otc": {
+        "wins": 247,
+        "losses": 253,
+        "pnl": -55.40000000000022
+      }
+    }
+  },
+  {
+    "candidate": "breakout_60",
+    "expiry": 60,
+    "trades": 1121,
+    "decided": 1117,
+    "wins": 546,
+    "losses": 571,
+    "ties": 4,
+    "win_rate": 0.4888093106535363,
+    "wilson_lower_95": 0.45958286821538563,
+    "break_even_payout": 1.0457875457875458,
+    "pnl_at_payout": {
+      "0.7": -188.8,
+      "0.8": -134.2,
+      "0.9": -79.6
+    },
+    "days": 1,
+    "daily_pnl": {
+      "2026-10-05": -134.2000000000005
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9999966724993282,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "AUDCHF_otc": {
+        "wins": 187,
+        "losses": 181,
+        "pnl": -31.399999999999952
+      },
+      "AEDCNY_otc": {
+        "wins": 185,
+        "losses": 198,
+        "pnl": -50.0000000000001
+      },
+      "AUDUSD_otc": {
+        "wins": 174,
+        "losses": 192,
+        "pnl": -52.800000000000125
+      }
+    }
+  },
+  {
+    "candidate": "fade1.5_15",
+    "expiry": 15,
+    "trades": 1230,
+    "decided": 1216,
+    "wins": 595,
+    "losses": 621,
+    "ties": 14,
+    "win_rate": 0.48930921052631576,
+    "wilson_lower_95": 0.4612901330866141,
+    "break_even_payout": 1.0436974789915967,
+    "pnl_at_payout": {
+      "0.7": -204.5,
+      "0.8": -145.0,
+      "0.9": -85.5
+    },
+    "days": 1,
+    "daily_pnl": {
+      "2026-10-05": -145.00000000000023
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9999984366363889,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "AUDUSD_otc": {
+        "wins": 201,
+        "losses": 180,
+        "pnl": -19.199999999999957
+      },
+      "AEDCNY_otc": {
+        "wins": 203,
+        "losses": 234,
+        "pnl": -71.60000000000028
+      },
+      "AUDCHF_otc": {
+        "wins": 191,
+        "losses": 207,
+        "pnl": -54.20000000000029
+      }
+    }
+  },
+  {
+    "candidate": "fade1.5_30",
+    "expiry": 30,
+    "trades": 1020,
+    "decided": 1012,
+    "wins": 490,
+    "losses": 522,
+    "ties": 8,
+    "win_rate": 0.4841897233201581,
+    "wilson_lower_95": 0.45351709888887887,
+    "break_even_payout": 1.0653061224489795,
+    "pnl_at_payout": {
+      "0.7": -179.0,
+      "0.8": -130.0,
+      "0.9": -81.0
+    },
+    "days": 1,
+    "daily_pnl": {
+      "2026-10-05": -130.0000000000001
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9999977260750735,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "AUDUSD_otc": {
+        "wins": 151,
+        "losses": 167,
+        "pnl": -46.20000000000018
+      },
+      "AEDCNY_otc": {
+        "wins": 158,
+        "losses": 198,
+        "pnl": -71.6000000000002
+      },
+      "AUDCHF_otc": {
+        "wins": 181,
+        "losses": 157,
+        "pnl": -12.199999999999921
+      }
+    }
+  },
+  {
+    "candidate": "fade1.5_60",
+    "expiry": 60,
+    "trades": 827,
+    "decided": 819,
+    "wins": 409,
+    "losses": 410,
+    "ties": 8,
+    "win_rate": 0.4993894993894994,
+    "wilson_lower_95": 0.4652284345698347,
+    "break_even_payout": 1.0024449877750612,
+    "pnl_at_payout": {
+      "0.7": -123.7,
+      "0.8": -82.8,
+      "0.9": -41.9
+    },
+    "days": 1,
+    "daily_pnl": {
+      "2026-10-05": -82.80000000000061
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9994441198033585,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "AUDUSD_otc": {
+        "wins": 132,
+        "losses": 123,
+        "pnl": -17.399999999999952
+      },
+      "AEDCNY_otc": {
+        "wins": 140,
+        "losses": 146,
+        "pnl": -33.999999999999915
+      },
+      "AUDCHF_otc": {
+        "wins": 137,
+        "losses": 141,
+        "pnl": -31.399999999999952
+      }
+    }
+  },
+  {
+    "candidate": "fade2.0_15",
+    "expiry": 15,
+    "trades": 350,
+    "decided": 346,
+    "wins": 173,
+    "losses": 173,
+    "ties": 4,
+    "win_rate": 0.5,
+    "wilson_lower_95": 0.447604938989605,
+    "break_even_payout": 1.0,
+    "pnl_at_payout": {
+      "0.7": -51.9,
+      "0.8": -34.6,
+      "0.9": -17.3
+    },
+    "days": 1,
+    "daily_pnl": {
+      "2026-10-05": -34.599999999999895
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9833525778078293,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "AUDUSD_otc": {
+        "wins": 62,
+        "losses": 53,
+        "pnl": -3.400000000000002
+      },
+      "AEDCNY_otc": {
+        "wins": 51,
+        "losses": 70,
+        "pnl": -29.199999999999967
+      },
+      "AUDCHF_otc": {
+        "wins": 60,
+        "losses": 50,
+        "pnl": -1.9999999999999811
+      }
+    }
+  },
+  {
+    "candidate": "fade2.0_30",
+    "expiry": 30,
+    "trades": 337,
+    "decided": 335,
+    "wins": 172,
+    "losses": 163,
+    "ties": 2,
+    "win_rate": 0.5134328358208955,
+    "wilson_lower_95": 0.46006080688255413,
+    "break_even_payout": 0.9476744186046512,
+    "pnl_at_payout": {
+      "0.7": -42.6,
+      "0.8": -25.4,
+      "0.9": -8.2
+    },
+    "days": 1,
+    "daily_pnl": {
+      "2026-10-05": -25.399999999999913
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9456389541149588,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "AUDUSD_otc": {
+        "wins": 58,
+        "losses": 54,
+        "pnl": -7.600000000000006
+      },
+      "AEDCNY_otc": {
+        "wins": 51,
+        "losses": 67,
+        "pnl": -26.19999999999998
+      },
+      "AUDCHF_otc": {
+        "wins": 63,
+        "losses": 42,
+        "pnl": 8.399999999999997
+      }
+    }
+  },
+  {
+    "candidate": "fade2.0_60",
+    "expiry": 60,
+    "trades": 326,
+    "decided": 324,
+    "wins": 172,
+    "losses": 152,
+    "ties": 2,
+    "win_rate": 0.5308641975308642,
+    "wilson_lower_95": 0.4764800226174959,
+    "break_even_payout": 0.8837209302325582,
+    "pnl_at_payout": {
+      "0.7": -31.6,
+      "0.8": -14.4,
+      "0.9": 2.8
+    },
+    "days": 1,
+    "daily_pnl": {
+      "2026-10-05": -14.399999999999991
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.8290738161020855,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "AUDUSD_otc": {
+        "wins": 59,
+        "losses": 52,
+        "pnl": -4.799999999999999
+      },
+      "AEDCNY_otc": {
+        "wins": 52,
+        "losses": 59,
+        "pnl": -17.39999999999998
+      },
+      "AUDCHF_otc": {
+        "wins": 61,
+        "losses": 41,
+        "pnl": 7.80000000000001
+      }
+    }
+  },
+  {
+    "candidate": "fade2.5_15",
+    "expiry": 15,
+    "trades": 30,
+    "decided": 30,
+    "wins": 12,
+    "losses": 18,
+    "ties": 0,
+    "win_rate": 0.4,
+    "wilson_lower_95": 0.24590394326083398,
+    "break_even_payout": 1.5,
+    "pnl_at_payout": {
+      "0.7": -9.6,
+      "0.8": -8.4,
+      "0.9": -7.2
+    },
+    "days": 1,
+    "daily_pnl": {
+      "2026-10-05": -8.400000000000002
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9709063985403396,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "AUDUSD_otc": {
+        "wins": 6,
+        "losses": 5,
+        "pnl": -0.19999999999999973
+      },
+      "AUDCHF_otc": {
+        "wins": 3,
+        "losses": 7,
+        "pnl": -4.6000000000000005
+      },
+      "AEDCNY_otc": {
+        "wins": 3,
+        "losses": 6,
+        "pnl": -3.6000000000000005
+      }
+    }
+  },
+  {
+    "candidate": "fade2.5_30",
+    "expiry": 30,
+    "trades": 30,
+    "decided": 30,
+    "wins": 13,
+    "losses": 17,
+    "ties": 0,
+    "win_rate": 0.43333333333333335,
+    "wilson_lower_95": 0.27377237430615114,
+    "break_even_payout": 1.3076923076923077,
+    "pnl_at_payout": {
+      "0.7": -7.9,
+      "0.8": -6.6,
+      "0.9": -5.3
+    },
+    "days": 1,
+    "daily_pnl": {
+      "2026-10-05": -6.600000000000001
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9366748375874513,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "AUDUSD_otc": {
+        "wins": 4,
+        "losses": 7,
+        "pnl": -3.8
+      },
+      "AUDCHF_otc": {
+        "wins": 3,
+        "losses": 7,
+        "pnl": -4.6000000000000005
+      },
+      "AEDCNY_otc": {
+        "wins": 6,
+        "losses": 3,
+        "pnl": 1.7999999999999998
+      }
+    }
+  },
+  {
+    "candidate": "fade2.5_60",
+    "expiry": 60,
+    "trades": 30,
+    "decided": 30,
+    "wins": 16,
+    "losses": 14,
+    "ties": 0,
+    "win_rate": 0.5333333333333333,
+    "wilson_lower_95": 0.36142013281525043,
+    "break_even_payout": 0.875,
+    "pnl_at_payout": {
+      "0.7": -2.8,
+      "0.8": -1.2,
+      "0.9": 0.4
+    },
+    "days": 1,
+    "daily_pnl": {
+      "2026-10-05": -1.2
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.6675950195202764,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "AUDUSD_otc": {
+        "wins": 6,
+        "losses": 5,
+        "pnl": -0.19999999999999996
+      },
+      "AUDCHF_otc": {
+        "wins": 4,
+        "losses": 6,
+        "pnl": -2.8
+      },
+      "AEDCNY_otc": {
+        "wins": 6,
+        "losses": 3,
+        "pnl": 1.7999999999999998
+      }
+    }
+  },
+  {
+    "candidate": "streak3_15",
+    "expiry": 15,
+    "trades": 3061,
+    "decided": 3022,
+    "wins": 1489,
+    "losses": 1533,
+    "ties": 39,
+    "win_rate": 0.4927200529450695,
+    "wilson_lower_95": 0.47491547793424393,
+    "break_even_payout": 1.0295500335795835,
+    "pnl_at_payout": {
+      "0.7": -490.7,
+      "0.8": -341.8,
+      "0.9": -192.9
+    },
+    "days": 1,
+    "daily_pnl": {
+      "2026-10-05": -341.79999999998813
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9999999999981327,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "AEDCNY_otc": {
+        "wins": 515,
+        "losses": 541,
+        "pnl": -129.0000000000009
+      },
+      "AUDUSD_otc": {
+        "wins": 465,
+        "losses": 465,
+        "pnl": -93.00000000000078
+      },
+      "AUDCHF_otc": {
+        "wins": 509,
+        "losses": 527,
+        "pnl": -119.80000000000115
+      }
+    }
+  },
+  {
+    "candidate": "streak3_30",
+    "expiry": 30,
+    "trades": 2205,
+    "decided": 2176,
+    "wins": 1086,
+    "losses": 1090,
+    "ties": 29,
+    "win_rate": 0.4990808823529412,
+    "wilson_lower_95": 0.4780924810474051,
+    "break_even_payout": 1.003683241252302,
+    "pnl_at_payout": {
+      "0.7": -329.8,
+      "0.8": -221.2,
+      "0.9": -112.6
+    },
+    "days": 1,
+    "daily_pnl": {
+      "2026-10-05": -221.1999999999942
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9999999442970292,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "AEDCNY_otc": {
+        "wins": 370,
+        "losses": 379,
+        "pnl": -83.0000000000007
+      },
+      "AUDUSD_otc": {
+        "wins": 338,
+        "losses": 351,
+        "pnl": -80.60000000000053
+      },
+      "AUDCHF_otc": {
+        "wins": 378,
+        "losses": 360,
+        "pnl": -57.60000000000073
+      }
+    }
+  },
+  {
+    "candidate": "streak3_60",
+    "expiry": 60,
+    "trades": 1398,
+    "decided": 1390,
+    "wins": 709,
+    "losses": 681,
+    "ties": 8,
+    "win_rate": 0.5100719424460431,
+    "wilson_lower_95": 0.483800095458128,
+    "break_even_payout": 0.9605077574047954,
+    "pnl_at_payout": {
+      "0.7": -184.7,
+      "0.8": -113.8,
+      "0.9": -42.9
+    },
+    "days": 1,
+    "daily_pnl": {
+      "2026-10-05": -113.80000000000152
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9996994154819562,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "AEDCNY_otc": {
+        "wins": 246,
+        "losses": 225,
+        "pnl": -28.19999999999987
+      },
+      "AUDUSD_otc": {
+        "wins": 229,
+        "losses": 217,
+        "pnl": -33.80000000000014
+      },
+      "AUDCHF_otc": {
+        "wins": 234,
+        "losses": 239,
+        "pnl": -51.800000000000246
+      }
+    }
+  },
+  {
+    "candidate": "streak4_15",
+    "expiry": 15,
+    "trades": 1508,
+    "decided": 1483,
+    "wins": 756,
+    "losses": 727,
+    "ties": 25,
+    "win_rate": 0.5097774780849629,
+    "wilson_lower_95": 0.48434185170224464,
+    "break_even_payout": 0.9616402116402116,
+    "pnl_at_payout": {
+      "0.7": -197.8,
+      "0.8": -122.2,
+      "0.9": -46.6
+    },
+    "days": 1,
+    "daily_pnl": {
+      "2026-10-05": -122.20000000000198
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9998180232186591,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "AEDCNY_otc": {
+        "wins": 254,
+        "losses": 262,
+        "pnl": -58.8000000000002
+      },
+      "AUDUSD_otc": {
+        "wins": 233,
+        "losses": 236,
+        "pnl": -49.60000000000021
+      },
+      "AUDCHF_otc": {
+        "wins": 269,
+        "losses": 229,
+        "pnl": -13.799999999999809
+      }
+    }
+  },
+  {
+    "candidate": "streak4_30",
+    "expiry": 30,
+    "trades": 1273,
+    "decided": 1263,
+    "wins": 630,
+    "losses": 633,
+    "ties": 10,
+    "win_rate": 0.498812351543943,
+    "wilson_lower_95": 0.4712823087842905,
+    "break_even_payout": 1.0047619047619047,
+    "pnl_at_payout": {
+      "0.7": -192.0,
+      "0.8": -129.0,
+      "0.9": -66.0
+    },
+    "days": 1,
+    "daily_pnl": {
+      "2026-10-05": -129.0000000000015
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9999769393299829,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "AEDCNY_otc": {
+        "wins": 204,
+        "losses": 228,
+        "pnl": -64.80000000000038
+      },
+      "AUDUSD_otc": {
+        "wins": 189,
+        "losses": 208,
+        "pnl": -56.800000000000296
+      },
+      "AUDCHF_otc": {
+        "wins": 237,
+        "losses": 197,
+        "pnl": -7.3999999999998485
+      }
+    }
+  },
+  {
+    "candidate": "streak4_60",
+    "expiry": 60,
+    "trades": 946,
+    "decided": 944,
+    "wins": 467,
+    "losses": 477,
+    "ties": 2,
+    "win_rate": 0.4947033898305085,
+    "wilson_lower_95": 0.4628950560237633,
+    "break_even_payout": 1.0214132762312633,
+    "pnl_at_payout": {
+      "0.7": -150.1,
+      "0.8": -103.4,
+      "0.9": -56.7
+    },
+    "days": 1,
+    "daily_pnl": {
+      "2026-10-05": -103.40000000000092
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9999227373337631,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "AEDCNY_otc": {
+        "wins": 152,
+        "losses": 164,
+        "pnl": -42.400000000000226
+      },
+      "AUDUSD_otc": {
+        "wins": 155,
+        "losses": 153,
+        "pnl": -28.999999999999936
+      },
+      "AUDCHF_otc": {
+        "wins": 160,
+        "losses": 160,
+        "pnl": -31.999999999999908
+      }
+    }
+  },
+  {
+    "candidate": "streak5_15",
+    "expiry": 15,
+    "trades": 752,
+    "decided": 745,
+    "wins": 402,
+    "losses": 343,
+    "ties": 7,
+    "win_rate": 0.5395973154362416,
+    "wilson_lower_95": 0.5036938732928188,
+    "break_even_payout": 0.8532338308457711,
+    "pnl_at_payout": {
+      "0.7": -61.6,
+      "0.8": -21.4,
+      "0.9": 18.8
+    },
+    "days": 1,
+    "daily_pnl": {
+      "2026-10-05": -21.399999999999853
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.8195509310811542,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "AUDUSD_otc": {
+        "wins": 117,
+        "losses": 122,
+        "pnl": -28.399999999999956
+      },
+      "AUDCHF_otc": {
+        "wins": 131,
+        "losses": 106,
+        "pnl": -1.2000000000000106
+      },
+      "AEDCNY_otc": {
+        "wins": 154,
+        "losses": 115,
+        "pnl": 8.200000000000092
+      }
+    }
+  },
+  {
+    "candidate": "streak5_30",
+    "expiry": 30,
+    "trades": 669,
+    "decided": 664,
+    "wins": 340,
+    "losses": 324,
+    "ties": 5,
+    "win_rate": 0.5120481927710844,
+    "wilson_lower_95": 0.4740680012633196,
+    "break_even_payout": 0.9529411764705882,
+    "pnl_at_payout": {
+      "0.7": -86.0,
+      "0.8": -52.0,
+      "0.9": -18.0
+    },
+    "days": 1,
+    "daily_pnl": {
+      "2026-10-05": -52.00000000000027
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9889987011076324,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "AUDUSD_otc": {
+        "wins": 98,
+        "losses": 113,
+        "pnl": -34.599999999999966
+      },
+      "AUDCHF_otc": {
+        "wins": 114,
+        "losses": 101,
+        "pnl": -9.799999999999972
+      },
+      "AEDCNY_otc": {
+        "wins": 128,
+        "losses": 110,
+        "pnl": -7.600000000000006
+      }
+    }
+  },
+  {
+    "candidate": "streak5_60",
+    "expiry": 60,
+    "trades": 571,
+    "decided": 566,
+    "wins": 284,
+    "losses": 282,
+    "ties": 5,
+    "win_rate": 0.5017667844522968,
+    "wilson_lower_95": 0.4607017405374284,
+    "break_even_payout": 0.9929577464788732,
+    "pnl_at_payout": {
+      "0.7": -83.2,
+      "0.8": -54.8,
+      "0.9": -26.4
+    },
+    "days": 1,
+    "daily_pnl": {
+      "2026-10-05": -54.800000000000296
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9954825724550003,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "AUDUSD_otc": {
+        "wins": 82,
+        "losses": 92,
+        "pnl": -26.399999999999963
+      },
+      "AUDCHF_otc": {
+        "wins": 97,
+        "losses": 91,
+        "pnl": -13.399999999999995
+      },
+      "AEDCNY_otc": {
+        "wins": 105,
+        "losses": 99,
+        "pnl": -14.999999999999954
+      }
+    }
+  },
+  {
+    "candidate": "xgb_15_0.6",
+    "expiry": 15,
+    "trades": 0,
+    "decided": 0,
+    "wins": 0,
+    "losses": 0,
+    "ties": 0,
+    "win_rate": null,
+    "wilson_lower_95": 0.0,
+    "break_even_payout": null,
+    "pnl_at_payout": {
+      "0.7": 0.0,
+      "0.8": 0.0,
+      "0.9": 0.0
+    },
+    "days": 0,
+    "daily_pnl": {},
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 1.0,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {}
+  },
+  {
+    "candidate": "xgb_15_0.65",
+    "expiry": 15,
+    "trades": 0,
+    "decided": 0,
+    "wins": 0,
+    "losses": 0,
+    "ties": 0,
+    "win_rate": null,
+    "wilson_lower_95": 0.0,
+    "break_even_payout": null,
+    "pnl_at_payout": {
+      "0.7": 0.0,
+      "0.8": 0.0,
+      "0.9": 0.0
+    },
+    "days": 0,
+    "daily_pnl": {},
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 1.0,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {}
+  },
+  {
+    "candidate": "xgb_15_0.7",
+    "expiry": 15,
+    "trades": 0,
+    "decided": 0,
+    "wins": 0,
+    "losses": 0,
+    "ties": 0,
+    "win_rate": null,
+    "wilson_lower_95": 0.0,
+    "break_even_payout": null,
+    "pnl_at_payout": {
+      "0.7": 0.0,
+      "0.8": 0.0,
+      "0.9": 0.0
+    },
+    "days": 0,
+    "daily_pnl": {},
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 1.0,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {}
+  },
+  {
+    "candidate": "xgb_30_0.6",
+    "expiry": 30,
+    "trades": 0,
+    "decided": 0,
+    "wins": 0,
+    "losses": 0,
+    "ties": 0,
+    "win_rate": null,
+    "wilson_lower_95": 0.0,
+    "break_even_payout": null,
+    "pnl_at_payout": {
+      "0.7": 0.0,
+      "0.8": 0.0,
+      "0.9": 0.0
+    },
+    "days": 0,
+    "daily_pnl": {},
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 1.0,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {}
+  },
+  {
+    "candidate": "xgb_30_0.65",
+    "expiry": 30,
+    "trades": 0,
+    "decided": 0,
+    "wins": 0,
+    "losses": 0,
+    "ties": 0,
+    "win_rate": null,
+    "wilson_lower_95": 0.0,
+    "break_even_payout": null,
+    "pnl_at_payout": {
+      "0.7": 0.0,
+      "0.8": 0.0,
+      "0.9": 0.0
+    },
+    "days": 0,
+    "daily_pnl": {},
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 1.0,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {}
+  },
+  {
+    "candidate": "xgb_30_0.7",
+    "expiry": 30,
+    "trades": 0,
+    "decided": 0,
+    "wins": 0,
+    "losses": 0,
+    "ties": 0,
+    "win_rate": null,
+    "wilson_lower_95": 0.0,
+    "break_even_payout": null,
+    "pnl_at_payout": {
+      "0.7": 0.0,
+      "0.8": 0.0,
+      "0.9": 0.0
+    },
+    "days": 0,
+    "daily_pnl": {},
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 1.0,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {}
+  },
+  {
+    "candidate": "xgb_60_0.6",
+    "expiry": 60,
+    "trades": 0,
+    "decided": 0,
+    "wins": 0,
+    "losses": 0,
+    "ties": 0,
+    "win_rate": null,
+    "wilson_lower_95": 0.0,
+    "break_even_payout": null,
+    "pnl_at_payout": {
+      "0.7": 0.0,
+      "0.8": 0.0,
+      "0.9": 0.0
+    },
+    "days": 0,
+    "daily_pnl": {},
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 1.0,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {}
+  },
+  {
+    "candidate": "xgb_60_0.65",
+    "expiry": 60,
+    "trades": 0,
+    "decided": 0,
+    "wins": 0,
+    "losses": 0,
+    "ties": 0,
+    "win_rate": null,
+    "wilson_lower_95": 0.0,
+    "break_even_payout": null,
+    "pnl_at_payout": {
+      "0.7": 0.0,
+      "0.8": 0.0,
+      "0.9": 0.0
+    },
+    "days": 0,
+    "daily_pnl": {},
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 1.0,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {}
+  },
+  {
+    "candidate": "xgb_60_0.7",
+    "expiry": 60,
+    "trades": 0,
+    "decided": 0,
+    "wins": 0,
+    "losses": 0,
+    "ties": 0,
+    "win_rate": null,
+    "wilson_lower_95": 0.0,
+    "break_even_payout": null,
+    "pnl_at_payout": {
+      "0.7": 0.0,
+      "0.8": 0.0,
+      "0.9": 0.0
+    },
+    "days": 0,
+    "daily_pnl": {},
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 1.0,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {}
+  }
+]

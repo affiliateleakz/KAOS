@@ -1,0 +1,16 @@
+{
+  "balanced_sample_actual_win_rate": 0.5,
+  "source_bootstrap_interval": [
+    1.0,
+    1.0
+  ],
+  "corrected_iid_bootstrap_interval": [
+    0.3,
+    0.75
+  ],
+  "wrong_test_atr": 1.0,
+  "aligned_test_atr": 10.0,
+  "wrong_outcome": "tp",
+  "aligned_outcome": "time",
+  "note": "Synthetic regression demonstration, not trading evidence."
+}

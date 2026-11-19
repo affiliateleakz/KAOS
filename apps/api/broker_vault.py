@@ -10,7 +10,7 @@ import os
 from cryptography.fernet import Fernet, MultiFernet
 from fastapi import HTTPException
 
-ENCRYPTED_FIELDS = ("key_name_enc", "private_key_enc")
+ENCRYPTED_FIELDS = ("key_name_enc", "private_key_enc", "oauth_access_enc", "oauth_refresh_enc")
 
 
 def vault() -> MultiFernet:
@@ -18,7 +18,10 @@ def vault() -> MultiFernet:
     if not primary:
         raise HTTPException(503, "Broker vault not configured on this server")
     previous = [k.strip() for k in os.environ.get("KAOS_BROKER_VAULT_PREVIOUS_KEYS", "").split(",") if k.strip()]
-    return MultiFernet([Fernet(k.encode()) for k in [primary, *previous]])
+    try:
+        return MultiFernet([Fernet(k.encode()) for k in [primary, *previous]])
+    except (ValueError, TypeError):
+        raise HTTPException(503, "Broker vault configuration is invalid") from None
 
 
 async def rotate_all(collection) -> int:
@@ -34,7 +37,7 @@ async def rotate_all(collection) -> int:
 
 if __name__ == "__main__":
     import sys
-    from database import db
+    from db import db
     if sys.argv[1:] != ["rotate"]:
         sys.exit("usage: python broker_vault.py rotate")
     print(f"re-encrypted {asyncio.run(rotate_all(db.broker_connections))} broker connection(s)")

@@ -82,13 +82,17 @@ export default function TrendPauseBacktest(){
      </>}
     </div>)}
    </div>
-   <form onSubmit={run} className="space-y-3">\n    <div className="grid gap-3 md:grid-cols-2">\n      <label className="text-xs">Import 1-minute JSON or CSV<input type="file" accept=".json,.csv,application/json,text/csv" onChange={e=>importFile(e,setMinutes)} className="mt-1 block w-full text-xs"/></label>\n      <label className="text-xs">Import 15-second JSON or CSV<input type="file" accept=".json,.csv,application/json,text/csv" onChange={e=>importFile(e,setSeconds)} className="mt-1 block w-full text-xs"/></label>\n    </div>
+   <form onSubmit={run} className="space-y-3">
+    <div className="grid gap-3 md:grid-cols-2">
+      <label className="text-xs">Import 1-minute JSON or CSV<input type="file" accept=".json,.csv,application/json,text/csv" onChange={e=>importFile(e,setMinutes)} className="mt-1 block w-full text-xs"/></label>
+      <label className="text-xs">Import 15-second JSON or CSV<input type="file" accept=".json,.csv,application/json,text/csv" onChange={e=>importFile(e,setSeconds)} className="mt-1 block w-full text-xs"/></label>
+    </div>
      <div className="grid gap-3 md:grid-cols-2">
       <label className="text-sm">1-minute candles (Trend-Pause only, at least 53)<textarea value={minutes} onChange={e=>setMinutes(e.target.value)} required={strategy==="trend-pause"} rows={5} spellCheck={false} placeholder='[{"ts":1760054400000,"open":1,"high":2,"low":1,"close":2}]' className="mt-1 w-full rounded border border-[#333] bg-[#0c0c0c] p-2 font-mono text-xs"/></label>
       <label className="text-sm">15-second candles (at least 24)<textarea value={seconds} onChange={e=>setSeconds(e.target.value)} required rows={5} spellCheck={false} placeholder='[{"ts":1760054400000,"open":1,"high":2,"low":1,"close":2}]' className="mt-1 w-full rounded border border-[#333] bg-[#0c0c0c] p-2 font-mono text-xs"/></label>
      </div>
      <label className="block text-sm">Expiry / exit horizon<select value={horizon} onChange={e=>setHorizon(e.target.value)} className="ml-2 rounded border border-[#333] bg-[#111] p-2">{[15,30,60,120,300,900].map(s=><option key={s} value={s}>{s}s</option>)}</select></label>
-     <button disabled={loading} type="submit" className="rounded bg-[#2F8CFF] px-4 py-2 text-sm font-semibold text-black disabled:opacity-40">{loading?"Running replay…":"Run Historical Backtest"}</button>
+     <button disabled={loading} type="submit" className="rounded bg-[#D4AF37] px-4 py-2 text-sm font-semibold text-black disabled:opacity-40">{loading?"Running replay…":"Run Historical Backtest"}</button>
    </form>
    {error&&<p role="alert" className="text-sm text-red-400">{error}</p>}
    {result&&<div aria-live="polite" className="rounded border border-[#333] p-3 text-sm">

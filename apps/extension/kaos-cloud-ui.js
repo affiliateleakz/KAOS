@@ -67,10 +67,18 @@
     if (status === 'SESSION_EXPIRED') card.appendChild(el('div', 'kaos-alert', 'Your KAOS session expired — please sign in again.'));
     var step = el('div', 'kaos-step', 'STEP 1 · SIGN IN TO KAOS');
     card.appendChild(step);
+    card.appendChild(el('h1', 'kaos-login-heading', 'Welcome to your trading desk'));
+    card.appendChild(el('p', 'kaos-muted', 'Sign in to connect your broker, monitor charts and manage your bot.'));
     var email = el('input', 'kaos-input'); email.type = 'email'; email.placeholder = 'Email'; email.setAttribute('data-testid', 'kaos-login-email');
     var pass = el('input', 'kaos-input'); pass.type = 'password'; pass.placeholder = 'Password'; pass.setAttribute('data-testid', 'kaos-login-password');
-    card.appendChild(email); card.appendChild(pass);
-    var err = el('div', 'kaos-error'); err.style.display = 'none'; card.appendChild(err);
+    email.id = 'kaos-signin-email'; email.autocomplete = 'username';
+    pass.id = 'kaos-signin-password'; pass.autocomplete = 'current-password';
+    var emailLabel = el('label', 'kaos-field-label', 'Email address'); emailLabel.htmlFor = email.id;
+    var passwordLabel = el('label', 'kaos-field-label', 'Password'); passwordLabel.htmlFor = pass.id;
+    card.appendChild(emailLabel); card.appendChild(email); card.appendChild(passwordLabel); card.appendChild(pass);
+    var recovery = el('a', 'kaos-link kaos-recovery', 'Forgot password?');
+    recovery.href = 'https://tradingwithkaos.com/forgot-password'; recovery.target = '_blank'; recovery.rel = 'noopener noreferrer'; card.appendChild(recovery);
+    var err = el('div', 'kaos-error'); err.setAttribute('role', 'alert'); err.style.display = 'none'; card.appendChild(err);
 
     var google = el('button', 'kaos-btn kaos-btn-google', 'G  CONTINUE WITH GOOGLE');
     google.type = 'button';
@@ -90,6 +98,8 @@
     var btn = el('button', 'kaos-btn kaos-btn-gold', 'SIGN IN'); btn.setAttribute('data-testid', 'kaos-login-submit');
     card.appendChild(btn);
     btn.onclick = async function () {
+      if (btn.disabled) return;
+      if (!email.value.trim() || !pass.value) { err.textContent = 'Enter your email address and password.'; err.style.display = 'block'; return; }
       err.style.display = 'none'; btn.disabled = true; btn.textContent = 'VERIFYING…';
       var r = await send({ type: 'KAOS_LOGIN', email: email.value.trim(), password: pass.value });
       btn.disabled = false; btn.textContent = 'SIGN IN';
@@ -97,6 +107,7 @@
       route(r.state);
     };
     pass.onkeydown = function (e) { if (e.key === 'Enter') btn.click(); };
+    email.onkeydown = function (e) { if (e.key === 'Enter') btn.click(); };
     var foot = el('div', 'kaos-foot');
     var link = el('a', 'kaos-link', 'Need an account? Join KAOS →'); link.href = 'https://tradingwithkaos.com/register'; link.target = '_blank';
     foot.appendChild(link);
@@ -127,13 +138,15 @@
     var st = state.status || 'LICENSE_INVALID';
     card.appendChild(el('div', 'kaos-status-big kaos-red', STATUS_LABEL[st] || st));
     var reasons = (state.license && state.license.reasons) || [];
-    if (st === 'DEVICE_NOT_AUTHORIZED') card.appendChild(el('div', 'kaos-muted', 'This device is not authorized or your device limit is reached. Manage devices in your KAOS dashboard.'));
+    if (state.detail) card.appendChild(el('div', 'kaos-muted', state.detail));
+    else if (st === 'DEVICE_NOT_AUTHORIZED') card.appendChild(el('div', 'kaos-muted', 'This installation is not authorized. Check your registered devices or account access.'));
     else {
       var msgs = (state.license && state.license.reasonMessages) || [];
       if (msgs.length) msgs.forEach(function (m) { card.appendChild(el('div', 'kaos-muted', m)); });
       else card.appendChild(el('div', 'kaos-muted', 'Your KAOS membership or entitlement is not active. ' + (reasons.length ? '(' + reasons.join(', ') + ')' : '')));
     }
-    var manage = el('a', 'kaos-btn kaos-btn-gold', 'MANAGE MEMBERSHIP'); manage.href = 'https://tradingwithkaos.com/dashboard'; manage.target = '_blank';
+    var deviceProblem = st === 'DEVICE_NOT_AUTHORIZED' || st === 'DEVICE_REGISTRATION_FAILED';
+    var manage = el('a', 'kaos-btn kaos-btn-gold', deviceProblem ? 'MANAGE DEVICES' : 'MANAGE MEMBERSHIP'); manage.href = deviceProblem ? 'https://tradingwithkaos.com/dashboard/devices' : 'https://tradingwithkaos.com/dashboard'; manage.target = '_blank';
     manage.setAttribute('data-testid', 'kaos-blocked-manage');
     card.appendChild(manage);
     var row = el('div', 'kaos-row');
@@ -154,14 +167,31 @@
     remember.appendChild(cb); remember.appendChild(el('span', null, 'Remember My Platform'));
     var res = await send({ type: 'KAOS_GET_PLATFORMS' });
     var plats = (res && res.platforms) || [{ id: 'pocket_option', name: 'Pocket Option', status: 'SUPPORTED' }];
+    var groups={};
+    [['direct','Browser connections'],['keys','API-key brokers'],['upcoming','Other brokers · coming soon']].forEach(function(entry){
+      listWrap.appendChild(el('h3','kaos-step',entry[1]));var box=el('div','kaos-platforms');groups[entry[0]]=box;listWrap.appendChild(box);
+    });
     plats.forEach(function (p) {
-      var supported = (p.status || 'SUPPORTED') === 'SUPPORTED';
+      var coinbase = p.id === 'coinbase';
+      var supported = coinbase || (p.status || 'SUPPORTED') === 'SUPPORTED';
       var rowc = el('div', 'kaos-plat' + (supported ? '' : ' kaos-plat-soon'));
       rowc.appendChild(el('div', 'kaos-plat-name', p.name || p.id));
-      var connect = el('button', 'kaos-btn kaos-btn-green', supported ? 'CONNECT' : 'COMING SOON');
+      var connect = el('button', 'kaos-btn kaos-btn-green', coinbase ? 'SET UP COINBASE' : supported ? 'CONNECT' : 'COMING SOON');
       connect.disabled = !supported;
       connect.setAttribute('data-testid', 'kaos-connect-' + (p.id || 'platform'));
       connect.onclick = async function () {
+        if (coinbase) {
+          if (window.KAOSBroker) {
+            clear();
+            await window.KAOSBroker.refresh();
+            window.KAOSBroker.show();
+            await window.KAOSBroker.choose('coinbase');
+          } else {
+            window.open('https://tradingwithkaos.com/dashboard/api?broker=coinbase','_blank','noopener,noreferrer');
+            connect.textContent = 'OPEN KAOS API SETUP';
+          }
+          return;
+        }
         connect.disabled = true; connect.textContent = 'CONNECTING…';
         var r = await send({ type: 'KAOS_CONNECT_PLATFORM', platform: p.id, remember: cb.checked });
         if (!r || !r.ok) {
@@ -169,11 +199,11 @@
           return;
         }
         var next = r.state || await refreshState();
-        if (next && next.platform) next.step = 'DASHBOARD';
         route(next);
       };
       rowc.appendChild(connect);
-      listWrap.appendChild(rowc);
+      var group=coinbase||['kraken','binanceus','binance_us'].includes(p.id)?'keys':supported?'direct':'upcoming';
+      groups[group].appendChild(rowc);
     });
     card.appendChild(remember);
   }
@@ -205,15 +235,25 @@
     host.appendChild(wrap);
   }
 
+  function chartSessionState(state) {
+    if (!state) return null;
+    // DOM events can be observed by the broker page. Never publish account data.
+    return { step: state.step, status: state.status, platform: state.platform,
+      license: { authorized: !!(state.license && state.license.authorized) } };
+  }
+
   function route(state) {
-    document.dispatchEvent(new CustomEvent('kaos-cloud-state-changed'));
+    document.dispatchEvent(new CustomEvent('kaos-cloud-state-changed', { detail: { state: chartSessionState(state) } }));
     mount();
     if (!state) { renderOffline(); return; }
     switch (state.step) {
       case 'LOGIN': renderLogin(state); break;
       case 'OFFLINE': renderOffline(); break;
       case 'BLOCKED': renderBlocked(state); break;
-      case 'PLATFORM': pill(state); setTimeout(function(){if(window.KAOSBroker)window.KAOSBroker.refresh();},0); break;
+      case 'PLATFORM':
+        if (document.getElementById('kaos-broker-overlay')) { pill(state); if(window.KAOSBroker)window.KAOSBroker.refresh(); }
+        else renderPlatform(state);
+        break;
       case 'DASHBOARD': pill(state); break;
       default: renderLogin(state);
     }

@@ -1,0 +1,49 @@
+{
+  "metrics": {
+    "n": 1564,
+    "wins": 621,
+    "losses": 318,
+    "wr": 0.6613418530351438,
+    "parity": 0.625,
+    "excess_pp": 3.634185303514381,
+    "z_vs_parity": 2.300298633203292,
+    "expectancy_atr": -0.014911984238087716,
+    "total_atr": -23.322343348369188,
+    "pf": 0.9896086915847627,
+    "max_dd_atr": 206.69084347482863,
+    "avg_bars": 15.101023017902813,
+    "time_share": 0.39961636828644503,
+    "pnl_wr": 0.5652173913043478
+  },
+  "source_confidence": [
+    1.0,
+    1.0
+  ],
+  "corrected_iid_interval_not_clustered": [
+    0.6315228966986155,
+    0.6922257720979765
+  ],
+  "source_raw_candle_files_included": 0,
+  "classifications": [
+    {
+      "asset": "USDJPY",
+      "tf": "5m",
+      "class": "equity"
+    },
+    {
+      "asset": "USDJPY",
+      "tf": "15m",
+      "class": "equity"
+    },
+    {
+      "asset": "USDJPY",
+      "tf": "1h",
+      "class": "equity"
+    },
+    {
+      "asset": "USDJPY",
+      "tf": "4h",
+      "class": "equity"
+    }
+  ]
+}

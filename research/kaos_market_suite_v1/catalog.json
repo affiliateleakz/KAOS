@@ -1,0 +1,97 @@
+[
+  {
+    "market": "stocks",
+    "id": "kaos_stocks_pullback_v1",
+    "name": "KAOS Stocks Pullback",
+    "executionEnabled": false,
+    "researchOnly": true,
+    "productionApproved": false,
+    "riskPolicy": {
+      "riskFractionPerTrade": 0.005,
+      "aggregatePlannedRiskFraction": 0.01,
+      "grossNotionalFraction": 1.0,
+      "martingale": false,
+      "requiresAccountCurrencyContractMetadata": true
+    },
+    "timeframe": "1d",
+    "contractType": "cash_equity",
+    "historicalOptionsPricesAvailable": null,
+    "evidenceStatus": "research_profile_no_production_approval"
+  },
+  {
+    "market": "forex",
+    "id": "kaos_fx_london_breakout_v1",
+    "name": "KAOS Forex London Breakout",
+    "executionEnabled": false,
+    "researchOnly": true,
+    "productionApproved": false,
+    "riskPolicy": {
+      "riskFractionPerTrade": 0.005,
+      "aggregatePlannedRiskFraction": 0.01,
+      "grossNotionalFraction": 1.0,
+      "martingale": false,
+      "requiresAccountCurrencyContractMetadata": true
+    },
+    "timeframe": "1h",
+    "contractType": "spot_fx",
+    "historicalOptionsPricesAvailable": null,
+    "evidenceStatus": "research_profile_no_production_approval"
+  },
+  {
+    "market": "crypto",
+    "id": "kaos_crypto_breakout_v1",
+    "name": "KAOS Crypto Swing Breakout",
+    "executionEnabled": false,
+    "researchOnly": true,
+    "productionApproved": false,
+    "riskPolicy": {
+      "riskFractionPerTrade": 0.005,
+      "aggregatePlannedRiskFraction": 0.01,
+      "grossNotionalFraction": 1.0,
+      "martingale": false,
+      "requiresAccountCurrencyContractMetadata": true
+    },
+    "timeframe": "4h",
+    "contractType": "spot_crypto",
+    "historicalOptionsPricesAvailable": null,
+    "evidenceStatus": "research_profile_no_production_approval"
+  },
+  {
+    "market": "binary",
+    "id": "kaos_binary_pullback_v1",
+    "name": "KAOS Binary Trend Pullback",
+    "executionEnabled": false,
+    "researchOnly": true,
+    "productionApproved": false,
+    "riskPolicy": {
+      "riskFractionPerTrade": 0.005,
+      "aggregatePlannedRiskFraction": 0.01,
+      "grossNotionalFraction": 1.0,
+      "martingale": false,
+      "requiresAccountCurrencyContractMetadata": true
+    },
+    "timeframe": "1m",
+    "contractType": "fixed_expiry",
+    "historicalOptionsPricesAvailable": null,
+    "evidenceStatus": "research_profile_no_production_approval"
+  },
+  {
+    "market": "options",
+    "id": "kaos_options_call_spread_v1",
+    "name": "KAOS Options Call Spread",
+    "executionEnabled": false,
+    "researchOnly": true,
+    "productionApproved": false,
+    "riskPolicy": {
+      "riskFractionPerTrade": 0.005,
+      "aggregatePlannedRiskFraction": 0.01,
+      "grossNotionalFraction": 1.0,
+      "martingale": false,
+      "requiresAccountCurrencyContractMetadata": true
+    },
+    "timeframe": "1d",
+    "contractType": "equity_call_vertical",
+    "historicalOptionsPricesAvailable": false,
+    "evidenceStatus": "requires_historical_option_contract_data"
+  }
+]

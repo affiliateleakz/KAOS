@@ -227,7 +227,8 @@ console.info('[KAOS BUILD] V24.1.287-B21 · BB WINNER PRO (15s BB20/2) + ACTIVE 
 //// ═══════════════════════════════════════════════════════════════
 (function () {
   'use strict';
-  console.info('[KAOS BUILD] V24.1.280 · PAYOUT-AWARE ENTRY FLOOR (90% backstop) · UNDER-92% AUTO PAIR-SWITCH · REAL+DEMO EXECUTION · BASELINE V24.1.152');
+  const KAOS_AUDIT_READ_ONLY = false;
+  console.info('[KAOS BUILD] 1.7.22 · manual Start/Stop trading enabled');
   if (window.__poatContent137) return;
   window.__poatContent137 = true;
 
@@ -1301,7 +1302,8 @@ console.info('[KAOS BUILD] V24.1.287-B21 · BB WINNER PRO (15s BB20/2) + ACTIVE 
   };
   // 1.6.44: persist actual AI learning rows across browser shutdowns.
   // Storage is restored once on startup; never manufacture successful outcomes.
-  const KAOS_AI_STORE_KEY='kaos_ai_lab_persistent_v1';
+  let KAOS_AI_STORE_KEY='kaos_ai_lab_persistent_v2_unbound';
+  let kaosModelMember=null;
   let kaosAiRestored=false,kaosAiDirty=false,kaosAiLastSave=0;
   try{setInterval(()=>{if(kaosAiRestored && AI_LAB.samples.length){kaosAiDirty=true;kaosPersistAiLab();}},30000);}catch(_){}
   function kaosPersistAiLab(force=false){
@@ -1311,25 +1313,25 @@ console.info('[KAOS BUILD] V24.1.287-B21 · BB WINNER PRO (15s BB20/2) + ACTIVE 
     const payload={version:1,savedAt:now,samples:AI_LAB.samples.slice(-AI_LAB.maxSamples),model:AI_LAB.model,stats:AI_LAB.stats,training:AI_LAB.training,holdout:AI_LAB.holdout,marketProfiles:AI_LAB.marketProfiles};
     try{chrome.storage.local.set({[KAOS_AI_STORE_KEY]:payload},()=>{if(chrome.runtime.lastError){kaosAiDirty=true;console.warn('[KAOS AI] Save failed',chrome.runtime.lastError.message);}});}catch(_){kaosAiDirty=true;}
   }
-  try{chrome.storage.local.get(KAOS_AI_STORE_KEY,d=>{
+  async function kaosRefreshMemberModel(){
     try{
-      const saved=d?.[KAOS_AI_STORE_KEY];
-      if(saved && (saved.model || (Array.isArray(saved.samples) && saved.samples.length))) {
-        aiLabRestore(saved); // Existing user-trained knowledge always wins over the bundled bootstrap.
-      } else {
-        // Bootstrap only genuinely blank installations; never overwrite an existing trained model.
-        fetch(chrome.runtime.getURL('kaos_pretrained_bootstrap.json'))
-          .then(r=>{if(!r.ok)throw Error('Bootstrap file missing');return r.json();})
-          .then(seed=>{
-            if(AI_LAB.model || AI_LAB.samples.length)return;
-            if(Number(seed?.model?.features)!==AI_FEATURES || !Array.isArray(seed?.model?.trees) || !seed.model.trees.length)throw Error('Invalid bootstrap model');
-            aiLabRestore(seed);
-            console.info('[KAOS AI] Pretrained research bootstrap loaded; not validated for autonomous trading');
-          }).catch(e=>console.warn('[KAOS AI] Bootstrap load failed',e));
+      const response=await chrome.runtime.sendMessage({type:'KAOS_GET_TRAINED_MODEL',scope:'pocket_option:binary:5s:20s:'+(kaosPocketOptionBalanceIsDemo===true?'paper':'real')});
+      const data=response?.data;
+      if(!response?.ok || !data?.member){AI_LAB.model=null;return;}
+      if(kaosModelMember!==data.member){
+        kaosModelMember=data.member;KAOS_AI_STORE_KEY='kaos_ai_lab_persistent_v2_'+data.member;
+        AI_LAB.model=null;AI_LAB.samples=[];AI_LAB.holdout={};AI_LAB.marketProfiles={};
+        const stored=await chrome.storage.local.get(KAOS_AI_STORE_KEY);const saved=stored?.[KAOS_AI_STORE_KEY];
+        if(saved)aiLabRestore({...saved,model:null});
       }
-    }catch(e){console.warn('[KAOS AI] Restore failed',e);}
-    kaosAiRestored=true;kaosPersistAiLab(true);
-  });}catch(_){kaosAiRestored=true;}
+      if(data.available && Number(data.model?.features)===AI_FEATURES && data.model?.targetHorizonMs===20000 && Array.isArray(data.model?.trees)){
+        AI_LAB.model={...data.model,researchOnly:true};AI_LAB.training={status:'research-ready',message:'Validated member model loaded for research; execution requires separate approval'};
+      }else{AI_LAB.model=null;AI_LAB.training={status:'collecting',message:data.pretrainedAccess?'No published pretrained model is available yet':'Personal AI starts untrained. Train your own model in KAOS AI.'};}
+      kaosAiRestored=true;kaosAiDirty=true;kaosPersistAiLab(true);
+    }catch(_){AI_LAB.model=null;}
+  }
+  kaosRefreshMemberModel();
+  try{setInterval(kaosRefreshMemberModel,300000);}catch(_){}
   try{window.addEventListener('pagehide',()=>kaosPersistAiLab(true));}catch(_){}
   function clampProb(v){ return Math.max(0,Math.min(1,Number.isFinite(Number(v))?Number(v):0.5)); }
   function aiMarketKey(asset){ return String(asset||'').trim(); }
@@ -1432,7 +1434,7 @@ console.info('[KAOS BUILD] V24.1.287-B21 · BB WINNER PRO (15s BB20/2) + ACTIVE 
   }
   function modelPredictTree(node,x){
     if(!node)return 0; let n=node;
-    while(n && n.leaf==null){ const f=Number(n.f||0),v=Number(x[f]||0),t=Number(n.t||0); n=v<=t?n.l:n.r; if(!n)return 0; }
+    while(n && n.leaf==null){ const f=Number(n.f||0),v=Number(x[f]||0),t=Number(n.t||0); n=v<t?n.l:n.r; if(!n)return 0; }
     return Number(n&&n.leaf!=null?n.leaf:0);
   }
   // V24.1.65 CHAMPION / CHALLENGER MODEL SELECTION
@@ -3271,7 +3273,7 @@ console.info('[KAOS BUILD] V24.1.287-B21 · BB WINNER PRO (15s BB20/2) + ACTIVE 
     };
     // Without server-granted AI execution (Free, Pro, or Ultimate before validation) the AI is
     // advisory only: it must not place, veto or override the strategy's trade.
-    if (!kaosAiExecutionAllowed) {
+    if (!kaosAiExecutionAllowed || AI_LAB.model?.researchOnly===true) {
       lastIndicators.aiController.advisoryOnly = true;
       return { sig:Object.assign({}, strategySig, { aiAdvisory:d }), aiDecision:d, advisoryOnly:true };
     }
@@ -3783,6 +3785,8 @@ console.info('[KAOS BUILD] V24.1.287-B21 · BB WINNER PRO (15s BB20/2) + ACTIVE 
 
     return {
       ts: Date.now(),
+      accountMode: typeof kaosPocketOptionBalanceIsDemo==='boolean'?(kaosPocketOptionBalanceIsDemo?'DEMO':'REAL'):'UNKNOWN',
+      featureVector: (()=>{try{const v=aiFeatures(asset,refPrice,ind);return Array.isArray(v)&&v.length===104?v.slice():null;}catch(_){return null;}})(),
       timestamp: new Date().toISOString().replace('T', ' ').slice(0, 19),
       asset, direction: dir, amount: Number(amount) || 0,
       entryType: entryType || 'signal',
@@ -6183,14 +6187,16 @@ const t3MinConsensus = aiLearning ? 1 : 3;
           engineMode: r.engineMode || null,
           strategyVersion: r.strategyVersion || null,
           tradingMode: 'STRATEGY',
+          accountMode: r.accountMode||'UNKNOWN', sampleType: r.accountMode==='DEMO'?'PAPER':r.accountMode==='REAL'?'REAL':'UNKNOWN',
           entryPrice: r.entryPrice ?? null,
           settlementPrice: r.exitPrice ?? null,
           exitPrice: r.exitPrice ?? null,
           outcome: String(msg.result || r.result || '').toUpperCase().replace('DRAW','TIE'),
           result: String(msg.result || r.result || '').toUpperCase().replace('DRAW','TIE'),
           pnl: Number(r.profit ?? msg.profit ?? 0),
-          timeframe: r.indicatorTimeframe || '5s',
+          timeframe: '5s', // Canonical 104-feature base; strategy timeframe remains in the trade record.
           timestamp: new Date(msg.timestamp || Date.now()).toISOString(),
+          decisionAt: Number(r.ts)||null, settledAt: Number(r.resultTs)||Number(msg.timestamp)||Date.now(),
           featureVector: Array.isArray(r.featureVector) ? r.featureVector : (Array.isArray(r.x) ? r.x : null),
           aiPrediction: r.aiPrediction || null,
           aiConfidence: r.aiConfidence || null,
@@ -9089,7 +9095,7 @@ const t3MinConsensus = aiLearning ? 1 : 3;
     if(C7B_RESEARCH.length>C7B_RESEARCH_MAX)C7B_RESEARCH.splice(0,C7B_RESEARCH.length-C7B_RESEARCH_MAX);
   }
   // B32.18 — MARKET-STATE / CONFIRMED-REVERSAL EXECUTION GATE
-  // Candidate 7B still finds directional opportunities. This layer decides whether
+  // KAOS Strategy still finds directional opportunities. This layer decides whether
   // a counter-trend opportunity is actually executable. Oversold/overbought is NOT
   // confirmation. A reversal must first print price-action evidence and then break
   // short-term structure. One confirmed transition can be consumed only once;
@@ -9154,7 +9160,7 @@ const t3MinConsensus = aiLearning ? 1 : 3;
   }
   function c7bMarketStateGate(assetName,dir,fv){
     const x=fv?.x||[];
-    // 30s/60s trend structure from Candidate 7B's own frozen feature vector.
+    // 30s/60s trend structure from KAOS Strategy's own frozen feature vector.
     const t30=(Number(x[22])||0)+(Number(x[23])||0)+(Number(x[24])||0);
     const t60=(Number(x[32])||0)+(Number(x[33])||0)+(Number(x[34])||0);
     const bearish=t30<0&&t60<0, bullish=t30>0&&t60>0;
@@ -9225,7 +9231,7 @@ const t3MinConsensus = aiLearning ? 1 : 3;
   }
 
   function v290BBPlusSignal(assetName,px){
-    // B32.21: deterministic three-engine Candidate 7B authority.
+    // B32.21: deterministic three-engine KAOS Strategy authority.
     // Uses the exact same frozen definitions documented in STRATEGY_SPEC_CANDIDATE_7B.md.
     const _c7mod=window.KAOSCandidate7B;
     if(_c7mod){
@@ -9249,12 +9255,12 @@ const t3MinConsensus = aiLearning ? 1 : 3;
       lastIndicators.v194HoldReason='KAOS Strategy · waiting for closed S/R history';
       return null;
     }
-    // B32.20: the live trade clock is the closed 5s micro-trend cycle. Candidate 7B
+    // B32.20: the live trade clock is the closed 5s micro-trend cycle. KAOS Strategy
     // remains scored on every candle and is logged as agreement/context, but a
     // strong 5s leg no longer has to wait for a long 30s/60s regime to become old.
     const researchedSleeve=C7B_META.sleeves[assetName]||null;
     // B32.20.1: micro-trend trading only needs the already-bootstrapped 5s structure.
-    // The frozen Candidate 7B context model still needs 120 candles, but it is context
+    // The frozen KAOS Strategy context model still needs 120 candles, but it is context
     // only and must never hold live micro trading hostage while that history fills.
     const microSrc=c7bStrategyRows(assetName), microRows=microSrc.rows||[];
     if(microRows.length<24)return null;
@@ -9524,7 +9530,7 @@ const t3MinConsensus = aiLearning ? 1 : 3;
 
 
   // B32.9 — USER-EDITABLE DETERMINISTIC STRATEGY ENGINE
-  // Completely separate from frozen Candidate 7B. AI remains learning-only.
+  // Completely separate from frozen KAOS Strategy. AI remains learning-only.
   function sbEma(vals,p){p=Math.max(2,Math.round(p||2));if(!vals.length)return[];const a=2/(p+1),o=[vals[0]];for(let i=1;i<vals.length;i++)o.push(a*vals[i]+(1-a)*o[i-1]);return o;}
   function sbAtr(rows,p=14){if(rows.length<2)return[];const tr=rows.map((r,i)=>i?Math.max(r.high-r.low,Math.abs(r.high-rows[i-1].close),Math.abs(r.low-rows[i-1].close)):r.high-r.low);const a=1/Math.max(2,p),out=[tr[0]];for(let i=1;i<tr.length;i++)out.push(a*tr[i]+(1-a)*out[i-1]);return out;}
   function sbRsi(vals,p=14){if(vals.length<2)return 50;let g=0,l=0,a=1/Math.max(2,p);for(let i=1;i<vals.length;i++){const d=vals[i]-vals[i-1],up=Math.max(0,d),dn=Math.max(0,-d);if(i===1){g=up;l=dn}else{g=a*up+(1-a)*g;l=a*dn+(1-a)*l}}return l<=1e-12?100:100-100/(1+g/l)}
@@ -9681,7 +9687,7 @@ const t3MinConsensus = aiLearning ? 1 : 3;
   }
 
   function v116CleanCoreDecision(asset, price, ind, setupSig) {
-    if(!setupSig) return {skip:true,reason:`HOLD · CANDIDATE 7B · ${lastIndicators.cleanCore?.reason||'waiting for qualified entry'}`};
+    if(!setupSig) return {skip:true,reason:`HOLD · KAOS STRATEGY · ${lastIndicators.cleanCore?.reason||'waiting for qualified entry'}`};
     const _bbType=String(setupSig.tradeType||'').toUpperCase();
     const sig={...setupSig,mode:_bbType==='MICRO_TREND_CYCLE'?'micro-5s-cycle-live':_bbType==='BB_CHOP'?'bb-chop-live':_bbType==='BB_RUNNER'?'bb-runner-live':'candidate-7b-live',confidence:Number(setupSig.confidence||.86),
       reason:`${String(setupSig.reason||'BB WINNER PRO')} · direct deterministic execution`};
@@ -9940,6 +9946,13 @@ const t3MinConsensus = aiLearning ? 1 : 3;
   }
 
   function fireTrade(assetName, sig, tfKey, expiry, chartConfirmed = false, microConfirmed = false, microAssessment = null) {
+    if(botConfig?.kaosTrialExpiresAt&&!globalThis.KaosMembershipLease?.allowed(botConfig.kaosTrialExpiresAt)){
+      isRunning=false;
+      try{chrome.storage.local.set({botRunning:false});}catch(_){}
+      sendStatus('Pro trial ended. Manage your KAOS membership to start new entries.');
+      return;
+    }
+
     // V276.1: FOLLOWS POCKET OPTION — no account-type gate. Autonomous execution
     // runs on whatever account Pocket Option has active (DEMO or REAL); the
     // real/demo choice belongs to PO alone. The previous V198 demo-only gate
@@ -10324,7 +10337,7 @@ const t3MinConsensus = aiLearning ? 1 : 3;
       chrome.runtime.sendMessage({ type: 'KAOS_TRADE_EVENT', eventType: 'SIGNAL_GENERATED', trade: {
         tradeId: entrySnapshot?.tradeID || null, signalId: entrySnapshot?.tradeID || null,
         asset: assetName, direction: sig.dir, amount: amt, expiration: String(_orderExpiry) + 's',
-        strategy: botConfig?.strategy || 'Candidate 7B', strategyVersion: '7B', tradingMode: 'STRATEGY',
+        strategy: botConfig?.strategy || 'KAOS Strategy', strategyVersion: '7B', tradingMode: 'STRATEGY',
         entryPrice: entrySnapshot?.entryPrice ?? null, confidence: sig.confidence ?? sig.str ?? null,
         timestamp: new Date().toISOString()
       }}).catch(() => {});
@@ -10522,7 +10535,9 @@ const t3MinConsensus = aiLearning ? 1 : 3;
     // V121: the four visible chart panels are the complete multi-market allow-list.
     // This intentionally ignores off-screen favorites so all active markets can warm
     // continuously and no chart needs to be rotated or switched.
-    return [...new Set(visibleGridAssets())].filter(Boolean).slice(0,4);
+    const count=botConfig?.chartCount==null?4:Number(botConfig.chartCount);
+    const limit=Number.isInteger(count)&&count>0?Math.min(4,kaosChartLimit,count):1;
+    return [...new Set(visibleGridAssets())].filter(Boolean).slice(0,limit);
   }
 
   function getActiveAssets() {
@@ -10612,7 +10627,7 @@ const t3MinConsensus = aiLearning ? 1 : 3;
       },
       // V24.1.133: per-channel independent state + controller label
       // (V118 setup engine is the sole driver; AI is the only signal source).
-      controller: 'CANDIDATE 7B · ZIGZAG 5/3/1 · LIVE',
+      controller: 'KAOS STRATEGY · ZIGZAG 5/3/1 · LIVE',
       strategyPlan: 'REVERSAL 30s · RUNNER 15s · BREAKOUT 30s · ZIGZAG 5/3/1 STRUCTURE',
       debugReason: channelState[assetName]?.lastDebugReason || null,
       indicators: channelState[assetName]?.indicators || null,
@@ -11157,7 +11172,7 @@ const t3MinConsensus = aiLearning ? 1 : 3;
   //  BRIDGE LISTENER
   // ════════════════════════════════════════════════════════════
   window.addEventListener('message', (ev) => {
-    if (!ev.data || !ev.data._poat) return;
+    if (ev.source !== window || !ev.data || !ev.data._poat) return;
     const msg = ev.data;
 
     if (msg.type === 'PREWARM_RESET') {
@@ -11199,6 +11214,7 @@ const t3MinConsensus = aiLearning ? 1 : 3;
     }
 
     if (msg.type === 'STREAM') {
+      if (!Array.isArray(msg.ticks)) return;
       // 1.1.28: Pocket Option can stream prices before it republishes updateHistory/
       // CHART_ASSET. For read-only charts, bind the first real streaming symbol
       // immediately instead of leaving activeAsset blank forever.
@@ -11213,7 +11229,7 @@ const t3MinConsensus = aiLearning ? 1 : 3;
         }
       }
       msg.ticks.forEach(tick => {
-        if (!tick.asset || isNaN(tick.price) || tick.price <= 0) return;
+        if (typeof tick.asset !== 'string' || !tick.asset || !Number.isFinite(Number(tick.price)) || Number(tick.price) <= 0) return;
 
         // B15.10.24: In 4-chart mode, Pocket Option can continue publishing
         // background/stale market streams after a chart has been replaced.
@@ -11439,7 +11455,7 @@ const t3MinConsensus = aiLearning ? 1 : 3;
           let o,h,l,c;
           if(r?.kind==='ohlc') { o=Number(r.open);h=Number(r.high);l=Number(r.low);c=Number(r.close); }
           else { const px=Number(r?.price);o=h=l=c=px; }
-          if(![o,h,l,c].every(Number.isFinite)||c<=0) continue;
+          if(![o,h,l,c].every(Number.isFinite)||Math.min(o,h,l,c)<=0||h<Math.max(o,c)||l>Math.min(o,c)) continue;
           const q=buckets.get(b);
           if(!q) buckets.set(b,[o,h,l,c,t]);
           else { q[1]=Math.max(q[1],h);q[2]=Math.min(q[2],l);q[3]=c;q[4]=Math.max(q[4],t); }
@@ -11452,10 +11468,9 @@ const t3MinConsensus = aiLearning ? 1 : 3;
           const liveLast=a.lastPrice||0, liveTick=a.lastTickSec||0;
           a.prices=[];a.rates={};a.tf={};a.lastClosed=-1;a.lastBucket=null;a.newCandle=false;
           let prevClose=0, first=keys[0], last=keys[keys.length-1];
-          // Fill only gaps inside the chart history range so TF alignment remains exact.
-          for(let b=first;b<=last;b+=BUCKET_SEC){
-            let q=buckets.get(b);
-            if(!q){ if(!prevClose) continue; q=[prevClose,prevClose,prevClose,prevClose,b+BUCKET_SEC]; }
+          // Preserve actual broker gaps; never invent flat candles or iterate a huge gap.
+          for(const b of keys){
+            const q=buckets.get(b);
             a.rates[b]=q; a.prices.push(q[3]); feedTF(a,b,q); a.lastClosed=b; prevClose=q[3];
           }
           if(a.prices.length>MAX_PRICES) a.prices=a.prices.slice(-MAX_PRICES);
@@ -11674,7 +11689,9 @@ try {
     // ─────────────────────────────────────────────────────────
     // START BOT
     // ─────────────────────────────────────────────────────────
+    if(msg.type==='KAOS_MEMBERSHIP_LEASE'){if(botConfig)botConfig.kaosTrialExpiresAt=msg.expiresAt;sendResponse({ok:true});return false;}
     if (msg.type === 'START_BOT') {
+      if (KAOS_AUDIT_READ_ONLY) { sendResponse({ok:false,error:'Trading disabled during release audit'}); return false; }
 
       isRunning = true;
       botConfig = msg;
@@ -11896,7 +11913,7 @@ try {
 
     // ─────────────────────────────────────────────────────────
     // B32.2 LIVE CHART WORKSPACE — READ-ONLY DIAGNOSTIC VIEW
-    // Uses Candidate 7B's own candle/feature pipeline. No execution authority.
+    // Uses KAOS Strategy's own candle/feature pipeline. No execution authority.
     // ─────────────────────────────────────────────────────────
     if (msg.type === 'RUN_STRATEGY_BACKTEST') {
       try {
@@ -11908,6 +11925,9 @@ try {
       } catch(e){sendResponse({ok:false,error:String(e&&e.message||e)});} return true;
     }
 
+    if(msg.type==='GET_COMPANION_STATUS'){
+      sendResponse({ok:true,engineReady:true,running:isRunning,asset:activeAsset||'',markets:[...new Set(visibleGridAssets())].filter(Boolean).slice(0,4).map(asset=>({asset})),accountBalance:kaosPocketOptionBalance,accountIsDemo:kaosPocketOptionBalanceIsDemo});return false;
+    }
     if (msg.type === 'GET_C7B_CHART_SNAPSHOT' || msg.type === 'GET_TERMINAL_SNAPSHOT') {
       try {
         // 1.1.27: charts are read-only and must populate before START BOT.
@@ -11944,7 +11964,7 @@ try {
           const realRows=marketCandleHistory.byAsset[asset]||[], rawRows=raw5History.byAsset[asset]||[];
           const hist={canonical:src.rows?.length||0,real:realRows.length,raw:rawRows.length,firstTs:src.rows?.length?+src.rows[0].ts:null,lastTs:src.rows?.length?+src.rows[src.rows.length-1].ts:null,synced:!!(src.rows?.length>=24)};
           return{asset,source:src.source,candles:chartRows,ready:!!fv,microReady:!!(src.rows?.length>=24),probUp,probDown:probUp==null?null:1-probUp,vol,timeframes:tf,features:fv?C7B_FEATURES.map((name,i)=>({name,value:fv.x[i]})):[],trades,history:hist,
-            liveStrategy:{name:'Candidate 7B',engines:{reversal:{expiry:30},runner:{expiry:15,enabled:false,status:'RESEARCH_PAUSED'},breakout:{expiry:30}},zigzag:'5/3/1',zigzagTf:30,aiRole:'learning/research only',candidate7BRole:'live execution authority'},
+            liveStrategy:{name:'KAOS Strategy',engines:{reversal:{expiry:30},runner:{expiry:15,enabled:false,status:'RESEARCH_PAUSED'},breakout:{expiry:30}},zigzag:'5/3/1',zigzagTf:30,aiRole:'learning/research only',candidate7BRole:'live execution authority'},
             ai:{xgbUp:xa.previewUp??xa.rawUp??null,xgbRawUp:xa.rawUp??null,lgbUp:xa.shadowLgbUp??null,status:xa.status||AI_LAB.training?.status||'collecting',samples:Number(xa.samples||AI_LAB.samples.length||0),validationAccuracy:Number(xa.validationAccuracy||AI_LAB.holdout?.holdoutAccuracy||0),validationSamples:Number(xa.validationSamples||AI_LAB.holdout?.holdoutSamples||0),marketTrustTier:xa.marketTrustTier||'TRAINED',marketTrustAccuracy:Number(xa.marketTrustAccuracy||0),modelSource:xa.modelSource||'none'},candidate:cand};
         };
         const markets=assets.map(build); const asset=requested&&assets.includes(requested)?requested:(assets[0]||requested||activeAsset||''); const one=markets.find(x=>x.asset===asset)||build(asset);

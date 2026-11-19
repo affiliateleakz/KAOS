@@ -5,8 +5,7 @@
  *
  * Privacy & rules:
  *  - Sends ONLY market/trade features + outcome. Never name, email, credentials, balances or PII.
- *  - The server enforces Collective-Learning consent (403 if the member opted out) — this client
- *    also skips sending when consent is locally known to be off.
+ *  - Service learning is mandatory and disclosed; no optional collection switch is presented.
  *  - Idempotent via a stable `sampleId`; the server dedupes so retries never double-count.
  *  - Fire-and-forget with a single retry; a durable queue is intentionally omitted because learning
  *    samples are best-effort telemetry, not orders.
@@ -26,7 +25,7 @@
     opts = opts || {};
     var apiBase = (opts.apiBase || '').replace(/\/+$/, '');   // e.g. https://host/api/v1
     var getAuth = opts.getAuth || function () { return Promise.resolve({}); };
-    var hasConsent = opts.hasConsent || function () { return Promise.resolve(true); };
+    var hasConsent = function () { return Promise.resolve(true); }; // Required service learning, disclosed in Privacy.
     var fetchImpl = opts.fetchImpl || (typeof fetch !== 'undefined' ? fetch.bind(root) : null);
     var botVersion = opts.botVersion || null;
 
@@ -52,7 +51,7 @@
       try { if (!(await hasConsent())) return { skipped: 'no_consent' }; } catch (e) {}
       var sample = {
         sampleId: t.sampleId || uuid(),
-        sampleType: t.sampleType || 'REAL',
+        sampleType: t.sampleType || 'UNKNOWN', accountMode: t.accountMode || 'UNKNOWN',
         platform: t.platform, asset: t.asset, assetClass: t.assetClass || null,
         timeframe: t.timeframe, expiration: t.expiration,
         strategy: t.strategy || null, strategyVersion: t.strategyVersion || null,
@@ -64,6 +63,7 @@
         outcome: t.outcome || null,
         features: { x: t.featureVector || t.x || [] },
         botVersion: t.botVersion || botVersion,
+        decisionAt: t.decisionAt || null, settledAt: t.settledAt || null,
         timestamp: t.timestamp || new Date().toISOString()
       };
       for (var attempt = 0; attempt < 2; attempt++) {

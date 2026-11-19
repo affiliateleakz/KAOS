@@ -1,0 +1,66 @@
+{
+  "300": {
+    "BTCUSDT": {
+      "segments": 1,
+      "indicator_bars": 192672,
+      "ready_bars_validation": 69984
+    },
+    "ETHUSDT": {
+      "segments": 1,
+      "indicator_bars": 192672,
+      "ready_bars_validation": 69984
+    },
+    "SOLUSDT": {
+      "segments": 1,
+      "indicator_bars": 192672,
+      "ready_bars_validation": 69984
+    },
+    "BNBUSDT": {
+      "segments": 1,
+      "indicator_bars": 192672,
+      "ready_bars_validation": 69984
+    },
+    "XRPUSDT": {
+      "segments": 1,
+      "indicator_bars": 192672,
+      "ready_bars_validation": 69984
+    },
+    "ADAUSDT": {
+      "segments": 65,
+      "indicator_bars": 168302,
+      "ready_bars_validation": 39211
+    }
+  },
+  "900": {
+    "BTCUSDT": {
+      "segments": 1,
+      "indicator_bars": 64224,
+      "ready_bars_validation": 23328
+    },
+    "ETHUSDT": {
+      "segments": 1,
+      "indicator_bars": 64224,
+      "ready_bars_validation": 23328
+    },
+    "SOLUSDT": {
+      "segments": 1,
+      "indicator_bars": 64224,
+      "ready_bars_validation": 23328
+    },
+    "BNBUSDT": {
+      "segments": 1,
+      "indicator_bars": 64224,
+      "ready_bars_validation": 23328
+    },
+    "XRPUSDT": {
+      "segments": 1,
+      "indicator_bars": 64224,
+      "ready_bars_validation": 23328
+    },
+    "ADAUSDT": {
+      "segments": 25,
+      "indicator_bars": 50348,
+      "ready_bars_validation": 8181
+    }
+  }
+}

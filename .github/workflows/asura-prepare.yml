@@ -1,0 +1,122 @@
+name: Prepare KAOS release on Asura Hosting
+
+# Manual, non-disruptive upload. Never changes the live website, Python
+# application startup file, MongoDB or broker/payment environment variables.
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Enter STAGE-KAOS to upload release ZIPs into a private folder (no activation)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kaos-asura-prepare
+  cancel-in-progress: false
+
+jobs:
+  stage-release:
+    if: ${{ inputs.confirmation == 'STAGE-KAOS' }}
+    environment: kaos-hosting
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Verify release files compile
+        run: |
+          set -euo pipefail
+          python -m compileall -q apps/api packages/kaos-core deploy/cpanel
+          test -f apps/api/server.py
+          test -f apps/api/requirements.txt
+
+      - name: Build KAOS website for existing domains
+        working-directory: apps/web
+        env:
+          CI: "false"
+          REACT_APP_BACKEND_URL: https://api.tradingwithkaos.com
+        run: |
+          set -euo pipefail
+          npm ci --no-audit --no-fund
+          npm run build
+
+      - name: Package cPanel release
+        run: |
+          set -euo pipefail
+          python scripts/build_cpanel_packages.py
+          cd dist
+          sha256sum kaos-cpanel-website.zip kaos-cpanel-backend.zip > SHA256SUMS
+          printf 'KAOS revision %s\n' "$GITHUB_SHA" > RELEASE.txt
+
+      # Retain compiled files even if SSH staging is unavailable, avoiding a
+      # second npm/vite build on the resource-limited cPanel account.
+      - name: Save downloadable prepared release
+        uses: actions/upload-artifact@v4
+        with:
+          name: kaos-cpanel-${{ github.sha }}
+          path: |
+            dist/kaos-cpanel-website.zip
+            dist/kaos-cpanel-backend.zip
+            dist/SHA256SUMS
+            dist/RELEASE.txt
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Configure verified SSH connection
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.ASURA_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.ASURA_SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ vars.ASURA_SSH_HOST }}
+          SSH_USER: ${{ vars.ASURA_SSH_USER }}
+          SSH_PORT: ${{ vars.ASURA_SSH_PORT }}
+        run: |
+          set -euo pipefail
+          umask 077
+          [[ "$SSH_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]]
+          [[ "$SSH_USER" =~ ^[a-zA-Z0-9_][a-zA-Z0-9_-]*$ ]]
+          test -n "$SSH_HOST" && test -n "$SSH_USER"
+          test -n "$SSH_PRIVATE_KEY" && test -n "$SSH_KNOWN_HOSTS"
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/kaos_deploy_key"
+          chmod 600 "$HOME/.ssh/kaos_deploy_key"
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+          port="${SSH_PORT:-22}"
+          [[ "$port" =~ ^[0-9]{1,5}$ ]] && ((port >= 1 && port <= 65535))
+          {
+            echo "Host kaos-host"
+            echo "  HostName $SSH_HOST"
+            echo "  User $SSH_USER"
+            echo "  Port $port"
+            echo "  IdentityFile $HOME/.ssh/kaos_deploy_key"
+            echo "  IdentitiesOnly yes"
+            echo "  StrictHostKeyChecking yes"
+            echo "  BatchMode yes"
+          } > "$HOME/.ssh/config"
+          chmod 600 "$HOME/.ssh/config"
+          ssh kaos-host 'echo "Verified SSH connection to Asura hosting"'
+
+      - name: Upload release to private account directory only
+        env:
+          GIT_SHA: ${{ github.sha }}
+        run: bash scripts/asura_stage.sh
+
+      - name: Remove local SSH material
+        if: always()
+        run: |
+          rm -f "$HOME/.ssh/kaos_deploy_key" "$HOME/.ssh/config" "$HOME/.ssh/known_hosts"

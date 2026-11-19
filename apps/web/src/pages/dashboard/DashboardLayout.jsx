@@ -2,10 +2,11 @@ import React, { useEffect, useState } from "react";
 import { Outlet, NavLink, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { api } from "../../lib/api";
+import {useMembership, FEATURE_ROUTES} from "../../components/MembershipAccess";
 import { Brand, RiskBar } from "../../components/Brand";
 import {
   LayoutGrid, Boxes, Users, Activity, FileCode, LineChart, Bookmark, UserPlus,
-  CreditCard, MonitorSmartphone, Download, Settings, LifeBuoy, Bell, LogOut, Shield, Bot, Menu, X, FlaskConical,
+  LockKeyhole, CreditCard, MonitorSmartphone, Download, Settings, LifeBuoy, Bell, LogOut, Shield, Bot, Menu, X, FlaskConical,
 } from "lucide-react";
 
 const NAV = [
@@ -17,11 +18,13 @@ const NAV = [
   ["crypto-scanner", "Crypto Scanner & Heat Map", Activity],
   ["stock-heatmap", "Stock Heat Map", LineChart],
   ["brokers", "Broker Connections", MonitorSmartphone],
+  ["api", "KAOS API Setup", MonitorSmartphone],
   ["kaos-ai", "KAOS AI", Activity],
   ["strategies", "My Strategies", Boxes],
   ["community", "Community", Users],
   ["indicators", "Indicators", Activity],
   ["scripts", "Scripts", FileCode],
+  ["pinescripts", "TradingView Scripts", FileCode],
   ["backtests", "Backtests", LineChart],
   ["saved", "Saved", Bookmark],
   ["following", "Following", UserPlus],
@@ -30,11 +33,13 @@ const NAV = [
   ["devices", "Devices", MonitorSmartphone],
   ["downloads", "Downloads", Download],
   ["account", "Account", Settings],
+  ["follow-us", "Follow Us", Users],
   ["support", "Support", LifeBuoy],
 ];
 
 export default function DashboardLayout() {
   const { user, logout } = useAuth();
+  const access = useMembership();
   const nav = useNavigate();
   const [notifs, setNotifs] = useState([]);
   const [open, setOpen] = useState(false);
@@ -49,7 +54,7 @@ export default function DashboardLayout() {
 
   const renderSidebar = (onNavigate) => (
     <>
-      <div className="flex items-center justify-between px-5 py-5">
+      <div className="kaos-sidebar-brand flex items-center justify-between px-5 py-5">
         <Brand />
         {onNavigate && (
           <button onClick={onNavigate} data-testid="mobile-menu-close" className="text-slate-400 hover:text-white lg:hidden">
@@ -57,12 +62,13 @@ export default function DashboardLayout() {
           </button>
         )}
       </div>
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3">
+      <nav className="kaos-sidebar-links flex-1 space-y-1 overflow-y-auto px-3">
         {NAV.map(([path, label, Icon]) => (
           <NavLink key={path} to={`/dashboard/${path}`} end={path === ""} onClick={onNavigate}
             data-testid={`${onNavigate ? "mobile-" : ""}nav-${label.toLowerCase().replace(/ /g, "-")}-link`}
-            className={({ isActive }) => `flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${isActive ? "bg-[#2F8CFF]/10 text-[#2F8CFF]" : "text-slate-400 hover:bg-[#111111] hover:text-white"}`}>
+            className={({ isActive }) => `flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${isActive ? "bg-[#D4AF37]/10 text-[#D4AF37]" : "text-slate-400 hover:bg-[#111111] hover:text-white"}`}>
             <Icon className="h-4 w-4" />{label}
+            {access?.entitlements && FEATURE_ROUTES[path] && access.entitlements[FEATURE_ROUTES[path].key] !== true && <LockKeyhole aria-label="Membership upgrade available" className="ml-auto h-3 w-3 shrink-0 text-[#d4af37]" />}
           </NavLink>
         ))}
       </nav>
@@ -78,29 +84,29 @@ export default function DashboardLayout() {
   );
 
   return (
-    <div className="flex min-h-screen bg-[#080808] text-white">
-      <aside className="hidden w-60 shrink-0 flex-col border-r border-[#2E2E2E] bg-[#0A0A0A] lg:flex">
+    <div className="kaos-member-shell flex min-h-screen bg-[#080808] text-white">
+      <aside className="kaos-member-sidebar hidden w-60 shrink-0 flex-col border-r border-[#2E2E2E] bg-[#0A0A0A] lg:flex">
         {renderSidebar()}
       </aside>
 
       {mobileNav && (
         <div className="fixed inset-0 z-[60] lg:hidden" data-testid="mobile-nav-drawer">
           <div className="absolute inset-0 bg-black/60" onClick={() => setMobileNav(false)} />
-          <aside className="absolute left-0 top-0 flex h-full w-72 max-w-[85%] flex-col border-r border-[#2E2E2E] bg-[#0A0A0A]">
+          <aside className="kaos-member-sidebar absolute left-0 top-0 flex h-full w-72 max-w-[85%] flex-col border-r border-[#2E2E2E] bg-[#0A0A0A]">
             {renderSidebar(() => setMobileNav(false))}
           </aside>
         </div>
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="glass-nav flex items-center justify-between px-4 py-3 sm:px-6">
+        <header className="kaos-member-header glass-nav flex items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3 lg:hidden">
             <button data-testid="mobile-menu-button" onClick={() => setMobileNav(true)} className="text-slate-300 hover:text-white">
               <Menu className="h-6 w-6" />
             </button>
             <Brand />
           </div>
-          <div className="hidden lg:block"><span className="label-mono">Member Portal</span></div>
+          <div className="hidden lg:block"><span className="label-mono">KAOS · Trading Command Center</span><p className="kaos-member-motto">Where We Give the Advantage to the Trader</p></div>
           <div className="flex items-center gap-4">
             <div className="relative">
               <button data-testid="notifications-button" onClick={() => { setOpen(!open); if (!open && unread) api.post("/api/notifications/read").then(loadNotifs); }} className="relative text-slate-400 hover:text-white">
@@ -117,11 +123,11 @@ export default function DashboardLayout() {
               )}
             </div>
             <Link to={`/u/${user?.username}`} className="flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1A1A1A] text-sm font-bold text-[#2F8CFF]">{(user?.name || "U")[0]}</span>
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1A1A1A] text-sm font-bold text-[#D4AF37]">{(user?.name || "U")[0]}</span>
             </Link>
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6"><Outlet /></main>
+        <main className="kaos-member-main flex-1 overflow-y-auto p-4 sm:p-6"><p className="mb-4 rounded border border-[#65512d] bg-[#15150c] p-3 text-xs leading-relaxed text-[#bfb18e]">KAOS service learning uses de-identified trade features and outcomes for personal, shared and owner models. Credentials, balances and payments are excluded from training. <a href="/privacy.html" className="text-[#e8c46f] underline">Data policy</a></p><Outlet /></main>
         <div style={{fontSize:12,padding:"6px 24px",textAlign:"right"}}><a href="/privacy.html" style={{color:"#b9a36e"}}>Privacy Policy</a></div>
         <RiskBar />
       </div>

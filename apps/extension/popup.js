@@ -2,6 +2,8 @@
 /* KAOS v19.8 — no automatic sample downloads/popups.
    Local AI training is in-memory; explicit user export/import is the only AI persistence path. */
 const KAOS_NO_AUTO_SAMPLE_DOWNLOADS = true;
+const KAOS_AUDIT_READ_ONLY = false;
+const KAOS_COMPANION_ONLY = true;
 function KAOSV198IsAutoSampleDownload(opts) {
   const s = String(opts?.reason ?? opts?.source ?? opts?.kind ?? "").toLowerCase();
   return s.includes("sample") || s.includes("training") || s.includes("dataset") || s.includes("auto");
@@ -177,23 +179,27 @@ $('open-po-link').addEventListener('click', async (e) => {
 $('support-btn').addEventListener('click',    () => chrome.tabs.create({ url: SUPPORT_URL }));
 $('nv-support-btn').addEventListener('click', () => chrome.tabs.create({ url: SUPPORT_URL }));
 $('recheck-btn').addEventListener('click', () => {
+  window.__kaosChartSessionInitialized = false;
   chrome.storage.local.remove(['traderId', 'verified', 'verifiedAt']);
   startFlow();
 });
 
 // ════════════════════════════════════════════════════════════
-//  VERIFICATION FLOW — BYPASS BUILD (authorized pentest PoC)
-//  Drop-in replacement for the startFlow/detect/show* section
+//  SERVER-AUTHORIZED MEMBERSHIP AND BROKER VERIFICATION
 // ════════════════════════════════════════════════════════════
 
 async function startFlow() {
+  const selected = await chrome.storage.local.get("kaosSelectedBroker");
+  if (selected.kaosSelectedBroker === "coinbase") return; // Coinbase is opened by authenticated broker selection, never PO detection.
+  if(window.__kaosChartSessionInitialized && window.__kaosChartSessionAuthorized===true){kaosStartChartFeed();return;}
   if (window.__kaosStartFlowRunning) return;
   window.__kaosStartFlowRunning = true;
   try {
     showScreen('checking');
     setCheckMsg('VERIFYING KAOS MEMBERSHIP...');
     const cloud = await new Promise(resolve => chrome.runtime.sendMessage({type:'KAOS_STARTUP'}, r => {void chrome.runtime.lastError; resolve(r); }));
-    if (!cloud?.ok || !['PLATFORM','DASHBOARD'].includes(cloud.state?.step)) {
+    if (!cloud?.ok || cloud.state?.step !== 'DASHBOARD' || cloud.state?.status !== 'CONNECTED' ||
+        !cloud.state?.license?.authorized || !['pocketoption','pocket_option'].includes(cloud.state?.platform)) {
       setCheckMsg('SIGN IN TO KAOS TO CONTINUE');
       showScreen('notPo');
       return;
@@ -216,6 +222,7 @@ async function startFlow() {
     }
     state.traderId = traderId;
     state.verified = true; // KAOS membership verified by server above; PO trader ID detected from page.
+    window.__kaosChartSessionInitialized = true;
     showVerified(traderId);
   } finally {window.__kaosStartFlowRunning = false;}
 }
@@ -528,9 +535,9 @@ function loadSettings() {
   martOn = true; compoundOn = false; martDir = 'opposite'; autoCdOn = true;
   applyMultiUI(); applyMartUI(); applyCompoundUI();
 
-  chrome.storage.local.get('settings', (data) => {
+  return new Promise(resolve => chrome.storage.local.get('settings', (data) => {
     const s = data.settings;
-    if (!s) return; // keep defaults above
+    if (!s) { resolve(); return; } // keep defaults above
     if (s.timeframe) {
       document.querySelectorAll('.tf-btn').forEach(b => {
         b.classList.toggle('active', parseInt(b.dataset.tf) === s.timeframe);
@@ -570,7 +577,9 @@ function loadSettings() {
     sv('anti-steps', s.antiSteps);
     sv('step-mult',  s.stepMult);
     sv('step-steps', s.stepSteps);
-  });
+    if ($('kaos-amount-input')) $('kaos-amount-input').value = $('amount-input').value;
+    resolve();
+  }));
 }
 
 // Auto-save on input change
@@ -703,7 +712,7 @@ function renderExactModelResearch(s) {
   const fmt=(h)=>{const x=st[h]||{},w=Number(x.wins||0),l=Number(x.losses||0),d=Number(x.draws||0),n=w+l;const wr=n?(100*w/n).toFixed(1)+'%':'—';return `<div style="padding:6px 4px;border:1px solid var(--border);border-radius:6px;text-align:center"><b style="color:var(--accent)">${h==='60s'?'1m':h}</b><br><strong>${wr}</strong><br><span style="font-size:10px;color:var(--muted)">${w}W/${l}L${d?`/${d}D`:''}</span></div>`;};
   box.innerHTML=['5s','15s','30s','60s'].map(fmt).join('');
   const n5=Number(st['5s']?.wins||0)+Number(st['5s']?.losses||0);
-  if(note)note.textContent=`Historical reference: 20W/0L (small original sample) · New exact-model signals: ${n5} · Same entry is measured at 5s, 15s, 30s and 1m.`;
+  if(note)note.textContent=`Observed research outcomes: ${n5} · Same entry is measured at 5s, 15s, 30s and 1m. Research outcomes are not a trading-performance guarantee.`;
   const meta=r.raw5Meta||{}, parts=Object.entries(meta).map(([a,v])=>`${a} ${Number(v?.count||0)}`);
   if(raw)raw.textContent=`Raw 5s archive: ${parts.length?parts.join(' · '):'collecting…'}`;
 }
@@ -826,6 +835,7 @@ function renderDebug(s) {
 }
 
 function pollStatus() {
+  if (window.KAOSCoinbaseBot?.selected()) return;
   refreshPocketFlowLiveMeter();
   getKAOSTargetTab().then(tab => {
     if (!tab) return;
@@ -852,7 +862,24 @@ $('start-btn').addEventListener('click', () => {
   state.running ? stopBot() : startBot();
 });
 
-function startBot() {
+async function startBot() {
+  const brokerChoice = await chrome.storage.local.get('kaosSelectedBroker');
+  if (brokerChoice.kaosSelectedBroker === 'coinbase') {
+    if (!window.KAOSCoinbaseBot) { setStatus('idle', 'Coinbase controls unavailable'); return; }
+    await window.KAOSCoinbaseBot.ready();
+    await window.KAOSCoinbaseBot.start({
+      amount: Number($('amount-input').value),
+      martingale: martOn, compound: compoundOn, autoCooldownOn: autoCdOn,
+      profitTarget: Number($('profit-target').value), dailyLossLimit: Number($('daily-loss-limit').value),
+      maxLossStreak: Number($('max-loss-streak').value), cooldownAfterLoss: Number($('cooldown-loss').value),
+      ...getStrategyBuilderStartConfig()
+    });
+    return;
+  }
+  if (KAOS_AUDIT_READ_ONLY) {
+    setStatus('idle', 'CHART AUDIT · TRADING DISABLED');
+    return;
+  }
   const strategy        = getStrategy();
   const timeframe       = getTimeframe();
   const amount          = parseFloat($('amount-input').value)     || 5;
@@ -885,7 +912,7 @@ function startBot() {
     chrome.runtime.sendMessage({
       type: 'START_BOT',
       strategy, timeframe, amount,
-      multiAsset: multiAssetOn, // only trade 4 markets when the popup multi toggle is checked
+      multiAsset: KAOS_COMPANION_ONLY ? kaosChartCount > 1 : multiAssetOn, // Selected count applies only on explicit Start
       martingale: martOn, multiplier: mult, maxSteps: steps, martDir, martMode,
       softSteps:  parseInt(($('soft-steps')||{value:'6'}).value)   || 6,
       antiMult:   parseFloat(($('anti-mult')||{value:'2'}).value)  || 2,
@@ -902,6 +929,7 @@ function startBot() {
 }
 
 function stopBot() {
+  if (window.KAOSCoinbaseBot?.selected()) { window.KAOSCoinbaseBot.stop(); return; }
   state.running = false;
   setRunningUI(false);
   setStatus('idle', 'IDLE · READY');
@@ -914,7 +942,8 @@ function stopBot() {
 function setRunningUI(running) {
   const btn = $('start-btn');
   btn.className   = 'kaos-start-btn ' + (running ? 'stop-state' : 'start-state');
-  btn.textContent = running ? '■ STOP' : '▶ START KAOS';
+  btn.textContent = running ? '■ STOP' : (KAOS_AUDIT_READ_ONLY ? 'CHART AUDIT · TRADING DISABLED' : '▶ START KAOS');
+  btn.title = running ? 'Stop the bot' : (KAOS_AUDIT_READ_ONLY ? 'Trading disabled in this build' : 'Start trading on the connected broker account');
   $('edit-hint').style.display = running ? 'block' : 'none';
 
   // Lock all inputs while running
@@ -1211,7 +1240,7 @@ async function exportDebugCsv() {
     if (document.getElementById('ai-popup-info')) return;
     const el = document.createElement('div');
     el.style.cssText = 'margin:10px 16px;padding:10px 13px;background:var(--card);border:2px solid var(--accent);border-radius:8px;font-size:12px;color:var(--text2)';
-    el.innerHTML = '<div style="font-weight:700;color:var(--accent);margin-bottom:4px"> AI LEARNING LAB <span style="font-size:11px;opacity:.8">learning only · does not control entries</span></div><div id="ai-popup-info" style="display:block;margin-top:7px">Loading AI training status...</div><div style="margin-top:9px;padding-top:9px;border-top:1px solid var(--border)"><div style="font-size:10px;color:#ff8a80;font-weight:800;margin-bottom:6px">DANGER / RESET</div><button id="ai-popup-clear" style="background:#2a1717;border:1px solid #e74c3c;color:#ff6b5f;padding:7px 11px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer"> CLEAR AI + START FRESH</button></div><div id="ai-backup-status" style="margin-top:4px;font-size:11px;opacity:.8">KAOS Berserker LIVE TEST · fixed 45s expiry · independent REAL 5s candle recorder runs separately from trading.</div><div id="ai-sample-warning" style="margin-top:3px;font-size:11px;color:#f39c12;display:none"></div>';
+    el.innerHTML = '<div style="font-weight:700;color:var(--accent);margin-bottom:4px"> AI LEARNING LAB <span style="font-size:11px;opacity:.8">learning only · does not control entries</span></div><div id="ai-popup-info" style="display:block;margin-top:7px">Loading AI training status...</div><div style="margin-top:9px;padding-top:9px;border-top:1px solid var(--border)"><div style="font-size:10px;color:#ff8a80;font-weight:800;margin-bottom:6px">DANGER / RESET</div><button id="ai-popup-clear" style="background:#2a1717;border:1px solid #e74c3c;color:#ff6b5f;padding:7px 11px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer"> CLEAR AI + START FRESH</button></div><div id="ai-backup-status" style="margin-top:4px;font-size:11px;opacity:.8">KAOS Strategy LIVE TEST · fixed 45s expiry · independent REAL 5s candle recorder runs separately from trading.</div><div id="ai-sample-warning" style="margin-top:3px;font-size:11px;color:#f39c12;display:none"></div>';
     const fold = document.createElement('details');
     fold.className = 'dashboard-fold';
     fold.id = 'ai-learning-fold';
@@ -1518,9 +1547,30 @@ async function exportDebugCsv() {
 
 // ════════════════════════════════════════════════════════════
 // B32.7 — INTERACTIVE MULTI-TF + STRUCTURED TRADE REPLAY TERMINAL
-// Monitoring + research only. KAOS Berserker remains execution authority.
+// Monitoring + research only. KAOS Strategy remains execution authority.
 // ════════════════════════════════════════════════════════════
-let terminalTimer=null,terminalData=null;
+let terminalTimer=null,terminalData=null,kaosCompanionStatusAt=0,kaosChartFeedGeneration=0,kaosChartRefreshBusy=false;
+function kaosStartChartFeed(){
+ if(window.__kaosChartSessionAuthorized!==true || terminalTimer)return;
+ const poll=KAOS_COMPANION_ONLY?kaosRefreshCompanionStatus:terminalRefresh;
+ poll();terminalTimer=setInterval(poll,KAOS_COMPANION_ONLY?5000:1000);
+}
+async function kaosRefreshCompanionStatus(){
+ if(window.__kaosChartSessionAuthorized!==true||kaosChartRefreshBusy)return;
+ kaosChartRefreshBusy=true;const generation=kaosChartFeedGeneration;
+ try{
+  const tab=await getKAOSTargetTab();if(!tab){terminalData=null;kaosCompanionStatusAt=0;return;}
+  const r=await chrome.tabs.sendMessage(tab.id,{type:'GET_COMPANION_STATUS'});
+  if(window.__kaosChartSessionAuthorized!==true||generation!==kaosChartFeedGeneration)return;
+  if(!r?.ok){terminalData=null;kaosCompanionStatusAt=0;return;}
+  kaosCompanionStatusAt=Date.now();terminalData=r;kaosUpdateAccountBalance(r);
+  const asset=document.querySelector('[data-companion-asset]');if(asset)asset.textContent=r.asset||'Select a market in Pocket Option';
+ }catch(_){if(generation===kaosChartFeedGeneration){terminalData=null;kaosCompanionStatusAt=0;}}finally{kaosChartRefreshBusy=false;}
+}
+function kaosStopChartFeed(){
+ clearInterval(terminalTimer);terminalTimer=null;kaosChartFeedGeneration++;
+ terminalData=null;kaosCompanionStatusAt=0;kaosFallbackSnap=null;kaosLiveChartOk=false;
+}
 const terminalTradeHits=Array.from({length:4},()=>[]);
 const terminalView=Array.from({length:4},()=>({visibleBars:80,pan:0,tf:5,drag:false,lastX:0,dragCarry:0,crossX:null,crossY:null}));
 async function KAOSSetWindowMode(mode){
@@ -1533,14 +1583,15 @@ document.querySelectorAll('.kaos-social').forEach(btn=>{const url=KAOS_SOCIAL_LI
 $('window-compact-btn')?.addEventListener('click',()=>KAOSSetWindowMode('bot'));
 $('window-max-btn')?.addEventListener('click',()=>KAOSSetWindowMode('charts'));
 async function terminalShow(){
+ if(KAOS_COMPANION_ONLY)return;
  document.body.classList.add('chart-mode');
  Object.values(screens).forEach(s=>{if(s)s.style.display='none';});
  const sc=$('screen-chart');if(sc){sc.classList.add('active');sc.style.display='flex';}
  await KAOSSetWindowMode('charts');
- terminalRefresh();clearInterval(terminalTimer);terminalTimer=setInterval(terminalRefresh,1000);
+ kaosStartChartFeed();
 }
 async function terminalHide(){
- clearInterval(terminalTimer);terminalTimer=null;
+ // Keep the read-only feed running for the dashboard mirror. Logout stops it.
  document.querySelectorAll('.market-chart.maximized').forEach(x=>x.classList.remove('maximized'));
  const sc=$('screen-chart');if(sc){sc.classList.remove('active');sc.style.display='none';}
  document.body.classList.remove('chart-mode');
@@ -1606,37 +1657,15 @@ async function kaosGetSnapshot(tabId){
 // is guarded by window.__poatContent137, so this is safe to repeat.
 let kaosHealBusy=false,kaosHealStamp=0,kaosHealNote='';
 async function kaosHealPoTab(tab){
- if(!tab||!tab.id)return false;
+ if(!tab?.id || window.__kaosChartSessionAuthorized!==true)return false;
  const now=Date.now();
  if(kaosHealBusy||now-kaosHealStamp<20000)return false;
  kaosHealBusy=true;kaosHealStamp=now;
  try{
-  // A reloaded unpacked extension can leave the OLD isolated-world and MAIN-world
-  // guard flags alive in an already-open Pocket Option tab. Merely injecting the
-  // files again then exits immediately at their guards and the chart receives no
-  // snapshot. Clear both guards, reinstall MAIN bridge, then reinstall isolated code.
-  await chrome.scripting.executeScript({
-    target:{tabId:tab.id}, world:'MAIN',
-    func:()=>{ try{ delete window.__poatBridge440; }catch(_){ window.__poatBridge440=false; } }
-  });
-  await chrome.scripting.executeScript({target:{tabId:tab.id},world:'MAIN',files:['po-bridge.js']});
-  await chrome.scripting.executeScript({
-    target:{tabId:tab.id},
-    func:()=>{ try{ delete window.__poatContent137; }catch(_){ window.__poatContent137=false; } }
-  });
-  // Manifest owns the KAOS content scripts. Never inject them twice.
-  try{
-    await chrome.tabs.sendMessage(tab.id,{type:'GET_TERMINAL_SNAPSHOT'});
-    kaosHealNote='KAOS Pocket Option bridge reattached';
-    await new Promise(r=>setTimeout(r,700));
-    return true;
-  }catch(_){
-    kaosHealNote='Refreshing Pocket Option once to install the KAOS content context';
-    await chrome.tabs.reload(tab.id);
-    await new Promise(r=>setTimeout(r,1800));
-    return true;
-  }
- }catch(e){kaosHealNote='bridge reattach blocked ('+String((e&&e.message)||e)+')';return false;}
+  const result=await chrome.runtime.sendMessage({type:'KAOS_PO_ENSURE_ATTACH',tabId:tab.id});
+  kaosHealNote=result?.ok ? (result.alreadyAttached?'market-data listener ready':'authorized broker reload requested') : String(result?.error||result?.reason||'attachment failed');
+  return !!result?.ok;
+ }catch(error){kaosHealNote=String(error?.message||'attachment failed');return false;}
  finally{kaosHealBusy=false;}
 }
 function kaosRenderEmptyChartState(reason){
@@ -1645,28 +1674,35 @@ function kaosRenderEmptyChartState(reason){
   const meta=card.querySelector('.mc-meta'),name=card.querySelector('.mc-name'),why=card.querySelector('.mc-why');
   if(name)name.textContent=`CHART ${i+1}`;
   if(meta)meta.textContent='awaiting Pocket Option candles';
-  if(why)why.innerHTML='<strong>NO CANDLE DATA YET</strong> · '+kaosChartDiag+' KAOS will automatically reattach to the open Pocket Option tab and stream closed 5s candles. Once two real candles are received the chart paints automatically.';
+  if(why)why.textContent='NO CANDLE DATA YET · '+kaosChartDiag+' KAOS will automatically reattach to the open Pocket Option tab and stream closed 5s candles. Once two real candles are received the chart paints automatically.';
   terminalDraw(card.querySelector('canvas'),null,i);
  });
 }
-async function kaosTerminalRenderFallback(force=false){
+async function kaosTerminalRenderFallback(force=false,generation=kaosChartFeedGeneration){
  if(kaosFallbackBusy)return true; kaosFallbackBusy=true;
  try{
   const now=Date.now();
   if(force||!kaosFallbackSnap||now-kaosFallbackStamp>5000){kaosFallbackSnap=await kaosLoadFallbackSnapshot();kaosFallbackStamp=now;}
-  if(kaosFallbackSnap&&kaosFallbackSnap.markets.length){terminalData=kaosFallbackSnap;terminalRender(kaosFallbackSnap);return true;}
+  if(window.__kaosChartSessionAuthorized===true&&generation===kaosChartFeedGeneration&&kaosFallbackSnap&&kaosFallbackSnap.markets.length){terminalData=kaosFallbackSnap;terminalRender(kaosFallbackSnap);return true;}
   return false;
  }catch(_){return false;}
  finally{kaosFallbackBusy=false;}
 }
 async function terminalRefresh(){
+ if(window.__kaosChartSessionAuthorized!==true||kaosChartRefreshBusy)return;
+ kaosChartRefreshBusy=true;
+ const generation=kaosChartFeedGeneration;
+ try{return await kaosReadChartFeed(generation);}finally{kaosChartRefreshBusy=false;}
+}
+async function kaosReadChartFeed(generation){
  let live=null,tab=null;
  // Charts are driven only by the manifest-managed Pocket Option content context.
  // Ask the worker to heal/reload the PO tab if that context disappeared.
  try{tab=await getKAOSTargetTab();}catch(_){tab=null;}
  if(tab&&tab.id){
   live=await kaosGetSnapshot(tab.id);
-  if(!live){ try{await chrome.runtime.sendMessage({type:'KAOS_PO_ENSURE_ATTACH'});}catch(_){} }
+  if(window.__kaosChartSessionAuthorized!==true||generation!==kaosChartFeedGeneration)return;
+  if(!live)await kaosHealPoTab(tab);
   if(live&&live.ok&&!kaosSnapshotHasCandles(live)){
    kaosChartDiag='Pocket Option tab connected · live candle store empty ('+(kaosHealNote||'bridge healthy')+').';
    if(await kaosHealPoTab(tab)){
@@ -1675,12 +1711,18 @@ async function terminalRefresh(){
    }
   }
  }
+ if(window.__kaosChartSessionAuthorized!==true||generation!==kaosChartFeedGeneration)return;
  // Working-build behaviour: render whatever the live bridge returned.
  if(live&&live.ok&&kaosSnapshotHasCandles(live)){kaosLiveChartOk=true;terminalData=live;terminalRender(live);return;}
  // No usable live candles yet — paint the persisted candle archives instead.
- if(await kaosTerminalRenderFallback()){kaosChartDiag='rendering persisted candle archive ('+(tab&&tab.id?'live bridge has no candles yet':'no Pocket Option tab open')+').';return;}
+ if(await kaosTerminalRenderFallback(false,generation)){kaosChartDiag='rendering persisted candle archive ('+(tab&&tab.id?'live bridge has no candles yet':'no Pocket Option tab open')+').';return;}
+ if(window.__kaosChartSessionAuthorized!==true||generation!==kaosChartFeedGeneration)return;
  // Archive empty too: still render the live snapshot so the panels populate.
- if(live&&live.ok){kaosLiveChartOk=true;terminalData=live;terminalRender(live);return;}
+ if(live&&live.ok){
+  kaosLiveChartOk=false;terminalData=live;terminalRender(live);
+  const stores=Number(live.marketDataDiag?.assetStoreCount)||0;
+  kaosRenderEmptyChartState('Market-data listener ready; '+stores+' asset stores; waiting for two closed candles.');return;
+ }
  kaosRenderEmptyChartState(tab&&tab.id?'Pocket Option tab connected but returned no snapshot.':'No Pocket Option tab is open.');
 }
 function tp(v){return Number.isFinite(+v)?(+v*100).toFixed(1)+'%':'—'} function tn(v,n=2){return Number.isFinite(+v)?(+v).toFixed(n):'—'}
@@ -1699,8 +1741,13 @@ function kaosApplyChartLimit(ent){
    o.textContent=o.value+(o.value==='1'?' Chart':' Charts')+(over?' (not in your plan)':'');
  });
  if(kaosChartCount>kaosChartLimit)kaosApplyChartCount(kaosChartLimit,true);
+ else kaosUpdateChartCountStatus();
 }
 
+function kaosUpdateChartCountStatus(){
+ const status=document.getElementById('kaos-chart-count-status');
+ if(status)status.textContent=kaosChartCount+' selected · plan supports '+kaosChartLimit+'. Open the matching broker charts in Pocket Option. Applies on next Start.';
+}
 function kaosApplyChartCount(count,persist=true){
  count=Math.max(1,Math.min(4,kaosChartLimit,Number(count)||1));
  kaosChartCount=count;
@@ -1713,6 +1760,7 @@ function kaosApplyChartCount(count,persist=true){
  });
  const sel=document.getElementById('kaos-chart-count');
  if(sel)sel.value=String(count);
+ kaosUpdateChartCountStatus();
  if(persist)chrome.storage.local.set({kaosChartCount,terminalSelectedCharts});
  if(typeof terminalRenderChartSelection==='function')terminalRenderChartSelection();
 }
@@ -1721,7 +1769,16 @@ function kaosInitChartCount(){
  chrome.storage.onChanged.addListener((c,area)=>{if(area==='local'&&c.kaosEntitlements)kaosApplyChartLimit(c.kaosEntitlements.newValue);});
  const sel=document.getElementById('kaos-chart-count');
  if(sel)sel.addEventListener('change',e=>kaosApplyChartCount(e.target.value,true));
- document.getElementById('kaos-open-selected-charts')?.addEventListener('click',()=>{
+ const control=document.querySelector('#screen-main .kaos-chart-count-control');
+ const rail=document.querySelector('#screen-main .kaos-run-rail');
+ if(KAOS_COMPANION_ONLY&&control&&rail)rail.before(control);
+ const openCharts=document.getElementById('kaos-open-selected-charts');
+ if(openCharts&&KAOS_COMPANION_ONLY)openCharts.textContent='SHOW POCKET OPTION';
+ openCharts?.addEventListener('click',async()=>{
+   if(KAOS_COMPANION_ONLY){
+     try{const tab=await getKAOSTargetTab();if(tab){await chrome.tabs.update(tab.id,{active:true});if(tab.windowId!=null)await chrome.windows.update(tab.windowId,{focused:true});}else setStatus('idle','Open Pocket Option to select broker charts.');}catch(_){setStatus('idle','Could not focus Pocket Option. Open your broker tab.');}
+     return;
+   }
    if(typeof window.kaosRoute==='function')window.kaosRoute('charts');
    else document.querySelector('[data-kaos-view="charts"]')?.click();
  });
@@ -1779,9 +1836,9 @@ function terminalRenderMarket(card,m,i){
  state.textContent=d;state.className='mc-state '+(d==='BUY'?'buy':d==='SELL'?'sell':'hold');const open=(m.trades||[]).some(t=>!t.result);card.classList.toggle('active-trade',open);
  const q=m.timeframes?.['5s']||{},h=m.history||{};
  foot.innerHTML=[['HISTORY',h.canonical??'—'],['REAL 5s',h.real??'—'],['RAW 5s',h.raw??'—'],['EXPIRY','R30 / U15 / B30'],['ZIGZAG','5 / 3 / 1'],['ENGINES','REV / RUN / BRK'],['AI','LEARNING ONLY'],['7B P(UP)',tp(m.probUp)],['7B VOL',tn(m.vol,3)],['XGB / LGB',`${tp(m.ai?.xgbUp)} / ${tp(m.ai?.lgbUp)}`]].map(x=>`<div class="mc-stat"><span>${x[0]}</span><b>${x[1]}</b></div>`).join('');
- if(truth)truth.innerHTML='<b>KAOS BERSERKER </b> · 2-CANDLE PULLBACK CONTINUATION · <b>5s SIGNAL</b> · <b>45s EXPIRY</b> · AI LEARNING ONLY';
+ if(truth)truth.innerHTML='<b>KAOS STRATEGY </b> · 2-CANDLE PULLBACK CONTINUATION · <b>5s SIGNAL</b> · <b>45s EXPIRY</b> · AI LEARNING ONLY';
  const histState=h.synced?'HISTORY + LIVE SYNCED':'HISTORY LOADING';
- why.innerHTML=`<strong>${histState}</strong> · ${h.canonical??0} canonical · ${h.real??0} real · ${h.raw??0} raw 5s · <strong>LIVE AUTHORITY:</strong> KAOS Berserker · exactly 2-candle pullback · next-candle confirmation entry · fixed 45s expiry · ${d==='HOLD'?'waiting for qualified continuation':d+' continuation setup'}.`;
+ why.innerHTML=`<strong>${histState}</strong> · ${h.canonical??0} canonical · ${h.real??0} real · ${h.raw??0} raw 5s · <strong>LIVE AUTHORITY:</strong> KAOS Strategy · exactly 2-candle pullback · next-candle confirmation entry · fixed 45s expiry · ${d==='HOLD'?'waiting for qualified continuation':d+' continuation setup'}.`;
  terminalDraw(card.querySelector('canvas'),m,i);
 }
 function terminalAggregate(rows,sec){
@@ -1846,7 +1903,7 @@ function terminalDraw(c,m,i){
 }
 function terminalRenderAI(r){
  const m=r.markets?.[terminalActiveSlot]||r.markets?.[0];const selected=$('terminal-ai-selected');
- if(selected)selected.innerHTML=m?`<b>CH${terminalActiveSlot+1} · ${m.asset}</b><br>LIVE AUTHORITY: KAOS Berserker · 2-candle pullback → confirmation → next-candle entry · 45s<br>Market context: ${tp(m.probUp)} P(UP) · ${tn(m.vol,3)} VOL · context/research only<br>XGBoost: ${kaosAiValue(m.ai?.xgbUp,m.ai?.samples)} · ${m.ai?.samples||0} samples · ${m.ai?.status||'collecting'} · learning/research only<br>LightGBM: ${kaosAiValue(m.ai?.lgbUp,m.ai?.samples)} · learning/research only<br>History: ${m.history?.canonical||0} canonical · ${m.history?.real||0} real · ${m.history?.raw||0} raw 5s · ${m.history?.synced?'SYNCED':'LOADING'}`:'Waiting for selected chart…';
+ if(selected)selected.innerHTML=m?`<b>CH${terminalActiveSlot+1} · ${m.asset}</b><br>LIVE AUTHORITY: KAOS Strategy · 2-candle pullback → confirmation → next-candle entry · 45s<br>Market context: ${tp(m.probUp)} P(UP) · ${tn(m.vol,3)} VOL · context/research only<br>XGBoost: ${kaosAiValue(m.ai?.xgbUp,m.ai?.samples)} · ${m.ai?.samples||0} samples · ${m.ai?.status||'collecting'} · learning/research only<br>LightGBM: ${kaosAiValue(m.ai?.lgbUp,m.ai?.samples)} · learning/research only<br>History: ${m.history?.canonical||0} canonical · ${m.history?.real||0} real · ${m.history?.raw||0} raw 5s · ${m.history?.synced?'SYNCED':'LOADING'}`:'Waiting for selected chart…';
  const el=$('terminal-ai-markets');if(el){let h='<div class="ai-market-row head"><span>MARKET</span><span>7B</span><span>XGB</span><span>LGB</span><span>SAMPLES</span><span>VALIDATION</span><span>STATUS</span></div>';for(const x of r.markets||[]){h+=`<div class="ai-market-row"><b>${x.asset}</b><span>${tp(x.probUp)}</span><span>${kaosAiValue(x.ai?.xgbUp,x.ai?.samples)}</span><span>${kaosAiValue(x.ai?.lgbUp,x.ai?.samples)}</span><span>${x.ai?.samples||0}</span><span>${x.ai?.validationSamples?tp(x.ai.validationAccuracy):'—'}</span><span>${x.ai?.status||'collecting'}</span></div>`;}el.innerHTML=h;}
  const s=r.aiSummary||{},sum=$('terminal-ai-summary');if(sum)sum.innerHTML=`<div class="terminal-strip" style="grid-template-columns:1fr 1fr"><div class="terminal-kpi"><span>AI SAMPLES</span><b>${s.samples||0}</b></div><div class="terminal-kpi"><span>7B RESEARCH</span><b>${s.researchSamples||0}</b></div><div class="terminal-kpi"><span>45s LABELS RESOLVED</span><b>${s.researchResolved45||0}</b></div><div class="terminal-kpi"><span>TRAINER</span><b style="font-size:10px">${s.training?.status||'collecting'}</b></div></div>`;
  const log=$('terminal-research-log');if(log)log.innerHTML=[...(r.research||[])].reverse().map(x=>`<div class="research-row"><b>${new Date(x.ts).toLocaleTimeString()} · ${x.asset}</b> · 7B ${x.decision} ${tp(x.probUp)} · XGB ${tp(x.ai?.xgbUp)} · 15s ${x.forward?.[15]?((x.forward[15].up===.5?'TIE':x.forward[15].up?'UP':'DOWN')+' '+tn(x.forward[15].delta,6)):'pending'} · 45s ${x.forward?.[45]?((x.forward[45].up===.5?'TIE':x.forward[45].up?'UP':'DOWN')):'pending'}</div>`).join('')||'Waiting for research snapshots…';
@@ -1889,14 +1946,14 @@ document.querySelectorAll('.market-chart').forEach((card,i)=>{
  window.addEventListener('mouseup',()=>{v.drag=false;if(terminalDrawTool[i]==='cursor')c.style.cursor='crosshair'});
  c.addEventListener('mousemove',e=>{const r=c.getBoundingClientRect();v.crossX=(e.clientX-r.left)*c.width/r.width;v.crossY=(e.clientY-r.top)*c.height/r.height;if(v.drag){const m=terminalData?.markets?.[i],all=terminalAggregate(m?.candles||[],v.tf||5),bars=Math.max(12,Math.min(all.length,Math.round(v.visibleBars||80))),pxPerBar=Math.max(2,(c.clientWidth||r.width)/bars),dx=e.clientX-v.lastX;v.lastX=e.clientX;v.dragCarry+=-dx/pxPerBar;const whole=v.dragCarry>0?Math.floor(v.dragCarry):Math.ceil(v.dragCarry);if(whole){v.pan=Math.max(0,Math.min(Math.max(0,all.length-bars),(v.pan||0)+whole));v.dragCarry-=whole;}}terminalRedrawIndex(i);});
  c.addEventListener('mouseleave',()=>{v.crossX=null;v.crossY=null;if(!v.drag)terminalRedrawIndex(i)});
- c.addEventListener('click',e=>{const r=c.getBoundingClientRect(),xx=(e.clientX-r.left)*c.width/r.width,yy=(e.clientY-r.top)*c.height/r.height;const hit=(terminalTradeHits[i]||[]).find(h=>xx>=h.x1&&xx<=h.x2&&yy>=h.y1&&yy<=h.y2);if(!hit)return;const t=hit.trade,why=card?.querySelector('.mc-why'),snap=t.signalSnapshot||{};if(why)why.innerHTML=`<strong>${t.direction} TRADE REVIEW · ${String(t.result||'OPEN').toUpperCase()}</strong> · entry ${Number(t.entryPrice||0).toFixed(6)} → exit ${Number(t.exitPrice||0).toFixed(6)} · ${t.expiry||45}s · P/L ${Number(t.profit||0)>=0?'+':''}$${Number(t.profit||0).toFixed(2)}<br><span style="color:var(--muted)">Entry regime: ${t.regimeAtEntry||'—'} · engine: ${t.engineFamily||'KAOS Berserker'} · score: ${t.totalScore??'—'} · saved signal: ${Object.keys(snap).length?'YES':'NO'} · replay frames: ${t.replayFrameCount||t.replayFrames?.length||0}</span>`;});
+ c.addEventListener('click',e=>{const r=c.getBoundingClientRect(),xx=(e.clientX-r.left)*c.width/r.width,yy=(e.clientY-r.top)*c.height/r.height;const hit=(terminalTradeHits[i]||[]).find(h=>xx>=h.x1&&xx<=h.x2&&yy>=h.y1&&yy<=h.y2);if(!hit)return;const t=hit.trade,why=card?.querySelector('.mc-why'),snap=t.signalSnapshot||{};if(why)why.innerHTML=`<strong>${t.direction} TRADE REVIEW · ${String(t.result||'OPEN').toUpperCase()}</strong> · entry ${Number(t.entryPrice||0).toFixed(6)} → exit ${Number(t.exitPrice||0).toFixed(6)} · ${t.expiry||45}s · P/L ${Number(t.profit||0)>=0?'+':''}$${Number(t.profit||0).toFixed(2)}<br><span style="color:var(--muted)">Entry regime: ${t.regimeAtEntry||'—'} · engine: ${t.engineFamily||'KAOS Strategy'} · score: ${t.totalScore??'—'} · saved signal: ${Object.keys(snap).length?'YES':'NO'} · replay frames: ${t.replayFrameCount||t.replayFrames?.length||0}</span>`;});
  c.addEventListener('dblclick',()=>{v.visibleBars=80;v.pan=0;terminalRedrawIndex(i)});
 });
 
 
 // ════════════════════════════════════════════════════════════
 // B32.10 CHART STRATEGY BUILDER — profile editor / persistence
-// KAOS Berserker is immutable; custom profiles are sent to content.js.
+// KAOS Strategy is immutable; custom profiles are sent to content.js.
 // ════════════════════════════════════════════════════════════
 const SB_DEFAULT={id:'custom1',name:'Custom Strategy 1',description:'Editable confirmation strategy. Install indicators, tune their settings, backtest, and assign it to any chart.',engine:'CUSTOM_CONFIRM',signalTf:30,expiry:45,minConfirmations:3,
   ema:{enabled:true,periods:[9,20,50,100]},rsi:{enabled:true,period:14,low:30,high:70},macd:{enabled:true,fast:12,slow:26,signal:9},
@@ -1924,7 +1981,7 @@ function sbLoadSelected(){
  return true;
 }
 function sbDownloadSelected(){
- if(sbSelected==='legacy7b'){const st=$('sb-status');if(st)st.textContent='KAOS Berserker is built into KAOS Trading Bot and does not need a profile file.';return;}
+ if(sbSelected==='legacy7b'){const st=$('sb-status');if(st)st.textContent='KAOS Strategy is built into KAOS Trading Bot and does not need a profile file.';return;}
  const p=sbProfiles[sbSelected]||sbRead();
  const payload={kind:'KAOS-Strategy-Profile',version:1,exportedAt:new Date().toISOString(),profile:structuredClone(p)};
  const json=JSON.stringify(payload,null,2),url='data:application/json;base64,'+strToBase64(json);
@@ -1935,7 +1992,7 @@ function sbStatus(){const e=$('sb-live');if(e)e.textContent=BUILTIN_STRATEGIES[s
 function sbPreviewRedraw(){if(!terminalData)return;document.querySelectorAll('.market-chart').forEach((card,i)=>terminalDraw(card.querySelector('canvas'),terminalData.markets?.[i],i));}
 document.getElementById('strategy-builder')?.addEventListener('input',sbPreviewRedraw);document.getElementById('strategy-builder')?.addEventListener('change',()=>setTimeout(sbPreviewRedraw,0));
 function sbInit(){chrome.storage.local.get(['strategyProfiles','activeStrategyProfile'],d=>{if(d.strategyProfiles&&typeof d.strategyProfiles==='object')sbProfiles=d.strategyProfiles;sbSelected=d.activeStrategyProfile&&(BUILTIN_STRATEGIES[d.activeStrategyProfile]||sbProfiles[d.activeStrategyProfile])?d.activeStrategyProfile:'legacy7b';sbRefreshSelect();if(BUILTIN_STRATEGIES[sbSelected])sbWrite({...SB_DEFAULT,...BUILTIN_STRATEGIES[sbSelected]});else if(sbProfiles[sbSelected])sbWrite(sbProfiles[sbSelected]);else sbWrite(SB_DEFAULT);sbStatus()});
- $('sb-profile')?.addEventListener('change',e=>{const st=$('sb-status');if(st)st.textContent=e.target.value==='legacy7b'?'KAOS Berserker selected in library. Click Load Profile to load it.':`Selected ${sbProfiles[e.target.value]?.name||'strategy'} in library. Click Load Profile to load it.`;});
+ $('sb-profile')?.addEventListener('change',e=>{const st=$('sb-status');if(st)st.textContent=e.target.value==='legacy7b'?'KAOS Strategy selected in library. Click Load Profile to load it.':`Selected ${sbProfiles[e.target.value]?.name||'strategy'} in library. Click Load Profile to load it.`;});
  $('sb-load')?.addEventListener('click',sbLoadSelected);
  $('sb-download')?.addEventListener('click',sbDownloadSelected);
  $('sb-save')?.addEventListener('click',()=>{if(BUILTIN_STRATEGIES[sbSelected]){ $('sb-status').textContent=BUILTIN_STRATEGIES[sbSelected].name+' is a protected built-in strategy. Duplicate it to create an editable custom strategy.';return;}const p=sbRead();p.id=sbSelected;sbProfiles[sbSelected]=p;terminalSlotProfiles[terminalActiveSlot]=sbSelected;sbRefreshSelect();terminalRefreshStrategySelects();sbPersist();sbStatus();$('sb-status').textContent=`Saved ${p.name}. It becomes live the next time the bot is started.`});
@@ -1945,9 +2002,9 @@ function sbInit(){chrome.storage.local.get(['strategyProfiles','activeStrategyPr
   if(BUILTIN_STRATEGIES[sbSelected]){ $('sb-status').textContent=BUILTIN_STRATEGIES[sbSelected].name+' is built in and cannot be deleted.';return;}
   const p=sbProfiles[sbSelected];if(!p){$('sb-status').textContent='Select a custom strategy to delete.';return;}
   if(!confirm(`Delete custom strategy "${p.name}"? This cannot be undone.`))return;
-  const doomed=sbSelected;delete sbProfiles[doomed];terminalSlotProfiles=terminalSlotProfiles.map(id=>id===doomed?'legacy7b':id);sbSelected='legacy7b';sbRefreshSelect();sbWrite({...SB_DEFAULT,...BUILTIN_STRATEGIES.legacy7b});sbPersist();chrome.storage.local.set({terminalSlotProfiles});terminalRefreshStrategySelects();sbStatus();$('sb-status').textContent=`Deleted ${p.name}. Any chart using it was switched to KAOS Berserker.`;
+  const doomed=sbSelected;delete sbProfiles[doomed];terminalSlotProfiles=terminalSlotProfiles.map(id=>id===doomed?'legacy7b':id);sbSelected='legacy7b';sbRefreshSelect();sbWrite({...SB_DEFAULT,...BUILTIN_STRATEGIES.legacy7b});sbPersist();chrome.storage.local.set({terminalSlotProfiles});terminalRefreshStrategySelects();sbStatus();$('sb-status').textContent=`Deleted ${p.name}. Any chart using it was switched to KAOS Strategy.`;
  });
- $('sb-legacy')?.addEventListener('click',()=>{sbSelected='legacy7b';sbRefreshSelect();sbWrite(SB_DEFAULT);sbPersist();sbStatus();$('sb-status').textContent='KAOS Berserker selected. Locked signature execution will be used on next Start.'});
+ $('sb-legacy')?.addEventListener('click',()=>{sbSelected='legacy7b';sbRefreshSelect();sbWrite(SB_DEFAULT);sbPersist();sbStatus();$('sb-status').textContent='KAOS Strategy selected. Locked signature execution will be used on next Start.'});
  $('sb-backtest')?.addEventListener('click',async()=>{
   const out=$('sb-backtest-results');if(!out)return;
   const cfg=BUILTIN_STRATEGIES[sbSelected]?structuredClone(BUILTIN_STRATEGIES[sbSelected]):sbRead();
@@ -1990,7 +2047,7 @@ let poEditingIndicator=null;
 function poIsInstalled(key){return !!document.getElementById(PO_INDICATORS[key]?.check)?.checked;}
 function poRenderIndicatorLibrary(filter='',lockedView=false,slot=terminalActiveSlot){
  const el=document.getElementById('po-ind-list');if(!el)return;const q=String(filter).toLowerCase().trim();
- if(lockedView){const fixed=[['KAOS Berserker Core','Established move → exactly 2 counter-trend pullback candles → continuation confirmation'],['Signal Timeframe','5-second closed candles'],['Trade Expiry','Fixed 45 seconds'],['Trend Structure','EMA 9 / EMA 21 alignment + established directional candles'],['Volatility Gate','ATR 20 controls oversized pullbacks'],['Confirmation','Continuation candle must reclaim structure before entry'],['AI Models','Learning/research only — never execution authority']];el.innerHTML='<div class="sb-note" style="margin:4px 0 10px">CHART '+(slot+1)+' · KAOS Berserker <br>Hard-coded strategy inputs are locked. All strategy indicators are displayed automatically.</div>'+fixed.filter(x=>!q||x.join(' ').toLowerCase().includes(q)).map(x=>`<div class="po-ind-option" style="cursor:default"><span><b>${x[0]} </b><small>${x[1]}</small></span><span>ON</span></div>`).join('');return;}
+ if(lockedView){const fixed=[['KAOS Strategy Core','Established move → exactly 2 counter-trend pullback candles → continuation confirmation'],['Signal Timeframe','5-second closed candles'],['Trade Expiry','Fixed 45 seconds'],['Trend Structure','EMA 9 / EMA 21 alignment + established directional candles'],['Volatility Gate','ATR 20 controls oversized pullbacks'],['Confirmation','Continuation candle must reclaim structure before entry'],['AI Models','Learning/research only — never execution authority']];el.innerHTML='<div class="sb-note" style="margin:4px 0 10px">CHART '+(slot+1)+' · KAOS Strategy <br>Hard-coded strategy inputs are locked. All strategy indicators are displayed automatically.</div>'+fixed.filter(x=>!q||x.join(' ').toLowerCase().includes(q)).map(x=>`<div class="po-ind-option" style="cursor:default"><span><b>${x[0]} </b><small>${x[1]}</small></span><span>ON</span></div>`).join('');return;}
  el.innerHTML=Object.entries(PO_INDICATORS).filter(([k,v])=>!q||v.name.toLowerCase().includes(q)||v.desc.toLowerCase().includes(q)).map(([k,v])=>`<button type="button" class="po-ind-option" data-ind="${k}"><span><b>${v.name}</b><small>${v.desc}</small></span><span>${poIsInstalled(k)?'INSTALLED':'ADD'}</span></button>`).join('');
  el.querySelectorAll('[data-ind]').forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.ind;if(poIsInstalled(k)){poOpenSettings(k);return;}const cb=document.getElementById(PO_INDICATORS[k].check);if(cb)cb.checked=true;poRenderInstalled();sbPreviewRedraw();poCloseLibrary();poOpenSettings(k);}));
 }
@@ -2001,7 +2058,7 @@ function poRenderInstalled(){
  renderDisplayIndicatorChips();
  document.querySelectorAll('[data-gear]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();poOpenSettings(b.dataset.gear);}));
 }
-function poOpenLibrary(){if(sbSelected==='legacy7b'){const st=document.getElementById('sb-status');if(st)st.textContent='KAOS Berserker strategy inputs are locked. Duplicate or create a custom strategy to install indicators.';return;}poRenderIndicatorLibrary();document.getElementById('po-ind-library')?.classList.add('open');setTimeout(()=>document.getElementById('po-ind-search')?.focus(),0);}
+function poOpenLibrary(){if(sbSelected==='legacy7b'){const st=document.getElementById('sb-status');if(st)st.textContent='KAOS Strategy strategy inputs are locked. Duplicate or create a custom strategy to install indicators.';return;}poRenderIndicatorLibrary();document.getElementById('po-ind-library')?.classList.add('open');setTimeout(()=>document.getElementById('po-ind-search')?.focus(),0);}
 function poCloseLibrary(){document.getElementById('po-ind-library')?.classList.remove('open');}
 function poOpenSettings(key){if(sbSelected==='legacy7b')return;const def=PO_INDICATORS[key];if(!def)return;poEditingIndicator=key;document.getElementById('po-settings-title').textContent=def.name+' SETTINGS';const box=document.getElementById('po-settings-fields');box.innerHTML=def.fields.map(([id,label])=>{const val=document.getElementById(id)?.value??'';return `<div class="po-setting"><label>${label}</label><input data-source="${id}" type="number" step="any" value="${String(val).replace(/"/g,'&quot;')}"></div>`}).join('');document.getElementById('po-ind-settings')?.classList.add('open');}
 function poCloseSettings(){document.getElementById('po-ind-settings')?.classList.remove('open');poEditingIndicator=null;}
@@ -2127,6 +2184,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     qa('#screen-main .kaos-nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.kaosView===v));
   }
   function route(view){
+    if(KAOS_COMPANION_ONLY && TERMINAL_VIEWS[view]){chrome.tabs.create({url:"https://tradingwithkaos.com/dashboard/"+({charts:"trading",backtester:"backtests",ai:"kaos-ai",performance:"trading"}[view])});return;}
     // 1.6.34 canonical navigation: Trading is Dashboard; Advanced is Build Strategy.
     if(view==='trading') view='dashboard';
     if(view==='advanced') view='strategy';
@@ -2152,8 +2210,8 @@ document.addEventListener('DOMContentLoaded',()=>{
         window.dispatchEvent(new Event('resize'));
       }catch(_){}
     }else{
-      // Stop chart polling only when leaving terminal pages.
-      try{ if(terminalTimer){clearInterval(terminalTimer);terminalTimer=null;} }catch(_){}
+      // Dashboard also consumes the candle feed; only sign-out stops it.
+      try{kaosStartChartFeed();}catch(_){}
       setMainView(MAIN_VIEWS[view] ? view : 'dashboard');
     }
     try{ localStorage.setItem('kaosLastView',view); }catch(_){}
@@ -2180,6 +2238,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     // Keep dashboard live chart visually tied to the real first multi-chart canvas.
     const mirror=document.getElementById('kaos-dashboard-canvas');
     const copyChart=()=>{
+      if(KAOS_COMPANION_ONLY)return;
       if(!mirror) return;
       const src=document.querySelector('#terminal-four-grid .mc-canvas');
       const ctx=mirror.getContext('2d');
@@ -2286,8 +2345,8 @@ if (document.readyState === 'loading') {
     document.body.classList.remove('kaos-mini','kaos-mid','kaos-max');
     document.body.classList.add('kaos-'+mode);
     try{
-      if(location.protocol==='chrome-extension:' && /(?:^|[?&])kaosApp=1(?:&|$)/.test(location.search)){
-        chrome.runtime.sendMessage({type:'KAOS_RESIZE_APP',mode:mode}).catch(()=>{});
+      if(location.protocol==='chrome-extension:'){
+        chrome.windows.getCurrent().then(win=>chrome.runtime.sendMessage({type:'KAOS_RESIZE_APP',mode:mode,windowId:win.id})).catch(()=>{});
       }
     }catch(_){}
     qa('.kaos-view-btn').forEach(b=>b.classList.toggle('active',b.dataset.kaosMode===mode));
@@ -2303,8 +2362,8 @@ if (document.readyState === 'loading') {
   }
 
   function initViewMode(){
-    let mode='max';
-    try{ mode=localStorage.getItem('kaosViewMode')||'max'; if(mode==='mid') mode='max'; }catch(_){}
+    let mode='mini';
+    try{ mode=KAOS_COMPANION_ONLY?'mini':localStorage.getItem('kaosViewMode')||'max'; if(mode==='mid') mode='max'; }catch(_){}
     if(kaosFullPage()){ document.body.classList.add('kaos-fullpage'); setViewMode('max',false); return; }
     setViewMode(mode);
   }
@@ -2437,7 +2496,10 @@ if (document.readyState === 'loading') {
     return (dot && dot.classList.contains('active')) || /CONNECT|LIVE|READY|RUN/.test(t);
   }
 
+  let serverHealthBusy=false;
   async function pingServer() {
+    if(serverHealthBusy)return null;
+    serverHealthBusy=true;
     try {
       const hr = await chrome.runtime.sendMessage({ type:'KAOS_HEALTH' });
       const h = hr && hr.health;
@@ -2450,7 +2512,7 @@ if (document.readyState === 'loading') {
     } catch (_) {
       setPill('k14-pill-server','off','OFFLINE');
       return null;
-    }
+    } finally {serverHealthBusy=false;}
   }
 
   function refreshPills() {
@@ -2505,7 +2567,7 @@ if (document.readyState === 'loading') {
   }
 
   function openFoldAndGo(foldId) {
-    if (typeof window.kaosRoute === 'function') window.kaosRoute('strategy');
+    if (typeof window.kaosRoute === 'function') window.kaosRoute(foldId === 'debug-fold' ? 'dashboard' : 'strategy');
     setTimeout(() => {
       const fold = $(foldId);
       if (fold) { fold.open = true; fold.scrollIntoView({ block: 'start' }); }
@@ -2552,7 +2614,7 @@ if (document.readyState === 'loading') {
     refreshPills(); refreshCards();
     setInterval(refreshPills, 1500);
     setInterval(refreshCards, 1500);
-    setInterval(pingServer, 6000); pingServer();
+    setInterval(()=>{if(!document.hidden)pingServer();}, 60000); pingServer();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
@@ -2844,7 +2906,7 @@ async function kaos1619SetView(mode){
   if(v!=='max') return;
   try{
     const w=await chrome.windows.getCurrent();
-    if(w && w.id) await chrome.windows.update(w.id,{state:'maximized',focused:true});
+    if(w && w.id && w.type==='popup') await chrome.windows.update(w.id,{state:'maximized',focused:true});
   }catch(_){}
 }
 document.addEventListener('click',(e)=>{
@@ -2931,6 +2993,7 @@ function kaos1627DashboardChartCount(){
 }
 
 function kaos1627SyncDashboardCharts(){
+ if(KAOS_COMPANION_ONLY)return;
   const n=kaos1627DashboardChartCount();
   const dash=document.querySelector('#screen-dashboard,.screen-dashboard,[data-page="dashboard"],[data-screen="dashboard"]');
   if(!dash)return;
@@ -3008,6 +3071,7 @@ function kaos1628SelectedCount(){
 }
 
 function kaos1628Dashboard(){
+ if(KAOS_COMPANION_ONLY)return;
   const dash=document.querySelector('#screen-dashboard,.screen-dashboard,[data-page="dashboard"],[data-screen="dashboard"]');
   if(!dash)return;
   const n=kaos1628SelectedCount();
@@ -3082,6 +3146,7 @@ setInterval(kaos1628Dashboard,1500);
    return document.getElementById('kaos-dashboard-live');
  }
  function build(){
+ if(KAOS_COMPANION_ONLY)return;
    const box=host();if(!box)return;
    const n=selectedCount();box.dataset.count=String(n);
    let grid=box.querySelector('.kaos-live-grid');
@@ -3094,13 +3159,14 @@ setInterval(kaos1628Dashboard,1500);
    while(grid.children.length<n){
      const i=grid.children.length,cell=document.createElement('div');
      cell.className='kaos-live-cell';
-     cell.innerHTML='<div class="kaos-live-cell-head"><span>CH'+(i+1)+' · <b class="klm-name">WAITING</b></span><span>LIVE</span></div><canvas width="700" height="260"></canvas><div class="kaos-live-cell-foot"><span class="klm-status">WAITING FOR DATA</span></div>';
+     cell.innerHTML='<div class="kaos-live-cell-head"><span>CH'+(i+1)+' · <b class="klm-name">WAITING</b></span><span class="klm-source">WAITING</span></div><canvas width="700" height="260"></canvas><div class="kaos-live-cell-foot"><span class="klm-status">WAITING FOR DATA</span></div>';
      grid.appendChild(cell);
    }
    [...grid.children].forEach((el,i)=>el.style.display=i<n?'':'none');
    paint();
  }
  function paint(){
+ if(KAOS_COMPANION_ONLY)return;
    const box=host(),grid=box?.querySelector('.kaos-live-grid');if(!grid)return;
    const srcs=[...document.querySelectorAll('#terminal-four-grid .market-chart')];
    [...grid.children].forEach((cell,i)=>{
@@ -3110,6 +3176,7 @@ setInterval(kaos1628Dashboard,1500);
      const sc=src?.querySelector('.mc-canvas,canvas');
      if(sc&&sc.width&&sc.height){try{ctx.drawImage(sc,0,0,dst.width,dst.height)}catch(_){}}
      else{ctx.fillStyle='#71818a';ctx.font='12px monospace';ctx.textAlign='center';ctx.fillText('WAITING FOR MARKET DATA',dst.width/2,dst.height/2)}
+     cell.querySelector('.klm-source').textContent=terminalData?.fallback?'RECORDED':kaosLiveChartOk?'LIVE':'WAITING';
      cell.querySelector('.klm-name').textContent=src?.querySelector('.mc-name')?.textContent?.trim()||`CHART ${i+1}`;
      const st=src?.querySelector('.mc-status,.mc-why')?.textContent?.trim();
      cell.querySelector('.klm-status').textContent=(st||'LIVE').slice(0,55);
@@ -3153,6 +3220,7 @@ setTimeout(kaos1631DashboardFlow,500);
 // KAOS 1.6.34 — size Live Market from its actual 1–4 chart grid so lower cards
 // can never overlap/cut off CH3 or CH4.
 function kaos1632ReserveDashboardHeight(){
+ if(KAOS_COMPANION_ONLY)return;
   const live=document.getElementById('kaos-dashboard-live');
   const grid=live?.querySelector('.kaos-live-grid');
   if(!live||!grid)return;

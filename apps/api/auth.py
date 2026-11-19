@@ -2,6 +2,7 @@ import os
 import logging
 import hashlib
 import secrets
+from urllib.parse import urlsplit
 from datetime import datetime, timezone, timedelta
 
 import jwt
@@ -12,6 +13,8 @@ from db import db, clean
 
 logger = logging.getLogger(__name__)
 JWT_ALGORITHM = "HS256"
+MAX_LOGIN_ATTEMPTS = 5
+LOGIN_LOCK_MINUTES = 15
 
 ROLE_RANK = {"user": 0, "moderator": 1, "admin": 2, "super_admin": 3}
 
@@ -76,6 +79,8 @@ async def _user_from_token(token: str) -> dict:
         raise HTTPException(status_code=401, detail="User not found")
     if payload.get("ver", 0) != user.get("token_version", 0):
         raise HTTPException(status_code=401, detail="Session expired")
+    if user.get("account_status", "active") in ("suspended", "banned") or user.get("extension_access_revoked"):
+        raise HTTPException(status_code=403, detail="Account access disabled")
     user = clean(user)
     user.pop("password_hash", None)
     return user
@@ -94,11 +99,35 @@ async def _session_user(token: str):
     if exp and exp < datetime.now(timezone.utc):
         return None
     user = await db.users.find_one({"id": sess["user_id"]})
-    if not user:
+    if not user or user.get("account_status", "active") in ("suspended", "banned") or user.get("extension_access_revoked"):
         return None
     user = clean(user)
     user.pop("password_hash", None)
     return user
+
+
+def _cookie_write_origin_allowed(request: Request) -> bool:
+    """Require a trusted Origin (or Referer) for cookie-authenticated writes."""
+    if request.method.upper() in ("GET", "HEAD", "OPTIONS", "TRACE"):
+        return True
+    raw = request.headers.get("origin") or request.headers.get("referer")
+    if not raw or raw == "null":
+        return False
+    try:
+        parsed = urlsplit(raw)
+        candidate = f"{parsed.scheme}://{parsed.netloc}"
+        if parsed.scheme not in ("https", "http") or not parsed.hostname:
+            return False
+        frontend = os.environ.get("FRONTEND_URL", "http://localhost:3000").rstrip("/")
+        api_origin = os.environ.get("API_PUBLIC_ORIGIN", "").rstrip("/")
+        allowed = {frontend}
+        if api_origin:
+            allowed.add(api_origin)
+        if os.environ.get("KAOS_ENV", "").lower() != "production":
+            allowed.add("http://localhost:3000")
+        return candidate in allowed
+    except (ValueError, AttributeError):
+        return False
 
 
 async def get_current_user(request: Request) -> dict:
@@ -109,19 +138,27 @@ async def get_current_user(request: Request) -> dict:
     if auth_header.startswith("Bearer "):
         bearer = auth_header[7:]
 
-    # 1. JWT access (cookie or bearer)
-    for t in [token, bearer]:
+    # Explicit bearer credentials are not browser-ambient and do not need CSRF checks.
+    if bearer:
+        try:
+            return await _user_from_token(bearer)
+        except HTTPException:
+            u = await _session_user(bearer)
+            if u:
+                return u
+    # Cookies are ambient browser credentials; fail closed for unsafe writes.
+    if (token or session_token) and not _cookie_write_origin_allowed(request):
+        raise HTTPException(status_code=403, detail="Untrusted cookie request origin")
+    for t in [token]:
         if t:
             try:
                 return await _user_from_token(t)
             except HTTPException:
                 pass
-    # 2. Emergent Google session (cookie or bearer)
-    for t in [session_token, bearer]:
-        if t:
-            u = await _session_user(t)
-            if u:
-                return u
+    if session_token:
+        u = await _session_user(session_token)
+        if u:
+            return u
     raise HTTPException(status_code=401, detail="Not authenticated")
 
 

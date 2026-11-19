@@ -1,0 +1,6 @@
+{
+  "profile": "kaos_options_call_spread_v1",
+  "status": "quote-gated_implementation_no_historical_option_PnL",
+  "reason": "Historical option contracts/Greeks/assignment/fill data unavailable",
+  "productionApproved": false
+}

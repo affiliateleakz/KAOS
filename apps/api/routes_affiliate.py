@@ -6,7 +6,13 @@ from db import db, new_id, now, now_iso, clean
 from auth import get_current_user, require_role
 from services import get_setting, set_setting, audit_log
 import re
+import hashlib
+import os
+from urllib.parse import urlsplit, urlencode
+from affiliate_access import paid_member, require_paid_member
 import services_affiliate_ledger as ledger
+from kaos.memberships import RATES
+from kaos.affiliate_ledger import DEFAULT_HOLD_DAYS
 
 aff = APIRouter(prefix="/api/affiliate", tags=["affiliate"])
 aff_admin = APIRouter(prefix="/api/admin", tags=["affiliate-admin"])
@@ -25,13 +31,37 @@ async def get_program():
 
 
 def _code(user):
-    return (user.get("username") or user.get("id"))[:16].upper()
+    return 'KAOS-' + hashlib.sha256(user['id'].encode()).hexdigest()[:16].upper()
+
+
+def referral_link(code):
+    configured = urlsplit(os.getenv('FRONTEND_URL', 'https://tradingwithkaos.com'))
+    origin = (f'https://{configured.netloc}' if configured.scheme == 'https' and configured.hostname
+              and not configured.username and not configured.password else 'https://tradingwithkaos.com')
+    return f'{origin}/register?{urlencode({"ref": code})}'
+
+
+@aff.get('/program')
+async def member_program(user: dict = Depends(get_current_user)):
+    program = await get_program()
+    return {'eligible':paid_member(user),'enrollmentEnabled': program.get('enabled') is True and paid_member(user),
+            'payoutsEnabled': (await __import__('affiliate_payouts').availability())['payoutsEnabled'], 'holdDays': DEFAULT_HOLD_DAYS,
+            'rates': await __import__('affiliate_rates').rates(),
+            'tier': await ledger.member_tier(user),
+            'qualifyingPayments': ['initial', 'renewal']}
 
 
 @aff.post("/activate")
 async def activate(user: dict = Depends(get_current_user)):
+    require_paid_member(user)
+    if user.get('account_status', 'active') in ('suspended', 'banned'):
+        raise HTTPException(403, 'Account access is restricted')
+    if (await get_program()).get('enabled') is not True:
+        raise HTTPException(503, 'Affiliate enrollment is currently paused')
     acc = await db.affiliate_accounts.find_one({"userId": user["id"]})
     if acc:
+        if acc.get('status') != 'active':
+            raise HTTPException(403, 'Affiliate account is not active; contact support')
         return clean(acc)
     doc = {"id": new_id("affacc"), "userId": user["id"], "code": _code(user),
            "status": "active", "createdAt": now_iso()}
@@ -41,11 +71,11 @@ async def activate(user: dict = Depends(get_current_user)):
 
 @aff.get("/overview")
 async def overview(request: Request, user: dict = Depends(get_current_user)):
+    if not paid_member(user):return {"active":False,"membershipRequired":True}
     acc = await db.affiliate_accounts.find_one({"userId": user["id"]}, {"_id": 0})
     if not acc:
         return {"active": False}
     code = acc["code"]
-    origin = request.headers.get("origin") or "https://TradeWithKAOS.com"
     comms = await db.commissions.find({"affiliateUserId": user["id"]}, {"_id": 0}).sort("createdAt", -1).to_list(200)
 
     def sum_status(s):
@@ -54,10 +84,12 @@ async def overview(request: Request, user: dict = Depends(get_current_user)):
     clicks = await db.affiliate_clicks.count_documents({"code": code})
     share_clicks = await db.affiliate_clicks.count_documents({"code": code, "campaign": "signal_share"})
     shares_created = await db.signal_shares.count_documents({"userId": user["id"]})
-    signups = len(refs)
-    paying = len([r for r in refs if r.get("converted")])
+    totals=await db.affiliate_click_totals.aggregate([{'$match':{'code':code}},{'$group':{'_id':None,'clicks':{'$sum':'$clicks'}}}]).to_list(1)
+    clicks+=(totals or [{}])[0].get('clicks',0)
+    signups = await db.users.count_documents({'referredByCode':code,'id':{'$ne':user['id']}})
+    paying = await db.users.count_documents({'referredByCode':code,'id':{'$ne':user['id']},'membership_status':'ACTIVE','stripe_subscription_id':{'$type':'string'}})
     return {
-        "active": True, "code": code, "referralLink": f"{origin}/?ref={code}",
+        "active": acc.get('status') == 'active', "code": code, "referralLink": referral_link(code),
         "clicks": clicks, "signups": signups, "payingReferrals": paying,
         "conversionRate": round((paying / clicks) * 100, 2) if clicks else 0,
         "shareFunnel": {"shares": shares_created, "clicks": share_clicks, "signups": signups,
@@ -73,6 +105,7 @@ async def overview(request: Request, user: dict = Depends(get_current_user)):
 
 @aff.get("/my-rank")
 async def my_rank(user: dict = Depends(get_current_user)):
+    require_paid_member(user)
     """Lightweight leaderboard position for the current user (for a dashboard-home badge)."""
     mine = await db.affiliate_customer_referrals.count_documents({"affiliateUserId": user["id"], "converted": True})
     if mine == 0:
@@ -86,11 +119,13 @@ async def my_rank(user: dict = Depends(get_current_user)):
 
 @aff.get("/marketing")
 async def member_marketing(user: dict = Depends(get_current_user)):
+    require_paid_member(user)
     return await db.marketing_assets.find({"published": True}, {"_id": 0}).sort("createdAt", -1).to_list(100)
 
 
 @aff.get("/leaderboard")
 async def leaderboard(user: dict = Depends(get_current_user)):
+    require_paid_member(user)
     """Top affiliates ranked by paying (converted) referrals — friendly competition for sharers."""
     rows = await db.affiliate_customer_referrals.aggregate([
         {"$match": {"converted": True}},
@@ -115,7 +150,7 @@ async def track_click(ref: str, request: Request, campaign: Optional[str] = None
     acc = await db.affiliate_accounts.find_one({"code": ref})
     if acc:
         await db.affiliate_clicks.insert_one({"id": new_id("clk"), "code": ref, "campaign": campaign,
-                                              "ip": request.client.host if request.client else None, "createdAt": now_iso()})
+                                              "createdAt": now_iso()})
     return {"ok": True}
 
 
@@ -132,13 +167,11 @@ async def record_commission(customer_user: dict, plan: dict, event: str = "purch
     amount_cents = plan["amount"] if amount_cents is None else amount_cents
     entries = await ledger.record_payment(event_id, customer_user["id"], plan, amount_cents, kind)
     for e in entries:
-        if await db.commissions.find_one({"ledgerEntryId": e.entry_id}):
-            continue
-        await db.commissions.insert_one({
+        await db.commissions.update_one({"ledgerEntryId": e.entry_id}, {"$setOnInsert": {
             "id": new_id("comm"), "ledgerEntryId": e.entry_id, "affiliateUserId": e.affiliate_id,
             "customerUserId": e.buyer_id, "planId": plan["id"], "level": e.level, "recipientTier": e.recipient_tier,
             "amount": float(e.amount), "rate": e.rate_pct, "type": "percentage", "event": event,
-            "status": "PENDING", "holdReleaseAt": e.available_at.isoformat(), "createdAt": now_iso()})
+            "status": "PENDING", "holdReleaseAt": e.available_at.isoformat(), "createdAt": now_iso()}}, upsert=True)
     direct = next((e for e in entries if e.level == 1), None)
     if direct:
         await db.affiliate_customer_referrals.update_one(
@@ -193,9 +226,11 @@ class CommActionReq(BaseModel):
 @aff_admin.post("/commissions/{cid}/status")
 async def set_commission_status(cid: str, req: CommActionReq, admin: dict = Depends(admin_dep)):
     if req.status == "PAID":
-        raise HTTPException(status_code=403, detail="Affiliate payouts are disabled")
+        raise HTTPException(status_code=403, detail="Use the live transfer controls; a display status cannot confirm that funds were sent")
     if req.status not in ("PENDING", "APPROVED", "PAYABLE", "REVERSED"):
         raise HTTPException(status_code=400, detail="Invalid status")
+    record=await db.commissions.find_one({"id":cid})
+    if record and record.get("ledgerEntryId") and req.status=="REVERSED":raise HTTPException(409,"Use the authoritative refund/reversal workflow; a display status cannot reverse ledger funds")
     await db.commissions.update_one({"id": cid}, {"$set": {"status": req.status, "updatedAt": now_iso()}})
     await audit_log(admin, "commission_status", "commission", cid, {"status": req.status})
     return {"ok": True}

@@ -1,0 +1,151 @@
+import React from "react";
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
+import { Toaster } from "sonner";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import AuthCallback from "./components/AuthCallback";
+import {MembershipProvider, FeatureGate} from "./components/MembershipAccess";
+
+import VisitorTracker from "./components/VisitorTracker";
+import TrafficAnalytics from "./components/TrafficAnalytics";
+import PineScripts from "./pages/PineScripts";
+import FollowUs from "./pages/FollowUs";
+import Landing from "./pages/Landing";
+import RadarSources from "./pages/admin/RadarSources";
+import Privacy from "./pages/Privacy";
+import {PaymentComplete} from './components/GuestCheckout';
+import { Login, Register, ForgotPassword, ResetPassword } from "./pages/Auth";
+import Onboarding from "./pages/Onboarding";
+import Memberships from "./pages/Memberships";
+import CommunityDetail from "./pages/CommunityDetail";
+import SharePage from "./pages/SharePage";
+import Profile from "./pages/Profile";
+import { PaymentSuccess, PaymentCancel } from "./pages/Payment";
+import DashboardLayout from "./pages/dashboard/DashboardLayout";
+import * as DP from "./pages/dashboard/pages";
+import Trading from "./pages/dashboard/Trading";
+import OpportunityRadar from "./pages/dashboard/OpportunityRadar";
+import PublicTradesScanner from "./pages/dashboard/PublicTradesScanner";
+import CryptoScanner from "./pages/dashboard/CryptoScanner";
+import StockHeatmap from "./pages/dashboard/StockHeatmap";
+import BrokerConnections from "./pages/dashboard/BrokerConnections";
+import PaperTrading from "./pages/dashboard/PaperTrading";
+import {AIPage} from "./pages/dashboard/AffiliateAI";
+import AffiliatePage from "./pages/dashboard/AffiliateHub";
+import CommerceSetup from "./pages/admin/CommerceSetup";
+import LaunchReadiness from "./pages/admin/LaunchReadiness";
+import AdminLayout from "./pages/admin/AdminLayout";
+import * as AP from "./pages/admin/pages";
+import { TradingOps, Connectors } from "./pages/admin/TradingOps";
+import { AICenter, Affiliates } from "./pages/admin/AICenter";
+import ExtensionSimulator from "./pages/admin/ExtensionSimulator";
+
+function Protected({ children, role }) {
+  const protectedLocation = useLocation();
+  const { user, loading } = useAuth();
+  if (loading || user === undefined)
+    return <div className="flex min-h-screen items-center justify-center font-mono text-sm text-slate-400">Loading…</div>;
+  if (!user) {
+    const brokerSetup = protectedLocation.pathname === '/dashboard/api';
+    const broker = new URLSearchParams(protectedLocation.search).get('broker');
+    return <Navigate to={brokerSetup ? '/login?brokerSetup=1' + (broker==='coinbase'?'&broker=coinbase':'') : '/login'} replace />;
+  }
+  if (role) {
+    const rank = { user: 0, moderator: 1, admin: 2, super_admin: 3 };
+    if ((rank[user.role] || 0) < rank[role]) return <Navigate to="/dashboard" replace />;
+  }
+  return children;
+}
+
+function AppRouter() {
+  const location = useLocation();
+  if (location.hash?.includes("session_id=")) return <AuthCallback />;
+  return (
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route path="/follow-us" element={<FollowUs />} />
+      <Route path="/privacy" element={<Privacy />} />
+      <Route path="/privacy/" element={<Privacy />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Memberships />} />
+      <Route path="/memberships" element={<Memberships />} />
+      <Route path="/register/account" element={<Register />} />
+      <Route path="/checkout" element={<Register purchase />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/community/:id" element={<CommunityDetail />} />
+      <Route path="/u/:username" element={<Profile />} />
+      <Route path="/s/:id" element={<SharePage />} />
+      <Route path="/payment/complete" element={<PaymentComplete />} />
+      <Route path="/payment/success" element={<PaymentSuccess />} />
+      <Route path="/payment/cancel" element={<PaymentCancel />} />
+
+      <Route path="/onboarding" element={<Protected><Onboarding /></Protected>} />
+
+      <Route path="/dashboard" element={<Protected><MembershipProvider><DashboardLayout /></MembershipProvider></Protected>}>
+        <Route index element={<DP.Overview />} />
+        <Route path="trading" element={<Trading />} />
+        <Route path="opportunities" element={<FeatureGate route="opportunities"><OpportunityRadar /></FeatureGate>} />
+        <Route path="public-trades" element={<FeatureGate route="public-trades"><PublicTradesScanner /></FeatureGate>} />
+        <Route path="crypto-scanner" element={<FeatureGate route="crypto-scanner"><CryptoScanner /></FeatureGate>} />
+        <Route path="stock-heatmap" element={<FeatureGate route="stock-heatmap"><StockHeatmap /></FeatureGate>} />
+        <Route path="brokers" element={<BrokerConnections />} />
+        <Route path="api" element={<BrokerConnections />} />
+        <Route path="paper" element={<PaperTrading />} />
+        <Route path="kaos-ai" element={<FeatureGate route="kaos-ai"><AIPage /></FeatureGate>} />
+        <Route path="affiliate" element={<AffiliatePage />} />
+        <Route path="follow-us" element={<FollowUs />} />
+        <Route path="strategies" element={<FeatureGate route="strategies"><DP.MyStrategies /></FeatureGate>} />
+        <Route path="community" element={<DP.CommunityFeed />} />
+        <Route path="indicators" element={<DP.Indicators />} />
+        <Route path="scripts" element={<DP.Scripts />} />
+        <Route path="pinescripts" element={<PineScripts />} />
+        <Route path="backtests" element={<DP.Backtests />} />
+        <Route path="saved" element={<DP.Saved />} />
+        <Route path="following" element={<DP.Following />} />
+        <Route path="subscription" element={<DP.Subscription />} />
+        <Route path="devices" element={<DP.Devices />} />
+        <Route path="downloads" element={<DP.Downloads />} />
+        <Route path="account" element={<DP.Account />} />
+        <Route path="support" element={<DP.Support />} />
+      </Route>
+
+      <Route path="/admin" element={<Protected role="moderator"><AdminLayout /></Protected>}>
+        <Route index element={<AP.AdminDashboard />} />
+        <Route path="pinescripts" element={<Protected role="admin"><PineScripts admin /></Protected>} />
+        <Route path="trading-ops" element={<TradingOps />} />
+        <Route path="kaos-ai" element={<AICenter />} />
+        <Route path="follow-us" element={<Protected role="super_admin"><FollowUs admin /></Protected>} />
+        <Route path="analytics" element={<Protected role="admin"><TrafficAnalytics admin /></Protected>} />
+        <Route path="affiliates" element={<Affiliates />} />
+        <Route path="radar" element={<Protected role="super_admin"><RadarSources /></Protected>} />
+        <Route path="launch" element={<Protected role="super_admin"><LaunchReadiness /></Protected>} />
+        <Route path="commerce" element={<Protected role="super_admin"><CommerceSetup /></Protected>} />
+        <Route path="connectors" element={<Connectors />} />
+        <Route path="users" element={<AP.Users />} />
+        <Route path="subscriptions" element={<AP.Subscriptions />} />
+        <Route path="devices" element={<AP.AdminDevices />} />
+        <Route path="affiliate" element={<AP.Affiliate />} />
+        <Route path="strategies" element={<AP.AdminStrategies />} />
+        <Route path="moderation" element={<AP.Moderation />} />
+        <Route path="extension" element={<AP.ExtensionReleases />} />
+        <Route path="settings" element={<AP.Settings />} />
+        <Route path="audit" element={<AP.Audit />} />
+        <Route path="extension-test" element={<ExtensionSimulator />} />
+      </Route>
+
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <Toaster theme="dark" position="top-right" richColors />
+        <VisitorTracker />
+        <AppRouter />
+      </BrowserRouter>
+    </AuthProvider>
+  );
+}

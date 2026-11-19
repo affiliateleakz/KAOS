@@ -17,15 +17,29 @@ services:
     ports: ["8001:8001"]
     depends_on:
       mongo: { condition: service_healthy }
+  training:
+    profiles: [training]
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    command: ["python", "training_worker.py"]
+    env_file: .env
+    environment:
+      KAOS_TRAINING_WORKER_ENABLED: "true"
+      KAOS_TRAINING_INTERVAL_SECONDS: "300"
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+    restart: unless-stopped
+    cpus: 1
+    mem_limit: 1g
+    pids_limit: 128
+    depends_on:
+      mongo: { condition: service_healthy }
   web:
     image: node:20-alpine
     working_dir: /app
-    command: sh -c "npm ci --no-audit --no-fund && npm start"
+    command: sh -c "npm ci --no-audit --no-fund && npm start -- --host 0.0.0.0"
     environment:
       REACT_APP_BACKEND_URL: ""
       KAOS_API_PROXY: http://api:8001
-      BROWSER: none
-      WDS_SOCKET_PORT: "0"
     ports: ["3000:3000"]
     volumes: [./apps/web:/app, web-node-modules:/app/node_modules]
     depends_on: [api]

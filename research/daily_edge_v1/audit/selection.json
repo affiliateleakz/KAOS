@@ -1,0 +1,9 @@
+{
+  "chosen": {
+    "kind": "stocks",
+    "strategy": "chandelier22_3atr"
+  },
+  "trials": 24,
+  "eligible": 4,
+  "frozen_before_final": true
+}

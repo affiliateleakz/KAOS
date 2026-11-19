@@ -1,0 +1,88 @@
+# Current extension mode
+
+Extension 1.7.38 uses browser-driven Coinbase spot decisions. See
+[Coinbase extension spot setup](COINBASE_EXTENSION_SPOT.md). The server-worker
+mode below describes legacy sessions and remains separate from new extension sessions.
+
+# Coinbase automatic spot trading candidate
+
+Coinbase uses the member's existing bot controls. The owner requested automatic real-money trading; this release prepares that path without changing a hosting environment or placing an order during development. Repository checks are not live exchange acceptance or evidence of profitability.
+
+## What Start uses
+
+In extension **1.7.34**, select Coinbase, load available USD spot markets in the main bot tab, and select the same number of markets as the existing chart count. Set the existing **Trade Amount**, **Profit Target**, **Loss Limit**, **Max Loss Streak**, and **Cooldown**. Start copies those exact values into a server-owned session. Settings changes apply on the next accepted Start, not midway through a run. Missing/invalid values cause an error; no replacement dollar amount is invented.
+
+- One open KAOS spot position per selected market. Maximum reserved buy notional is Trade Amount × chart count, shared across selected products. Unknown outcomes retain their reservations. This is a principal/notional cap, not a promise that fees or price movements cannot affect account value.
+- Profit/loss thresholds and the loss streak/cooldown are session-wide across the selected markets. P&L includes verified fill costs/fees and fresh bid marks on open positions; the final exit price/fee may differ. A configured session risk stop requests exits of verified holdings. These are software triggers, not exchange-native guaranteed stops. Zero retains the existing control's off meaning.
+- **KAOS Strategy SR1.1** is the same deterministic module used by the current bot, already covered by JavaScript/Python parity tests. The worker does not use the placeholder intelligence endpoint, OpenAI, or an unvalidated AI model. Each Coinbase chart must select KAOS Strategy; custom profiles are rejected rather than silently replaced.
+- Coinbase is long-only spot: BUY opens a holding and SELL closes a verified KAOS holding. No short selling and no binary expiration. The expiration selector is disabled for Coinbase. Martingale and Compounding must be switched off in existing Risk Controls; these modes are not silently translated from binary contracts.
+- Signals use Coinbase Exchange public trades; Advanced Trade submits orders. Feed marks are not promised execution prices. Initial signal warmup requires at least 300 genuine contiguous closed 5-second candles, roughly 25 minutes, and restarts on missing trade coverage. No missing bars are fabricated. Stale signals/quotes cannot start a trade. Fresh quotes can still support risk exits when only the signal feed has a gap.
+- Start has a 12-hour entry-consent window. Stop disables new buys. It does not cancel in-flight exchange requests, close holdings immediately, or stop the dedicated worker. The worker continues configured exit management for tracked holdings; risk-reducing exits do not require expired entry consent or a still-paid membership. Account suspension/emergency stops, unavailable data, or service outages may prevent those exits; review actual holdings in Coinbase.
+- Restarting the browser does not create a new session. Status restores the existing server run. Closing the browser does not stop that run. A new Start is refused while another run is active/stopping or a tracked/uncertain position remains unresolved.
+
+## Deployment order
+
+1. Install the tested website/backend release and extension 1.7.34 for the existing Store item `gbobopmnjgeeegniphckfpalhnebapjm`. Preserve the public key, backend `.env`, root `.htaccess`, and broker vault key. Restart Passenger after installation. The updated wrapper keeps Coinbase disabled unless `KAOS_COINBASE_LIVE_ORDERS` is explicitly set to `enabled`; billing and other order routes remain blocked.
+2. Before enabling the gateway, configure **Dashboard → Broker Connections** with a Coinbase CDP key that has **View + Trade** and **Transfer disabled**. Enter it privately in KAOS, never in chat/GitHub. Reconnect/update existing View-only keys while the gateway is paused. A configured IP allowlist must permit both the API and worker's actual outbound IPs. Connection verification alone does not place orders.
+3. Configure the separate `KAOS_BROKER_VAULT_KEY` privately. Preserve an existing value. During rotation retain old keys in `KAOS_BROKER_VAULT_PREVIOUS_KEYS`, explicitly re-encrypt with `broker_vault.py rotate`, then remove old keys only after verification. The commerce vault is separate. No vault key is generated/replaced during activation.
+4. Provision a **persistent dedicated worker process outside Passenger**, using the same deployed API/core code, database and broker vault configuration. Shared cPanel's Python web app alone is not this worker. Do not rely on an unattended cPanel Terminal session; use a supervised service on a host that supports persistent processes. No worker host has been provisioned by this release.
+5. In the API environment set `KAOS_COINBASE_LIVE_ORDERS=enabled` and restart the app. On the worker set that same flag plus `KAOS_COINBASE_AUTO_WORKER=enabled`. Optional `KAOS_COINBASE_MAX_ORDER_USD` is an operator ceiling: Start rejects a larger selected amount rather than reducing it silently. There is no hardcoded $25 ceiling on a valid automatic session's chosen amount.
+6. Start the worker under its process supervisor with `PYTHONPATH` pointing to `apps/api` and `packages/kaos-core`, then run `python apps/api/coinbase_auto_worker.py` from the deployed source root. Supply `MONGO_URL`, `DB_NAME` and vault configuration through private environment settings. It never starts from a website request or ASGI startup hook.
+7. The worker checks the API's public `/api/v1/coinbase-live/capabilities` response each cycle and before submitting orders. The default control origin is `https://api.tradingwithkaos.com`; `KAOS_COINBASE_CONTROL_ORIGIN` can select another HTTPS deployment origin. Bot-verification HTML, redirects, a disabled gateway, or an unreachable control API prevent order submission. Stop remains reachable through the cPanel wrapper even when the gateway is disabled.
+8. Verify real account permissions, products, amounts, membership, worker heartbeat and actual Coinbase outcomes before treating the integration as production-accepted. The extension only accepts Start when the worker is online and displays a real-money confirmation. Use the existing settings and explicit Start to authorize the selected run; no trade is submitted just by enabling a flag, connecting, loading markets or opening the extension.
+
+To globally stop future worker submissions, disable the API gateway and stop the dedicated worker process; an in-flight exchange request can still complete. Neither action liquidates holdings. Check Coinbase directly. The separate recovery worker remains read-only; it must not be mistaken for the automatic worker.
+
+## Verification and limitations
+
+Tests use generated temporary keys, fake provider responses and fixture candles; they make no real orders. They cover settings mapping, explicit Start/Stop, membership/permissions/worker gates, exposure reservations, genuine trade-gap handling, stale prices, deterministic strategy use, no-short exits, risk exits, duplicate identities and uncertain outcomes. Browser tests exercise the main bot controls and ensure Coinbase never dispatches Pocket Option Start. Live account execution, service uptime, liquidity, fees, latency, order-size increments and real broker reconciliation still need hosted acceptance. Software loss limits are not guaranteed losses, and this strategy has no established profitable live Coinbase track record.
+
+Credentials are encrypted at rest and not returned to the website or extension. The read-only account/product connection endpoints remain available. A verified connection badge is timestamped evidence, not continuous proof of connectivity. Existing holdings from outside KAOS are never adopted or sold automatically. Ambiguous submissions, partial fills, mismatched quantities/fees and unsupported reconciliation cases require review rather than a replacement order.
+
+Local MongoDB integration tests additionally race two products for a single remaining notional allocation and verify that only one reservation succeeds. A separate isolated test database exercises Start → reserved BUY → verified fills → SELL → released exposure → Stop with a fake Coinbase provider. Neither test uses a real exchange key or order. The account reservation and fill ledger use natural unique Mongo IDs, so protection does not depend on Passenger running ASGI startup index creation.
+
+## Execution service package (independent of AI training)
+
+Coinbase execution uses `deploy/coinbase/kaos-coinbase.service`; the AI trainer
+uses a different service and is not a prerequisite for deterministic KAOS Strategy.
+The extension supplies the controls while the execution process manages the run.
+This is the existing server-execution architecture: no broker keys or database
+credentials should be copied into the extension.
+
+The execution process can share infrastructure with the API if the hosting plan
+supports a supervised persistent Python process. A cPanel Python/Passenger web
+application alone does not provide that supervision. Ask Asura whether your plan
+supports a persistent, supervised process running
+`python scripts/run_coinbase_worker.py` separately from Passenger. Do not add it
+to `passenger_wsgi.py`, a request handler, or a repeated cron job. Resource limits
+still apply if both processes share the same cPanel account.
+
+For a Linux host with systemd:
+
+1. Use a dedicated `kaos` system user. Install this same revision at `/opt/KAOS`,
+   create `/opt/KAOS/.venv`, and install `apps/api/requirements.txt` there.
+2. Privately copy `deploy/coinbase/coinbase.env.example` to
+   `/etc/kaos/coinbase.env`, root-owned with mode 0600. Replace the placeholders
+   using the API's existing database and broker-vault values. Do not use the
+   separate commerce vault key. Allow the host's IP in MongoDB/Coinbase as needed.
+3. Install `deploy/coinbase/kaos-coinbase.service` at
+   `/etc/systemd/system/kaos-coinbase.service`. Inspect paths/user before use.
+4. Explicitly enable the API gateway using the existing cPanel runtime command
+   `python scripts/cpanel_billing_runtime.py --enable-stripe --enable-trading`
+   with the cPanel virtualenv Python, then restart the API app.
+5. Run `sudo systemctl daemon-reload` and
+   `sudo systemctl enable --now kaos-coinbase` on the execution host.
+   Inspect `sudo systemctl status kaos-coinbase` and
+   `sudo journalctl -u kaos-coinbase -n 50 --no-pager`.
+
+The service validates required configuration without printing secret values before
+starting. It does not create a member session. The member must connect Coinbase
+and explicitly press Start with valid settings. A fresh worker heartbeat is
+required. The initial ~25-minute candle warmup still applies. `--check` only
+validates local settings: it is not proof of exchange/database connectivity or
+successful trading. No service has been installed or started by preparing these
+files. Closing the browser does not stop an accepted server-owned run.
+
+Stopping the service does not liquidate positions. Existing in-flight Coinbase
+requests can still complete; inspect Coinbase directly and retain the same database
+and vault so reservations and fills can be reconciled on recovery.

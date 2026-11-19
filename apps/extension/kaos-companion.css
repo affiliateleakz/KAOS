@@ -1,0 +1,85 @@
+/* Compact control surface. Broker data and strategy calculations stay in content.js. */
+html body.kaos-companion{min-width:0!important;width:100vw!important;max-width:100vw!important}
+html body.kaos-companion canvas{display:none!important}
+html body.kaos-companion #screen-chart,
+html body.kaos-companion :is(#kaos-dashboard-live,.kaos-nav-research,[data-kaos-view="charts"],[data-kaos-view="backtester"],[data-kaos-view="ai"],[data-kaos-view="performance"],#open-chart-btn,#open-chart-btn2,#kaos-opportunity-popup){display:none!important}
+html body.kaos-companion .kaos-app-nav{display:none!important}
+html body.kaos-companion :is(.kaos-live-head,.kaos-live-grid,.kaos-indicator-strip,.four-grid,#kaos-dashboard-multichart){display:none!important}
+html body.kaos-companion .kaos-session-strip [data-session-size]{background:#312611!important;border-color:#8a6b32!important;color:#e8c46f!important}
+html body.kaos-companion:is(.kaos-mini,.kaos-max,.kaos-mid,.kaos-fullpage) #screen-main.kaos-five-app .kaos-app-workspace.k14-workspace{margin:0!important;width:100%!important;min-width:0!important;max-width:none!important;overflow-y:auto!important;display:flex!important;flex-direction:column!important;gap:12px!important;padding:12px 12px 70px!important}
+html body.kaos-companion #screen-main .kaos-session-strip{order:-10;position:sticky!important;top:0!important;width:100%!important;flex-wrap:wrap!important;gap:8px!important;min-height:0!important}
+.kaos-companion-nav{display:flex;flex-wrap:wrap;gap:5px;flex-basis:100%;border-top:1px solid #514027;padding-top:9px}
+html body.kaos-companion .kaos-companion-nav button,.kaos-companion-nav a{margin:0!important;background:#211b10!important;color:#e8d8b2!important;border:1px solid #66502a!important;padding:8px!important;border-radius:5px;font:11px system-ui,sans-serif;text-decoration:none}
+.kaos-companion-summary{order:-9;border:1px solid #66502a;border-radius:9px;padding:14px;background:#17130d}
+.kaos-companion-summary h1{color:#e8c46f;font:700 20px Georgia,serif}
+.kaos-companion-summary p{color:#bdae92;font-size:12px;line-height:1.6;margin-top:7px}
+.kaos-companion-summary [data-companion-asset]{color:#f3ead8;font-weight:700}
+.kaos-companion-summary button{margin-top:10px;padding:8px 12px;border:1px solid #8a6b32;border-radius:5px;background:#302512;color:#e8c46f;cursor:pointer}
+html body.kaos-companion #screen-main:not(.view-dashboard) .kaos-companion-summary{display:none!important}
+html body.kaos-companion #screen-main.view-dashboard .k14-page-head{display:none!important}
+html body.kaos-companion #screen-main.view-dashboard .dashboard-top{display:contents!important}
+html body.kaos-companion #screen-main.view-dashboard .kaos-banner-toolbar{display:grid!important;grid-template-columns:1fr 1fr!important;gap:10px!important;width:100%!important;height:auto!important;min-height:0!important;margin:0!important}
+html body.kaos-companion #screen-main.view-dashboard .kaos-tb-field:first-child{display:none!important}
+html body.kaos-companion #screen-main.view-dashboard .kaos-tb-field{min-width:0!important;width:100%!important}
+html body.kaos-companion #screen-main.view-dashboard .kaos-tb-strategy{grid-column:1/-1!important}
+html body.kaos-companion #screen-main.view-dashboard .kaos-run-rail{display:block!important;position:static!important;width:100%!important;height:auto!important;margin:10px 0 0!important}
+html body.kaos-companion #screen-main.view-dashboard #start-btn{width:100%!important;max-width:none!important;height:48px!important}
+html body.kaos-companion #screen-main.view-dashboard .k14-rail{display:grid!important;grid-template-columns:minmax(0,1fr)!important;width:100%!important;min-width:0!important;gap:12px!important}
+html body.kaos-companion #screen-main.view-dashboard .k14-acct,html body.kaos-companion #screen-main.view-dashboard .k14-trades{width:100%!important;min-width:0!important;min-height:0!important;height:auto!important;max-height:none!important;overflow:visible!important;margin:0!important;position:static!important}
+html body.kaos-companion #screen-main.view-dashboard .k14-bottom-cards{display:none!important}
+html body.kaos-companion #screen-main.view-dashboard .k14-acct .status-bar{display:flex!important;flex-direction:column!important;align-items:flex-start!important;min-height:0!important;gap:7px!important}
+html body.kaos-companion #screen-main.view-dashboard .k14-acct .stats-row{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important}
+html body.kaos-companion #screen-main.view-dashboard .k14-acct .stat-card{min-height:64px!important;padding:10px 3px!important}
+html body.kaos-companion #screen-main.view-dashboard .k14-acct .stat-val{font-size:17px!important}
+html body.kaos-companion #screen-main .k14-footer{display:none!important}
+
+/* Command center hierarchy and keyboard navigation. */
+html body.kaos-companion .kaos-companion-summary{background:linear-gradient(135deg,#241c10,#110f0b);border-top:3px solid #e8c46f;padding:18px}
+html body.kaos-companion .kaos-companion-summary h1{margin:0;font-size:22px;line-height:1.25}
+html body.kaos-companion [data-companion-asset]{font-size:18px;letter-spacing:.03em}
+html body.kaos-companion [data-companion-guidance]{border-top:1px solid #514027;padding-top:12px;min-height:48px}
+html body.kaos-companion .kaos-companion-nav [aria-current="page"]{background:#e8c46f!important;color:#17130d!important;border-color:#e8c46f!important;font-weight:700}
+html body.kaos-companion :is(button,a,select,input):focus-visible{outline:2px solid #f2d888!important;outline-offset:3px}
+html body.kaos-companion [data-session-status]{font-size:11px;line-height:1.5}
+
+/* Visual reference: the owner's 2.2.0 Viking homepage trading panels. */
+html body.kaos-companion #screen-main{background:#060707!important}
+html body.kaos-companion .kaos-companion-summary{background:radial-gradient(ellipse at top right,#33240d55,transparent 65%),#080a09;border:1px solid #9a762d;border-radius:6px;box-shadow:inset 0 1px #efcf7829,0 12px 30px #0006}
+html body.kaos-companion .kaos-companion-brand{display:block;width:210px;max-width:80%;height:58px;object-fit:contain;object-position:left}
+html body.kaos-companion .kaos-companion-eyebrow{font:10px/1.6 system-ui,sans-serif;letter-spacing:.18em;color:#d9b555;margin:10px 0 6px}
+html body.kaos-companion .kaos-companion-summary h1{font:700 23px/1.3 Georgia,serif;color:#f0d389}
+html body.kaos-companion .kaos-companion-summary [data-companion-asset]{font:600 14px/1.6 system-ui,sans-serif;color:#eee5cc}
+html body.kaos-companion #screen-main .kaos-session-strip{background:#090b0b!important;border:1px solid #765a29!important;border-radius:6px!important;box-shadow:inset 0 1px #efcf781a!important;padding:12px!important}
+html body.kaos-companion .kaos-companion-nav button,html body.kaos-companion .kaos-companion-nav a{background:#101311!important;border-color:#514329!important;color:#d8c9a5!important;min-height:36px;text-transform:uppercase;letter-spacing:.04em;font-size:10px}
+html body.kaos-companion .kaos-companion-nav [aria-current="page"]{background:linear-gradient(180deg,#e8c46f,#b7882d)!important;border-color:#f0d389!important;color:#17130d!important}
+html body.kaos-companion #screen-main .k14-card{background:linear-gradient(150deg,#111512,#070909)!important;border:1px solid #71582a!important;border-radius:6px!important;box-shadow:inset 0 1px #efcf781a!important}
+html body.kaos-companion #screen-main .k14-card-head{background:linear-gradient(90deg,#261e10,#0b0e0c)!important;border-bottom:1px solid #514329!important;color:#e8c46f!important;letter-spacing:.08em}
+html body.kaos-companion #screen-main .stat-card{background:#080c0a!important;border:1px solid #393724!important;border-radius:4px!important}
+html body.kaos-companion #screen-main :is(select,input){background:#0a100e!important;border-color:#5d4b2a!important;color:#f3ead8!important}
+
+html body.kaos-companion #screen-main .kaos-app-workspace.k14-workspace > *{flex-shrink:0!important}
+html body.kaos-companion #screen-main.view-dashboard .kaos-app-workspace.k14-workspace .k14-rail{display:grid!important;grid-template-columns:minmax(0,1fr)!important;grid-template-rows:none!important;grid-auto-rows:max-content!important;height:auto!important;min-height:0!important;max-height:none!important;flex:none!important;align-content:start!important;overflow:visible!important}
+html body.kaos-companion #screen-main.view-dashboard .kaos-app-workspace .k14-rail > .k14-card{display:block!important;position:static!important;height:auto!important;min-height:min-content!important;max-height:none!important;flex:none!important;overflow:visible!important}
+html body.kaos-companion #screen-main .k14-acct :is(#status-text,#kaos-last-trade,#kaos-balance){position:static!important;flex-shrink:0!important;background:#0a100d!important;border-color:#514329!important}
+html body.kaos-companion #screen-main .k14-acct .status-bar{height:auto!important;flex:none!important;overflow:visible!important}
+html body.kaos-companion #screen-main.view-dashboard .kaos-app-workspace.k14-workspace .kaos-banner-toolbar{flex:none!important;grid-template-rows:none!important;grid-auto-rows:max-content!important;align-content:start!important;padding:0!important;overflow:visible!important}
+html body.kaos-companion #screen-main.view-dashboard .kaos-banner-toolbar .kaos-tb-field{display:flex!important;flex-direction:column!important;position:static!important;height:auto!important;min-height:64px!important;gap:6px!important}
+html body.kaos-companion #screen-main.view-dashboard .kaos-banner-toolbar .kaos-tb-field:first-child{display:none!important}
+html body.kaos-companion #screen-main.view-dashboard .kaos-banner-toolbar .kaos-tb-strategy{display:flex!important;grid-column:1/-1!important}
+html body.kaos-companion #screen-main.view-dashboard .kaos-banner-toolbar .kaos-tb-gear{display:none!important}
+html body.kaos-companion #screen-main.view-dashboard .kaos-banner-toolbar :is(input,select,#kaos-strategy-box){position:static!important;min-height:42px!important;height:42px!important;width:100%!important;margin:0!important}
+html body.kaos-companion #screen-main.view-dashboard .kaos-app-workspace.k14-workspace .kaos-run-rail{flex:none!important}
+
+/* Diagnostics belongs to the Bot workspace beside account and trade activity. */
+html body.kaos-companion #screen-main.view-dashboard #debug-fold{display:block!important;margin:0!important;min-width:0!important;width:100%!important;border:1px solid #71582a!important;border-radius:6px!important;background:#0a0e0b!important}
+html body.kaos-companion #screen-main:not(.view-dashboard) #debug-fold{display:none!important}
+html body.kaos-companion #debug-fold>summary{min-height:44px;display:flex;align-items:center;padding:12px;color:#e8c46f;line-height:1.5}
+html body.kaos-companion #debug-fold .fold-body{padding:10px;min-width:0;overflow-wrap:anywhere}
+html body.kaos-companion #debug-fold .dbg-panel{padding:0;background:transparent!important;min-width:0}
+
+/* Broker chart selection belongs to the main Bot menu; no internal canvases. */
+html body.kaos-companion #screen-main.view-dashboard .kaos-chart-count-control{display:grid!important;grid-template-columns:minmax(0,1fr) 130px!important;gap:10px!important;min-width:0!important;width:100%!important;box-sizing:border-box!important;background:#0a100e!important;border-color:#71582a!important}
+html body.kaos-companion #screen-main:not(.view-dashboard) .kaos-chart-count-control{display:none!important}
+html body.kaos-companion .kaos-chart-count-control .kcc-copy{min-width:0!important}
+html body.kaos-companion #kaos-open-selected-charts{grid-column:1/-1!important;width:100%!important;background:#211b10!important;border-color:#8a6b32!important;color:#e8c46f!important}
+@media(max-width:480px){html body.kaos-companion #screen-main.view-dashboard .kaos-chart-count-control{grid-template-columns:minmax(0,1fr)!important}}

@@ -4,9 +4,11 @@ from kaos_opportunity import evaluate
 NOW=datetime(2026,10,16,4,tzinfo=timezone.utc)
 
 def obs(source,direction,age_days=0,observed_age_minutes=1):
+    observed=NOW-timedelta(minutes=observed_age_minutes)
+    published=observed-timedelta(days=age_days)
     return {'source':source,'direction':direction,'strength':1.,'event_id':source,
-            'observed_at':(NOW-timedelta(minutes=observed_age_minutes)).isoformat(),
-            'published_at':(NOW-timedelta(days=age_days)).isoformat(),'source_url':'https://example.com'}
+            'observed_at':observed.isoformat(),
+            'published_at':published.isoformat(),'source_url':'https://example.com'}
 class FusionTests(unittest.TestCase):
     def test_two_neutral_sources_not_trade_candidate(self):
         r=evaluate('AAPL',[obs('news','neutral'),obs('insider','neutral')],NOW)

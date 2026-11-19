@@ -1,0 +1,26 @@
+{
+  "BTCUSDT": {
+    "net_return": -0.1055958703036558,
+    "not_risk_matched": true
+  },
+  "ETHUSDT": {
+    "net_return": -0.17159331028362768,
+    "not_risk_matched": true
+  },
+  "SOLUSDT": {
+    "net_return": -0.17512072764440123,
+    "not_risk_matched": true
+  },
+  "BNBUSDT": {
+    "net_return": -0.20192693212904678,
+    "not_risk_matched": true
+  },
+  "XRPUSDT": {
+    "net_return": -0.2528807806546657,
+    "not_risk_matched": true
+  },
+  "ADAUSDT": {
+    "net_return": -0.0034048026467723425,
+    "not_risk_matched": true
+  }
+}

@@ -1,5 +1,6 @@
 import React, {useCallback,useEffect,useState} from "react";
 import {api} from "../../lib/api";
+import {UpgradeContent} from "../../components/MembershipAccess";
 
 // Four isolated chart configurations. This view does not place trades.
 const DEFAULTS=[
@@ -38,7 +39,7 @@ function Tile({index,config,onChange,onSave}){
    <input aria-label={`Chart ${index+1} symbol`} value={config.symbol} onChange={e=>onChange({...config,symbol:e.target.value.toUpperCase().slice(0,32)})} className="w-28 rounded bg-[#222] p-1 text-xs"/>
    <select aria-label={`Chart ${index+1} timeframe`} value={config.seconds} onChange={e=>onChange({...config,seconds:Number(e.target.value)})} className="rounded bg-[#222] p-1 text-xs"><option value={60}>1m</option><option value={300}>5m</option><option value={900}>15m</option></select>
    <button type="button" onClick={load} className="ml-auto rounded border border-slate-600 px-2 py-1 text-xs">Refresh</button>
-   <button type="button" onClick={()=>onSave(index,config)} className="rounded border border-[#2F8CFF] px-2 py-1 text-xs">Save chart</button>
+   <button type="button" onClick={()=>onSave(index,config)} className="rounded border border-[#D4AF37] px-2 py-1 text-xs">Save chart</button>
   </div>
   {error?<p role="status" className="text-xs text-amber-300">{error}</p>:<CandleChart candles={response?.candles}/>}
   <p className="mt-2 text-xs text-slate-400">{loading?"Refreshing · ":""}Source: {response?.source||"Not available"} · read-only · no order submission</p>
@@ -65,6 +66,7 @@ export default function FourChartTerminal({entitlements}){
   <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-semibold">KAOS Multi-Chart Terminal</h2><p className="text-xs text-slate-400">Independent chart settings (press Save chart to sync) · current source supports 1m, 5m and 15m Coinbase public candles only. Other feeds are unavailable. No real orders.</p></div>
    <label className="text-sm">Charts <select value={Math.min(count,maxCharts)} onChange={e=>setCount(Number(e.target.value))} className="ml-2 rounded bg-[#222] p-2">{Array.from({length:maxCharts},(_,i)=><option key={i} value={i+1}>{i+1}</option>)}</select></label>
   </div>
+  {maxCharts<4 && <UpgradeContent compact title="a four-chart workspace" description="Compare up to four chart configurations side by side while keeping the controls for each chart separate."/>}
   {message && <p role="status" className="text-xs text-slate-400">{message}</p>}
   <div className="grid gap-3 lg:grid-cols-2">{configs.slice(0,Math.min(count,maxCharts)).map((cfg,i)=><Tile key={i} index={i} config={cfg} onChange={v=>change(i,v)} onSave={save}/>)}</div>
  </section>;

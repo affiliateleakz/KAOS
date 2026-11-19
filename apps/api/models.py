@@ -8,6 +8,7 @@ class RegisterReq(BaseModel):
     name: str = Field(min_length=1)
     username: Optional[str] = None
     refCode: Optional[str] = None
+    planId: Optional[str] = Field(default=None, max_length=64)
 
 
 class LoginReq(BaseModel):
@@ -74,8 +75,10 @@ class AffiliateSubmitReq(BaseModel):
 
 
 class CheckoutReq(BaseModel):
-    lookup_key: str
-    origin_url: str
+    start_trial: bool = False
+    lookup_key: Optional[str] = None
+    origin_url: Optional[str] = None
+    plan_id: Optional[str] = None
 
 
 class DeviceReq(BaseModel):

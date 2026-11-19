@@ -28,6 +28,10 @@ def clean(doc):
 
 
 async def ensure_indexes():
+    await db.kaos_radar_sentiment.create_index([("symbol", 1), ("asset_class", 1), ("observed_at", -1)])
+    await db.kaos_radar_sentiment.create_index("expires_at", expireAfterSeconds=0)
+    await db.kaos_radar_samples.create_index([("group", 1), ("symbol", 1), ("target_at", 1)])
+    await db.kaos_radar_samples.create_index("expires_at", expireAfterSeconds=0)
     await db.users.create_index("email", unique=True)
     await db.users.create_index("username", unique=True, sparse=True)
     await db.users.create_index("id", unique=True)
@@ -52,6 +56,7 @@ async def ensure_indexes():
     await db.trades.create_index("state")
     await db.signals.create_index("userId")
     await db.signals.create_index([("clientSignalId", 1), ("userId", 1)])
+    await db.commissions.create_index("ledgerEntryId", unique=True, sparse=True)
     await db.affiliate_accounts.create_index("code", unique=True)
     await db.affiliate_accounts.create_index("userId", unique=True)
     await db.commissions.create_index("affiliateUserId")

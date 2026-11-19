@@ -1,7 +1,7 @@
 """Extension auth aliases, bot config/release/platforms, and idempotent event ingestion."""
 from typing import Optional, List
 from pydantic import BaseModel
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, HTTPException
 from db import db, new_id, now_iso, clean
 from auth import get_current_user
 from services import compute_license, get_setting
@@ -35,7 +35,18 @@ async def ext_logout(user: dict = Depends(get_current_user)):
 async def ext_me(request: Request, user: dict = Depends(get_current_user)):
     did = request.headers.get("X-Device-Id")
     device = await db.devices.find_one({"installId": did, "userId": user["id"]}) if did else None
-    lic = await compute_license(user, device)
+    if device and device.get("revoked"):
+        raise HTTPException(status_code=403, detail="Device access revoked")
+    # An unregistered device can still read onboarding status before registration.
+    # The license/status and device-registration endpoints enforce device access.
+    # Broker selection precedes broker-specific eligibility checks.
+    # In particular, a member choosing Coinbase must not be blocked by
+    # Pocket Option's separate affiliate verification requirement.
+    selection = await db.member_broker_selections.find_one(
+        {"user_id": user["id"]}, {"_id": 0, "broker": 1})
+    selected_broker = (selection or {}).get("broker")
+    broker_for_license = "pocket_option" if selected_broker in ("pocketoption", "pocket_option") else (selected_broker or "unselected")
+    lic = await compute_license(user, device, broker=broker_for_license)
     ent = await get_entitlements(user)
     return {"user": {"id": user["id"], "username": user.get("username"), "email": user["email"], "role": user.get("role")},
             "license": lic, "entitlements": ent}
@@ -45,7 +56,7 @@ async def ext_me(request: Request, user: dict = Depends(get_current_user)):
 async def bot_config(user: dict = Depends(get_current_user)):
     return {"entitlements": await get_entitlements(user),
             "officialStrategy": await get_official_strategy(),
-            "collectiveLearningConsent": bool(user.get("collective_learning_consent", False)),
+            "collectiveLearningConsent": True, "sharedLearningRequired": True,
             "tradingMode": user.get("trading_mode", "STRATEGY")}
 
 
@@ -97,6 +108,10 @@ async def ingest_events(batch: EventsBatch, user: dict = Depends(get_current_use
         await db.trade_events.insert_one({"eventId": e.eventId, "userId": user["id"], "type": e.type,
                                           "signalId": e.signalId, "tradeId": e.tradeId, "payload": e.payload,
                                           "timestamp": e.timestamp or now_iso(), "createdAt": now_iso()})
+        if e.type == "TRADE_RESULT" and (e.payload or {}).get("featureVector"):
+            from training_samples import ingest
+            try:await ingest(user,{**e.payload,"sampleId":e.tradeId or e.eventId,"platform":e.payload.get("platform","pocket_option")})
+            except ValueError:pass  # Telemetry ACK is independent from model-quality validation.
         acked.append(e.eventId)
     return {"acked": acked, "duplicates": duplicates, "rejected": rejected, "serverTime": now_iso()}
 
@@ -107,5 +122,7 @@ class ConsentReq(BaseModel):
 
 @bot.post("/ai/consent")
 async def set_consent(req: ConsentReq, user: dict = Depends(get_current_user)):
-    await db.users.update_one({"id": user["id"]}, {"$set": {"collective_learning_consent": req.consent, "updated_at": now_iso()}})
-    return {"collectiveLearningConsent": req.consent}
+    from training_samples import POLICY, NOTICE
+    if not req.consent:
+        raise HTTPException(409,"Shared service learning is required by the current KAOS data policy; see Privacy. There is no optional learning switch.")
+    return {"collectiveLearningConsent": True, "sharedLearningRequired": True, "policy": POLICY, "notice": NOTICE}

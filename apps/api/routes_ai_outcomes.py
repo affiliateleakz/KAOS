@@ -22,8 +22,10 @@ async def settle_verified(req:SettleRequest,admin=Depends(admin_dep)):
     if pred.get("outcomeVerified"):raise HTTPException(409,"Already settled")
     if pred.get("simulated") or not pred.get("productionTrained"):
         raise HTTPException(422,"Not a trained real prediction")
+    if pred.get("horizon_seconds") != req.horizon_seconds or not pred.get("source"):
+        raise HTTPException(422,"Prediction horizon or source provenance missing or mismatched")
     quotes=await db.kaos_ai_quote_observations.find(
-        {"prediction_id":req.prediction_id,"asset":pred.get("asset")},{"_id":0}).sort("observed_at",1).limit(100).to_list(length=100)
+        {"prediction_id":req.prediction_id,"asset":pred.get("asset"),"source":pred["source"]},{"_id":0}).sort("observed_at",1).limit(100).to_list(length=100)
     if len(quotes)<2:raise HTTPException(409,"Independent entry and expiry observations not available")
     result=None
     for first in quotes:
@@ -50,14 +52,18 @@ async def record_observations(items:list[CollectorObservation],x_kaos_collector_
     if not key or not x_kaos_collector_key or not compare_digest(key,x_kaos_collector_key):
         raise HTTPException(403,"Server collector authentication required")
     if not 1<=len(items)<=100:raise HTTPException(422,"Batch must contain 1-100 observations")
-    # These fields are accepted only from the trusted server collector, not member browsers.
+    # Validate the entire batch before any database writes. A collector must not
+    # supply future observations that could pre-settle a prediction.
+    from datetime import datetime, timezone, timedelta
+    now = datetime.now(timezone.utc).timestamp()
     for item in items:
         from decimal import Decimal
         from kaos_ai_outcome_verifier import timestamp
         try:
             price=Decimal(item.price)
             ts=timestamp(item.observed_at)
-            if not price.is_finite() or price<=0 or ts<=0:raise ValueError()
+            if not price.is_finite() or price<=0 or ts<=0 or ts>now+2 or ts<now-timedelta(days=7).total_seconds():
+                raise ValueError()
         except (ValueError,ArithmeticError,TypeError) as exc:
             raise HTTPException(422,"Invalid market observation") from exc
     for item in items:

@@ -14,27 +14,50 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from db import db, ensure_indexes
+import follow_us
+import affiliate_rates
+import visitor_analytics
+import routes_offerings
+import training_service
+import routes_research_models
+import launch_readiness
 import routes_auth, routes_strategies, routes_community, routes_billing, routes_extension, routes_admin, routes_trading, routes_affiliate, routes_botsync, routes_ai
 import seed
 import routes_coinbase
+import routes_coinbase_bot
 import routes_finbert
 import routes_opportunity
+import routes_radar
+import radar_signals  # registers signal views on the Radar router
+import radar_news  # registers the simple news feed
+import radar_trending  # keyless provider mention rankings
+import radar_opportunities  # bounded multi-market discovery
+import radar_research  # unified single-asset evidence and scoring
+import routes_radar_admin
 import routes_disclosures
 import routes_crypto_scanner
+import routes_commerce_admin
+import affiliate_payouts
+import routes_affiliate_connect
 import routes_stock_heatmap
 import routes_ai_outcomes
 import routes_owner_candles
 import routes_paper
+import routes_broker_connections
 import routes_broker_selection
 import routes_research_replay
 import routes_chart_settings
 import routes_free_apis
+import routes_kaos_scanner
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 limiter = Limiter(key_func=get_remote_address, default_limits=["600/minute"])
 app = FastAPI(title="KAOS Trading API")
+app.include_router(visitor_analytics.router)
+app.include_router(affiliate_rates.router)
+app.include_router(follow_us.router)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -74,25 +97,46 @@ for mod in (routes_auth, routes_strategies, routes_community, routes_billing,
         if r is not None:
             app.include_router(r)
 
+import pine_pack_install
+import pine_scripts
+import coinbase_oauth
+import guest_checkout
+app.include_router(guest_checkout.router)
+app.include_router(coinbase_oauth.router)
+app.include_router(pine_scripts.router)
+app.include_router(pine_pack_install.router)
 app.include_router(routes_coinbase.router)
+app.include_router(routes_coinbase_bot.router)
 app.include_router(routes_finbert.router)
 app.include_router(routes_opportunity.router)
+app.include_router(routes_radar.router)
+app.include_router(routes_radar_admin.router)
 app.include_router(routes_disclosures.router)
 app.include_router(routes_crypto_scanner.router)
 app.include_router(routes_stock_heatmap.router)
+app.include_router(routes_affiliate_connect.router)
+app.include_router(affiliate_payouts.router)
+app.include_router(routes_commerce_admin.router)
 app.include_router(routes_ai_outcomes.router)
 app.include_router(routes_owner_candles.router)
 app.include_router(routes_paper.router)
 app.include_router(routes_broker_selection.router)
+app.include_router(routes_broker_connections.router)
 app.include_router(routes_research_replay.router)
 app.include_router(routes_chart_settings.router)
 app.include_router(routes_chart_settings.candles_router)
 app.include_router(routes_free_apis.router)
+app.include_router(routes_kaos_scanner.router)
+app.include_router(routes_offerings.router)
+app.include_router(training_service.router)
+app.include_router(routes_research_models.router)
+app.include_router(launch_readiness.router)
+app.include_router(training_service.admin_router)
 
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_URL, "http://localhost:3000"],
+    allow_origins=[FRONTEND_URL, "http://localhost:3000", "chrome-extension://" + "gbobopmnjgeeegniphckfpalhnebapjm"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

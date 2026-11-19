@@ -1,0 +1,1769 @@
+[
+  {
+    "candidate": "momentum_15",
+    "expiry": 15,
+    "eligible": false,
+    "trades": 7284,
+    "decided": 6068,
+    "wins": 3408,
+    "losses": 2660,
+    "ties": 1216,
+    "win_rate": 0.5616348055372445,
+    "wilson_lower_95": 0.5491149927915582,
+    "break_even_payout": 0.7805164319248826,
+    "pnl_at_payout": {
+      "0.7": -274.4,
+      "0.8": 66.4,
+      "0.9": 407.2
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": 104.39999999999765,
+      "2026-10-05": -38.00000000000283
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.17359801309790843,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 2750,
+        "losses": 2027,
+        "pnl": 173.00000000001216
+      },
+      "ETHUSDT": {
+        "wins": 606,
+        "losses": 558,
+        "pnl": -73.20000000000026
+      },
+      "SOLUSDT": {
+        "wins": 52,
+        "losses": 75,
+        "pnl": -33.39999999999999
+      }
+    }
+  },
+  {
+    "candidate": "momentum_30",
+    "expiry": 30,
+    "eligible": false,
+    "trades": 4580,
+    "decided": 4020,
+    "wins": 2231,
+    "losses": 1789,
+    "ties": 560,
+    "win_rate": 0.5549751243781095,
+    "wilson_lower_95": 0.5395670291362475,
+    "break_even_payout": 0.8018825638727028,
+    "pnl_at_payout": {
+      "0.7": -227.3,
+      "0.8": -4.2,
+      "0.9": 218.9
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": 69.19999999999804,
+      "2026-10-05": -73.40000000000103
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.536060133384196,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 1819,
+        "losses": 1391,
+        "pnl": 64.1999999999955
+      },
+      "ETHUSDT": {
+        "wins": 377,
+        "losses": 342,
+        "pnl": -40.39999999999996
+      },
+      "SOLUSDT": {
+        "wins": 35,
+        "losses": 56,
+        "pnl": -27.999999999999982
+      }
+    }
+  },
+  {
+    "candidate": "momentum_60",
+    "expiry": 60,
+    "eligible": false,
+    "trades": 2688,
+    "decided": 2483,
+    "wins": 1334,
+    "losses": 1149,
+    "ties": 205,
+    "win_rate": 0.5372533225936368,
+    "wilson_lower_95": 0.5175985266160987,
+    "break_even_payout": 0.861319340329835,
+    "pnl_at_payout": {
+      "0.7": -215.2,
+      "0.8": -81.8,
+      "0.9": 51.6
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": 41.99999999999951,
+      "2026-10-05": -123.80000000000133
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9681217850620323,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 1082,
+        "losses": 910,
+        "pnl": -44.40000000000081
+      },
+      "ETHUSDT": {
+        "wins": 230,
+        "losses": 204,
+        "pnl": -19.999999999999982
+      },
+      "SOLUSDT": {
+        "wins": 22,
+        "losses": 35,
+        "pnl": -17.399999999999995
+      }
+    }
+  },
+  {
+    "candidate": "pullback_15",
+    "expiry": 15,
+    "eligible": true,
+    "trades": 1175,
+    "decided": 1090,
+    "wins": 666,
+    "losses": 424,
+    "ties": 85,
+    "win_rate": 0.6110091743119266,
+    "wilson_lower_95": 0.5817250233462676,
+    "break_even_payout": 0.6366366366366366,
+    "pnl_at_payout": {
+      "0.7": 42.2,
+      "0.8": 108.8,
+      "0.9": 175.4
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": 73.99999999999963,
+      "2026-10-05": 34.800000000000175
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.00012051357072975221,
+    "bonferroni_pvalue": 0.005061569970649593,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 506,
+        "losses": 285,
+        "pnl": 119.79999999999876
+      },
+      "ETHUSDT": {
+        "wins": 147,
+        "losses": 122,
+        "pnl": -4.399999999999956
+      },
+      "SOLUSDT": {
+        "wins": 13,
+        "losses": 17,
+        "pnl": -6.600000000000002
+      }
+    }
+  },
+  {
+    "candidate": "pullback_30",
+    "expiry": 30,
+    "eligible": false,
+    "trades": 1040,
+    "decided": 992,
+    "wins": 571,
+    "losses": 421,
+    "ties": 48,
+    "win_rate": 0.5756048387096774,
+    "wilson_lower_95": 0.5446139179377409,
+    "break_even_payout": 0.7373029772329247,
+    "pnl_at_payout": {
+      "0.7": -21.3,
+      "0.8": 35.8,
+      "0.9": 92.9
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": 48.39999999999973,
+      "2026-10-05": -12.599999999999849
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.10756900516010498,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 433,
+        "losses": 294,
+        "pnl": 52.39999999999901
+      },
+      "ETHUSDT": {
+        "wins": 127,
+        "losses": 109,
+        "pnl": -7.4000000000000075
+      },
+      "SOLUSDT": {
+        "wins": 11,
+        "losses": 18,
+        "pnl": -9.2
+      }
+    }
+  },
+  {
+    "candidate": "pullback_60",
+    "expiry": 60,
+    "eligible": false,
+    "trades": 857,
+    "decided": 833,
+    "wins": 470,
+    "losses": 363,
+    "ties": 24,
+    "win_rate": 0.5642256902761105,
+    "wilson_lower_95": 0.5303332447267965,
+    "break_even_payout": 0.7723404255319148,
+    "pnl_at_payout": {
+      "0.7": -34.0,
+      "0.8": 13.0,
+      "0.9": 60.0
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": 51.59999999999973,
+      "2026-10-05": -38.60000000000017
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.32000694055251727,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 367,
+        "losses": 260,
+        "pnl": 33.5999999999993
+      },
+      "ETHUSDT": {
+        "wins": 92,
+        "losses": 89,
+        "pnl": -15.399999999999974
+      },
+      "SOLUSDT": {
+        "wins": 11,
+        "losses": 14,
+        "pnl": -5.199999999999999
+      }
+    }
+  },
+  {
+    "candidate": "breakout_15",
+    "expiry": 15,
+    "eligible": true,
+    "trades": 3486,
+    "decided": 3101,
+    "wins": 2007,
+    "losses": 1094,
+    "ties": 385,
+    "win_rate": 0.6472105772331506,
+    "wilson_lower_95": 0.6302194132875398,
+    "break_even_payout": 0.5450921773791729,
+    "pnl_at_payout": {
+      "0.7": 310.9,
+      "0.8": 511.6,
+      "0.9": 712.3
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": 274.0000000000045,
+      "2026-10-05": 237.60000000000647
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 1.991645906021581e-25,
+    "bonferroni_pvalue": 8.364912805290641e-24,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 1653,
+        "losses": 803,
+        "pnl": 519.4000000000142
+      },
+      "ETHUSDT": {
+        "wins": 319,
+        "losses": 255,
+        "pnl": 0.20000000000011586
+      },
+      "SOLUSDT": {
+        "wins": 35,
+        "losses": 36,
+        "pnl": -8.0
+      }
+    }
+  },
+  {
+    "candidate": "breakout_30",
+    "expiry": 30,
+    "eligible": true,
+    "trades": 2543,
+    "decided": 2372,
+    "wins": 1519,
+    "losses": 853,
+    "ties": 171,
+    "win_rate": 0.6403878583473862,
+    "wilson_lower_95": 0.6208626906700161,
+    "break_even_payout": 0.5615536537195523,
+    "pnl_at_payout": {
+      "0.7": 210.3,
+      "0.8": 362.2,
+      "0.9": 514.1
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": 210.6000000000029,
+      "2026-10-05": 151.59999999999943
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 2.9415909996653814e-17,
+    "bonferroni_pvalue": 1.2354682198594602e-15,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 1250,
+        "losses": 645,
+        "pnl": 355.00000000001063
+      },
+      "ETHUSDT": {
+        "wins": 238,
+        "losses": 180,
+        "pnl": 10.40000000000013
+      },
+      "SOLUSDT": {
+        "wins": 31,
+        "losses": 28,
+        "pnl": -3.2
+      }
+    }
+  },
+  {
+    "candidate": "breakout_60",
+    "expiry": 60,
+    "eligible": false,
+    "trades": 1775,
+    "decided": 1704,
+    "wins": 1024,
+    "losses": 680,
+    "ties": 71,
+    "win_rate": 0.6009389671361502,
+    "wilson_lower_95": 0.5774851967589767,
+    "break_even_payout": 0.6640625,
+    "pnl_at_payout": {
+      "0.7": 36.8,
+      "0.8": 139.2,
+      "0.9": 241.6
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": 147.20000000000098,
+      "2026-10-05": -7.999999999999845
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 8.49234299702659e-05,
+    "bonferroni_pvalue": 0.0035667840587511675,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 857,
+        "losses": 515,
+        "pnl": 170.60000000000593
+      },
+      "ETHUSDT": {
+        "wins": 149,
+        "losses": 143,
+        "pnl": -23.799999999999965
+      },
+      "SOLUSDT": {
+        "wins": 18,
+        "losses": 22,
+        "pnl": -7.6
+      }
+    }
+  },
+  {
+    "candidate": "fade1.5_15",
+    "expiry": 15,
+    "eligible": false,
+    "trades": 1086,
+    "decided": 910,
+    "wins": 420,
+    "losses": 490,
+    "ties": 176,
+    "win_rate": 0.46153846153846156,
+    "wilson_lower_95": 0.4293774678534778,
+    "break_even_payout": 1.1666666666666667,
+    "pnl_at_payout": {
+      "0.7": -196.0,
+      "0.8": -154.0,
+      "0.9": -112.0
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": -99.40000000000026,
+      "2026-10-05": -54.60000000000041
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9999999946258463,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 311,
+        "losses": 388,
+        "pnl": -139.2000000000007
+      },
+      "ETHUSDT": {
+        "wins": 82,
+        "losses": 91,
+        "pnl": -25.399999999999945
+      },
+      "SOLUSDT": {
+        "wins": 27,
+        "losses": 11,
+        "pnl": 10.6
+      }
+    }
+  },
+  {
+    "candidate": "fade1.5_30",
+    "expiry": 30,
+    "eligible": false,
+    "trades": 962,
+    "decided": 871,
+    "wins": 395,
+    "losses": 476,
+    "ties": 91,
+    "win_rate": 0.4535017221584386,
+    "wilson_lower_95": 0.42071581171289085,
+    "break_even_payout": 1.2050632911392405,
+    "pnl_at_payout": {
+      "0.7": -199.5,
+      "0.8": -160.0,
+      "0.9": -120.5
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": -101.20000000000017,
+      "2026-10-05": -58.80000000000041
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.999999999364512,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 292,
+        "losses": 386,
+        "pnl": -152.3999999999993
+      },
+      "ETHUSDT": {
+        "wins": 79,
+        "losses": 78,
+        "pnl": -14.799999999999962
+      },
+      "SOLUSDT": {
+        "wins": 24,
+        "losses": 12,
+        "pnl": 7.1999999999999975
+      }
+    }
+  },
+  {
+    "candidate": "fade1.5_60",
+    "expiry": 60,
+    "eligible": false,
+    "trades": 859,
+    "decided": 809,
+    "wins": 370,
+    "losses": 439,
+    "ties": 50,
+    "win_rate": 0.4573547589616811,
+    "wilson_lower_95": 0.4233075162993014,
+    "break_even_payout": 1.1864864864864866,
+    "pnl_at_payout": {
+      "0.7": -180.0,
+      "0.8": -143.0,
+      "0.9": -106.0
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": -99.20000000000024,
+      "2026-10-05": -43.80000000000028
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9999999911985638,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 282,
+        "losses": 358,
+        "pnl": -132.4000000000005
+      },
+      "ETHUSDT": {
+        "wins": 73,
+        "losses": 66,
+        "pnl": -7.599999999999967
+      },
+      "SOLUSDT": {
+        "wins": 15,
+        "losses": 15,
+        "pnl": -3.0000000000000018
+      }
+    }
+  },
+  {
+    "candidate": "fade2.0_15",
+    "expiry": 15,
+    "eligible": false,
+    "trades": 407,
+    "decided": 333,
+    "wins": 145,
+    "losses": 188,
+    "ties": 74,
+    "win_rate": 0.43543543543543545,
+    "wilson_lower_95": 0.3832171547121214,
+    "break_even_payout": 1.296551724137931,
+    "pnl_at_payout": {
+      "0.7": -86.5,
+      "0.8": -72.0,
+      "0.9": -57.5
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": -47.40000000000008,
+      "2026-10-05": -24.59999999999994
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9999956874823048,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 113,
+        "losses": 157,
+        "pnl": -66.60000000000022
+      },
+      "ETHUSDT": {
+        "wins": 21,
+        "losses": 29,
+        "pnl": -12.199999999999985
+      },
+      "SOLUSDT": {
+        "wins": 11,
+        "losses": 2,
+        "pnl": 6.799999999999999
+      }
+    }
+  },
+  {
+    "candidate": "fade2.0_30",
+    "expiry": 30,
+    "eligible": false,
+    "trades": 395,
+    "decided": 358,
+    "wins": 155,
+    "losses": 203,
+    "ties": 37,
+    "win_rate": 0.4329608938547486,
+    "wilson_lower_95": 0.3826139216113487,
+    "break_even_payout": 1.3096774193548386,
+    "pnl_at_payout": {
+      "0.7": -94.5,
+      "0.8": -79.0,
+      "0.9": -63.5
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": -60.80000000000006,
+      "2026-10-05": -18.19999999999994
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9999987175305354,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 119,
+        "losses": 173,
+        "pnl": -77.80000000000025
+      },
+      "ETHUSDT": {
+        "wins": 26,
+        "losses": 25,
+        "pnl": -4.2
+      },
+      "SOLUSDT": {
+        "wins": 10,
+        "losses": 5,
+        "pnl": 3.0
+      }
+    }
+  },
+  {
+    "candidate": "fade2.0_60",
+    "expiry": 60,
+    "eligible": false,
+    "trades": 376,
+    "decided": 353,
+    "wins": 160,
+    "losses": 193,
+    "ties": 23,
+    "win_rate": 0.45325779036827196,
+    "wilson_lower_95": 0.4021071244764524,
+    "break_even_payout": 1.20625,
+    "pnl_at_payout": {
+      "0.7": -81.0,
+      "0.8": -65.0,
+      "0.9": -49.0
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": -61.200000000000074,
+      "2026-10-05": -3.799999999999952
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9999531637478861,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 124,
+        "losses": 163,
+        "pnl": -63.80000000000027
+      },
+      "ETHUSDT": {
+        "wins": 28,
+        "losses": 24,
+        "pnl": -1.6000000000000003
+      },
+      "SOLUSDT": {
+        "wins": 8,
+        "losses": 6,
+        "pnl": 0.40000000000000036
+      }
+    }
+  },
+  {
+    "candidate": "fade2.5_15",
+    "expiry": 15,
+    "eligible": false,
+    "trades": 136,
+    "decided": 106,
+    "wins": 45,
+    "losses": 61,
+    "ties": 30,
+    "win_rate": 0.42452830188679247,
+    "wilson_lower_95": 0.3346948483840659,
+    "break_even_payout": 1.3555555555555556,
+    "pnl_at_payout": {
+      "0.7": -29.5,
+      "0.8": -25.0,
+      "0.9": -20.5
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": -23.599999999999987,
+      "2026-10-05": -1.3999999999999992
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9974677288654452,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 37,
+        "losses": 52,
+        "pnl": -22.399999999999977
+      },
+      "ETHUSDT": {
+        "wins": 4,
+        "losses": 9,
+        "pnl": -5.800000000000001
+      },
+      "SOLUSDT": {
+        "wins": 4,
+        "losses": 0,
+        "pnl": 3.2
+      }
+    }
+  },
+  {
+    "candidate": "fade2.5_30",
+    "expiry": 30,
+    "eligible": false,
+    "trades": 133,
+    "decided": 118,
+    "wins": 49,
+    "losses": 69,
+    "ties": 15,
+    "win_rate": 0.4152542372881356,
+    "wilson_lower_95": 0.33038729052795845,
+    "break_even_payout": 1.4081632653061225,
+    "pnl_at_payout": {
+      "0.7": -34.7,
+      "0.8": -29.8,
+      "0.9": -24.9
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": -29.19999999999999,
+      "2026-10-05": -0.6000000000000008
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9991810180902762,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 42,
+        "losses": 58,
+        "pnl": -24.39999999999998
+      },
+      "ETHUSDT": {
+        "wins": 5,
+        "losses": 8,
+        "pnl": -4.000000000000001
+      },
+      "SOLUSDT": {
+        "wins": 2,
+        "losses": 3,
+        "pnl": -1.4000000000000001
+      }
+    }
+  },
+  {
+    "candidate": "fade2.5_60",
+    "expiry": 60,
+    "eligible": false,
+    "trades": 132,
+    "decided": 120,
+    "wins": 50,
+    "losses": 70,
+    "ties": 12,
+    "win_rate": 0.4166666666666667,
+    "wilson_lower_95": 0.33238206535330334,
+    "break_even_payout": 1.4,
+    "pnl_at_payout": {
+      "0.7": -35.0,
+      "0.8": -30.0,
+      "0.9": -25.0
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": -30.199999999999985,
+      "2026-10-05": 0.2000000000000004
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9991637655816582,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 42,
+        "losses": 59,
+        "pnl": -25.399999999999974
+      },
+      "ETHUSDT": {
+        "wins": 7,
+        "losses": 7,
+        "pnl": -1.4000000000000001
+      },
+      "SOLUSDT": {
+        "wins": 1,
+        "losses": 4,
+        "pnl": -3.2
+      }
+    }
+  },
+  {
+    "candidate": "streak3_15",
+    "expiry": 15,
+    "eligible": false,
+    "trades": 3128,
+    "decided": 2831,
+    "wins": 1134,
+    "losses": 1697,
+    "ties": 297,
+    "win_rate": 0.40056517131755565,
+    "wilson_lower_95": 0.38266096444979963,
+    "break_even_payout": 1.4964726631393297,
+    "pnl_at_payout": {
+      "0.7": -903.2,
+      "0.8": -789.8,
+      "0.9": -676.4
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": -250.19999999999797,
+      "2026-10-05": -539.5999999999954
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 1.0,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 837,
+        "losses": 1342,
+        "pnl": -672.4000000000051
+      },
+      "ETHUSDT": {
+        "wins": 264,
+        "losses": 327,
+        "pnl": -115.80000000000057
+      },
+      "SOLUSDT": {
+        "wins": 33,
+        "losses": 28,
+        "pnl": -1.6000000000000019
+      }
+    }
+  },
+  {
+    "candidate": "streak3_30",
+    "expiry": 30,
+    "eligible": false,
+    "trades": 2395,
+    "decided": 2255,
+    "wins": 947,
+    "losses": 1308,
+    "ties": 140,
+    "win_rate": 0.4199556541019956,
+    "wilson_lower_95": 0.39973753008993057,
+    "break_even_payout": 1.3812038014783528,
+    "pnl_at_payout": {
+      "0.7": -645.1,
+      "0.8": -550.4,
+      "0.9": -455.7
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": -196.19999999999874,
+      "2026-10-05": -354.19999999999595
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 1.0,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 723,
+        "losses": 1032,
+        "pnl": -453.599999999994
+      },
+      "ETHUSDT": {
+        "wins": 201,
+        "losses": 254,
+        "pnl": -93.20000000000027
+      },
+      "SOLUSDT": {
+        "wins": 23,
+        "losses": 22,
+        "pnl": -3.6000000000000005
+      }
+    }
+  },
+  {
+    "candidate": "streak3_60",
+    "expiry": 60,
+    "eligible": false,
+    "trades": 1682,
+    "decided": 1621,
+    "wins": 696,
+    "losses": 925,
+    "ties": 61,
+    "win_rate": 0.4293645897594078,
+    "wilson_lower_95": 0.40546284546122907,
+    "break_even_payout": 1.3290229885057472,
+    "pnl_at_payout": {
+      "0.7": -437.8,
+      "0.8": -368.2,
+      "0.9": -298.6
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": -145.39999999999992,
+      "2026-10-05": -222.79999999999802
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 1.0,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 535,
+        "losses": 749,
+        "pnl": -320.99999999999693
+      },
+      "ETHUSDT": {
+        "wins": 143,
+        "losses": 160,
+        "pnl": -45.60000000000008
+      },
+      "SOLUSDT": {
+        "wins": 18,
+        "losses": 16,
+        "pnl": -1.5999999999999992
+      }
+    }
+  },
+  {
+    "candidate": "streak4_15",
+    "expiry": 15,
+    "eligible": false,
+    "trades": 1475,
+    "decided": 1343,
+    "wins": 527,
+    "losses": 816,
+    "ties": 132,
+    "win_rate": 0.3924050632911392,
+    "wilson_lower_95": 0.36663227675210525,
+    "break_even_payout": 1.5483870967741935,
+    "pnl_at_payout": {
+      "0.7": -447.1,
+      "0.8": -394.4,
+      "0.9": -341.7
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": -108.60000000000026,
+      "2026-10-05": -285.79999999999785
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 1.0,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 394,
+        "losses": 647,
+        "pnl": -331.7999999999974
+      },
+      "ETHUSDT": {
+        "wins": 127,
+        "losses": 155,
+        "pnl": -53.40000000000008
+      },
+      "SOLUSDT": {
+        "wins": 6,
+        "losses": 14,
+        "pnl": -9.2
+      }
+    }
+  },
+  {
+    "candidate": "streak4_30",
+    "expiry": 30,
+    "eligible": false,
+    "trades": 1245,
+    "decided": 1186,
+    "wins": 492,
+    "losses": 694,
+    "ties": 59,
+    "win_rate": 0.4148397976391231,
+    "wilson_lower_95": 0.38711784540630595,
+    "break_even_payout": 1.410569105691057,
+    "pnl_at_payout": {
+      "0.7": -349.6,
+      "0.8": -300.4,
+      "0.9": -251.2
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": -80.40000000000026,
+      "2026-10-05": -219.99999999999872
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 1.0,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 378,
+        "losses": 552,
+        "pnl": -249.59999999999886
+      },
+      "ETHUSDT": {
+        "wins": 107,
+        "losses": 130,
+        "pnl": -44.40000000000005
+      },
+      "SOLUSDT": {
+        "wins": 7,
+        "losses": 12,
+        "pnl": -6.4
+      }
+    }
+  },
+  {
+    "candidate": "streak4_60",
+    "expiry": 60,
+    "eligible": false,
+    "trades": 986,
+    "decided": 954,
+    "wins": 404,
+    "losses": 550,
+    "ties": 32,
+    "win_rate": 0.42348008385744235,
+    "wilson_lower_95": 0.39249350821559237,
+    "break_even_payout": 1.3613861386138615,
+    "pnl_at_payout": {
+      "0.7": -267.2,
+      "0.8": -226.8,
+      "0.9": -186.4
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": -68.00000000000021,
+      "2026-10-05": -158.8000000000001
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9999999999999999,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 309,
+        "losses": 441,
+        "pnl": -193.7999999999991
+      },
+      "ETHUSDT": {
+        "wins": 89,
+        "losses": 98,
+        "pnl": -26.799999999999983
+      },
+      "SOLUSDT": {
+        "wins": 6,
+        "losses": 11,
+        "pnl": -6.2
+      }
+    }
+  },
+  {
+    "candidate": "streak5_15",
+    "expiry": 15,
+    "eligible": false,
+    "trades": 751,
+    "decided": 685,
+    "wins": 260,
+    "losses": 425,
+    "ties": 66,
+    "win_rate": 0.3795620437956204,
+    "wilson_lower_95": 0.34398759320645267,
+    "break_even_payout": 1.6346153846153846,
+    "pnl_at_payout": {
+      "0.7": -243.0,
+      "0.8": -217.0,
+      "0.9": -191.0
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": -55.00000000000007,
+      "2026-10-05": -161.9999999999999
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 1.0,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 195,
+        "losses": 339,
+        "pnl": -182.99999999999966
+      },
+      "ETHUSDT": {
+        "wins": 59,
+        "losses": 82,
+        "pnl": -34.79999999999998
+      },
+      "SOLUSDT": {
+        "wins": 6,
+        "losses": 4,
+        "pnl": 0.8000000000000003
+      }
+    }
+  },
+  {
+    "candidate": "streak5_30",
+    "expiry": 30,
+    "eligible": false,
+    "trades": 659,
+    "decided": 623,
+    "wins": 238,
+    "losses": 385,
+    "ties": 36,
+    "win_rate": 0.38202247191011235,
+    "wilson_lower_95": 0.3447014768332701,
+    "break_even_payout": 1.6176470588235294,
+    "pnl_at_payout": {
+      "0.7": -218.4,
+      "0.8": -194.6,
+      "0.9": -170.8
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": -45.200000000000045,
+      "2026-10-05": -149.40000000000003
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 1.0,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 182,
+        "losses": 306,
+        "pnl": -160.4000000000001
+      },
+      "ETHUSDT": {
+        "wins": 53,
+        "losses": 73,
+        "pnl": -30.599999999999984
+      },
+      "SOLUSDT": {
+        "wins": 3,
+        "losses": 6,
+        "pnl": -3.5999999999999996
+      }
+    }
+  },
+  {
+    "candidate": "streak5_60",
+    "expiry": 60,
+    "eligible": false,
+    "trades": 581,
+    "decided": 569,
+    "wins": 238,
+    "losses": 331,
+    "ties": 12,
+    "win_rate": 0.4182776801405975,
+    "wilson_lower_95": 0.3784268805829839,
+    "break_even_payout": 1.3907563025210083,
+    "pnl_at_payout": {
+      "0.7": -164.4,
+      "0.8": -140.6,
+      "0.9": -116.8
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": -40.00000000000004,
+      "2026-10-05": -100.60000000000036
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.9999999999803871,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 187,
+        "losses": 262,
+        "pnl": -112.4000000000004
+      },
+      "ETHUSDT": {
+        "wins": 47,
+        "losses": 64,
+        "pnl": -26.39999999999999
+      },
+      "SOLUSDT": {
+        "wins": 4,
+        "losses": 5,
+        "pnl": -1.7999999999999996
+      }
+    }
+  },
+  {
+    "candidate": "reclaim1.5_15",
+    "expiry": 15,
+    "eligible": true,
+    "trades": 406,
+    "decided": 386,
+    "wins": 232,
+    "losses": 154,
+    "ties": 20,
+    "win_rate": 0.6010362694300518,
+    "wilson_lower_95": 0.5514200551740368,
+    "break_even_payout": 0.6637931034482759,
+    "pnl_at_payout": {
+      "0.7": 8.4,
+      "0.8": 31.6,
+      "0.9": 54.8
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": 11.2,
+      "2026-10-05": 20.40000000000006
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.03990796047000577,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 166,
+        "losses": 78,
+        "pnl": 54.799999999999876
+      },
+      "ETHUSDT": {
+        "wins": 51,
+        "losses": 61,
+        "pnl": -20.199999999999974
+      },
+      "SOLUSDT": {
+        "wins": 15,
+        "losses": 15,
+        "pnl": -3.0000000000000027
+      }
+    }
+  },
+  {
+    "candidate": "reclaim1.5_30",
+    "expiry": 30,
+    "eligible": false,
+    "trades": 391,
+    "decided": 383,
+    "wins": 229,
+    "losses": 154,
+    "ties": 8,
+    "win_rate": 0.597911227154047,
+    "wilson_lower_95": 0.5480675016077816,
+    "break_even_payout": 0.6724890829694323,
+    "pnl_at_payout": {
+      "0.7": 6.3,
+      "0.8": 29.2,
+      "0.9": 52.1
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": -4.200000000000005,
+      "2026-10-05": 33.40000000000009
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.052569629614067075,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 166,
+        "losses": 80,
+        "pnl": 52.799999999999876
+      },
+      "ETHUSDT": {
+        "wins": 50,
+        "losses": 58,
+        "pnl": -17.999999999999968
+      },
+      "SOLUSDT": {
+        "wins": 13,
+        "losses": 16,
+        "pnl": -5.600000000000001
+      }
+    }
+  },
+  {
+    "candidate": "reclaim1.5_60",
+    "expiry": 60,
+    "eligible": true,
+    "trades": 335,
+    "decided": 332,
+    "wins": 202,
+    "losses": 130,
+    "ties": 3,
+    "win_rate": 0.608433734939759,
+    "wilson_lower_95": 0.5549753405171263,
+    "break_even_payout": 0.6435643564356436,
+    "pnl_at_payout": {
+      "0.7": 11.4,
+      "0.8": 31.6,
+      "0.9": 51.8
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": 0.5999999999999999,
+      "2026-10-05": 31.00000000000007
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.029360886294590115,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 133,
+        "losses": 87,
+        "pnl": 19.400000000000052
+      },
+      "ETHUSDT": {
+        "wins": 55,
+        "losses": 34,
+        "pnl": 10.000000000000005
+      },
+      "SOLUSDT": {
+        "wins": 14,
+        "losses": 9,
+        "pnl": 2.2
+      }
+    }
+  },
+  {
+    "candidate": "reclaim2.0_15",
+    "expiry": 15,
+    "eligible": false,
+    "trades": 139,
+    "decided": 130,
+    "wins": 78,
+    "losses": 52,
+    "ties": 9,
+    "win_rate": 0.6,
+    "wilson_lower_95": 0.5140824117718141,
+    "break_even_payout": 0.6666666666666666,
+    "pnl_at_payout": {
+      "0.7": 2.6,
+      "0.8": 10.4,
+      "0.9": 18.2
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": 1.3999999999999986,
+      "2026-10-05": 9.000000000000012
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.1759169240839555,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 56,
+        "losses": 30,
+        "pnl": 14.800000000000013
+      },
+      "ETHUSDT": {
+        "wins": 14,
+        "losses": 17,
+        "pnl": -5.800000000000001
+      },
+      "SOLUSDT": {
+        "wins": 8,
+        "losses": 5,
+        "pnl": 1.4000000000000004
+      }
+    }
+  },
+  {
+    "candidate": "reclaim2.0_30",
+    "expiry": 30,
+    "eligible": false,
+    "trades": 136,
+    "decided": 133,
+    "wins": 76,
+    "losses": 57,
+    "ties": 3,
+    "win_rate": 0.5714285714285714,
+    "wilson_lower_95": 0.4864828528600957,
+    "break_even_payout": 0.75,
+    "pnl_at_payout": {
+      "0.7": -3.8,
+      "0.8": 3.8,
+      "0.9": 11.4
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": -6.6000000000000005,
+      "2026-10-05": 10.399999999999999
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.3905104940365563,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 54,
+        "losses": 33,
+        "pnl": 10.2
+      },
+      "ETHUSDT": {
+        "wins": 15,
+        "losses": 18,
+        "pnl": -6.000000000000003
+      },
+      "SOLUSDT": {
+        "wins": 7,
+        "losses": 6,
+        "pnl": -0.3999999999999999
+      }
+    }
+  },
+  {
+    "candidate": "reclaim2.0_60",
+    "expiry": 60,
+    "eligible": false,
+    "trades": 131,
+    "decided": 129,
+    "wins": 76,
+    "losses": 53,
+    "ties": 2,
+    "win_rate": 0.5891472868217055,
+    "wilson_lower_95": 0.5028645140129736,
+    "break_even_payout": 0.6973684210526315,
+    "pnl_at_payout": {
+      "0.7": 0.2,
+      "0.8": 7.8,
+      "0.9": 15.4
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": -8.599999999999998,
+      "2026-10-05": 16.400000000000016
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.2491401152995406,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 50,
+        "losses": 38,
+        "pnl": 1.9999999999999958
+      },
+      "ETHUSDT": {
+        "wins": 20,
+        "losses": 11,
+        "pnl": 4.999999999999999
+      },
+      "SOLUSDT": {
+        "wins": 6,
+        "losses": 4,
+        "pnl": 0.8000000000000003
+      }
+    }
+  },
+  {
+    "candidate": "xgb_15_0.55",
+    "expiry": 15,
+    "eligible": true,
+    "trades": 5217,
+    "decided": 4533,
+    "wins": 2959,
+    "losses": 1574,
+    "ties": 684,
+    "win_rate": 0.6527685859254357,
+    "wilson_lower_95": 0.6387848409034395,
+    "break_even_payout": 0.5319364650219669,
+    "pnl_at_payout": {
+      "0.7": 497.3,
+      "0.8": 793.2,
+      "0.9": 1089.1
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": 330.6000000000075,
+      "2026-10-05": 462.60000000001406
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 1.1867797450587528e-40,
+    "bonferroni_pvalue": 4.9844749292467616e-39,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 2515,
+        "losses": 1231,
+        "pnl": 780.9999999999734
+      },
+      "ETHUSDT": {
+        "wins": 402,
+        "losses": 314,
+        "pnl": 7.600000000000045
+      },
+      "SOLUSDT": {
+        "wins": 42,
+        "losses": 29,
+        "pnl": 4.599999999999996
+      }
+    }
+  },
+  {
+    "candidate": "xgb_15_0.6",
+    "expiry": 15,
+    "eligible": true,
+    "trades": 1132,
+    "decided": 933,
+    "wins": 652,
+    "losses": 281,
+    "ties": 199,
+    "win_rate": 0.6988210075026795,
+    "wilson_lower_95": 0.6686166796761182,
+    "break_even_payout": 0.43098159509202455,
+    "pnl_at_payout": {
+      "0.7": 175.4,
+      "0.8": 240.6,
+      "0.9": 305.8
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": 129.99999999999952,
+      "2026-10-05": 110.59999999999945
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 2.0384496463117815e-19,
+    "bonferroni_pvalue": 8.561488514509482e-18,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 616,
+        "losses": 256,
+        "pnl": 236.80000000000254
+      },
+      "ETHUSDT": {
+        "wins": 36,
+        "losses": 25,
+        "pnl": 3.8
+      }
+    }
+  },
+  {
+    "candidate": "xgb_15_0.65",
+    "expiry": 15,
+    "eligible": true,
+    "trades": 311,
+    "decided": 249,
+    "wins": 173,
+    "losses": 76,
+    "ties": 62,
+    "win_rate": 0.6947791164658634,
+    "wilson_lower_95": 0.634980002264596,
+    "break_even_payout": 0.4393063583815029,
+    "pnl_at_payout": {
+      "0.7": 45.1,
+      "0.8": 62.4,
+      "0.9": 79.7
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": 42.599999999999916,
+      "2026-10-05": 19.800000000000022
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 4.71194069601938e-06,
+    "bonferroni_pvalue": 0.00019790150923281396,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 170,
+        "losses": 76,
+        "pnl": 59.99999999999978
+      },
+      "ETHUSDT": {
+        "wins": 3,
+        "losses": 0,
+        "pnl": 2.4000000000000004
+      }
+    }
+  },
+  {
+    "candidate": "xgb_30_0.55",
+    "expiry": 30,
+    "eligible": true,
+    "trades": 3537,
+    "decided": 3248,
+    "wins": 2035,
+    "losses": 1213,
+    "ties": 289,
+    "win_rate": 0.6265394088669951,
+    "wilson_lower_95": 0.6097632407721493,
+    "break_even_payout": 0.596068796068796,
+    "pnl_at_payout": {
+      "0.7": 211.5,
+      "0.8": 415.0,
+      "0.9": 618.5
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": 254.60000000000423,
+      "2026-10-05": 160.3999999999985
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 1.4090502147354986e-16,
+    "bonferroni_pvalue": 5.918010901889094e-15,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 1693,
+        "losses": 944,
+        "pnl": 410.40000000001453
+      },
+      "ETHUSDT": {
+        "wins": 313,
+        "losses": 243,
+        "pnl": 7.400000000000201
+      },
+      "SOLUSDT": {
+        "wins": 29,
+        "losses": 26,
+        "pnl": -2.8000000000000016
+      }
+    }
+  },
+  {
+    "candidate": "xgb_30_0.6",
+    "expiry": 30,
+    "eligible": true,
+    "trades": 854,
+    "decided": 754,
+    "wins": 505,
+    "losses": 249,
+    "ties": 100,
+    "win_rate": 0.669761273209549,
+    "wilson_lower_95": 0.6354054021136306,
+    "break_even_payout": 0.49306930693069306,
+    "pnl_at_payout": {
+      "0.7": 104.5,
+      "0.8": 155.0,
+      "0.9": 205.5
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": 114.39999999999942,
+      "2026-10-05": 40.599999999999966
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 1.0333522732893719e-10,
+    "bonferroni_pvalue": 4.340079547815362e-09,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 478,
+        "losses": 223,
+        "pnl": 159.4000000000004
+      },
+      "ETHUSDT": {
+        "wins": 27,
+        "losses": 25,
+        "pnl": -3.4000000000000012
+      },
+      "SOLUSDT": {
+        "wins": 0,
+        "losses": 1,
+        "pnl": -1
+      }
+    }
+  },
+  {
+    "candidate": "xgb_30_0.65",
+    "expiry": 30,
+    "eligible": false,
+    "trades": 30,
+    "decided": 28,
+    "wins": 22,
+    "losses": 6,
+    "ties": 2,
+    "win_rate": 0.7857142857142857,
+    "wilson_lower_95": 0.6046105292072612,
+    "break_even_payout": 0.2727272727272727,
+    "pnl_at_payout": {
+      "0.7": 9.4,
+      "0.8": 11.6,
+      "0.9": 13.8
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": 7.999999999999998,
+      "2026-10-05": 3.5999999999999996
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.010057561454491815,
+    "bonferroni_pvalue": 0.42241758108865624,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 20,
+        "losses": 6,
+        "pnl": 10.0
+      },
+      "ETHUSDT": {
+        "wins": 2,
+        "losses": 0,
+        "pnl": 1.6
+      }
+    }
+  },
+  {
+    "candidate": "xgb_60_0.55",
+    "expiry": 60,
+    "eligible": true,
+    "trades": 1530,
+    "decided": 1423,
+    "wins": 891,
+    "losses": 532,
+    "ties": 107,
+    "win_rate": 0.6261419536191145,
+    "wilson_lower_95": 0.6006951654920265,
+    "break_even_payout": 0.5970819304152637,
+    "pnl_at_payout": {
+      "0.7": 91.7,
+      "0.8": 180.8,
+      "0.9": 269.9
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": 121.39999999999898,
+      "2026-10-05": 59.39999999999943
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 3.9737775564640566e-08,
+    "bonferroni_pvalue": 1.6689865737149038e-06,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 789,
+        "losses": 452,
+        "pnl": 179.200000000003
+      },
+      "ETHUSDT": {
+        "wins": 94,
+        "losses": 76,
+        "pnl": -0.8000000000000009
+      },
+      "SOLUSDT": {
+        "wins": 8,
+        "losses": 4,
+        "pnl": 2.4000000000000004
+      }
+    }
+  },
+  {
+    "candidate": "xgb_60_0.6",
+    "expiry": 60,
+    "eligible": true,
+    "trades": 327,
+    "decided": 304,
+    "wins": 209,
+    "losses": 95,
+    "ties": 23,
+    "win_rate": 0.6875,
+    "wilson_lower_95": 0.6333283053747206,
+    "break_even_payout": 0.45454545454545453,
+    "pnl_at_payout": {
+      "0.7": 51.3,
+      "0.8": 72.2,
+      "0.9": 93.1
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-04": 60.599999999999795,
+      "2026-10-05": 11.6
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 1.7171796114577147e-06,
+    "bonferroni_pvalue": 7.212154368122402e-05,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 196,
+        "losses": 90,
+        "pnl": 66.79999999999967
+      },
+      "ETHUSDT": {
+        "wins": 13,
+        "losses": 5,
+        "pnl": 5.399999999999999
+      }
+    }
+  },
+  {
+    "candidate": "xgb_60_0.65",
+    "expiry": 60,
+    "eligible": false,
+    "trades": 0,
+    "decided": 0,
+    "wins": 0,
+    "losses": 0,
+    "ties": 0,
+    "win_rate": null,
+    "wilson_lower_95": 0.0,
+    "break_even_payout": null,
+    "pnl_at_payout": {
+      "0.7": 0.0,
+      "0.8": 0.0,
+      "0.9": 0.0
+    },
+    "days": 0,
+    "daily_pnl": {},
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 1.0,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {}
+  }
+]

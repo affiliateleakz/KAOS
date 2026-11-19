@@ -22,3 +22,16 @@ def test_simulated_rejected():
 def test_stale_outcome_rejected():
     p,a,b=data();b["observed_at"]="2026-10-18T12:05:00Z"
     with pytest.raises(ValueError,match="timestamps"):verify(p,a,b,30)
+
+
+def test_naive_prediction_timestamp_rejected():
+    p,a,b=data()
+    p["timestamp"]="2026-10-18T12:00:00"
+    with pytest.raises(ValueError,match="timezone"):
+        verify(p,a,b,30)
+
+def test_naive_quote_timestamp_rejected():
+    p,a,b=data()
+    a["observed_at"]="2026-10-18T12:00:01"
+    with pytest.raises(ValueError,match="timezone"):
+        verify(p,a,b,30)

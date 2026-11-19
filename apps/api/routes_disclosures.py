@@ -1,8 +1,13 @@
 """Public disclosed trades scanner. Not a real-time trade feed or an order trigger."""
+import asyncio
 import os
+import time
 from datetime import date, datetime, timezone
 from secrets import compare_digest
-from urllib.parse import urlparse
+from urllib.parse import urlencode, urlparse
+from xml.etree import ElementTree
+
+import httpx
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -84,6 +89,72 @@ async def ingest_disclosures(items: list[Disclosure], x_kaos_collector_key: str 
             {"$set": record}, upsert=True)
     return {"accepted": len(items), "research_only": True}
 
+# Free, keyless headline discovery for the political + Wall Street research view.
+# Google News RSS is a public feed: no account, no key, one cached request per topic.
+HEADLINE_TOPICS = {
+    "politics": 'congress stock trades OR politician stocks OR congressional trading',
+    "wallstreet": 'insider trading OR "wall street" SEC filing OR hedge fund disclosure',
+    "markets": '"stock market" OR earnings OR "Federal Reserve" markets',
+}
+_HEADLINE_CACHE: dict = {}
+_HEADLINE_TTL = 300.0
+_HEADLINE_LOCK = asyncio.Lock()
+
+
+def _parse_headlines(xml_bytes, topic):
+    if len(xml_bytes) > 2_000_000:
+        raise ValueError("Headline feed too large")
+    rows = []
+    for item in ElementTree.fromstring(xml_bytes).iter("item"):
+        title = (item.findtext("title") or "").strip()
+        link = (item.findtext("link") or "").strip()
+        if not title or not link.startswith("https://") or len(link) > 1800:
+            continue
+        parsed = urlparse(link)
+        if parsed.hostname not in {"news.google.com", "news.yahoo.com", "finance.yahoo.com", "www.sec.gov"}:
+            continue
+        source = (item.findtext("source") or "Google News").strip()[:80]
+        published = (item.findtext("pubDate") or "").strip()[:60]
+        rows.append({"title": title[:300], "publisher": source, "published_at": published,
+                     "url": link, "topic": topic})
+        if len(rows) >= 20:
+            break
+    return rows
+
+
+@router.get("/headlines")
+async def free_headlines(topic: str = Query("politics"), user=Depends(require_scanner)):
+    """Free political / Wall Street headlines. No key and no account required."""
+    if topic not in HEADLINE_TOPICS:
+        raise HTTPException(422, "Unsupported headline topic")
+    now = time.monotonic()
+    cached = _HEADLINE_CACHE.get(topic)
+    if cached and now - cached[0] < _HEADLINE_TTL:
+        return {**cached[1], "cached": True}
+    async with _HEADLINE_LOCK:
+        cached = _HEADLINE_CACHE.get(topic)
+        if cached and time.monotonic() - cached[0] < _HEADLINE_TTL:
+            return {**cached[1], "cached": True}
+        params = {"q": HEADLINE_TOPICS[topic], "hl": "en-US", "gl": "US", "ceid": "US:en"}
+        url = "https://news.google.com/rss/search?" + urlencode(params)
+        try:
+            async with httpx.AsyncClient(timeout=15, follow_redirects=False) as client:
+                response = await client.get(url, headers={"User-Agent": "KAOSTrading-Research/1.0"})
+                response.raise_for_status()
+                rows = _parse_headlines(response.content, topic)
+        except (httpx.HTTPError, ValueError, ElementTree.ParseError) as exc:
+            if cached and time.monotonic() - cached[0] < _HEADLINE_TTL * 6:
+                return {**cached[1], "cached": True, "stale": True}
+            raise HTTPException(503, "Free headline feed unavailable") from exc
+        if not rows:
+            raise HTTPException(503, "Free headline feed returned no usable articles")
+        payload = {"topic": topic, "headlines": rows, "count": len(rows),
+                   "provider": "Google News RSS (free, no key)", "research_only": True,
+                   "note": "Headlines are discovery links only; timestamps come from the feed, not a verified publisher clock."}
+        _HEADLINE_CACHE[topic] = (time.monotonic(), payload)
+        return {**payload, "cached": False}
+
+
 @router.get("/trades")
 async def list_disclosures(source: KIND | None=None, ticker: str | None=Query(default=None,max_length=24),
                            limit: int=Query(default=50,ge=1,le=100), user=Depends(require_scanner)):
@@ -131,6 +202,80 @@ async def refresh_sec_form4(cik: int, x_kaos_collector_key: str | None=Header(de
             accepted+=1
     return {"filings_examined":len(docs),"transactions_imported":accepted,
             "research_only":True,"automatic_schedule_enabled":False}
+
+@router.post("/sync-sec")
+async def sync_latest_sec_filings(ticker: str | None = Query(default=None, max_length=12),
+                                 cik: int | None = Query(default=None, ge=1, le=9999999999),
+                                 user=Depends(require_scanner)):
+    """Member-triggered SEC Form 4 sync.
+
+    Uses SEC's free public data — no key, only the server's declared User-Agent.
+    Bounded cooldown per member and issuer so the page can fill itself in without
+    hammering sec.gov; SEC asks for at most 10 requests/second industry-wide.
+    """
+    from sec_form4_collector import collect_issuer_form4
+    if not ticker and not cik:
+        raise HTTPException(422, "Provide a ticker or a CIK")
+    if not os.environ.get("KAOS_SEC_USER_AGENT", ""):
+        raise HTTPException(503, "SEC access is not configured; set the SEC User-Agent in Admin → API Keys")
+    issuer = cik or await _ticker_to_cik(ticker)
+    if not issuer:
+        raise HTTPException(404, f"SEC has no issuer with ticker {ticker.upper()}")
+    key = (user["id"], issuer)
+    now = time.monotonic()
+    last = _SEC_SYNC_SEEN.get(key)
+    if last and now - last < 300:
+        raise HTTPException(429, "That issuer was synced moments ago; try again in a few minutes")
+    _SEC_SYNC_SEEN[key] = now
+    try:
+        docs = await collect_issuer_form4(issuer, max_filings=10)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(503, "SEC Form 4 retrieval unavailable") from exc
+    imported = 0
+    for doc in docs:
+        for row in doc["transactions"]:
+            record = Disclosure(
+                source="sec_insider", filing_id=doc["filing_id"], filer=row["filer"],
+                ticker=row["ticker"], asset=row["asset"], action=row["action"],
+                transaction_date=date.fromisoformat(row["transaction_date"]),
+                filing_date=date.fromisoformat(doc["filing_date"]),
+                disclosed_at=datetime.now(timezone.utc), source_url=doc["source_url"],
+                note=("Form " + doc["form"] + "; shares=" + (row["shares"] or "unreported")
+                      + "; reported price/share=" + (row["price_per_share"] or "unreported")))
+            validate_disclosure(record)
+            data = record.model_dump(mode="json")
+            await db.kaos_public_disclosures.update_one(
+                {"source": "sec_insider", "filing_id": data["filing_id"], "filer": data["filer"],
+                 "asset": data["asset"], "action": data["action"], "transaction_date": data["transaction_date"]},
+                {"$set": data}, upsert=True)
+            imported += 1
+    return {"issuer_cik": issuer, "filings_examined": len(docs), "transactions_imported": imported,
+            "source": "SEC EDGAR (free)", "research_only": True}
+
+
+_SEC_SYNC_SEEN: dict = {}
+_CIK_CACHE: dict = {"at": 0.0, "map": {}}
+
+
+async def _ticker_to_cik(ticker: str | None) -> int | None:
+    """Resolve a ticker through SEC's free company index (cached for a day)."""
+    import httpx
+    symbol = (ticker or "").strip().upper()
+    if not symbol:
+        return None
+    if time.monotonic() - _CIK_CACHE["at"] > 86400 or not _CIK_CACHE["map"]:
+        agent = os.environ.get("KAOS_SEC_USER_AGENT", "")
+        async with httpx.AsyncClient(timeout=20, follow_redirects=False) as client:
+            response = await client.get("https://www.sec.gov/files/company_tickers.json",
+                                        headers={"User-Agent": agent})
+            response.raise_for_status()
+            rows = response.json()
+        _CIK_CACHE["map"] = {str(r["ticker"]).upper(): int(r["cik_str"]) for r in rows.values()}
+        _CIK_CACHE["at"] = time.monotonic()
+    return _CIK_CACHE["map"].get(symbol)
+
 
 @router.post("/refresh-13f/{cik}")
 async def refresh_sec_13f(cik: int, x_kaos_collector_key: str | None=Header(default=None)):

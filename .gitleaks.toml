@@ -1,0 +1,9 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Chrome Web Store public identity key for gbobopmnjgeeegniphckfpalhnebapjm; contains no private signing material"
+regexTarget = "secret"
+regexes = [
+    '''^MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnwSV5C2ORieokxn2cldjHEr0sHlFRtWdVnVphkTSxi5aIY1TVztKw66hf04\+XFnAL8wqAk\+KB9dDPjjZO6HhpgXjUCv8Gw/Jf4\+WhurnTBwrGVdz/1jIXfI2pXfummJ8utmLaphI9K/bnVX1SVvB21eNnsF/NtGSN0tJEMF3k9DlmMjTA0Sk2n2YsZbEgegLlAC5nnGq4HtMVd7pVVI5BsN90l8iCDAAsd/\+Ar41Mmy/\+g53fTOoXM1KS5Ywd3X/9WXskZVmmP\+se/lGYVTsRpGS024IiAos5RAMwrPQF3YgLVR3d1vmkgKvVMt2m5lrufBwLDMT2RSTGzNei7sCLwIDAQAB$'''
+]

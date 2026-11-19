@@ -1,0 +1,1 @@
+Frozen, unvalidated research artifacts. These are not public static assets or published member models. Access is through owner-only authenticated research endpoints. Never load these into production training_model/shared model registries automatically.

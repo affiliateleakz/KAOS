@@ -1,0 +1,133 @@
+{
+  "state": "failed_final_gate",
+  "selected": "xgb_15_0.6",
+  "final": {
+    "trades": 1295,
+    "decided": 1133,
+    "wins": 769,
+    "losses": 364,
+    "ties": 162,
+    "win_rate": 0.678729037952339,
+    "wilson_lower_95": 0.6509733487383028,
+    "break_even_payout": 0.47334200260078024,
+    "pnl_at_payout": {
+      "0.7": 174.3,
+      "0.8": 251.2,
+      "0.9": 328.1
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-06": 139.9999999999995,
+      "2026-10-07": 111.19999999999924
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 1.6378594435138307e-17,
+    "bonferroni_pvalue": 1.6378594435138307e-17,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 645,
+        "losses": 285,
+        "pnl": 231.00000000000293
+      },
+      "ETHUSDT": {
+        "wins": 121,
+        "losses": 76,
+        "pnl": 20.800000000000043
+      },
+      "SOLUSDT": {
+        "wins": 3,
+        "losses": 3,
+        "pnl": -0.5999999999999999
+      }
+    }
+  },
+  "live_approved": false,
+  "validation_days": 2,
+  "final_days": 2,
+  "limitations": [
+    "Only one week and three correlated crypto assets.",
+    "Proxy binary outcomes, assumed payouts, no broker execution verification.",
+    "Any positive result requires new prospective demo validation."
+  ],
+  "delayed_entry": {
+    "trades": 1192,
+    "decided": 1037,
+    "wins": 629,
+    "losses": 408,
+    "ties": 155,
+    "win_rate": 0.6065573770491803,
+    "wilson_lower_95": 0.5764830888435704,
+    "break_even_payout": 0.6486486486486487,
+    "pnl_at_payout": {
+      "0.7": 32.3,
+      "0.8": 95.2,
+      "0.9": 158.1
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-06": 56.39999999999945,
+      "2026-10-07": 38.79999999999999
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 0.0005045395885690185,
+    "bonferroni_pvalue": 0.0005045395885690185,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 531,
+        "losses": 317,
+        "pnl": 107.7999999999988
+      },
+      "ETHUSDT": {
+        "wins": 96,
+        "losses": 87,
+        "pnl": -10.199999999999982
+      },
+      "SOLUSDT": {
+        "wins": 2,
+        "losses": 4,
+        "pnl": -2.4
+      }
+    }
+  },
+  "adverse_entry_1bp": {
+    "trades": 1295,
+    "decided": 1295,
+    "wins": 377,
+    "losses": 918,
+    "ties": 0,
+    "win_rate": 0.2911196911196911,
+    "wilson_lower_95": 0.26702390152650973,
+    "break_even_payout": 2.4350132625994694,
+    "pnl_at_payout": {
+      "0.7": -654.1,
+      "0.8": -616.4,
+      "0.9": -578.7
+    },
+    "days": 2,
+    "daily_pnl": {
+      "2026-10-06": -296.79999999999916,
+      "2026-10-07": -319.5999999999989
+    },
+    "daily_cluster_bootstrap_lower_pnl95": null,
+    "binomial_pvalue_at_80pct": 1.0,
+    "bonferroni_pvalue": 1.0,
+    "by_asset": {
+      "BTCUSDT": {
+        "wins": 308,
+        "losses": 756,
+        "pnl": -509.5999999999977
+      },
+      "ETHUSDT": {
+        "wins": 67,
+        "losses": 158,
+        "pnl": -104.40000000000012
+      },
+      "SOLUSDT": {
+        "wins": 2,
+        "losses": 4,
+        "pnl": -2.4
+      }
+    }
+  },
+  "validation_adjusted_pvalue": 8.561488514509482e-18
+}

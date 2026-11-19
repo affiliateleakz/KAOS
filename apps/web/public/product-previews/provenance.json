@@ -1,0 +1,15 @@
+{
+  "kind": "Actual KAOS interface captures",
+  "data": "Labeled local fixtures; no real accounts, trades or performance claims",
+  "botVersion": "1.7.30",
+  "views": [
+    "bot",
+    "bot-controls",
+    "strategy",
+    "radar",
+    "heatmap",
+    "community",
+    "affiliate"
+  ],
+  "generator": "scripts/browser/capture_product.cjs"
+}

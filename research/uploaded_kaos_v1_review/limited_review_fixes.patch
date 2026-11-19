@@ -1,0 +1,153 @@
+--- a/research/kaos_strategy/backtest.py
++++ b/research/kaos_strategy/backtest.py
+@@ -49,6 +49,8 @@
+     c = df["close"].to_numpy(float)
+     ts = df["ts"].to_numpy()
+     n = len(df)
++    if len(atr) != n:
++        raise ValueError('ATR must align one-to-one with the supplied price frame')
+ 
+     trades = []
+     free_from = 0
+@@ -177,7 +179,7 @@
+         return (float("nan"), float("nan"))
+     won = trades["outcome"].isin(["tp", "tp_gap"]).to_numpy().astype(int)
+     lost = trades["outcome"].isin(["sl", "sl_gap"]).to_numpy().astype(int)
+-    sample = np.r_[won[won == 1], lost[lost == 1]]
++    sample = np.r_[np.ones(int(won.sum())), np.zeros(int(lost.sum()))]
+     if len(sample) < 10:
+         return (float("nan"), float("nan"))
+     rng = np.random.default_rng(seed)
+--- a/research/kaos_strategy/study.py
++++ b/research/kaos_strategy/study.py
+@@ -52,11 +52,7 @@
+ 
+ 
+ def asset_class(asset: str) -> str:
+-    if asset.endswith("USD") and asset[:3] in {"BTC", "ETH", "SOL", "XRP"}:
+-        return "crypto"
+-    if asset.endswith("USD"):
+-        return "fx"
+-    return "equity"
++    return data.ASSET_LOOKUP(asset)[0]
+ 
+ 
+ def prepare(df: pd.DataFrame, p: Params):
+@@ -87,7 +83,7 @@
+     for tp in TP_GRID:
+         for sl in SL_GRID:
+             for bars in BARS_GRID:
+-                tr = simulate_entries(df.iloc[lo:hi].reset_index(drop=True), entries, atr,
++                tr = simulate_entries(df.iloc[lo:hi].reset_index(drop=True), entries, atr[lo:hi],
+                                       tp, sl, bars, COST_ATR, "pulse")
+                 if tr.empty:
+                     continue
+@@ -114,7 +110,7 @@
+     picks.sort()
+     sides = np.where(rng.random(len(picks)) < long_share, 1, -1)
+     entries = [(int(i) - lo, int(s)) for i, s in zip(picks, sides)]
+-    return simulate_entries(df.iloc[lo:hi].reset_index(drop=True), entries, atr,
++    return simulate_entries(df.iloc[lo:hi].reset_index(drop=True), entries, atr[lo:hi],
+                             tp, sl, bars, COST_ATR, "placebo")
+ 
+ 
+@@ -140,7 +136,7 @@
+ 
+     # ---- out of sample, same geometry, no re-tuning
+     te_entries = pulse_entries(sig, reg, cut, n)
+-    te = simulate_entries(df.iloc[cut:].reset_index(drop=True), te_entries, atr,
++    te = simulate_entries(df.iloc[cut:].reset_index(drop=True), te_entries, atr[cut:n],
+                           tp, sl, bars, COST_ATR, "pulse")
+     tm = metrics(te, tp, sl) if not te.empty else {"n": 0}
+     if tm.get("n", 0) >= 5:
+@@ -165,7 +161,7 @@
+ 
+     # ---- DRIVE engine on its default brackets, same split
+     dr = simulate_entries(df.iloc[cut:].reset_index(drop=True),
+-                          drive_entries(sig, reg, cut, n), atr,
++                          drive_entries(sig, reg, cut, n), atr[cut:n],
+                           DEFAULT.dr_tp_atr, DEFAULT.dr_sl_atr, DEFAULT.dr_max_bars, COST_ATR, "drive")
+     dm = metrics(dr, DEFAULT.dr_tp_atr, DEFAULT.dr_sl_atr) if not dr.empty else {"n": 0}
+     if dm.get("n", 0) >= 5:
+--- a/research/kaos_strategy/portability.py
++++ b/research/kaos_strategy/portability.py
+@@ -39,7 +39,7 @@
+ 
+     slice_df = df.iloc[cut:].reset_index(drop=True)
+     entries = pulse_entries(sig, reg, cut, n)
+-    tr = simulate_entries(slice_df, entries, atr, FROZEN["tp"], FROZEN["sl"], FROZEN["bars"], COST_ATR, "pulse")
++    tr = simulate_entries(slice_df, entries, atr[cut:n], FROZEN["tp"], FROZEN["sl"], FROZEN["bars"], COST_ATR, "pulse")
+     m = metrics(tr, FROZEN["tp"], FROZEN["sl"]) if not tr.empty else {"n": 0}
+     row = {"asset": asset, "tf": tf, "class": asset_class(asset), "signals": len(entries)}
+     if m.get("n", 0) < 5:
+@@ -77,7 +77,7 @@
+     out = []
+     for tp in NEIGHBOURS_TP:
+         for sl in NEIGHBOURS_SL:
+-            tr = simulate_entries(slice_df, entries, atr, tp, sl, FROZEN["bars"], COST_ATR, "pulse")
++            tr = simulate_entries(slice_df, entries, atr[cut:n], tp, sl, FROZEN["bars"], COST_ATR, "pulse")
+             if tr.empty:
+                 continue
+             m = metrics(tr, tp, sl)
+--- a/research/kaos_strategy/report_charts.py
++++ b/research/kaos_strategy/report_charts.py
+@@ -36,7 +36,7 @@
+         cut = int(n * SPLIT)
+         _, reg, sig, atr = prepare(df, DEFAULT)
+         tr = simulate_entries(df.iloc[cut:].reset_index(drop=True),
+-                              pulse_entries(sig, reg, cut, n), atr,
++                              pulse_entries(sig, reg, cut, n), atr[cut:n],
+                               FROZEN["tp"], FROZEN["sl"], FROZEN["bars"], COST_ATR, "pulse")
+         if tr.empty:
+             continue
+--- a/research/kaos_strategy/cost_sensitivity.py
++++ b/research/kaos_strategy/cost_sensitivity.py
+@@ -34,7 +34,7 @@
+         cut = int(n * SPLIT)
+         _, reg, sig, atr = prepare(df, DEFAULT)
+         cache.append((asset, tf, asset_class(asset), df.iloc[cut:].reset_index(drop=True),
+-                      pulse_entries(sig, reg, cut, n), atr))
++                      pulse_entries(sig, reg, cut, n), atr[cut:n]))
+ 
+     rows = []
+     for cost in COSTS:
+--- a/research/kaos_strategy/refine.py
++++ b/research/kaos_strategy/refine.py
+@@ -56,7 +56,7 @@
+         n = len(df)
+         lo, hi = int(n * lo_frac), int(n * hi_frac)
+         _, atr, entries = entries_for(asset, tf, variant, lo, hi)
+-        tr = simulate_entries(df.iloc[lo:hi].reset_index(drop=True), entries, atr,
++        tr = simulate_entries(df.iloc[lo:hi].reset_index(drop=True), entries, atr[lo:hi],
+                               FROZEN["tp"], FROZEN["sl"], FROZEN["bars"], COST, "pulse")
+         if not tr.empty:
+             frames.append(tr.assign(asset=asset, tf=tf))
+--- a/research/kaos_strategy/platforms/tradingview_kaos.pine
++++ b/research/kaos_strategy/platforms/tradingview_kaos.pine
+@@ -86,8 +86,8 @@
+     strategy.exit("KAOS-x", from_entry="KAOS", stop=sl, limit=tp)
+ 
+ if shortSig
+-    tp = close - (pulseLong ? tpAtr : drTpAtr) * atr
+-    sl = close + (pulseLong ? slAtr : drSlAtr) * atr
++    tp = close - (pulseShort ? tpAtr : drTpAtr) * atr
++    sl = close + (pulseShort ? slAtr : drSlAtr) * atr
+     strategy.entry("KAOS", strategy.short, comment="KAOS short")
+     strategy.exit("KAOS-x", from_entry="KAOS", stop=sl, limit=tp)
+ 
+--- a/research/kaos_strategy/platforms/live_runner.py
++++ b/research/kaos_strategy/platforms/live_runner.py
+@@ -48,10 +48,11 @@
+     if source == "csv":
+         return data.load(symbol, tf).tail(bars).reset_index(drop=True)
+     if source == "coinbase":
++        product = data.CRYPTO.get(symbol, symbol)
+         if tf in data.COINBASE_GRANULARITY:
+-            return data.fetch_coinbase(symbol, tf, bars).tail(bars).reset_index(drop=True)
++            return data.fetch_coinbase(product, tf, bars).tail(bars).reset_index(drop=True)
+         base = data.base_timeframe_for_4h(tf, symbol)
+-        frame = data.fetch_coinbase(symbol, base, bars * 4)
++        frame = data.fetch_coinbase(product, base, bars * 4)
+         return data.resample(frame, tf).tail(bars).reset_index(drop=True)
+     raise SystemExit(f"unsupported source {source!r}")
+ 

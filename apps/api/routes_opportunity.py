@@ -1,8 +1,10 @@
 """Research-only KAOS Opportunity Radar API. Collector requires server-side token."""
+import asyncio
 import os
-from datetime import datetime, timezone
+import time
+from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 from typing import Literal
 from auth import get_current_user
 from db import db
@@ -29,6 +31,12 @@ async def member(user=Depends(get_current_user)):
         raise HTTPException(403,'Scanners require a Pro or Ultimate membership')
     return user
 
+async def signal_member(user=Depends(get_current_user)):
+    ent=await get_entitlements(user)
+    if not ent.get('scanners') or not ent.get('aiSignals'):
+        raise HTTPException(403,'AI Signals require an Ultimate membership')
+    return user
+
 @router.post('/ingest')
 async def ingest(items: list[Observation], x_kaos_collector_key: str | None=Header(default=None)):
     from secrets import compare_digest
@@ -48,10 +56,118 @@ async def ingest(items: list[Observation], x_kaos_collector_key: str | None=Head
         count+=1
     return {'accepted':count,'mode':'research_only'}
 
+
+_PACKAGED_COLLECTORS=os.path.join(os.path.dirname(os.path.abspath(__file__)), '_news_collectors')
+_COLLECTORS_DIR=os.getenv('KAOS_COLLECTORS_DIR') or (_PACKAGED_COLLECTORS if os.path.isdir(_PACKAGED_COLLECTORS) else os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    'services','collectors'))
+_NEWS_SYNC_SEEN={}
+# After a GDELT failure, skip it briefly instead of making every member wait for the
+# same timeout before the fallback feed is tried.
+_GDELT_DOWN_UNTIL=0.0
+
+
+def _gdelt_module():
+    import importlib,sys
+    if _COLLECTORS_DIR not in sys.path: sys.path.insert(0,_COLLECTORS_DIR)
+    return importlib.import_module('gdelt_news')
+
+
+@router.post('/sync-news')
+async def sync_news(symbol: str=Query(min_length=1,max_length=12),
+                    query: str | None=Query(default=None,max_length=120),
+                    user=Depends(member)):
+    """Member-triggered, bounded headline discovery for one ticker.
+
+    GDELT DOC is free and requires no account. One outbound request per press,
+    a per-member cooldown, and records are deduplicated by event id so repeated
+    presses cannot be used as a scraper.
+    """
+    global _GDELT_DOWN_UNTIL
+    gdelt=_gdelt_module()
+    ticker=symbol.strip().upper()
+    if not gdelt.SYMBOL_RE.fullmatch(ticker):
+        raise HTTPException(422,'Invalid ticker symbol')
+    text=(query or f'"{ticker}" (stock OR shares OR earnings)').strip()
+    if not gdelt.QUERY_RE.fullmatch(text) or not 3<=len(text)<=120:
+        raise HTTPException(422,'Unsupported news query')
+    key=(user['id'],ticker)
+    now_mono=time.monotonic()
+    if _NEWS_SYNC_SEEN.get(key) and now_mono-_NEWS_SYNC_SEEN[key]<300:
+        raise HTTPException(429,'That ticker was refreshed moments ago; try again in a few minutes')
+    _NEWS_SYNC_SEEN[key]=now_mono
+    now=datetime.now(timezone.utc)
+    provider,fallback='GDELT DOC (free, no key)',False
+    candidates=None
+    if time.monotonic()>=_GDELT_DOWN_UNTIL:
+        try:
+            articles=await asyncio.to_thread(gdelt.fetch_articles,text,max_records=25)
+            candidates=gdelt.observe_articles(ticker,text,articles,now)
+            examined=len(articles)
+        except Exception:
+            # GDELT rate-limits shared hosting IPs aggressively (sometimes returning
+            # an HTML page with HTTP 200, which fails JSON decoding) and can take many
+            # seconds to do it, so back off before retrying.
+            _GDELT_DOWN_UNTIL=time.monotonic()+600
+            candidates=None
+    if candidates is None:
+        # The ticker headline feed keeps the radar usable without another credential.
+        try:
+            candidates=await _yahoo_headlines(ticker,now)
+        except Exception as exc:
+            raise HTTPException(503,'News discovery unavailable; both GDELT and the headline feed failed') from exc
+        provider,fallback,examined='Yahoo Finance headline feed (free, no key)',True,len(candidates)
+    stored=0
+    for candidate in candidates:
+        try: item=Observation(**candidate)
+        except ValidationError: continue
+        record=item.model_dump(mode='json')
+        observed,published=utc(record['observed_at']),utc(record['published_at'])
+        if observed>now or published>observed: continue
+        await db.kaos_intelligence.update_one(
+            {'source':record['source'],'event_id':record['event_id']},{'$set':record},upsert=True)
+        stored+=1
+    return {'symbol':ticker,'query':text,'articles_examined':examined,'observations_stored':stored,
+            'provider':provider,'fallback':fallback,'research_only':True}
+
+
+async def _yahoo_headlines(ticker,ticker_time):
+    """Keyless ticker headline feed used when GDELT refuses the request."""
+    import httpx
+    from email.utils import parsedate_to_datetime
+    from hashlib import sha256
+    from xml.etree import ElementTree
+    url=f'https://feeds.finance.yahoo.com/rss/2.0/headline?s={ticker}&region=US&lang=en-US'
+    async with httpx.AsyncClient(timeout=20,follow_redirects=False) as client:
+        response=await client.get(url,headers={'User-Agent':'KAOS-Research/3.0'})
+        response.raise_for_status()
+    if len(response.content)>2_000_000: raise ValueError('Headline feed too large')
+    out=[]
+    for item in ElementTree.fromstring(response.content).iter('item'):
+        title=(item.findtext('title') or '').strip()
+        link=(item.findtext('link') or '').strip()
+        if not title or not link.startswith('https://') or len(link)>1800: continue
+        try: published=parsedate_to_datetime(item.findtext('pubDate') or '')
+        except (TypeError,ValueError): continue
+        if published.tzinfo is None: published=published.replace(tzinfo=timezone.utc)
+        if published>ticker_time or ticker_time-published>timedelta(days=7): continue
+        publisher=(item.findtext('source') or 'Yahoo Finance').strip()[:100]
+        out.append({'asset':ticker,'asset_class':'stock','source':'news','direction':'neutral','strength':0.25,
+                    'event_id':'yahoo-news:'+ticker+':'+sha256(link.encode()).hexdigest()[:24],
+                    'observed_at':ticker_time.isoformat(),'published_at':published.isoformat(),
+                    'source_url':link,
+                    'summary':(f'Yahoo Finance headline for {ticker}: {title[:330]} ({publisher}). '
+                               'Headline feed timing is not a verified publication timestamp; '
+                               'coverage does not imply price direction.')[:1200]})
+        if len(out)>=12: break
+    return out
+
 @router.get('/opportunities')
-async def opportunities(asset_class: str | None=None,limit:int=Query(30,ge=1,le=100),user=Depends(member)):
+async def opportunities(asset_class: str | None=None,limit:int=Query(30,ge=1,le=100),user=Depends(member),source_filter: str | None=None):
     if asset_class and asset_class not in SUPPORTED: raise HTTPException(422,'Unsupported asset class')
+    if source_filter and source_filter not in SOURCES: raise HTTPException(422,'Unsupported evidence source')
     query={'asset_class':asset_class} if asset_class else {}
+    if source_filter: query['source']=source_filter
     # Only bounded recent observations, not the entire historical collection.
     from datetime import timedelta
     cutoff=(datetime.now(timezone.utc)-timedelta(days=7)).isoformat()
@@ -80,3 +196,140 @@ async def health(user=Depends(member)):
         {'_id': 0, 'asset_class': 1, 'source': 1, 'event_id': 1, 'observed_at': 1}
     ).sort('observed_at', -1).limit(5000).to_list(length=5000)
     return summarize_health(records)
+
+
+class HeadlineScore(BaseModel):
+    """Score from an authenticated collector's separately-run financial NLP model."""
+    ticker: str = Field(pattern=r"^[A-Za-z0-9._-]{1,20}$")
+    asset_class: Literal["stock", "etf", "crypto", "forex"]
+    headline: str = Field(min_length=5, max_length=500)
+    source_url: str = Field(min_length=12, max_length=2000, pattern=r"^https://")
+    published_at: datetime
+    score: float = Field(ge=-1, le=1)
+    model_id: str = Field(min_length=1, max_length=100)
+    model_version: str = Field(min_length=1, max_length=100)
+
+
+@router.post("/ingest/headline-scores")
+async def ingest_headline_scores(items: list[HeadlineScore],
+                                 x_kaos_collector_key: str | None = Header(default=None)):
+    """Authenticated, attributable sentiment; no autonomous trading authority.
+
+    Server collector must separately verify the original news source and run
+    an actual model. A model's output is never represented as a win probability.
+    """
+    from hashlib import sha256
+    from math import isfinite
+    from secrets import compare_digest
+    from kaos_news_catalysts import aggregate_headlines
+    key = os.getenv("KAOS_COLLECTOR_KEY", "")
+    if not key or not x_kaos_collector_key or not compare_digest(key, x_kaos_collector_key):
+        raise HTTPException(403, "Collector authentication required")
+    if not items or len(items) > 100:
+        raise HTTPException(422, "Expected 1–100 headline scores")
+    now = datetime.now(timezone.utc)
+    buckets = {}
+    for item in items:
+        if not isfinite(item.score):
+            raise HTTPException(422, "Finite sentiment score required")
+        published = utc(item.published_at)
+        if not (now - __import__("datetime").timedelta(hours=24) <= published <= now):
+            raise HTTPException(422, "Headline timestamp out of range")
+        ticker = item.ticker.upper()
+        buckets.setdefault((ticker, item.asset_class), []).append({
+            "ticker": ticker, "headline": item.headline,
+            "source_url": item.source_url, "published_at": published, "score": item.score,
+            "model_id": item.model_id, "model_version": item.model_version})
+    written = 0
+    summary = []
+    for (ticker, asset_class), headlines in buckets.items():
+        output = aggregate_headlines(ticker, headlines, now=now)
+        # Persist each valid headline separately for audit; the existing radar
+        # counts "news" as a single independent source regardless of volume.
+        for entry in output["headline_scores"]:
+            identity = "|".join((ticker, entry["source_url"], entry["headline"],
+                                  entry["published_at"], entry["model_id"],
+                                  entry["model_version"]))
+            event_id = "nlp:" + sha256(identity.encode()).hexdigest()
+            val = entry["score"]
+            observation = {"asset": ticker, "asset_class": asset_class,
+                           "source": "news", "event_id": event_id,
+                           "direction": "bullish" if val > 0.15 else "bearish" if val < -0.15 else "neutral",
+                           "strength": abs(val), "observed_at": now.isoformat(),
+                           "published_at": entry["published_at"],
+                           "source_url": entry["source_url"],
+                           "summary": entry["headline"],
+                           "nlp_score": val, "nlp_model_id": entry["model_id"],
+                           "nlp_model_version": entry["model_version"],
+                           "research_only": True}
+            await db.kaos_intelligence.update_one(
+                {"source": "news", "event_id": event_id},
+                {"$setOnInsert": observation}, upsert=True)
+            written += 1
+        summary.append({"asset": ticker, "asset_class": asset_class,
+                        "valid_headlines": output["sample_count"],
+                        "sentiment_mean": output["sentiment_mean"]})
+    return {"accepted": written, "markets": summary, "mode": "research_only",
+            "trade_execution_enabled": False}
+
+
+class UnscoredHeadline(BaseModel):
+    ticker: str = Field(pattern=r"^[A-Za-z0-9._-]{1,20}$")
+    asset_class: Literal["stock", "etf", "crypto", "forex"]
+    headline: str = Field(min_length=5, max_length=500)
+    source_url: str = Field(min_length=12, max_length=2000, pattern=r"^https://")
+    published_at: datetime
+
+
+@router.post("/ingest/classify-headlines")
+async def classify_and_ingest_headlines(
+        items: list[UnscoredHeadline],
+        x_kaos_collector_key: str | None = Header(default=None)):
+    """Run a genuinely provisioned local NLP model, then persist research sentiment.
+
+    This endpoint is collector-only. A missing/unavailable model fails with 503,
+    rather than silently substituting pseudo probabilities or synthetic scores.
+    """
+    from secrets import compare_digest
+    from math import isfinite
+    from fastapi.concurrency import run_in_threadpool
+    from kaos_financial_inference import classify_headlines
+    key = os.getenv("KAOS_COLLECTOR_KEY", "")
+    if not key or not x_kaos_collector_key or not compare_digest(key, x_kaos_collector_key):
+        raise HTTPException(403, "Collector authentication required")
+    if not items or len(items) > 100:
+        raise HTTPException(422, "Expected 1–100 headlines")
+    now = datetime.now(timezone.utc)
+    from datetime import timedelta
+    for item in items:
+        if not now - timedelta(hours=24) <= utc(item.published_at) <= now:
+            raise HTTPException(422, "Headline timestamp out of range")
+    model_version = os.getenv("KAOS_TRADING_HERO_MODEL_VERSION", "").strip()
+    if not model_version or model_version == "unversioned-local":
+        raise HTTPException(503, "Financial NLP model revision is not configured")
+    try:
+        predictions = await run_in_threadpool(
+            classify_headlines, [item.headline for item in items])
+    except (RuntimeError, ImportError, OSError, ValueError) as exc:
+        raise HTTPException(503, "Financial NLP model unavailable") from exc
+    # A malformed or incomplete model response must not silently drop
+    # headlines or create incorrectly aligned market intelligence.
+    if not isinstance(predictions, list) or len(predictions) != len(items):
+        raise HTTPException(503, "Financial NLP returned incomplete predictions")
+    for item, prediction in zip(items, predictions):
+        if (not isinstance(prediction, dict)
+                or prediction.get("headline") != item.headline
+                or isinstance(prediction.get("sentiment_score"), bool)
+                or not isinstance(prediction.get("sentiment_score"), (int, float))
+                or not isfinite(prediction["sentiment_score"])
+                or not -1 <= prediction["sentiment_score"] <= 1):
+            raise HTTPException(503, "Financial NLP returned invalid prediction")
+    scored = []
+    for item, prediction in zip(items, predictions):
+        scored.append(HeadlineScore(
+            ticker=item.ticker, asset_class=item.asset_class,
+            headline=item.headline, source_url=item.source_url,
+            published_at=item.published_at,
+            score=prediction["sentiment_score"],
+            model_id="trading_hero", model_version=model_version))
+    return await ingest_headline_scores(scored, x_kaos_collector_key)

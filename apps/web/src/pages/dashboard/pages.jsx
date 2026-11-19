@@ -1,5 +1,11 @@
+import BillingPeriodToggle from '../../components/BillingPeriodToggle';
+import {plansForInterval,annualSaving,recommendedMonthly} from '../../lib/billingPlans';
+import {planPrice} from '../Memberships';
+import {commissionMoney} from '../../lib/affiliatePreview';
+import CommunityHub from './CommunityHub';
+import { deviceDate } from "../../lib/deviceDate";
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { api, errMsg } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { StatusBadge } from "../../components/Brand";
@@ -35,12 +41,12 @@ export function Overview() {
   const stats = [
     ["Membership", <StatusBadge value={d.membershipStatus} testid="stat-membership" />],
     ["Affiliate", <StatusBadge value={d.affiliateStatus} testid="stat-affiliate" />],
-    ["License", <StatusBadge value={d.license.authorized ? "ACTIVE" : "REVOKED"} testid="stat-license" />],
-    ["Devices", <span className="font-mono text-xl text-white">{d.counts.devices}</span>],
+    ["License", <StatusBadge value={d.license?.authorized ? "ACTIVE" : "REVOKED"} testid="stat-license" />],
+    ["Devices", <span className="font-mono text-xl text-white">{d.counts?.devices ?? 0}</span>],
   ];
   return (
-    <div>
-      <H>Dashboard</H>
+    <div className="kaos-overview-console">
+      <div className="kaos-overview-intro"><p className="kaos-overview-eyebrow">KAOS · TRADER COMMAND CENTER</p><H>Dashboard</H><p className="text-sm text-slate-400">Your account, tools and research workspace. Live figures appear only when verified data is available.</p></div>
       {rank?.ranked && (
         <Link to="/dashboard/affiliate" data-testid="rank-badge"
           className="mb-6 flex items-center justify-between rounded-lg border border-[#D4AF37]/30 bg-[#D4AF37]/5 p-4 transition hover:bg-[#D4AF37]/10">
@@ -60,12 +66,12 @@ export function Overview() {
           <Link to="/onboarding"><Button className="bg-[#FFB800] text-[#080808] font-semibold">Continue onboarding</Button></Link>
         </div>
       )}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="kaos-overview-stats grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map(([l, v]) => (
           <div key={l} className="card-surface p-5"><div className="label-mono">{l}</div><div className="mt-3">{v}</div></div>
         ))}
       </div>
-      <div className="mt-6 grid gap-4 lg:grid-cols-3">
+      <div className="kaos-overview-resources mt-6 grid gap-4 lg:grid-cols-3">
         {[["My Strategies", d.counts.myStrategies], ["Published", d.counts.published], ["Saved", d.counts.saved]].map(([l, v]) => (
           <div key={l} className="card-surface p-5"><div className="label-mono">{l}</div><div className="mt-2 font-mono text-3xl font-bold text-[#D4AF37]">{v}</div></div>
         ))}
@@ -156,27 +162,7 @@ export function MyStrategies() {
 }
 
 // ---------- Community feed ----------
-export function CommunityFeed() {
-  const [sort, setSort] = useState("popular");
-  const [list, setList] = useState([]);
-  const load = () => api.get(`/api/community/strategies?sort=${sort}`).then((r) => setList(r.data)).catch(() => {});
-  useEffect(() => { load(); }, [sort]);
-  return (
-    <div>
-      <H>Community</H>
-      <Tabs value={sort} onValueChange={setSort} className="mb-6">
-        <TabsList className="bg-[#111111]">
-          {[["popular", "Popular"], ["newest", "Newest"], ["saved", "Most Saved"], ["updated", "Recently Updated"]].map(([v, l]) => (
-            <TabsTrigger key={v} value={v} data-testid={`community-sort-${v}`} className="data-[state=active]:bg-[#22C55E] data-[state=active]:text-black">{l}</TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {list.map((s) => <StrategyCard key={s.id} s={s} onChange={load} />)}
-      </div>
-    </div>
-  );
-}
+export {default as CommunityFeed} from './CommunityHub';
 
 // ---------- Indicators ----------
 export function Indicators() {
@@ -285,43 +271,52 @@ export function Saved() {
   return (<div><H>Saved Strategies</H>{list.length === 0 ? <Empty>Nothing saved yet.</Empty> :
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">{list.map((s) => <StrategyCard key={s.id} s={s} onChange={load} />)}</div>}</div>);
 }
-export function Following() {
-  const [list, setList] = useState([]);
-  const load = () => api.get("/api/following/strategies").then((r) => setList(r.data)).catch(() => {});
-  useEffect(() => { load(); }, []);
-  return (<div><H>Following Feed</H>{list.length === 0 ? <Empty>Follow creators to see their strategies here.</Empty> :
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">{list.map((s) => <StrategyCard key={s.id} s={s} onChange={load} />)}</div>}</div>);
-}
+export function Following(){return <CommunityHub initialFeed="following"/>;}
 
 // ---------- Subscription ----------
 export function Subscription() {
   const { user } = useAuth();
+  const [search]=useSearchParams();
+  const selectedPlan=search.get('plan')||user?.requested_membership_plan;
+  const [period,setPeriod]=useState(selectedPlan?.endsWith('_yearly')?'year':'month');
   const [plans, setPlans] = useState([]);
-  useEffect(() => { api.get("/api/billing/plans").then((r) => setPlans(r.data)).catch(() => {}); }, []);
+  const [billing,setBilling]=useState(null),[planError,setPlanError]=useState('');
+  useEffect(() => {
+    api.get("/api/billing/plans").then(r=>setPlans(r.data)).catch(()=>setPlanError('Membership details are unavailable. Please try again later.'));
+    api.get("/api/billing/availability").then(r=>setBilling(r.data)).catch(()=>setBilling({checkoutEnabled:false}));
+  }, []);
+  useEffect(()=>{const chosen=plans.find(p=>p.id===selectedPlan);if(chosen)setPeriod(chosen.interval||'month');},[plans,selectedPlan]);
   const checkout = async (lookup_key) => { try { const { data } = await api.post("/api/billing/checkout", { lookup_key, origin_url: window.location.origin }); window.location.href = data.checkout_url; } catch (e) { toast.error(errMsg(e)); } };
   const portal = async () => { try { const { data } = await api.post("/api/billing/portal", { lookup_key: "x", origin_url: window.location.origin }); window.location.href = data.url; } catch (e) { toast.error(errMsg(e)); } };
-  const cancel = async () => { try { await api.post("/api/billing/cancel"); toast.success("Subscription canceled"); } catch (e) { toast.error(errMsg(e)); } };
+  const cancel = async () => { try { await api.post("/api/billing/cancel"); toast.success(user?.membership_status==="TRIAL"?"Trial cancellation scheduled. It will not renew.":"Cancellation scheduled for the end of your current billing period"); } catch (e) { toast.error(errMsg(e)); } };
   return (
     <div>
       <H>Subscription & Billing</H>
+      {selectedPlan&&selectedPlan!=='free'&&plans.some(p=>p.id===selectedPlan)&&<p className="mb-5 rounded border border-[#8a6b32] p-4 text-sm text-[#e8c46f]">Your selected membership: <strong>{plans.find(p=>p.id===selectedPlan).name}</strong>. This is a preference; paid access starts only after confirmed payment. You can choose another plan below.</p>}
+      {planError&&<p role="alert" className="mb-4 text-amber-200">{planError}</p>}
+      {billing&&!billing.checkoutEnabled&&<p role="status" className="mb-5 rounded border border-[#8a6b32] p-4 text-sm text-[#e8c46f]">Compare memberships below. Online checkout is not available yet; no payment will be taken here.</p>}
       <div className="card-surface mb-6 flex items-center justify-between p-5">
-        <div><div className="label-mono">Current status</div><div className="mt-2"><StatusBadge value={user?.membership_status} /></div></div>
+        <div><div className="label-mono">Current status</div><div className="mt-2"><StatusBadge value={user?.membership_status} /></div>{user?.membership_status==="TRIAL"&&<p className="mt-2 text-sm text-[#e8c46f]">Your Pro trial ends {user.membership_expires_at?new Date(user.membership_expires_at).toLocaleString():"on the date shown in Stripe"}. Cancel before then to avoid renewal.</p>}</div>
         <div className="flex gap-2">
-          <Button data-testid="billing-portal-button" onClick={portal} variant="outline" className="border-[#3A3A3A] bg-transparent text-white"><CreditCard className="mr-2 h-4 w-4" />Manage billing</Button>
-          {user?.membership_status === "ACTIVE" && <Button data-testid="cancel-subscription-button" onClick={cancel} variant="outline" className="border-[#C62828]/30 bg-transparent text-[#C62828]">Cancel</Button>}
+          <Button data-testid="billing-portal-button" disabled={!billing?.checkoutEnabled} onClick={portal} variant="outline" className="border-[#3A3A3A] bg-transparent text-white"><CreditCard className="mr-2 h-4 w-4" />Manage billing</Button>
+          {["ACTIVE","TRIAL"].includes(user?.membership_status) && <Button data-testid="cancel-subscription-button" onClick={cancel} variant="outline" className="border-[#C62828]/30 bg-transparent text-[#C62828]">Cancel</Button>}
         </div>
       </div>
+      {billing?.checkoutEnabled&&!["ACTIVE","TRIAL"].includes(user?.membership_status)&&plans.some(p=>p.id==="pro"&&p.interval==="month")&&<Link to="/checkout?plan=pro&trial=1" className="mb-5 inline-block rounded bg-[#d4af37] px-5 py-3 font-semibold text-black">7-day free trial</Link>}
+      <BillingPeriodToggle value={period} onChange={setPeriod} plans={plans}/>
       <div className="grid gap-6 md:grid-cols-2">
-        {plans.map((p) => (
-          <div key={p.id} className="card-surface p-6">
+        {plansForInterval(plans,period).map((p) => (
+          <div key={p.id} className={`card-surface p-6 ${selectedPlan===p.id?'ring-2 ring-[#d4af37]':''}`}>
+            {recommendedMonthly(p)&&<p className="kaos-plan-recommended">Recommended · Ultimate monthly</p>}
             <h3 className="font-heading text-xl font-semibold">{p.name}</h3>
-            <div className="mt-2 font-mono text-3xl font-bold text-[#D4AF37]">${(p.amount / 100).toFixed(0)}<span className="text-base text-slate-500">/{p.interval}</span></div>
+            <div className="mt-2 font-mono text-3xl font-bold text-[#D4AF37]">{planPrice(p)}<span className="text-base text-slate-500">/{p.interval}</span></div>
+            {annualSaving(p,plans)&&<p className="kaos-annual-saving">Save {commissionMoney(annualSaving(p,plans).cents,p.currency)} per year compared with monthly billing.</p>}
             <ul className="mt-4 space-y-2 text-sm text-slate-300">{(p.features || []).map((f) => <li key={f}>• {f}</li>)}</ul>
-            <Button data-testid={`subscribe-${p.id}`} onClick={() => checkout(p.lookup_key)} className="mt-6 w-full bg-[#22C55E] text-black font-semibold">Choose {p.name}</Button>
+            <Button data-testid={`subscribe-${p.id}`} disabled={!billing?.checkoutEnabled} onClick={() => checkout(p.lookup_key)} className="mt-6 w-full bg-[#d4af37] text-black font-semibold">{billing?.checkoutEnabled?(selectedPlan===p.id?`Continue with ${p.name}`:`Choose ${p.name}`):'Checkout not available yet'}</Button>
           </div>
         ))}
       </div>
-      <p className="mt-4 text-xs text-slate-500">Stripe test mode. Card 4242 4242 4242 4242, any future expiry & CVC.</p>
+      <p className="mt-4 text-xs text-slate-500">{billing?.mode==='test'?'Stripe test mode: no live membership payment.':'Membership payments are handled through Stripe when checkout is available.'} AI execution remains subject to independent validation.</p>
     </div>
   );
 }
@@ -329,9 +324,9 @@ export function Subscription() {
 // ---------- Devices ----------
 export function Devices() {
   const [list, setList] = useState([]);
-  const load = () => api.get("/api/v1/devices").then((r) => setList(r.data)).catch(() => {});
+  const load = () => api.get("/api/v1/devices").then((r) => setList(r.data)).catch((e) => toast.error(errMsg(e)));
   useEffect(() => { load(); }, []);
-  const revoke = async (id) => { try { await api.delete(`/api/v1/devices/${id}`); toast.success("Device revoked"); load(); } catch (e) { toast.error(errMsg(e)); } };
+  const revoke = async (id) => { try { await api.delete(`/api/v1/devices/${encodeURIComponent(id)}`); toast.success("Device revoked"); load(); } catch (e) { toast.error(errMsg(e)); } };
   return (
     <div><H>Connected Devices</H>
       {list.length === 0 ? <Empty>No devices registered. Install the extension to register one.</Empty> : (
@@ -339,7 +334,7 @@ export function Devices() {
           <div key={d.id} className="card-surface flex items-center justify-between p-4">
             <div className="flex items-center gap-3"><Cpu className="h-5 w-5 text-[#D4AF37]" />
               <div><div className="font-medium text-white">{d.deviceName}</div>
-                <div className="font-mono text-xs text-slate-500">v{d.extensionVersion || "?"} · last active {new Date(d.lastActive).toLocaleString()}{d.revoked && " · REVOKED"}</div></div></div>
+                <div className="font-mono text-xs text-slate-500">v{d.extensionVersion || "?"} · last active {deviceDate(d)}{d.revoked && " · REVOKED"}</div></div></div>
             {!d.revoked && <Button data-testid={`revoke-device-${d.id}`} onClick={() => revoke(d.id)} variant="outline" size="sm" className="border-[#C62828]/30 bg-transparent text-[#C62828]">Revoke</Button>}
           </div>
         ))}</div>

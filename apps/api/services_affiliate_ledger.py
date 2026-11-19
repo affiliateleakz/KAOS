@@ -1,4 +1,4 @@
-"""Persist the receiver-based 3-level ledger (packages/kaos-core) in Mongo. Accounting preview only: no payouts."""
+"""Persist the receiver-based 3-level ledger (packages/kaos-core) in Mongo. Accounting and balance snapshots; live transfers are handled separately by affiliate_payouts."""
 from datetime import datetime, timezone
 from decimal import Decimal
 
@@ -6,6 +6,7 @@ from kaos.affiliate_ledger import CommissionLedger, Payment, Entry, MAX_LEVELS, 
 from kaos.memberships import Affiliate, PRICES
 
 from db import db
+from affiliate_atomic import write_payment, write_reversal
 
 ACTIVE_STATES = ("ACTIVE", "TRIAL")
 
@@ -19,6 +20,9 @@ def plan_tier(plan):
 async def member_tier(user):
     if not user or user.get("membership_status") not in ACTIVE_STATES:
         return "free"
+    if user.get("membership_status")=="TRIAL":return "trial"
+    from affiliate_access import paid_member
+    if not paid_member(user):return "free"
     from routes_billing import get_plans, find_plan
     return plan_tier(find_plan(await get_plans(), user.get("membership_plan")))
 
@@ -74,38 +78,74 @@ async def _entries_for(event_id):
 
 async def record_payment(event_id, buyer_id, plan, amount_cents, kind="initial", at=None):
     """Record a settled initial/renewal payment. Idempotent on event_id."""
-    if await db.affiliate_ledger_payments.find_one({"event_id": event_id}):
+    existing = await db.affiliate_ledger_payments.find_one({"event_id": event_id})
+    if existing:
+        if existing.get("state") is None:
+            # Legacy records predate processing-state tracking. Do not assume
+            # completeness without matching expected commission entry count.
+            expected = CommissionLedger(await _members(buyer_id)).record_payment(
+                event_id, buyer_id, plan_tier(plan), Decimal(amount_cents) / 100,
+                kind, at or datetime.now(timezone.utc))
+            persisted = await _entries_for(event_id)
+            if {e.entry_id for e in persisted} != {e.entry_id for e in expected}:
+                raise RuntimeError("Legacy affiliate payment requires ledger reconciliation")
+            return persisted
+        if existing.get("state") != "completed":
+            raise RuntimeError("Affiliate payment requires ledger reconciliation")
+        if existing.get("buyer_id") != buyer_id or existing.get("kind") != kind or Decimal(existing.get("amount", "NaN")) != Decimal(amount_cents) / 100:
+            raise RuntimeError("Affiliate payment event reused with mismatched financial details")
         return await _entries_for(event_id)
-    ledger = CommissionLedger(await _members(buyer_id))
+    from affiliate_rates import configuration
+    rate_config=await configuration(db)
+    ledger = CommissionLedger(await _members(buyer_id),rates=rate_config["rates"])
     at = at or datetime.now(timezone.utc)
     entries = ledger.record_payment(event_id, buyer_id, plan_tier(plan), Decimal(amount_cents) / 100, kind, at)
     p = ledger.payments[event_id]
-    await db.affiliate_ledger_payments.insert_one({
+    await write_payment({
         "event_id": event_id, "buyer_id": buyer_id, "plan": p.plan, "plan_id": (plan or {}).get("id"),
-        "amount": str(p.amount), "kind": kind, "at": at.isoformat(), "reversed_amount": "0"})
-    if entries:
-        await db.affiliate_ledger_entries.insert_many([_entry_doc(e) for e in entries])
+        "amount": str(p.amount), "kind": kind, "at": at.isoformat(),
+        "currency":str((plan or {}).get("currency","usd")).lower(),
+        "rate_revision":rate_config["revision"],"rates_snapshot":rate_config["rates"],
+        "reversed_amount": "0"
+    }, [_entry_doc(e) for e in entries], database=db)
     return entries
 
 
 async def record_reversal(reversal_id, event_id, amount_cents=None, kind="refund", at=None):
     """Offset a payment's commissions (full when amount_cents is None). Idempotent on reversal_id."""
-    if await db.affiliate_ledger_reversals.find_one({"reversal_id": reversal_id}):
+    existing_reversal = await db.affiliate_ledger_reversals.find_one({"reversal_id": reversal_id})
+    if existing_reversal:
+        if existing_reversal.get("state") != "completed":
+            raise RuntimeError("Affiliate reversal requires ledger reconciliation")
+        if existing_reversal.get("event_id") != event_id or existing_reversal.get("kind") != kind or ("requested_amount_cents" in existing_reversal and existing_reversal["requested_amount_cents"] != amount_cents):
+            raise RuntimeError("Affiliate reversal ID reused with mismatched financial details")
         return await _entries_for(reversal_id)
     pd = await db.affiliate_ledger_payments.find_one({"event_id": event_id})
     if not pd:
         raise KeyError(event_id)
+    if pd.get("state") not in (None, "completed"):
+        raise RuntimeError("Affiliate payment must be reconciled before reversal")
+    if pd.get("state") is None:
+        # Legacy payment rows must be independently reviewed before issuing
+        # another financial mutation; they lack reliable completion metadata.
+        raise RuntimeError("Legacy affiliate payment requires reconciliation before reversal")
+    # A second reversal must not proceed while any reversal for the same
+    # payment has uncommitted ledger entries, even with another reversal ID.
+    pending = await db.affiliate_ledger_reversals.find_one(
+        {"event_id": event_id, "state": "pending_entries"})
+    if pending:
+        raise RuntimeError("Prior affiliate reversal requires ledger reconciliation")
     ledger = CommissionLedger({})
     ledger.payments[event_id] = Payment(event_id, pd["buyer_id"], pd["plan"], Decimal(pd["amount"]), pd["kind"],
                                         datetime.fromisoformat(pd["at"]), Decimal(pd["reversed_amount"]))
     ledger.entries = await _entries_for(event_id)
     amount = None if amount_cents is None else Decimal(amount_cents) / 100
     entries = ledger.record_reversal(reversal_id, event_id, amount, kind, at)
-    await db.affiliate_ledger_reversals.insert_one({"reversal_id": reversal_id, "event_id": event_id, "kind": kind})
-    await db.affiliate_ledger_payments.update_one(
-        {"event_id": event_id}, {"$set": {"reversed_amount": str(ledger.payments[event_id].reversed_amount)}})
-    if entries:
-        await db.affiliate_ledger_entries.insert_many([_entry_doc(e) for e in entries])
+    await write_reversal({
+        "reversal_id": reversal_id, "event_id": event_id, "kind": kind,
+        "requested_amount_cents": amount_cents
+    }, event_id, pd["reversed_amount"], str(ledger.payments[event_id].reversed_amount),
+       [_entry_doc(e) for e in entries], database=db)
     return entries
 
 
@@ -121,7 +161,8 @@ async def reverse_all_for_buyer(buyer_id, kind="refund", prefix="rev"):
 async def statement(affiliate_id, as_of=None):
     docs = await db.affiliate_ledger_entries.find({"affiliate_id": affiliate_id}, {"_id": 0}) \
         .sort("created_at", -1).to_list(1000)
-    ledger = CommissionLedger({}, entries=[_entry(d) for d in docs])
-    bal = {k: str(v) for k, v in ledger.balance(affiliate_id, as_of).items()}
-    return {"balance": bal, "entries": docs, "payoutsEnabled": False,
-            "note": "Preview only. Payouts are disabled pending compliance, KYC/tax and founder approval."}
+    from affiliate_payouts import balance,availability
+    bal=await balance(affiliate_id,as_of)
+    ready=await availability()
+    return {"balance":bal,"entries":docs,"payoutsEnabled":ready['payoutsEnabled'],
+            "note":"Transferred amounts are Stripe account transfers, not confirmation of a bank deposit. " + ready['note']}

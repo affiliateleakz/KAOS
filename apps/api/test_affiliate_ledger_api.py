@@ -14,7 +14,8 @@ from routes_billing import DEFAULT_PLANS
 
 loop = asyncio.new_event_loop()
 run = loop.run_until_complete
-YEARLY = next(p for p in DEFAULT_PLANS if p["id"] == "ultimate")
+# Preserve a historical paid amount to verify refunds/accounting across repricing.
+YEARLY = {**next(p for p in DEFAULT_PLANS if p["id"] == "ultimate"), "amount": 14900}
 COLLS = ["users", "affiliate_accounts", "commissions", "affiliate_customer_referrals", "settings",
          "affiliate_ledger_entries", "affiliate_ledger_payments", "affiliate_ledger_reversals"]
 
@@ -91,5 +92,13 @@ def test_legacy_plan_ids_map_to_new_tiers():
     from routes_billing import find_plan
     assert find_plan(DEFAULT_PLANS, "monthly")["id"] == "pro"
     assert find_plan(DEFAULT_PLANS, "yearly")["id"] == "ultimate"
-    assert [p["amount"] for p in DEFAULT_PLANS] == [4900, 14900]
-    assert {p["interval"] for p in DEFAULT_PLANS} == {"month"}
+    assert [p["amount"] for p in DEFAULT_PLANS] == [2995, 9995, 29995, 99595]
+    assert {p["interval"] for p in DEFAULT_PLANS} == {"month", "year"}
+
+
+def test_annual_payments_use_full_paid_amount_and_annual_receiver_tiers():
+    run(db.users.update_one({"id": "A"}, {"$set": {"membership_plan": "ultimate_yearly"}}))
+    run(db.users.update_one({"id": "B"}, {"$set": {"membership_plan": "pro_yearly"}}))
+    plan = next(p for p in DEFAULT_PLANS if p['id'] == 'ultimate_yearly')
+    entries = run(record_commission({'id':'D'}, plan, 'purchase', event_id='annual:1'))
+    assert amounts(entries) == {('C',1,'free'):Decimal('99.60'),('B',2,'pro'):Decimal('149.39'),('A',3,'ultimate'):Decimal('49.80')}

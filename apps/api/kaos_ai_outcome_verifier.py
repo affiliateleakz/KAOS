@@ -1,9 +1,14 @@
 """KAOS shadow outcome verification helpers; no trading authority."""
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, timezone
 
 def timestamp(value):
-    return datetime.fromisoformat(value.replace('Z','+00:00')).timestamp()
+    if not isinstance(value, str):
+        raise ValueError('Timestamp must be an ISO8601 string')
+    parsed = datetime.fromisoformat(value.replace('Z', '+00:00'))
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError('Timestamp requires an explicit timezone')
+    return parsed.astimezone(timezone.utc).timestamp()
 
 def verify(prediction, first, last, horizon):
     if prediction.get("simulated") or not prediction.get("productionTrained"):

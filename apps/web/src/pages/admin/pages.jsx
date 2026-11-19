@@ -1,5 +1,7 @@
+import MembershipPlansEditor from './MembershipPlansEditor';
+import { deviceDate } from "../../lib/deviceDate";
 import React, { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, Link } from "react-router-dom";
 import { api, errMsg } from "../../lib/api";
 import { StatusBadge } from "../../components/Brand";
 import { Button } from "../../components/ui/button";
@@ -149,12 +151,12 @@ export function Subscriptions() {
 
 export function AdminDevices() {
   const [list, setList] = useState([]);
-  const load = () => api.get("/api/admin/devices").then((r) => setList(r.data)).catch(() => {});
+  const load = () => api.get("/api/admin/devices").then((r) => setList(r.data)).catch((e) => toast.error(errMsg(e)));
   useEffect(() => { load(); }, []);
-  const revoke = async (id) => { try { await api.post(`/api/admin/devices/${id}/revoke`); toast.success("Revoked"); load(); } catch (e) { toast.error(errMsg(e)); } };
+  const revoke = async (id) => { try { await api.post(`/api/admin/devices/${encodeURIComponent(id)}/revoke`); toast.success("Revoked"); load(); } catch (e) { toast.error(errMsg(e)); } };
   return (<div><H>Connected Devices Monitor</H>
     <div className="card-surface p-0 overflow-x-auto"><Table><TableHeader><TableRow className="border-[#2E2E2E]"><TableHead>User</TableHead><TableHead>Device</TableHead><TableHead>Version</TableHead><TableHead>Last Active</TableHead><TableHead>Status</TableHead><TableHead></TableHead></TableRow></TableHeader>
-      <TableBody>{list.map((d) => (<TableRow key={d.id} className="border-[#2E2E2E]" data-testid={`admin-device-row-${d.id}`}><TableCell className="font-mono text-sm">{d.user?.username}</TableCell><TableCell>{d.deviceName}</TableCell><TableCell className="font-mono text-xs">{d.extensionVersion}</TableCell><TableCell className="font-mono text-xs">{new Date(d.lastActive).toLocaleString()}</TableCell><TableCell className={d.revoked ? "text-[#C62828]" : "text-[#D4AF37]"}>{d.revoked ? "REVOKED" : "ACTIVE"}</TableCell><TableCell>{!d.revoked && <Button data-testid={`admin-revoke-device-${d.id}`} size="sm" variant="outline" className="border-[#C62828]/30 bg-transparent text-[#C62828]" onClick={() => revoke(d.id)}>Revoke</Button>}</TableCell></TableRow>))}</TableBody></Table></div>
+      <TableBody>{list.map((d) => (<TableRow key={d.id} className="border-[#2E2E2E]" data-testid={`admin-device-row-${d.id}`}><TableCell className="font-mono text-sm">{d.user?.username}</TableCell><TableCell>{d.deviceName}</TableCell><TableCell className="font-mono text-xs">{d.extensionVersion}</TableCell><TableCell className="font-mono text-xs">{deviceDate(d)}</TableCell><TableCell className={d.revoked ? "text-[#C62828]" : "text-[#D4AF37]"}>{d.revoked ? "REVOKED" : "ACTIVE"}</TableCell><TableCell>{!d.revoked && <Button data-testid={`admin-revoke-device-${d.id}`} size="sm" variant="outline" className="border-[#C62828]/30 bg-transparent text-[#C62828]" onClick={() => revoke(d.id)}>Revoke</Button>}</TableCell></TableRow>))}</TableBody></Table></div>
   </div>);
 }
 
@@ -193,8 +195,8 @@ export function Moderation() {
   return (<div><H>Moderation Queue</H>
     {list.length === 0 ? <div className="card-surface p-10 text-center text-slate-500">No reports.</div> : (
       <div className="space-y-3">{list.map((r) => (
-        <div key={r.id} className="card-surface flex items-center justify-between p-4" data-testid={`report-${r.id}`}>
-          <div><div className="font-medium">{r.targetType} · {r.reason}</div><div className="font-mono text-xs text-slate-500">{r.details} · {r.status}</div></div>
+        <div key={r.id} className="card-surface flex flex-wrap items-center justify-between gap-3 p-4" data-testid={`report-${r.id}`}>
+          <div className="min-w-0"><div className="font-medium">{r.targetType} · {r.reason}</div><div className="break-words font-mono text-xs text-slate-500">{r.details} · {r.status}</div>{["community_post","community_comment"].includes(r.targetType)&&<Link className="mt-2 inline-block text-sm text-[#e8c46f] underline" to={"/dashboard/community?post="+encodeURIComponent(r.postId||r.targetId)} target="_blank" rel="noopener noreferrer">Review reported post</Link>}</div>
           {r.status === "open" && <div className="flex gap-2">
             <Button size="sm" variant="outline" className="border-[#3A3A3A] bg-transparent text-white" onClick={() => act(r.id, "dismiss")}>Dismiss</Button>
             <Button size="sm" variant="outline" className="border-[#FFB800]/30 bg-transparent text-[#FFB800]" onClick={() => act(r.id, "hide")}>Hide</Button>
@@ -229,7 +231,6 @@ export function Settings() {
   useEffect(() => { api.get("/api/admin/settings").then((r) => setS(r.data)).catch(() => {}); }, []);
   const saveAffiliate = async () => { try { await api.post("/api/admin/settings", { key: "affiliate", value: { value: s.affiliate } }); toast.success("Affiliate settings saved"); } catch (e) { toast.error(errMsg(e)); } };
   const saveBranding = async () => { try { await api.post("/api/admin/settings", { key: "branding", value: { value: s.branding } }); toast.success("Branding saved"); } catch (e) { toast.error(errMsg(e)); } };
-  const savePlans = async () => { try { await api.post("/api/admin/settings", { key: "plans", value: { value: s.plans } }); toast.success("Plans saved"); } catch (e) { toast.error(errMsg(e)); } };
   if (!s) return <p className="text-slate-500">Loading…</p>;
   return (<div><H>Platform Settings</H>
     <div className="grid gap-6 lg:grid-cols-2">
@@ -243,16 +244,8 @@ export function Settings() {
         <Label className="label-mono mt-3 block">Instructions</Label>
         <Textarea value={s.affiliate.instructions || ""} onChange={(e) => setS({ ...s, affiliate: { ...s.affiliate, instructions: e.target.value } })} className="mt-1 bg-[#080808] border-[#3A3A3A]" />
         <Button data-testid="save-affiliate-button" onClick={saveAffiliate} className="mt-3 bg-[#22C55E] text-black">Save</Button></div>
-      <div className="card-surface p-5 lg:col-span-2"><h3 className="font-heading font-semibold">Membership Plans</h3>
-        {s.plans.map((p, i) => (
-          <div key={p.id} className="mt-3 grid grid-cols-3 gap-2">
-            <Input value={p.name} onChange={(e) => { const pl = [...s.plans]; pl[i] = { ...p, name: e.target.value }; setS({ ...s, plans: pl }); }} className="bg-[#080808] border-[#3A3A3A]" />
-            <Input type="number" value={p.amount} onChange={(e) => { const pl = [...s.plans]; pl[i] = { ...p, amount: parseInt(e.target.value) }; setS({ ...s, plans: pl }); }} className="bg-[#080808] border-[#3A3A3A] font-mono" />
-            <Input value={p.interval} disabled className="bg-[#080808] border-[#3A3A3A] font-mono opacity-60" />
-          </div>
-        ))}
-        <Button data-testid="save-plans-button" onClick={savePlans} className="mt-3 bg-[#22C55E] text-black">Save Plans</Button>
-        <p className="mt-2 text-xs text-slate-500">Amount in cents. Pricing is configurable — never hardcoded in app logic.</p></div>
+      <MembershipPlansEditor settings={s}/>
+
     </div>
   </div>);
 }

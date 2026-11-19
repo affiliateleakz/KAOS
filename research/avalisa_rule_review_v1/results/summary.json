@@ -1,0 +1,1552 @@
+{
+  "source_hashes": {
+    "indicators.js": "ca29fb420286ace07aa2852d34b5b8cf8a62b7f5e66000a5527d8eee67a1aa13",
+    "signalEngine.js": "ceb25f9036059af6a600021535f978f25fff6b4660df8e04f09d62bedd02f7cc"
+  },
+  "plan_sha256": "99a226390932ec6f69a9eff202a510e834902c128690ef18b6967e811972892d",
+  "runner_sha256": "83dd47e5891b5b81f70a475e244e49ba698fb0791fc3a3b2443eaa798b0db42a",
+  "harness_sha256": "fac88ac1986d9d3444280a889b197e9736ca8a7aa0803299de48bc91411fa6f0",
+  "sources": {
+    "po": {
+      "sha256": "b47526f23972c2f80312ce1ac2020798fc359b92fe3dfb7e4123f6e199131957",
+      "markets": 30,
+      "bars": 145341,
+      "segments": 165
+    },
+    "fresh_proxy": {
+      "provider": "Binance public spot daily archive",
+      "source_interval": "1s",
+      "output_interval": "5s",
+      "start_utc": "2026-11-15",
+      "days": 3,
+      "retrieved_at": "2026-11-19T04:43:04.464157+00:00",
+      "collector_sha256": "5d62cab2976876ed55a7f503eeb270c1aa853eb43727e76b44c5f3a9d7adb920",
+      "files": [
+        {
+          "symbol": "BTCUSDT",
+          "date": "2026-11-15",
+          "url": "https://data.binance.vision/data/spot/daily/klines/BTCUSDT/1s/BTCUSDT-1s-2026-11-15.zip",
+          "checksum_url": "https://data.binance.vision/data/spot/daily/klines/BTCUSDT/1s/BTCUSDT-1s-2026-11-15.zip.CHECKSUM",
+          "sha256": "91d95896fa00fd525278fcf881cdb16eed4a591e511f0100077cfbea946bcce3",
+          "checksum_verified": true,
+          "source_seconds": 86400,
+          "empty_source_seconds": 7750,
+          "incomplete_five_second_buckets": 0,
+          "no_trade_buckets_excluded": 8,
+          "bars": 17272
+        },
+        {
+          "symbol": "BTCUSDT",
+          "date": "2026-11-16",
+          "url": "https://data.binance.vision/data/spot/daily/klines/BTCUSDT/1s/BTCUSDT-1s-2026-11-16.zip",
+          "checksum_url": "https://data.binance.vision/data/spot/daily/klines/BTCUSDT/1s/BTCUSDT-1s-2026-11-16.zip.CHECKSUM",
+          "sha256": "b809657158ab6415dc2b5807edf528e16865dd889af511fb669939ff0ca7f80b",
+          "checksum_verified": true,
+          "source_seconds": 86400,
+          "empty_source_seconds": 12318,
+          "incomplete_five_second_buckets": 0,
+          "no_trade_buckets_excluded": 9,
+          "bars": 17271
+        },
+        {
+          "symbol": "BTCUSDT",
+          "date": "2026-11-17",
+          "url": "https://data.binance.vision/data/spot/daily/klines/BTCUSDT/1s/BTCUSDT-1s-2026-11-17.zip",
+          "checksum_url": "https://data.binance.vision/data/spot/daily/klines/BTCUSDT/1s/BTCUSDT-1s-2026-11-17.zip.CHECKSUM",
+          "sha256": "c22cbc1da5e97e05911696ed39cee0a00eb380a8e0f05a59bc3e4971bfe9ddcd",
+          "checksum_verified": true,
+          "source_seconds": 86400,
+          "empty_source_seconds": 13496,
+          "incomplete_five_second_buckets": 0,
+          "no_trade_buckets_excluded": 12,
+          "bars": 17268
+        },
+        {
+          "symbol": "ETHUSDT",
+          "date": "2026-11-15",
+          "url": "https://data.binance.vision/data/spot/daily/klines/ETHUSDT/1s/ETHUSDT-1s-2026-11-15.zip",
+          "checksum_url": "https://data.binance.vision/data/spot/daily/klines/ETHUSDT/1s/ETHUSDT-1s-2026-11-15.zip.CHECKSUM",
+          "sha256": "d0f4e517ec797bf20da0769839b88394f19dace0370e8f554af1e930bf7c03e5",
+          "checksum_verified": true,
+          "source_seconds": 86400,
+          "empty_source_seconds": 18586,
+          "incomplete_five_second_buckets": 0,
+          "no_trade_buckets_excluded": 83,
+          "bars": 17197
+        },
+        {
+          "symbol": "ETHUSDT",
+          "date": "2026-11-16",
+          "url": "https://data.binance.vision/data/spot/daily/klines/ETHUSDT/1s/ETHUSDT-1s-2026-11-16.zip",
+          "checksum_url": "https://data.binance.vision/data/spot/daily/klines/ETHUSDT/1s/ETHUSDT-1s-2026-11-16.zip.CHECKSUM",
+          "sha256": "9d582e4d21c3db33830fb6c832a21de8e5f533adfbc32bdbd0e2f1d64c48ab49",
+          "checksum_verified": true,
+          "source_seconds": 86400,
+          "empty_source_seconds": 23455,
+          "incomplete_five_second_buckets": 0,
+          "no_trade_buckets_excluded": 168,
+          "bars": 17112
+        },
+        {
+          "symbol": "ETHUSDT",
+          "date": "2026-11-17",
+          "url": "https://data.binance.vision/data/spot/daily/klines/ETHUSDT/1s/ETHUSDT-1s-2026-11-17.zip",
+          "checksum_url": "https://data.binance.vision/data/spot/daily/klines/ETHUSDT/1s/ETHUSDT-1s-2026-11-17.zip.CHECKSUM",
+          "sha256": "90c7ed09a3f6d929ada9fa4a1e17374dde5f574ebd358e887aa9ee4c866fb42f",
+          "checksum_verified": true,
+          "source_seconds": 86400,
+          "empty_source_seconds": 20197,
+          "incomplete_five_second_buckets": 0,
+          "no_trade_buckets_excluded": 98,
+          "bars": 17182
+        },
+        {
+          "symbol": "SOLUSDT",
+          "date": "2026-11-15",
+          "url": "https://data.binance.vision/data/spot/daily/klines/SOLUSDT/1s/SOLUSDT-1s-2026-11-15.zip",
+          "checksum_url": "https://data.binance.vision/data/spot/daily/klines/SOLUSDT/1s/SOLUSDT-1s-2026-11-15.zip.CHECKSUM",
+          "sha256": "5f5838aea904b528f3a42c87d6cee513f17c2b20a62c5ab16cd7e67acad8180e",
+          "checksum_verified": true,
+          "source_seconds": 86400,
+          "empty_source_seconds": 24630,
+          "incomplete_five_second_buckets": 0,
+          "no_trade_buckets_excluded": 138,
+          "bars": 17142
+        },
+        {
+          "symbol": "SOLUSDT",
+          "date": "2026-11-16",
+          "url": "https://data.binance.vision/data/spot/daily/klines/SOLUSDT/1s/SOLUSDT-1s-2026-11-16.zip",
+          "checksum_url": "https://data.binance.vision/data/spot/daily/klines/SOLUSDT/1s/SOLUSDT-1s-2026-11-16.zip.CHECKSUM",
+          "sha256": "9bfd8ac70c2803e740a7846cf2a96c364fea1a146953be7c95593ae661f139e8",
+          "checksum_verified": true,
+          "source_seconds": 86400,
+          "empty_source_seconds": 30853,
+          "incomplete_five_second_buckets": 0,
+          "no_trade_buckets_excluded": 242,
+          "bars": 17038
+        },
+        {
+          "symbol": "SOLUSDT",
+          "date": "2026-11-17",
+          "url": "https://data.binance.vision/data/spot/daily/klines/SOLUSDT/1s/SOLUSDT-1s-2026-11-17.zip",
+          "checksum_url": "https://data.binance.vision/data/spot/daily/klines/SOLUSDT/1s/SOLUSDT-1s-2026-11-17.zip.CHECKSUM",
+          "sha256": "414300452978bcc771aa50344886283b42b0e94265c01e9440311d86eccea1f6",
+          "checksum_verified": true,
+          "source_seconds": 86400,
+          "empty_source_seconds": 31167,
+          "incomplete_five_second_buckets": 0,
+          "no_trade_buckets_excluded": 293,
+          "bars": 16987
+        }
+      ],
+      "markets": {
+        "BTCUSDT": {
+          "bars": 51811,
+          "start_ts": 1794700800000,
+          "end_ts": 1794959995000,
+          "file": "BTCUSDT_5s.json",
+          "sha256": "c0c94050fd5fd6e368e74287e1d1ea4733ac1bcafe9185d614a74bd0b197004c"
+        },
+        "ETHUSDT": {
+          "bars": 51491,
+          "start_ts": 1794700800000,
+          "end_ts": 1794959995000,
+          "file": "ETHUSDT_5s.json",
+          "sha256": "ec6ec8037d94d8603906d2984d3abccc16cb7647156d34900e3930c1210f37d4"
+        },
+        "SOLUSDT": {
+          "bars": 51167,
+          "start_ts": 1794700800000,
+          "end_ts": 1794959995000,
+          "file": "SOLUSDT_5s.json",
+          "sha256": "517eeaf2212790c5c717be8b1d707d179e1650ed2cd64e4b3c068021e462efe3"
+        }
+      },
+      "broker_execution_verified": false,
+      "pocket_option_otc": false,
+      "no_trade_buckets": "excluded, never filled",
+      "license_source": "https://github.com/binance/binance-public-data",
+      "live_approved": false
+    }
+  },
+  "extension_executed": false,
+  "pure_decision_functions_executed": true,
+  "live_approved": false,
+  "results": {
+    "po_validation": {
+      "sampled5:low": {
+        "base": {
+          "trades": 2760,
+          "wins": 1363,
+          "losses": 1370,
+          "ties": 27,
+          "win_rate": 0.4987193560190267,
+          "wilson_lower95": 0.4799884775984218,
+          "p_greater_breakeven80": 0.999999998887308,
+          "net_units": {
+            "0.7": -415.9000000000001,
+            "0.8": -279.5999999999999,
+            "0.9": -143.29999999999995,
+            "0.92": -116.03999999999996
+          },
+          "break_even_payout": 1.0051357300073367,
+          "utc_days": 1,
+          "daily_net80": {
+            "2026-10-05": -279.5999999999928
+          },
+          "day_bootstrap_lower95_mean_net80": null,
+          "assets": {
+            "AEDCNY_otc": {
+              "wins": 483,
+              "losses": 475,
+              "ties": 6,
+              "net80": -88.59999999999997
+            },
+            "AUDCHF_otc": {
+              "wins": 483,
+              "losses": 520,
+              "ties": 10,
+              "net80": -133.59999999999997
+            },
+            "AUDUSD_otc": {
+              "wins": 397,
+              "losses": 375,
+              "ties": 11,
+              "net80": -57.39999999999998
+            }
+          },
+          "benchmarks": {
+            "call": {
+              "wins": 1397,
+              "losses": 1336,
+              "net80": -218.39999999999523
+            },
+            "put": {
+              "wins": 1336,
+              "losses": 1397,
+              "net80": -328.19999999999214
+            },
+            "previous": {
+              "wins": 1358,
+              "losses": 1334,
+              "net80": -247.59999999999235
+            }
+          }
+        },
+        "latency5": {
+          "trades": 2760,
+          "wins": 1350,
+          "losses": 1382,
+          "ties": 28,
+          "win_rate": 0.49414348462664714,
+          "wilson_lower95": 0.47541683105567545,
+          "p_greater_breakeven80": 0.9999999999469944,
+          "net_units": {
+            "0.7": -437.0000000000001,
+            "0.8": -302.0,
+            "0.9": -167.0,
+            "0.92": -140.0
+          },
+          "break_even_payout": 1.0237037037037038,
+          "utc_days": 1,
+          "daily_net80": {
+            "2026-10-05": -301.99999999999267
+          },
+          "day_bootstrap_lower95_mean_net80": null,
+          "assets": {
+            "AEDCNY_otc": {
+              "wins": 478,
+              "losses": 481,
+              "ties": 5,
+              "net80": -98.59999999999997
+            },
+            "AUDCHF_otc": {
+              "wins": 477,
+              "losses": 532,
+              "ties": 4,
+              "net80": -150.39999999999998
+            },
+            "AUDUSD_otc": {
+              "wins": 395,
+              "losses": 369,
+              "ties": 19,
+              "net80": -53.0
+            }
+          },
+          "benchmarks": {
+            "call": {
+              "wins": 1374,
+              "losses": 1358,
+              "net80": -258.799999999996
+            },
+            "put": {
+              "wins": 1358,
+              "losses": 1374,
+              "net80": -287.59999999999167
+            },
+            "previous": {
+              "wins": 1348,
+              "losses": 1308,
+              "net80": -229.59999999999502
+            }
+          }
+        },
+        "passes_proxy_gate": false
+      },
+      "sampled5:mid": {
+        "base": {
+          "trades": 152,
+          "wins": 74,
+          "losses": 78,
+          "ties": 0,
+          "win_rate": 0.4868421052631579,
+          "wilson_lower95": 0.40869031228958663,
+          "p_greater_breakeven80": 0.9626295727474627,
+          "net_units": {
+            "0.7": -26.200000000000003,
+            "0.8": -18.799999999999997,
+            "0.9": -11.399999999999991,
+            "0.92": -9.920000000000002
+          },
+          "break_even_payout": 1.054054054054054,
+          "utc_days": 1,
+          "daily_net80": {
+            "2026-10-05": -18.79999999999997
+          },
+          "day_bootstrap_lower95_mean_net80": null,
+          "assets": {
+            "AEDCNY_otc": {
+              "wins": 21,
+              "losses": 27,
+              "ties": 0,
+              "net80": -10.2
+            },
+            "AUDCHF_otc": {
+              "wins": 25,
+              "losses": 27,
+              "ties": 0,
+              "net80": -7.0
+            },
+            "AUDUSD_otc": {
+              "wins": 28,
+              "losses": 24,
+              "ties": 0,
+              "net80": -1.5999999999999979
+            }
+          },
+          "benchmarks": {
+            "call": {
+              "wins": 75,
+              "losses": 77,
+              "net80": -16.999999999999954
+            },
+            "put": {
+              "wins": 77,
+              "losses": 75,
+              "net80": -13.399999999999988
+            },
+            "previous": {
+              "wins": 70,
+              "losses": 80,
+              "net80": -23.999999999999964
+            }
+          }
+        },
+        "latency5": {
+          "trades": 152,
+          "wins": 71,
+          "losses": 81,
+          "ties": 0,
+          "win_rate": 0.46710526315789475,
+          "wilson_lower95": 0.3895793569221462,
+          "p_greater_breakeven80": 0.988360567572288,
+          "net_units": {
+            "0.7": -31.300000000000004,
+            "0.8": -24.199999999999996,
+            "0.9": -17.1,
+            "0.92": -15.679999999999993
+          },
+          "break_even_payout": 1.1408450704225352,
+          "utc_days": 1,
+          "daily_net80": {
+            "2026-10-05": -24.19999999999996
+          },
+          "day_bootstrap_lower95_mean_net80": null,
+          "assets": {
+            "AEDCNY_otc": {
+              "wins": 20,
+              "losses": 28,
+              "ties": 0,
+              "net80": -12.0
+            },
+            "AUDCHF_otc": {
+              "wins": 24,
+              "losses": 28,
+              "ties": 0,
+              "net80": -8.799999999999997
+            },
+            "AUDUSD_otc": {
+              "wins": 27,
+              "losses": 25,
+              "ties": 0,
+              "net80": -3.3999999999999986
+            }
+          },
+          "benchmarks": {
+            "call": {
+              "wins": 74,
+              "losses": 78,
+              "net80": -18.799999999999955
+            },
+            "put": {
+              "wins": 78,
+              "losses": 74,
+              "net80": -11.599999999999994
+            },
+            "previous": {
+              "wins": 71,
+              "losses": 76,
+              "net80": -19.199999999999964
+            }
+          }
+        },
+        "passes_proxy_gate": false
+      },
+      "sampled5:high": {
+        "base": {
+          "trades": 2,
+          "wins": 0,
+          "losses": 2,
+          "ties": 0,
+          "win_rate": 0.0,
+          "wilson_lower95": 0.0,
+          "p_greater_breakeven80": 1.0,
+          "net_units": {
+            "0.7": -2.0,
+            "0.8": -2.0,
+            "0.9": -2.0,
+            "0.92": -2.0
+          },
+          "break_even_payout": null,
+          "utc_days": 1,
+          "daily_net80": {
+            "2026-10-05": -2.0
+          },
+          "day_bootstrap_lower95_mean_net80": null,
+          "assets": {
+            "AUDCHF_otc": {
+              "wins": 0,
+              "losses": 2,
+              "ties": 0,
+              "net80": -2.0
+            }
+          },
+          "benchmarks": {
+            "call": {
+              "wins": 1,
+              "losses": 1,
+              "net80": -0.19999999999999996
+            },
+            "put": {
+              "wins": 1,
+              "losses": 1,
+              "net80": -0.19999999999999996
+            },
+            "previous": {
+              "wins": 0,
+              "losses": 2,
+              "net80": -2
+            }
+          }
+        },
+        "latency5": {
+          "trades": 2,
+          "wins": 0,
+          "losses": 2,
+          "ties": 0,
+          "win_rate": 0.0,
+          "wilson_lower95": 0.0,
+          "p_greater_breakeven80": 1.0,
+          "net_units": {
+            "0.7": -2.0,
+            "0.8": -2.0,
+            "0.9": -2.0,
+            "0.92": -2.0
+          },
+          "break_even_payout": null,
+          "utc_days": 1,
+          "daily_net80": {
+            "2026-10-05": -2.0
+          },
+          "day_bootstrap_lower95_mean_net80": null,
+          "assets": {
+            "AUDCHF_otc": {
+              "wins": 0,
+              "losses": 2,
+              "ties": 0,
+              "net80": -2.0
+            }
+          },
+          "benchmarks": {
+            "call": {
+              "wins": 1,
+              "losses": 1,
+              "net80": -0.19999999999999996
+            },
+            "put": {
+              "wins": 1,
+              "losses": 1,
+              "net80": -0.19999999999999996
+            },
+            "previous": {
+              "wins": 2,
+              "losses": 0,
+              "net80": 1.6
+            }
+          }
+        },
+        "passes_proxy_gate": false
+      },
+      "closed30:low": {
+        "base": {
+          "trades": 2239,
+          "wins": 1119,
+          "losses": 1107,
+          "ties": 13,
+          "win_rate": 0.5026954177897575,
+          "wilson_lower95": 0.48193768410130144,
+          "p_greater_breakeven80": 0.9999997492884508,
+          "net_units": {
+            "0.7": -323.70000000000005,
+            "0.8": -211.79999999999995,
+            "0.9": -99.89999999999998,
+            "0.92": -77.51999999999998
+          },
+          "break_even_payout": 0.9892761394101877,
+          "utc_days": 1,
+          "daily_net80": {
+            "2026-10-05": -211.79999999999544
+          },
+          "day_bootstrap_lower95_mean_net80": null,
+          "assets": {
+            "AEDCNY_otc": {
+              "wins": 381,
+              "losses": 381,
+              "ties": 4,
+              "net80": -76.19999999999999
+            },
+            "AUDCHF_otc": {
+              "wins": 396,
+              "losses": 406,
+              "ties": 2,
+              "net80": -89.19999999999999
+            },
+            "AUDUSD_otc": {
+              "wins": 342,
+              "losses": 320,
+              "ties": 7,
+              "net80": -46.39999999999998
+            }
+          },
+          "benchmarks": {
+            "call": {
+              "wins": 1124,
+              "losses": 1102,
+              "net80": -202.79999999999694
+            },
+            "put": {
+              "wins": 1102,
+              "losses": 1124,
+              "net80": -242.39999999999543
+            },
+            "previous": {
+              "wins": 1077,
+              "losses": 1098,
+              "net80": -236.39999999999685
+            }
+          }
+        },
+        "latency5": {
+          "trades": 2239,
+          "wins": 1114,
+          "losses": 1099,
+          "ties": 26,
+          "win_rate": 0.5033890646181653,
+          "wilson_lower95": 0.4825695158790968,
+          "p_greater_breakeven80": 0.999999620965844,
+          "net_units": {
+            "0.7": -319.20000000000005,
+            "0.8": -207.79999999999995,
+            "0.9": -96.39999999999998,
+            "0.92": -74.11999999999989
+          },
+          "break_even_payout": 0.9865350089766607,
+          "utc_days": 1,
+          "daily_net80": {
+            "2026-10-05": -207.79999999999688
+          },
+          "day_bootstrap_lower95_mean_net80": null,
+          "assets": {
+            "AEDCNY_otc": {
+              "wins": 383,
+              "losses": 377,
+              "ties": 6,
+              "net80": -70.59999999999997
+            },
+            "AUDCHF_otc": {
+              "wins": 400,
+              "losses": 398,
+              "ties": 6,
+              "net80": -78.0
+            },
+            "AUDUSD_otc": {
+              "wins": 331,
+              "losses": 324,
+              "ties": 14,
+              "net80": -59.19999999999999
+            }
+          },
+          "benchmarks": {
+            "call": {
+              "wins": 1158,
+              "losses": 1055,
+              "net80": -128.6000000000027
+            },
+            "put": {
+              "wins": 1055,
+              "losses": 1158,
+              "net80": -313.9999999999925
+            },
+            "previous": {
+              "wins": 1102,
+              "losses": 1048,
+              "net80": -166.39999999999634
+            }
+          }
+        },
+        "passes_proxy_gate": false
+      },
+      "closed30:mid": {
+        "base": {
+          "trades": 60,
+          "wins": 24,
+          "losses": 36,
+          "ties": 0,
+          "win_rate": 0.4,
+          "wilson_lower95": 0.28569303003765506,
+          "p_greater_breakeven80": 0.9945803558273185,
+          "net_units": {
+            "0.7": -19.200000000000003,
+            "0.8": -16.799999999999997,
+            "0.9": -14.399999999999999,
+            "0.92": -13.919999999999998
+          },
+          "break_even_payout": 1.5,
+          "utc_days": 1,
+          "daily_net80": {
+            "2026-10-05": -16.799999999999986
+          },
+          "day_bootstrap_lower95_mean_net80": null,
+          "assets": {
+            "AEDCNY_otc": {
+              "wins": 5,
+              "losses": 15,
+              "ties": 0,
+              "net80": -11.0
+            },
+            "AUDCHF_otc": {
+              "wins": 8,
+              "losses": 12,
+              "ties": 0,
+              "net80": -5.6
+            },
+            "AUDUSD_otc": {
+              "wins": 11,
+              "losses": 9,
+              "ties": 0,
+              "net80": -0.1999999999999993
+            }
+          },
+          "benchmarks": {
+            "call": {
+              "wins": 29,
+              "losses": 31,
+              "net80": -7.800000000000003
+            },
+            "put": {
+              "wins": 31,
+              "losses": 29,
+              "net80": -4.200000000000003
+            },
+            "previous": {
+              "wins": 21,
+              "losses": 37,
+              "net80": -20.199999999999996
+            }
+          }
+        },
+        "latency5": {
+          "trades": 60,
+          "wins": 22,
+          "losses": 38,
+          "ties": 0,
+          "win_rate": 0.36666666666666664,
+          "wilson_lower95": 0.2562073884620827,
+          "p_greater_breakeven80": 0.9989296448388922,
+          "net_units": {
+            "0.7": -22.6,
+            "0.8": -20.4,
+            "0.9": -18.2,
+            "0.92": -17.759999999999998
+          },
+          "break_even_payout": 1.7272727272727273,
+          "utc_days": 1,
+          "daily_net80": {
+            "2026-10-05": -20.399999999999988
+          },
+          "day_bootstrap_lower95_mean_net80": null,
+          "assets": {
+            "AEDCNY_otc": {
+              "wins": 5,
+              "losses": 15,
+              "ties": 0,
+              "net80": -11.0
+            },
+            "AUDCHF_otc": {
+              "wins": 6,
+              "losses": 14,
+              "ties": 0,
+              "net80": -9.2
+            },
+            "AUDUSD_otc": {
+              "wins": 11,
+              "losses": 9,
+              "ties": 0,
+              "net80": -0.1999999999999993
+            }
+          },
+          "benchmarks": {
+            "call": {
+              "wins": 27,
+              "losses": 33,
+              "net80": -11.399999999999995
+            },
+            "put": {
+              "wins": 33,
+              "losses": 27,
+              "net80": -0.6000000000000016
+            },
+            "previous": {
+              "wins": 35,
+              "losses": 24,
+              "net80": 4.0
+            }
+          }
+        },
+        "passes_proxy_gate": false
+      },
+      "closed30:high": {
+        "base": {
+          "trades": 0,
+          "wins": 0,
+          "losses": 0,
+          "ties": 0,
+          "win_rate": null,
+          "wilson_lower95": 0.0,
+          "p_greater_breakeven80": 1.0,
+          "net_units": {
+            "0.7": 0.0,
+            "0.8": 0.0,
+            "0.9": 0.0,
+            "0.92": 0.0
+          },
+          "break_even_payout": null,
+          "utc_days": 0,
+          "daily_net80": {},
+          "day_bootstrap_lower95_mean_net80": null,
+          "assets": {},
+          "benchmarks": {
+            "call": {
+              "wins": 0,
+              "losses": 0,
+              "net80": 0
+            },
+            "put": {
+              "wins": 0,
+              "losses": 0,
+              "net80": 0
+            },
+            "previous": {
+              "wins": 0,
+              "losses": 0,
+              "net80": 0
+            }
+          }
+        },
+        "latency5": {
+          "trades": 0,
+          "wins": 0,
+          "losses": 0,
+          "ties": 0,
+          "win_rate": null,
+          "wilson_lower95": 0.0,
+          "p_greater_breakeven80": 1.0,
+          "net_units": {
+            "0.7": 0.0,
+            "0.8": 0.0,
+            "0.9": 0.0,
+            "0.92": 0.0
+          },
+          "break_even_payout": null,
+          "utc_days": 0,
+          "daily_net80": {},
+          "day_bootstrap_lower95_mean_net80": null,
+          "assets": {},
+          "benchmarks": {
+            "call": {
+              "wins": 0,
+              "losses": 0,
+              "net80": 0
+            },
+            "put": {
+              "wins": 0,
+              "losses": 0,
+              "net80": 0
+            },
+            "previous": {
+              "wins": 0,
+              "losses": 0,
+              "net80": 0
+            }
+          }
+        },
+        "passes_proxy_gate": false
+      }
+    },
+    "fresh_proxy": {
+      "sampled5:low": {
+        "base": {
+          "trades": 13623,
+          "wins": 6893,
+          "losses": 6446,
+          "ties": 284,
+          "win_rate": 0.5167553789639403,
+          "wilson_lower95": 0.5082712940339565,
+          "p_greater_breakeven80": 1.0,
+          "net_units": {
+            "0.7": -1620.9000000000005,
+            "0.8": -931.5999999999995,
+            "0.9": -242.30000000000018,
+            "0.92": -104.4399999999996
+          },
+          "break_even_payout": 0.9351516030755839,
+          "utc_days": 3,
+          "daily_net80": {
+            "2026-11-15": -373.1999999999801,
+            "2026-11-16": -323.99999999998766,
+            "2026-11-17": -234.39999999999299
+          },
+          "day_bootstrap_lower95_mean_net80": -373.1999999999801,
+          "assets": {
+            "BTCUSDT": {
+              "wins": 2950,
+              "losses": 2733,
+              "ties": 23,
+              "net80": -373.0
+            },
+            "ETHUSDT": {
+              "wins": 2413,
+              "losses": 2239,
+              "ties": 30,
+              "net80": -308.5999999999999
+            },
+            "SOLUSDT": {
+              "wins": 1530,
+              "losses": 1474,
+              "ties": 231,
+              "net80": -250.0
+            }
+          },
+          "benchmarks": {
+            "call": {
+              "wins": 6526,
+              "losses": 6813,
+              "net80": -1592.200000000176
+            },
+            "put": {
+              "wins": 6813,
+              "losses": 6526,
+              "net80": -1075.6000000001434
+            },
+            "previous": {
+              "wins": 6610,
+              "losses": 5939,
+              "net80": -650.9999999999827
+            }
+          }
+        },
+        "latency5": {
+          "trades": 13589,
+          "wins": 6716,
+          "losses": 6586,
+          "ties": 287,
+          "win_rate": 0.5048864832356037,
+          "wilson_lower95": 0.49638966589775546,
+          "p_greater_breakeven80": 1.0,
+          "net_units": {
+            "0.7": -1884.8000000000002,
+            "0.8": -1213.1999999999998,
+            "0.9": -541.5999999999995,
+            "0.92": -407.27999999999975
+          },
+          "break_even_payout": 0.9806432400238237,
+          "utc_days": 3,
+          "daily_net80": {
+            "2026-11-15": -514.7999999999812,
+            "2026-11-16": -429.3999999999856,
+            "2026-11-17": -268.9999999999917
+          },
+          "day_bootstrap_lower95_mean_net80": -514.7999999999812,
+          "assets": {
+            "BTCUSDT": {
+              "wins": 2902,
+              "losses": 2775,
+              "ties": 25,
+              "net80": -453.4000000000001
+            },
+            "ETHUSDT": {
+              "wins": 2338,
+              "losses": 2309,
+              "ties": 22,
+              "net80": -438.5999999999999
+            },
+            "SOLUSDT": {
+              "wins": 1476,
+              "losses": 1502,
+              "ties": 240,
+              "net80": -321.20000000000005
+            }
+          },
+          "benchmarks": {
+            "call": {
+              "wins": 6471,
+              "losses": 6831,
+              "net80": -1654.200000000189
+            },
+            "put": {
+              "wins": 6831,
+              "losses": 6471,
+              "net80": -1006.2000000001178
+            },
+            "previous": {
+              "wins": 6077,
+              "losses": 5625,
+              "net80": -763.4000000000142
+            }
+          }
+        },
+        "passes_proxy_gate": false
+      },
+      "sampled5:mid": {
+        "base": {
+          "trades": 655,
+          "wins": 349,
+          "losses": 300,
+          "ties": 6,
+          "win_rate": 0.5377503852080123,
+          "wilson_lower95": 0.4992820599371778,
+          "p_greater_breakeven80": 0.8295702743590084,
+          "net_units": {
+            "0.7": -55.70000000000002,
+            "0.8": -20.80000000000001,
+            "0.9": 14.100000000000023,
+            "0.92": 21.08000000000004
+          },
+          "break_even_payout": 0.8595988538681948,
+          "utc_days": 3,
+          "daily_net80": {
+            "2026-11-15": 1.3999999999999997,
+            "2026-11-16": -20.199999999999953,
+            "2026-11-17": -1.9999999999999847
+          },
+          "day_bootstrap_lower95_mean_net80": -20.199999999999953,
+          "assets": {
+            "BTCUSDT": {
+              "wins": 174,
+              "losses": 154,
+              "ties": 0,
+              "net80": -14.799999999999983
+            },
+            "ETHUSDT": {
+              "wins": 117,
+              "losses": 99,
+              "ties": 1,
+              "net80": -5.3999999999999915
+            },
+            "SOLUSDT": {
+              "wins": 58,
+              "losses": 47,
+              "ties": 5,
+              "net80": -0.5999999999999943
+            }
+          },
+          "benchmarks": {
+            "call": {
+              "wins": 317,
+              "losses": 332,
+              "net80": -78.40000000000049
+            },
+            "put": {
+              "wins": 332,
+              "losses": 317,
+              "net80": -51.40000000000012
+            },
+            "previous": {
+              "wins": 334,
+              "losses": 303,
+              "net80": -35.79999999999996
+            }
+          }
+        },
+        "latency5": {
+          "trades": 652,
+          "wins": 355,
+          "losses": 288,
+          "ties": 9,
+          "win_rate": 0.552099533437014,
+          "wilson_lower95": 0.5134661250303033,
+          "p_greater_breakeven80": 0.586059742825108,
+          "net_units": {
+            "0.7": -39.50000000000003,
+            "0.8": -4.0,
+            "0.9": 31.5,
+            "0.92": 38.60000000000002
+          },
+          "break_even_payout": 0.8112676056338028,
+          "utc_days": 3,
+          "daily_net80": {
+            "2026-11-15": -5.800000000000012,
+            "2026-11-16": -4.600000000000014,
+            "2026-11-17": 6.399999999999989
+          },
+          "day_bootstrap_lower95_mean_net80": -5.800000000000012,
+          "assets": {
+            "BTCUSDT": {
+              "wins": 178,
+              "losses": 146,
+              "ties": 4,
+              "net80": -3.5999999999999943
+            },
+            "ETHUSDT": {
+              "wins": 116,
+              "losses": 97,
+              "ties": 1,
+              "net80": -4.199999999999989
+            },
+            "SOLUSDT": {
+              "wins": 61,
+              "losses": 45,
+              "ties": 4,
+              "net80": 3.8000000000000043
+            }
+          },
+          "benchmarks": {
+            "call": {
+              "wins": 322,
+              "losses": 321,
+              "net80": -63.40000000000046
+            },
+            "put": {
+              "wins": 321,
+              "losses": 322,
+              "net80": -65.20000000000016
+            },
+            "previous": {
+              "wins": 310,
+              "losses": 262,
+              "net80": -13.9999999999999
+            }
+          }
+        },
+        "passes_proxy_gate": false
+      },
+      "sampled5:high": {
+        "base": {
+          "trades": 7,
+          "wins": 6,
+          "losses": 1,
+          "ties": 0,
+          "win_rate": 0.8571428571428571,
+          "wilson_lower95": 0.4868654966809702,
+          "p_greater_breakeven80": 0.10780437841014652,
+          "net_units": {
+            "0.7": 3.1999999999999993,
+            "0.8": 3.8000000000000007,
+            "0.9": 4.4,
+            "0.92": 4.5200000000000005
+          },
+          "break_even_payout": 0.16666666666666666,
+          "utc_days": 3,
+          "daily_net80": {
+            "2026-11-15": 0.8,
+            "2026-11-16": 1.4000000000000001,
+            "2026-11-17": 1.6
+          },
+          "day_bootstrap_lower95_mean_net80": 0.8000000000000002,
+          "assets": {
+            "BTCUSDT": {
+              "wins": 2,
+              "losses": 0,
+              "ties": 0,
+              "net80": 1.6
+            },
+            "ETHUSDT": {
+              "wins": 2,
+              "losses": 0,
+              "ties": 0,
+              "net80": 1.6
+            },
+            "SOLUSDT": {
+              "wins": 2,
+              "losses": 1,
+              "ties": 0,
+              "net80": 0.6000000000000001
+            }
+          },
+          "benchmarks": {
+            "call": {
+              "wins": 5,
+              "losses": 2,
+              "net80": 2.0000000000000004
+            },
+            "put": {
+              "wins": 2,
+              "losses": 5,
+              "net80": -3.4000000000000004
+            },
+            "previous": {
+              "wins": 5,
+              "losses": 2,
+              "net80": 2.0
+            }
+          }
+        },
+        "latency5": {
+          "trades": 7,
+          "wins": 4,
+          "losses": 3,
+          "ties": 0,
+          "win_rate": 0.5714285714285714,
+          "wilson_lower95": 0.2504542304090258,
+          "p_greater_breakeven80": 0.6200385158256305,
+          "net_units": {
+            "0.7": -0.20000000000000018,
+            "0.8": 0.20000000000000018,
+            "0.9": 0.6000000000000001,
+            "0.92": 0.6800000000000002
+          },
+          "break_even_payout": 0.75,
+          "utc_days": 3,
+          "daily_net80": {
+            "2026-11-15": 0.8,
+            "2026-11-16": -0.3999999999999999,
+            "2026-11-17": -0.19999999999999996
+          },
+          "day_bootstrap_lower95_mean_net80": -0.3999999999999999,
+          "assets": {
+            "BTCUSDT": {
+              "wins": 1,
+              "losses": 1,
+              "ties": 0,
+              "net80": -0.19999999999999996
+            },
+            "ETHUSDT": {
+              "wins": 2,
+              "losses": 0,
+              "ties": 0,
+              "net80": 1.6
+            },
+            "SOLUSDT": {
+              "wins": 1,
+              "losses": 2,
+              "ties": 0,
+              "net80": -1.2
+            }
+          },
+          "benchmarks": {
+            "call": {
+              "wins": 3,
+              "losses": 4,
+              "net80": -1.5999999999999999
+            },
+            "put": {
+              "wins": 4,
+              "losses": 3,
+              "net80": 0.20000000000000018
+            },
+            "previous": {
+              "wins": 2,
+              "losses": 3,
+              "net80": -1.4000000000000001
+            }
+          }
+        },
+        "passes_proxy_gate": false
+      },
+      "closed30:low": {
+        "base": {
+          "trades": 11003,
+          "wins": 5430,
+          "losses": 5371,
+          "ties": 202,
+          "win_rate": 0.5027312285899453,
+          "wilson_lower95": 0.4933024567477601,
+          "p_greater_breakeven80": 1.0,
+          "net_units": {
+            "0.7": -1570.0000000000005,
+            "0.8": -1027.0,
+            "0.9": -484.0,
+            "0.92": -375.39999999999964
+          },
+          "break_even_payout": 0.989134438305709,
+          "utc_days": 3,
+          "daily_net80": {
+            "2026-11-15": -448.59999999998524,
+            "2026-11-16": -362.39999999998616,
+            "2026-11-17": -215.99999999998744
+          },
+          "day_bootstrap_lower95_mean_net80": -448.5999999999852,
+          "assets": {
+            "BTCUSDT": {
+              "wins": 2348,
+              "losses": 2362,
+              "ties": 18,
+              "net80": -483.5999999999999
+            },
+            "ETHUSDT": {
+              "wins": 1891,
+              "losses": 1858,
+              "ties": 21,
+              "net80": -345.1999999999998
+            },
+            "SOLUSDT": {
+              "wins": 1191,
+              "losses": 1151,
+              "ties": 163,
+              "net80": -198.19999999999993
+            }
+          },
+          "benchmarks": {
+            "call": {
+              "wins": 5307,
+              "losses": 5494,
+              "net80": -1248.4000000001145
+            },
+            "put": {
+              "wins": 5494,
+              "losses": 5307,
+              "net80": -911.800000000097
+            },
+            "previous": {
+              "wins": 4812,
+              "losses": 4621,
+              "net80": -771.4000000000544
+            }
+          }
+        },
+        "latency5": {
+          "trades": 10982,
+          "wins": 5429,
+          "losses": 5317,
+          "ties": 236,
+          "win_rate": 0.5052112413921459,
+          "wilson_lower95": 0.4957578633417732,
+          "p_greater_breakeven80": 1.0,
+          "net_units": {
+            "0.7": -1516.7000000000003,
+            "0.8": -973.8000000000002,
+            "0.9": -430.89999999999964,
+            "0.92": -322.3199999999997
+          },
+          "break_even_payout": 0.9793700497329159,
+          "utc_days": 3,
+          "daily_net80": {
+            "2026-11-15": -416.19999999998566,
+            "2026-11-16": -341.79999999998785,
+            "2026-11-17": -215.79999999999467
+          },
+          "day_bootstrap_lower95_mean_net80": -416.19999999998566,
+          "assets": {
+            "BTCUSDT": {
+              "wins": 2379,
+              "losses": 2329,
+              "ties": 19,
+              "net80": -425.79999999999995
+            },
+            "ETHUSDT": {
+              "wins": 1914,
+              "losses": 1826,
+              "ties": 20,
+              "net80": -294.79999999999995
+            },
+            "SOLUSDT": {
+              "wins": 1136,
+              "losses": 1162,
+              "ties": 197,
+              "net80": -253.19999999999993
+            }
+          },
+          "benchmarks": {
+            "call": {
+              "wins": 5268,
+              "losses": 5478,
+              "net80": -1263.600000000105
+            },
+            "put": {
+              "wins": 5478,
+              "losses": 5268,
+              "net80": -885.6000000001064
+            },
+            "previous": {
+              "wins": 5022,
+              "losses": 4583,
+              "net80": -565.3999999999949
+            }
+          }
+        },
+        "passes_proxy_gate": false
+      },
+      "closed30:mid": {
+        "base": {
+          "trades": 308,
+          "wins": 180,
+          "losses": 120,
+          "ties": 8,
+          "win_rate": 0.6,
+          "wilson_lower95": 0.5436355502609682,
+          "p_greater_breakeven80": 0.06755120881717014,
+          "net_units": {
+            "0.7": 5.999999999999986,
+            "0.8": 24.0,
+            "0.9": 42.0,
+            "0.92": 45.599999999999994
+          },
+          "break_even_payout": 0.6666666666666666,
+          "utc_days": 3,
+          "daily_net80": {
+            "2026-11-15": 10.40000000000001,
+            "2026-11-16": 12.400000000000018,
+            "2026-11-17": 1.1999999999999968
+          },
+          "day_bootstrap_lower95_mean_net80": 1.1999999999999968,
+          "assets": {
+            "BTCUSDT": {
+              "wins": 94,
+              "losses": 55,
+              "ties": 2,
+              "net80": 20.200000000000003
+            },
+            "ETHUSDT": {
+              "wins": 59,
+              "losses": 44,
+              "ties": 1,
+              "net80": 3.200000000000003
+            },
+            "SOLUSDT": {
+              "wins": 27,
+              "losses": 21,
+              "ties": 5,
+              "net80": 0.6000000000000014
+            }
+          },
+          "benchmarks": {
+            "call": {
+              "wins": 157,
+              "losses": 143,
+              "net80": -17.3999999999999
+            },
+            "put": {
+              "wins": 143,
+              "losses": 157,
+              "net80": -42.60000000000006
+            },
+            "previous": {
+              "wins": 138,
+              "losses": 126,
+              "net80": -15.59999999999998
+            }
+          }
+        },
+        "latency5": {
+          "trades": 308,
+          "wins": 168,
+          "losses": 136,
+          "ties": 4,
+          "win_rate": 0.5526315789473685,
+          "wilson_lower95": 0.49642615995271683,
+          "p_greater_breakeven80": 0.5644853392183842,
+          "net_units": {
+            "0.7": -18.400000000000006,
+            "0.8": -1.5999999999999943,
+            "0.9": 15.200000000000017,
+            "0.92": 18.560000000000002
+          },
+          "break_even_payout": 0.8095238095238095,
+          "utc_days": 3,
+          "daily_net80": {
+            "2026-11-15": 6.599999999999993,
+            "2026-11-16": 8.000000000000025,
+            "2026-11-17": -16.19999999999998
+          },
+          "day_bootstrap_lower95_mean_net80": -16.19999999999998,
+          "assets": {
+            "BTCUSDT": {
+              "wins": 85,
+              "losses": 66,
+              "ties": 0,
+              "net80": 2.0
+            },
+            "ETHUSDT": {
+              "wins": 59,
+              "losses": 45,
+              "ties": 0,
+              "net80": 2.200000000000003
+            },
+            "SOLUSDT": {
+              "wins": 24,
+              "losses": 25,
+              "ties": 4,
+              "net80": -5.799999999999997
+            }
+          },
+          "benchmarks": {
+            "call": {
+              "wins": 159,
+              "losses": 145,
+              "net80": -17.799999999999894
+            },
+            "put": {
+              "wins": 145,
+              "losses": 159,
+              "net80": -43.000000000000085
+            },
+            "previous": {
+              "wins": 129,
+              "losses": 139,
+              "net80": -35.79999999999994
+            }
+          }
+        },
+        "passes_proxy_gate": false
+      },
+      "closed30:high": {
+        "base": {
+          "trades": 2,
+          "wins": 1,
+          "losses": 1,
+          "ties": 0,
+          "win_rate": 0.5,
+          "wilson_lower95": 0.09452865480086611,
+          "p_greater_breakeven80": 0.8024691358024691,
+          "net_units": {
+            "0.7": -0.30000000000000004,
+            "0.8": -0.19999999999999996,
+            "0.9": -0.09999999999999998,
+            "0.92": -0.07999999999999996
+          },
+          "break_even_payout": 1.0,
+          "utc_days": 1,
+          "daily_net80": {
+            "2026-11-16": -0.19999999999999996
+          },
+          "day_bootstrap_lower95_mean_net80": null,
+          "assets": {
+            "BTCUSDT": {
+              "wins": 0,
+              "losses": 1,
+              "ties": 0,
+              "net80": -1.0
+            },
+            "ETHUSDT": {
+              "wins": 1,
+              "losses": 0,
+              "ties": 0,
+              "net80": 0.8
+            }
+          },
+          "benchmarks": {
+            "call": {
+              "wins": 1,
+              "losses": 1,
+              "net80": -0.19999999999999996
+            },
+            "put": {
+              "wins": 1,
+              "losses": 1,
+              "net80": -0.19999999999999996
+            },
+            "previous": {
+              "wins": 1,
+              "losses": 1,
+              "net80": -0.19999999999999996
+            }
+          }
+        },
+        "latency5": {
+          "trades": 2,
+          "wins": 1,
+          "losses": 1,
+          "ties": 0,
+          "win_rate": 0.5,
+          "wilson_lower95": 0.09452865480086611,
+          "p_greater_breakeven80": 0.8024691358024691,
+          "net_units": {
+            "0.7": -0.30000000000000004,
+            "0.8": -0.19999999999999996,
+            "0.9": -0.09999999999999998,
+            "0.92": -0.07999999999999996
+          },
+          "break_even_payout": 1.0,
+          "utc_days": 1,
+          "daily_net80": {
+            "2026-11-16": -0.19999999999999996
+          },
+          "day_bootstrap_lower95_mean_net80": null,
+          "assets": {
+            "BTCUSDT": {
+              "wins": 0,
+              "losses": 1,
+              "ties": 0,
+              "net80": -1.0
+            },
+            "ETHUSDT": {
+              "wins": 1,
+              "losses": 0,
+              "ties": 0,
+              "net80": 0.8
+            }
+          },
+          "benchmarks": {
+            "call": {
+              "wins": 1,
+              "losses": 1,
+              "net80": -0.19999999999999996
+            },
+            "put": {
+              "wins": 1,
+              "losses": 1,
+              "net80": -0.19999999999999996
+            },
+            "previous": {
+              "wins": 0,
+              "losses": 2,
+              "net80": -2
+            }
+          }
+        },
+        "passes_proxy_gate": false
+      }
+    }
+  }
+}

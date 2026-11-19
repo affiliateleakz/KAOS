@@ -3,6 +3,7 @@ from db import db, new_id, now, now_iso, clean
 from auth import require_role, get_current_user, ROLE_RANK
 from services import audit_log, set_setting, get_setting, notify
 from models import RoleReq, PlanReq, SettingsReq
+from device_records import device_public, device_query
 from datetime import timedelta
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -77,7 +78,7 @@ async def admin_dashboard(admin: dict = Depends(admin_dep)):
         return m / 12.0 if interval == "year" else m
 
     default_month = next((p for p in plans if p.get("interval") == "month"),
-                         (plans[0] if plans else {"id": "pro", "name": "Pro", "amount": 4900, "interval": "month"}))
+                         (plans[0] if plans else {"id": "pro", "name": "Pro", "amount": 2995, "interval": "month"}))
     member_plan_counts = {}
     async for u in db.users.find({"membership_status": {"$in": ["ACTIVE", "TRIAL"]}}, {"membership_plan": 1}):
         pid = u.get("membership_plan") or default_month["id"]
@@ -196,7 +197,9 @@ async def set_membership(uid: str, req: SettingsReq, admin: dict = Depends(admin
 
 @router.post("/devices/{did}/revoke")
 async def admin_revoke_device(did: str, admin: dict = Depends(admin_dep)):
-    await db.devices.update_one({"id": did}, {"$set": {"revoked": True}})
+    result = await db.devices.update_one(device_query(did), {"$set": {"revoked": True}})
+    if result.matched_count != 1:
+        raise HTTPException(status_code=404, detail="Device not found")
     await audit_log(admin, "revoke_device", "device", did)
     return {"revoked": True}
 
@@ -210,7 +213,8 @@ async def revoke_all_devices(uid: str, admin: dict = Depends(admin_dep)):
 
 @router.get("/devices")
 async def admin_devices(admin: dict = Depends(admin_dep)):
-    docs = await db.devices.find({}, {"_id": 0}).sort("lastActive", -1).to_list(1000)
+    records = await db.devices.find({}).sort("lastActive", -1).to_list(1000)
+    docs = [device_public(record) for record in records]
     for d in docs:
         u = await db.users.find_one({"id": d["userId"]}, {"_id": 0, "username": 1, "email": 1})
         d["user"] = u
@@ -263,6 +267,9 @@ async def report_action(rid: str, req: SettingsReq, mod: dict = Depends(mod_dep)
         await db.strategies.update_one({"id": report["targetId"]}, {"$set": {"published": False, "visibility": "PRIVATE"}})
     if action in ("hide", "remove") and report["targetType"] == "comment":
         await db.comments.update_one({"id": report["targetId"]}, {"$set": {"hidden": True}})
+    if action in ("hide", "remove") and report["targetType"] in ("community_post", "community_comment"):
+        collection = db.community_posts if report["targetType"] == "community_post" else db.community_comments
+        await collection.update_one({"id": report["targetId"]}, {"$set": {"hidden": True}})
     await db.moderation_actions.insert_one({"id": new_id("mod"), "reportId": rid, "moderatorId": mod["id"],
                                             "action": action, "createdAt": now_iso()})
     await audit_log(mod, f"moderation_{action}", report["targetType"], report["targetId"])
@@ -300,7 +307,13 @@ async def get_settings(admin: dict = Depends(admin_dep)):
     affiliate = await get_setting("affiliate", {})
     branding = await get_setting("branding", {"productName": "Trading Platform"})
     from routes_billing import DEFAULT_PLANS
-    return {"plans": plans or DEFAULT_PLANS, "affiliate": affiliate, "branding": branding}
+    from services_trading import FREE_ENTITLEMENTS
+    from kaos.memberships import RATES
+    return {"plans": plans or DEFAULT_PLANS, "affiliate": affiliate, "branding": branding,
+            "planDefaults": DEFAULT_PLANS,
+            "freePlan": {"id": "free", "tier": "free", "name": "Free", "amount": 0,
+                         "currency": "usd", "interval": None, "entitlements": dict(FREE_ENTITLEMENTS)},
+            "affiliateRates": await __import__("affiliate_rates").rates()}
 
 
 @router.post("/settings")
@@ -308,6 +321,18 @@ async def update_settings(req: SettingsReq, admin: dict = Depends(admin_dep)):
     if req.key not in ("plans", "affiliate", "branding"):
         raise HTTPException(status_code=400, detail="Unknown setting")
     value = req.value.get("value", req.value)
+    if req.key == "plans":
+        if not isinstance(value, list) or not value:
+            raise HTTPException(status_code=400, detail="Provide paid membership plans. Free is managed separately.")
+        ids = set()
+        for plan in value:
+            if not isinstance(plan, dict) or not isinstance(plan.get("id"), str) or not plan["id"] or plan["id"] in ids or plan["id"] == "free":
+                raise HTTPException(status_code=400, detail="Paid plans need unique IDs; Free stays $0 and is not a checkout plan.")
+            ids.add(plan["id"])
+            if type(plan.get("amount")) is not int or not 0 < plan["amount"] <= 99999999:
+                raise HTTPException(status_code=400, detail="Paid plan amounts must be positive whole cents, up to 99999999.")
+            if not isinstance(plan.get("name"), str) or not plan["name"].strip() or plan.get("interval") not in ("month", "year"):
+                raise HTTPException(status_code=400, detail="Each paid plan needs a name and a valid billing interval.")
     await set_setting(req.key, value)
     await audit_log(admin, "update_settings", "settings", req.key)
     return {"ok": True, "key": req.key}
