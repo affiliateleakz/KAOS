@@ -8,10 +8,10 @@ ROOT=Path(__file__).resolve().parents[1]
 
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--out',type=Path,required=True);parser.add_argument('--cache',type=Path,required=True);args=parser.parse_args();args.out.mkdir(parents=True,exist_ok=True);args.cache.mkdir(parents=True,exist_ok=True)
+    parser=argparse.ArgumentParser();parser.add_argument('--out',type=Path,required=True);parser.add_argument('--cache',type=Path,required=True);parser.add_argument('--symbols',nargs='+',default=['BTCUSDT','ETHUSDT','SOLUSDT'],choices=['BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT','XRPUSDT','ADAUSDT']);args=parser.parse_args();args.out.mkdir(parents=True,exist_ok=True);args.cache.mkdir(parents=True,exist_ok=True)
     manifest={'source':'Binance public spot monthly1m archives','retrievedAt':datetime.now(timezone.utc).isoformat(),'files':[],'assets':{},'pocket_option_otc':False,'live_approved':False}
     with httpx.Client(timeout=45,follow_redirects=True) as client:
-        for symbol in ('BTCUSDT','ETHUSDT','SOLUSDT'):
+        for symbol in args.symbols:
             batches=[]
             for year in (2025,2026):
                 for month in range(1,13 if year==2025 else 11):
