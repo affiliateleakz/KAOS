@@ -1,0 +1,8 @@
+{
+  "strategy": "KAOS PULSE v2",
+  "selected": null,
+  "historical_gate_passed": false,
+  "researchOnly": true,
+  "executionEnabled": false,
+  "note": "Price-based and fixed-expiry results are separate; no native platform or production integration."
+}
