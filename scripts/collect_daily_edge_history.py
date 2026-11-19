@@ -11,8 +11,8 @@ def stamp(day):return int(datetime.fromisoformat(day).replace(tzinfo=timezone.ut
 
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--out',type=Path,required=True);p.add_argument('--cache',type=Path,required=True);args=p.parse_args();args.out.mkdir(parents=True,exist_ok=True);args.cache.mkdir(parents=True,exist_ok=True)
-    plan_path=ROOT/'research/daily_edge_v1/plan.json';plan=json.loads(plan_path.read_text());start,end=stamp(plan['data_start']),stamp(plan['end_exclusive']);manifest={'retrievedAt':datetime.now(timezone.utc).isoformat(),'plan_sha256':hashlib.sha256(plan_path.read_bytes()).hexdigest(),'assets':{},'live_approved':False}
+    p=argparse.ArgumentParser();p.add_argument('--out',type=Path,required=True);p.add_argument('--cache',type=Path,required=True);p.add_argument('--plan',type=Path,default=ROOT/'research/daily_edge_v1/plan.json');args=p.parse_args();args.out.mkdir(parents=True,exist_ok=True);args.cache.mkdir(parents=True,exist_ok=True)
+    plan_path=args.plan;plan=json.loads(plan_path.read_text());start,end=stamp(plan['data_start']),stamp(plan['end_exclusive']);manifest={'retrievedAt':datetime.now(timezone.utc).isoformat(),'plan_sha256':hashlib.sha256(plan_path.read_bytes()).hexdigest(),'assets':{},'live_approved':False}
     with httpx.Client(timeout=40,follow_redirects=True,headers={'User-Agent':'KAOS-bounded-research/1.0'}) as client:
         for kind,symbols in plan['universe'].items():
             for symbol in symbols:
@@ -35,6 +35,7 @@ def main():
                     o,h,l,c=map(float,values)
                     if not all(math.isfinite(v) and v>0 for v in (o,h,l,c)) or not l<=min(o,c)<=max(o,c)<=h:bad+=1;continue
                     rows.append({'ts':ts*1000,'open':o,'high':h,'low':l,'close':c})
+                if plan.get('abort_on_invalid_rows') and bad:raise ValueError('Invalid daily quote rows: '+symbol)
                 if len({r['ts'] for r in rows})!=len(rows):raise ValueError('Duplicate daily candles')
                 dividends=[{'ts':v['date']*1000,'amount':v['amount']} for v in record.get('events',{}).get('dividends',{}).values()]
                 data={'symbol':symbol,'kind':kind,'source':'Yahoo Finance daily indicative OHLC','url':url,'params':params,'raw_sha256':hashlib.sha256(raw).hexdigest(),'bars':rows,'dividends':dividends,'invalid_rows':bad,'timezone':record['meta'].get('exchangeTimezoneName')}
