@@ -1,0 +1,71 @@
+number,article_name,status,existing_research,assessment
+1,Dollar-Cost Averaging,market_style_or_framework,,Cash-flow accumulation method; compare equal cash flows and remember market risk remains.
+2,Position Trading,family_sampled,daily_edge_v1,Position-holding style partly represented; not every position strategy.
+3,Swing Trading,family_sampled,kaos_swing_v1,Hourly/four-hour swing tests; only fixed tested rules.
+4,End of Day Trading,new_rule_to_specify,,New overnight timing control; differs from article EOD chart-entry examples.
+5,Range Trading,family_sampled,kaos_pulse_v2,Range PULSE and reclaim tests; no validated live edge.
+6,Trend-Following,family_sampled,daily_edge_v1;kaos_swing_v1,Moving average and breakout trend subsets already sampled.
+7,Index Trading,market_style_or_framework,,"Index is an instrument/exposure, not a complete entry/exit rule."
+8,Gold Trading,market_style_or_framework,,Gold is a market; need a rule and the correct instrument/roll costs.
+9,Social Trading,additional_data_or_execution_model,,"Timestamped trader signals, copy latency, accepted fills and costs."
+10,Price Action Trading,family_sampled,video_strategies_v1,Specific price-action/video rules only; broad category not exhausted.
+11,Fibonacci Retracement Strategy,new_rule_to_specify,,Requires frozen causal swing-pivot definitions before Fibonacci entry rules.
+12,Seasonal Trading,new_rule_to_specify,,Calendar signals need fixed dates/rules and multiple-testing controls.
+13,Portfolio Rebalancing Strategy,family_sampled,kaos_swing_v1,Weekly momentum allocations with cash and turnover costs tested.
+14,Day Trading,market_style_or_framework,,Intraday holding constraint; choose executable entry/exit rules.
+15,Momentum Trading,family_sampled,kaos_swing_v1,Weekly relative momentum portfolios tested; excessive drawdown/confidence failure.
+16,Breakout Trading,family_sampled,kaos_swing_v1;kaos_transfer_v1,Donchian breakout variants already tested; opening-range variant distinct.
+17,Reversal Trading,family_sampled,video_strategies_v1;kaos_pulse_v2,"Specific reversal rules sampled, not every reversal pattern."
+18,Gap Trading,new_rule_to_specify,,Fixed stock gap-fade hypothesis with first-hour confirmation; new rule definition.
+19,News Trading,additional_data_or_execution_model,,"Point-in-time news availability, event labels, revisions and execution latency."
+20,Mean Reversion,family_sampled,crypto_strategy_v1;kaos_pulse_v2,Range/stretch/reclaim hypotheses tested; retail execution costs matter.
+21,Scalping,family_sampled,crypto_strategy_v1;all_timeframes_v1,Seconds-level proxies sampled; no broker-verified scalping edge.
+22,Forex Trading,market_style_or_framework,,Forex is a market; existing FX tests do not exhaust its strategies.
+23,Crypto Trading Strategy,market_style_or_framework,,Crypto is a market; existing crypto tests do not exhaust its strategies.
+24,Options Trading Strategy,market_style_or_framework,,Options are a contract class; underlying OHLC does not price contracts.
+25,Futures Trading Strategy,market_style_or_framework,,Futures require contract/roll/margin rules; not a spot-candle substitute.
+26,Dividend Capture Strategy,new_rule_to_specify,,"Cash-dividend data exists, but a capture rule and tax/ex-date execution model are separate."
+27,Short Selling,market_style_or_framework,,Short selling is a direction/financing mechanism; borrow cannot be assumed.
+28,Earnings Trading Strategy,additional_data_or_execution_model,,"Historical earnings announcement calendar including release time, guidance and revisions."
+29,Hedging Strategy,market_style_or_framework,,Hedging is an objective requiring the exposure and hedge instrument.
+30,Sentiment Analysis Trading,additional_data_or_execution_model,,"Historical social/news sentiment known at the decision time, not current counts."
+31,Insider Sentiment Trading,additional_data_or_execution_model,,Public filing arrival times and reporting lags; trade dates alone leak future information.
+32,Volatility Trading,additional_data_or_execution_model,,"Article describes volatility/option exposure: historical IV, contracts, Greeks and venue quotes."
+33,Pair Trading,additional_data_or_execution_model,,"Synchronized two-leg prices, train-only hedge ratios, borrow/funding and two-leg fills."
+34,Arbitrage,additional_data_or_execution_model,,"Simultaneous executable multi-venue quotes, fees, transfer limits and balances."
+35,Calendar Spread Trading,additional_data_or_execution_model,,"Historical option/futures contracts, expiry curves, spreads and margin."
+36,Theta Decay,additional_data_or_execution_model,,"Historical option quotes, exercise/assignment and expiry model."
+37,Volatility Crush Trading,additional_data_or_execution_model,,Historical pre/post-event implied volatility and option bid/ask quotes.
+38,Delta-Neutral Trading,additional_data_or_execution_model,,Historical option Greeks and underlying hedge execution/costs.
+39,Gamma Scalping,additional_data_or_execution_model,,Tick-level underlying hedges plus option gamma/quotes and costs.
+40,Skew Trading,additional_data_or_execution_model,,Point-in-time option volatility surface/skew and fillable spreads.
+41,Basis Trading,additional_data_or_execution_model,,"Synchronized spot/futures contracts, basis, funding and collateral costs."
+42,Funding Rate Arbitrage,additional_data_or_execution_model,,"Historical venue funding rates, both execution legs, borrowing and liquidation constraints."
+43,Market Making,additional_data_or_execution_model,,"Order-book queues, order sizes, latency, rebates and adverse-selection fills."
+44,Liquidity Grab / Stop-Hunt Trading,new_rule_to_specify,,A causal prior-level sweep/reclaim can be specified; candles do not prove stop-hunting intent.
+45,VWAP Trading Strategy,additional_data_or_execution_model,,Intraday volume and price data; normalized hourly OHLC is not true session VWAP.
+46,Order Flow Trading,additional_data_or_execution_model,,"Trade prints, bid/ask and order-side data, not candle color."
+47,Volume Profile Trading,additional_data_or_execution_model,,Traded volume by price level; total bar volume cannot reconstruct this.
+48,Market Profile Trading,additional_data_or_execution_model,,"Time at price from sufficiently fine data, not just hourly high/low."
+49,Tape Reading,additional_data_or_execution_model,,Timestamped trade prints and quotes suitable for tape interpretation.
+50,Smart Money Concepts,market_style_or_framework,,"Concept bundle requiring causal, non-repainting definitions."
+51,Quantitative Trading Strategy,market_style_or_framework,,"Quantitative research is a method, not an independently profitable rule."
+52,Algo Trading,market_style_or_framework,,Algorithmic implementation is not an entry edge.
+53,Automated Trading Strategy,market_style_or_framework,,Automation executes a strategy; it does not create profitability.
+54,AI Trading,market_style_or_framework,,"AI requires a specified model, training labels, causal inputs and independent evaluation."
+55,Statistical Arbitrage,additional_data_or_execution_model,,Train-only statistical relation plus executable multi-leg costs and financing.
+56,Regression-Based Trading,new_rule_to_specify,,"Regression is a modeling tool; freeze target, lag, fitting window and costs first."
+57,Correlation Trading,new_rule_to_specify,,Specify prediction lag and risk/cost controls; correlation alone is not an entry signal.
+58,Cointegration Trading,additional_data_or_execution_model,,"Train-only cointegration fit, walk-forward stability and two-leg costs/borrow."
+59,Factor Investing,market_style_or_framework,,"Factor framework; momentum subset was sampled, fundamentals need point-in-time data."
+60,Risk Parity Strategy,market_style_or_framework,,"Allocation/risk objective, not a directional signal or guaranteed return."
+61,Tail Risk Hedging,additional_data_or_execution_model,,Historical hedge instrument/options costs and portfolio exposure.
+62,High-Frequency Trading,additional_data_or_execution_model,,"Tick/order-book data, queues, latency, exchange rules and realistic fills."
+63,Dark Pool Tracking Strategy,additional_data_or_execution_model,,Time-stamped off-exchange prints and publication delays.
+64,Macro Trading,additional_data_or_execution_model,,Point-in-time macro releases/vintages plus tradable instruments.
+65,Interest Rate Trading,additional_data_or_execution_model,,"Historical yield curves, rate products, coupons, durations and execution costs."
+66,Inflation-Linked Trading,additional_data_or_execution_model,,Published inflation vintages and inflation-linked instrument prices/cash flows.
+67,Merger & Acquisition (M&A) Trading,additional_data_or_execution_model,,"Point-in-time deal terms, announcements, failures and closing events."
+68,On-Chain Data Trading,additional_data_or_execution_model,,"Timestamped chain events with availability lag, gas, attribution and execution."
+69,Yield Farming Strategy,additional_data_or_execution_model,,"LP pools, fees, incentives, impermanent loss, contract/depeg risks."
+70,Staking-Based Trading,additional_data_or_execution_model,,"Network rewards, lockups, fees, token inflation and staking cash flows."
