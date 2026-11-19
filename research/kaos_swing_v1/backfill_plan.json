@@ -1,0 +1,11 @@
+{
+ "purpose":"One bounded follow-up to positive but unqualified four-hour breakout family. Conditional research selection based on observed2023-24 results is explicitly acknowledged; no pristine or prospective claim.",
+ "frozen_rules":"Exact existing4h breakout20 engine, both3and4ATR stops. No indicators/exits/costs/filters changed. Source hourly snapshots2018-2020 added for context/older regimes. Missing archives before listings explicitly recorded, never synthesized.",
+ "validation":["2019-01-01","2023-01-01"],
+ "confirmation":["2025-01-01","2026-01-01"],
+ "confirmation_assets":["BNBUSDT","XRPUSDT","ADAUSDT"],
+ "maximum_followup_configs":2,
+ "gate":"Original swing validation gates plus>=300trades and>=150activeUTCdays, multiplicity lower bootstrap at.05/14 (12original+2followup). Rank lowerweeklybootstrap thenID. Atmostone choice written before2025newasset confirmation. Ifnonequalifies,confirmationremainsclosed. Final uses unchanged original swing confirmationgate. No third backfill, parameter tuning, or later alternate selection in this round.",
+ "risk":"Using an earlier historical period after seeing later results is an adaptive robustness study, not an untouched chronological research process. CoarserBTC/ETH histories and broad regimes were already seen. Correction14 does not erase past hundreds of research hypotheses. Any apparent qualification supports prospective paper testing only, no production/live promotion.",
+ "reserved":"September-October2026 and PocketOption reserved outcomes remainunscored."
+}

@@ -8,7 +8,9 @@ ASSETS=['BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT','XRPUSDT','ADAUSDT']
 def fetch(job):
     asset,year,month,cache=job;name=f'{asset}-1h-{year}-{month:02d}.zip';url=f'https://data.binance.vision/data/spot/monthly/klines/{asset}/1h/{name}';path=cache/name
     with httpx.Client(timeout=60,follow_redirects=True) as c:
-        response=c.get(url+'.CHECKSUM');response.raise_for_status();expected=response.text.split()[0].lower()
+        response=c.get(url+'.CHECKSUM')
+        if response.status_code==404:return asset,[],{'asset':asset,'year':year,'month':month,'url':url,'missingArchive':True,'httpStatus':404}
+        response.raise_for_status();expected=response.text.split()[0].lower()
         if path.exists():raw=path.read_bytes()
         else:
             response=c.get(url);response.raise_for_status();raw=response.content
@@ -27,14 +29,14 @@ def fetch(job):
     return asset,rows,{'asset':asset,'year':year,'month':month,'url':url,'sha256':digest,'bars':len(rows),'checksumVerified':True}
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--out',type=Path,required=True);p.add_argument('--cache',type=Path,required=True);a=p.parse_args();a.out.mkdir(parents=True,exist_ok=True);a.cache.mkdir(parents=True,exist_ok=True)
-    jobs=[(asset,y,m,a.cache) for asset in ASSETS for y in range(2021,2026) for m in range(1,13)];data={s:[] for s in ASSETS};manifest={'files':[],'assets':{},'source':'Binance public spot1h','executionEnabled':False}
+    p=argparse.ArgumentParser();p.add_argument('--out',type=Path,required=True);p.add_argument('--cache',type=Path,required=True);p.add_argument('--start-year',type=int,default=2021);p.add_argument('--end-year',type=int,default=2025);a=p.parse_args();a.out.mkdir(parents=True,exist_ok=True);a.cache.mkdir(parents=True,exist_ok=True)
+    jobs=[(asset,y,m,a.cache) for asset in ASSETS for y in range(a.start_year,a.end_year+1) for m in range(1,13)];data={s:[] for s in ASSETS};manifest={'files':[],'assets':{},'source':'Binance public spot1h','executionEnabled':False}
     with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:
         for count,(asset,rows,meta) in enumerate(pool.map(fetch,jobs),1):
             data[asset].extend(rows);manifest['files'].append(meta)
             if count%12==0:print('Verified',count,'of',len(jobs),'archives',flush=True)
     for asset,rows in data.items():
-        arr=np.array(sorted(rows),dtype=float)
+        arr=np.array(sorted(rows),dtype=float).reshape(-1,5)
         if np.any(np.diff(arr[:,0])<=0):raise ValueError('Duplicate timestamps')
         path=a.out/(asset+'.npy');np.save(path,arr,allow_pickle=False);manifest['assets'][asset]={'file':path.name,'bars':len(arr),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()}
     (a.out/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
