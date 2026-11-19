@@ -24,6 +24,7 @@ const NAV = [
   ["community", "Community", Users],
   ["indicators", "Indicators", Activity],
   ["scripts", "Scripts", FileCode],
+  ["pinescripts", "TradingView Scripts", FileCode],
   ["backtests", "Backtests", LineChart],
   ["saved", "Saved", Bookmark],
   ["following", "Following", UserPlus],

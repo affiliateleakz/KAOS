@@ -23,6 +23,7 @@ const NAV = [
   ["devices", "Devices", MonitorSmartphone],
   ["affiliate", "Affiliate Queue", BadgeCheck],
   ["strategies", "Strategies", Boxes],
+  ["pinescripts", "TradingView Scripts", ScrollText],
   ["moderation", "Moderation", Flag],
   ["extension", "Extension Releases", Chrome],
   ["settings", "Settings", Settings],
@@ -50,7 +51,7 @@ export default function AdminLayout() {
         </div>
       </div>
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-3">
-        {NAV.filter(([path])=>(path!=="analytics"||["admin","super_admin"].includes(user?.role))&&!["commerce","radar","launch","follow-us"].includes(path) || user?.role==="super_admin").map(([path, label, Icon]) => (
+        {NAV.filter(([path])=>(!["analytics","pinescripts"].includes(path)||["admin","super_admin"].includes(user?.role))&&!["commerce","radar","launch","follow-us"].includes(path) || user?.role==="super_admin").map(([path, label, Icon]) => (
           <NavLink key={path} to={`/admin/${path}`} end={path === ""} onClick={onNavigate} data-testid={`${onNavigate ? "mobile-" : ""}admin-nav-${path || "dashboard"}`}
             className={({ isActive }) => `flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${isActive ? "bg-red-500/10 text-red-300" : "text-slate-400 hover:bg-[#111111] hover:text-white"}`}>
             <Icon className="h-4 w-4" />{label}

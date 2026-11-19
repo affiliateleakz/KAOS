@@ -7,6 +7,7 @@ import {MembershipProvider, FeatureGate} from "./components/MembershipAccess";
 
 import VisitorTracker from "./components/VisitorTracker";
 import TrafficAnalytics from "./components/TrafficAnalytics";
+import PineScripts from "./pages/PineScripts";
 import FollowUs from "./pages/FollowUs";
 import Landing from "./pages/Landing";
 import RadarSources from "./pages/admin/RadarSources";
@@ -97,6 +98,7 @@ function AppRouter() {
         <Route path="community" element={<DP.CommunityFeed />} />
         <Route path="indicators" element={<DP.Indicators />} />
         <Route path="scripts" element={<DP.Scripts />} />
+        <Route path="pinescripts" element={<PineScripts />} />
         <Route path="backtests" element={<DP.Backtests />} />
         <Route path="saved" element={<DP.Saved />} />
         <Route path="following" element={<DP.Following />} />
@@ -109,6 +111,7 @@ function AppRouter() {
 
       <Route path="/admin" element={<Protected role="moderator"><AdminLayout /></Protected>}>
         <Route index element={<AP.AdminDashboard />} />
+        <Route path="pinescripts" element={<Protected role="admin"><PineScripts admin /></Protected>} />
         <Route path="trading-ops" element={<TradingOps />} />
         <Route path="kaos-ai" element={<AICenter />} />
         <Route path="follow-us" element={<Protected role="super_admin"><FollowUs admin /></Protected>} />
