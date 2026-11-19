@@ -2,7 +2,7 @@ const VISITOR='kaos_analytics_visitor',SESSION='kaos_analytics_session';
 const REF='kaos_ref',REF_AT='kaos_ref_saved_at';
 const DAY=86400000;
 export function analyticsEnabled(){
- try{return typeof window!=='undefined'&&navigator.doNotTrack!=='1'&&!navigator.globalPrivacyControl&&localStorage.getItem('kaos_analytics_opt_out')!=='1';}catch{return false;}
+ try{return typeof window!=='undefined'&&navigator.doNotTrack!=='1'&&!navigator.globalPrivacyControl&&localStorage.getItem('kaos_analytics_opt_out')!=='1'&&localStorage.getItem('kaos_analytics_owner_browser')!=='1';}catch{return false;}
 }
 export function captureReferral(search){
  const value=search?.get('ref');
@@ -45,3 +45,5 @@ export function trackingPath(path){
  if(['payment','dashboard','register'].includes(head))return '/'+head+(parts[1]&&['account','complete','success','cancel','subscription','affiliate','trading','strategies','community','radar','profile'].includes(parts[1])?'/'+parts[1]:'');
  return '/'+head;
 }
+
+export function excludeOwnerBrowser(){try{localStorage.setItem('kaos_analytics_owner_browser','1');}catch{}}

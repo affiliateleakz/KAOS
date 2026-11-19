@@ -1,7 +1,7 @@
 """First-party visitor analytics. Aggregated affiliate scope; no raw IPs or query strings."""
 
 import asyncio
-from datetime import timedelta
+from datetime import timedelta, datetime, timezone
 import hashlib
 import hmac
 import os
@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
 from pymongo.errors import DuplicateKeyError
 from db import db, now, now_iso
-from auth import get_current_user, require_role
+from auth import get_current_user, get_optional_user, require_role
 from analytics_geo import client_address, country, source_info
 
 router = APIRouter(tags=["visitor analytics"])
@@ -162,8 +162,10 @@ async def rate_limit(request):
 
 
 @router.post("/api/analytics/visit")
-async def capture(payload: Visit, request: Request, response: Response):
+async def capture(payload: Visit, request: Request, response: Response, user: dict | None = Depends(get_optional_user)):
     response.headers["Cache-Control"] = "no-store"
+    if isinstance(user, dict) and user.get("role") in ("admin", "super_admin", "moderator"):
+        return {"recorded": False}
     if request.headers.get("dnt") == "1" or request.headers.get("sec-gpc") == "1":
         return {"recorded": False}
     if re.search(
@@ -316,6 +318,14 @@ def event_scope(days, code=None, location=None, source=None):
 async def report(days, code=None, location=None, source=None, offset=0, admin=False):
     await indexes()
     match = event_scope(days, code, location, source)
+    reset_at = None
+    if admin:
+        policy = await db.settings.find_one({'_id':'visitor_analytics_display_reset'})
+        if policy and policy.get('resetAt'):
+            reset_at = policy['resetAt']
+            if isinstance(reset_at,str):reset_at=datetime.fromisoformat(reset_at)
+            if reset_at.tzinfo is None:reset_at=reset_at.replace(tzinfo=timezone.utc)
+            match['createdAt']['$gte']=max(match['createdAt']['$gte'],reset_at)
     count = lambda expression: {"$sum": {"$cond": [expression, 1, 0]}}
     facets = {
         "totals": [
@@ -422,7 +432,7 @@ async def report(days, code=None, location=None, source=None, offset=0, admin=Fa
         users["analyticsAcquisition.country"] = location
     if source:
         users["analyticsAcquisition.source"] = source
-    since = (now() - timedelta(days=days)).isoformat()
+    since = match["createdAt"]["$gte"].isoformat()
     acquired = {**users, "created_at": {"$gte": since, "$lte": now_iso()}}
     summary["newAccounts"] = await db.users.count_documents(acquired, maxTimeMS=2000)
     live = {
@@ -469,6 +479,7 @@ async def report(days, code=None, location=None, source=None, offset=0, admin=Fa
     owners = {a["code"]: a["userId"] for a in accounts}
     return {
         "days": days,
+        "statsResetAt": reset_at.isoformat() if reset_at else None,
         "summary": summary,
         "countries": data["countries"],
         "sources": data["sources"],
@@ -527,3 +538,14 @@ async def admin_report(
 ):
     response.headers["Cache-Control"] = "private, no-store"
     return await report(days, affiliate, location, source, offset, True)
+
+
+@router.post('/api/admin/analytics/reset')
+async def reset_visitor_stats(response: Response, user: dict = Depends(require_role('super_admin'))):
+    """Reset the admin traffic display baseline; never erase financial/referral records."""
+    response.headers['Cache-Control']='private, no-store'
+    stamp=now()
+    await db.settings.update_one({'_id':'visitor_analytics_display_reset'},
+        {'$set':{'key':'visitor_analytics_display_reset','resetAt':stamp,'resetBy':user['id']},
+         '$push':{'history':{'$each':[{'at':stamp,'actor':user['id']}],'$slice':-30}}},upsert=True)
+    return {'resetAt':stamp.isoformat(),'message':'Visitor dashboard now starts from this time. Referral attribution, affiliate accounting and current memberships are unchanged.'}

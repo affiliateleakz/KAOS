@@ -1,11 +1,16 @@
 import {useEffect,useRef} from 'react';
 import {useLocation} from 'react-router-dom';
+import {useAuth} from '../context/AuthContext';
 import {api} from '../lib/api';
-import {analyticsEnabled,captureReferral,trackingIds,trackingPath} from '../lib/visitorTracking';
+import {analyticsEnabled,excludeOwnerBrowser,captureReferral,trackingIds,trackingPath} from '../lib/visitorTracking';
 
 export default function VisitorTracker(){
  const location=useLocation(),last=useRef('');
+ const {user,loading}=useAuth();
  useEffect(()=>{
+  if(loading||user===undefined)return;
+  if(['admin','super_admin','moderator'].includes(user?.role)){excludeOwnerBrowser();return;}
+  if(!analyticsEnabled())return;
   if(location.pathname.startsWith('/admin')||location.pathname.includes('password')||location.pathname==='/auth/callback')return;
   const search=new URLSearchParams(location.search);captureReferral(search);
   const ids=trackingIds(search);if(!ids)return;
@@ -25,6 +30,6 @@ export default function VisitorTracker(){
   }
   document.addEventListener('click',click,true);
   return()=>document.removeEventListener('click',click,true);
- },[location.pathname,location.search]);
+ },[location.pathname,location.search,user?.id,user?.role,loading]);
  return null;
 }

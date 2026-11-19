@@ -1,4 +1,5 @@
 import React,{useEffect,useState} from 'react';
+import {useAuth} from '../context/AuthContext';
 import {api,errMsg} from '../lib/api';
 
 const panel='rounded-xl border border-[#514027] bg-[#12100d] p-4 sm:p-6';
@@ -6,21 +7,31 @@ const input='rounded border border-[#66502a] bg-black px-3 py-2 text-sm text-[#e
 function countryName(code){if(!code||code==='ZZ')return 'Unknown';try{return new Intl.DisplayNames(['en'],{type:'region'}).of(code)||code;}catch{return code;}}
 function Table({headers,rows,empty='No activity in this period.'}){return <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr>{headers.map(h=><th className="whitespace-nowrap border-b border-[#514027] px-3 py-3 text-[#e8c46f]" key={h}>{h}</th>)}</tr></thead><tbody>{rows.map((row,index)=><tr className="border-b border-[#514027]/40" key={index}>{row.map((cell,i)=><td className="max-w-64 break-words px-3 py-3 text-[#d0c4ae]" key={i}>{cell??'—'}</td>)}</tr>)}</tbody></table>{!rows.length&&<p className="p-4 text-sm text-slate-400">{empty}</p>}</div>;}
 export default function TrafficAnalytics({admin=false}){
+ const {user}=useAuth();
+ const [resetting,setResetting]=useState(false),[notice,setNotice]=useState('');
  const [days,setDays]=useState('30'),[country,setCountry]=useState(''),[source,setSource]=useState(''),[affiliate,setAffiliate]=useState(''),[affiliateDraft,setAffiliateDraft]=useState('');
  const [offset,setOffset]=useState(0),[data,setData]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[revision,setRevision]=useState(0);
  useEffect(()=>{let active=true;setBusy(true);setError('');const params={days,offset,...(country?{location:country}:{}),...(source?{source}:{}),...(admin&&affiliate?{affiliate}: {})};
   api.get(admin?'/api/admin/analytics':'/api/affiliate/analytics',{params,timeout:15000}).then(r=>{if(active)setData(r.data);}).catch(e=>{if(active)setError(errMsg(e));}).finally(()=>{if(active)setBusy(false);});return()=>{active=false;};
  },[days,country,source,affiliate,offset,revision,admin]);
  function reset(){setCountry('');setSource('');setAffiliate('');setAffiliateDraft('');setOffset(0);}
+ async function resetStats(){
+  if(!window.confirm('Start visitor stats from now? Previous traffic will disappear from this admin dashboard. Affiliate reports, commission records, accounts and current memberships will not be deleted.'))return;
+  setResetting(true);setError('');setNotice('');
+  try{const {data:result}=await api.post('/api/admin/analytics/reset',{});reset();setData(null);setNotice(result.message);setRevision(n=>n+1);}catch(e){setError(errMsg(e));}finally{setResetting(false);}
+ }
  const s=data?.summary||{};
  return <section className="min-w-0 space-y-5" data-testid={admin?'admin-traffic-analytics':'affiliate-traffic-analytics'}>
   <div className={panel}><p className="text-xs tracking-widest text-[#e8c46f]">{admin?'KAOS TRAFFIC DESK':'YOUR REFERRAL TRAFFIC'}</p><h1 className="mt-3 text-2xl font-semibold">{admin?'Visitors & referrals':'Clicks, visitors & subscribers'}</h1><p className="mt-3 text-sm text-[#b9aa91]">{admin?'See site visits, traffic sources, affiliate referrals and approximate visitor countries.':'Your own link traffic, campaigns and referred accounts. Other affiliates’ visitors are not shown.'}</p>
    <div className="mt-5 flex flex-wrap items-end gap-3"><label className="text-sm">Period<select aria-label="Analytics period" value={days} onChange={e=>{setDays(e.target.value);setOffset(0);}} className={input+' ml-2'}>{[7,30,90].map(d=><option key={d} value={d}>Last {d} days</option>)}</select></label>
     <label className="text-sm">Country<select aria-label="Analytics country" value={country} onChange={e=>{setCountry(e.target.value);setOffset(0);}} className={input+' ml-2'}><option value="">All countries</option>{(data?.countries||[]).map(row=><option key={row._id} value={row._id}>{countryName(row._id)}</option>)}{country&&!(data?.countries||[]).some(c=>c._id===country)&&<option value={country}>{countryName(country)}</option>}</select></label>
     {admin&&<label className="text-sm">Affiliate code<input aria-label="Analytics affiliate code" value={affiliateDraft} onChange={e=>setAffiliateDraft(e.target.value)} className={input+' ml-2 max-w-60'} placeholder="All affiliates"/><button className={input+" ml-2"} onClick={()=>{setAffiliate(affiliateDraft.trim());setOffset(0);}}>Apply affiliate</button></label>}
-    <button className={input} onClick={()=>setRevision(n=>n+1)} disabled={busy}>{busy?'Loading…':'Refresh traffic'}</button><button className={input} onClick={reset}>Clear filters</button>
+    <button className={input} onClick={()=>setRevision(n=>n+1)} disabled={busy}>{busy?'Loading…':'Refresh traffic'}</button><button className={input} onClick={reset}>Clear filters</button>{admin&&user?.role==='super_admin'&&<button className={input+" border-red-900 text-red-200"} disabled={busy||resetting} onClick={resetStats}>{resetting?'Resetting…':'Start visitor stats from now'}</button>}
    </div>{source&&<p className="mt-3 text-sm">Source: {source} <button onClick={()=>setSource('')} className="text-[#e8c46f] underline">Remove source filter</button></p>}
   </div>
+  {notice&&<p role="status" className={panel}>{notice}</p>}
+  {admin&&<p className="text-xs text-slate-400">Signed-in staff activity is excluded. Once you sign in as staff, this browser stays excluded after sign-out.</p>}
+  {data?.statsResetAt&&<p className="text-sm text-[#e8c46f]">Visitor stats start: {new Date(data.statsResetAt).toLocaleString()}. Current member totals are live totals and are not reset.</p>}
   {error&&<p role="alert" className={panel}>{error} <button className="text-[#e8c46f] underline" onClick={()=>setRevision(n=>n+1)}>Retry traffic report</button></p>}
   {data&&!error&&<>
    <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">{[['Page views',s.pageviews],['Unique browsers',s.uniqueVisitors],['Visits',s.visits],['Referral link visits',s.referralClicks],['Site link clicks',s.navigationClicks],['New accounts',s.newAccounts],['Current trial members',s.trialMembers],['Current paid subscribers',s.paidMembers]].map(([label,value])=><div className={panel} key={label}><p className="text-xs text-[#b9aa91]">{label}</p><p className="mt-2 text-3xl text-[#e8c46f]">{Number(value||0).toLocaleString()}</p></div>)}</div>
