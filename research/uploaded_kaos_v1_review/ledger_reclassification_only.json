@@ -1,0 +1,20 @@
+{
+  "note": "Relabeling only; does not correct ATR/fills or reproduce original study.",
+  "groups": {
+    "crypto": {
+      "trades": 661,
+      "net_ATR": -59.05267265218703,
+      "mean_ATR": -0.08933838525293045
+    },
+    "equity": {
+      "trades": 243,
+      "net_ATR": -0.6430123677554462,
+      "mean_ATR": -0.0026461414310923713
+    },
+    "fx": {
+      "trades": 660,
+      "net_ATR": 36.37334167157327,
+      "mean_ATR": 0.055111123744807984
+    }
+  }
+}

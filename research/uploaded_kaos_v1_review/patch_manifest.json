@@ -1,0 +1,34 @@
+{
+  "backtest.py": {
+    "original_sha256": "593e449cffc197730252ef3c9467baa76a07a298c49f02c6a1d6ee7e3b134cd8",
+    "patched_sha256": "123e85fe27cf3c5f59e6a3ead8b6cdd69e141683615dd3419b808ffb4cd996b7"
+  },
+  "study.py": {
+    "original_sha256": "e956cf5a80471b8d27260daa412cd77866be069ab8cdf2f490ceecbbb3985c30",
+    "patched_sha256": "5c024b85b33d0f9b6886b9ff62dcc3d6ff74449a9c4fd986ca2aa1e421fcdb0b"
+  },
+  "portability.py": {
+    "original_sha256": "a631a29d617eb189e34cee01cce9c0a4ca0cb9da753b1cd57ba40f460d0f00f9",
+    "patched_sha256": "23fd6dc4f193c6187f5b5498c161749d8619a549c9283e3a046c428c4b502bdc"
+  },
+  "report_charts.py": {
+    "original_sha256": "1ffc05f7720f29553daf78476b6926c1a8f823e0ffdc74c5efe8f419a3ffce9f",
+    "patched_sha256": "194400fdba6f1624f7258396cdef7dd2c1ba1cd807f347f481708602c5ca6bd2"
+  },
+  "cost_sensitivity.py": {
+    "original_sha256": "c56b05385749587f911c106c6c54cbd4064b5b1e365e175752a852af770e41f7",
+    "patched_sha256": "e425ceec3be61b85f4f87b0a3ee1e42e8867de5ef77de6db43ebfb4530fd9995"
+  },
+  "refine.py": {
+    "original_sha256": "6cdc371d072494b3065e4ac253f41be8e75fd6402240cba9bba588cb4f4f7a11",
+    "patched_sha256": "bde28f565754ceea77520434d2cf435b00b665c2324eb2424e513a1e82cd6e42"
+  },
+  "platforms/tradingview_kaos.pine": {
+    "original_sha256": "0ac6c98df00c8ce6fd36afd10ad864079ba44fc1796059ac8fbaca92e8d5fdb0",
+    "patched_sha256": "f4dcab8ec0a77e485aa6bd27dce9aef313e94c76dfa67530119d5d1859e1d505"
+  },
+  "platforms/live_runner.py": {
+    "original_sha256": "2e153c646301d036a47d00273f33241855b48a602828dc202705699ae38555d4",
+    "patched_sha256": "e71d63ab8da7d3d7698f44f95ec761781ee4ea103046e24483f0e713b5dbab44"
+  }
+}
