@@ -9687,7 +9687,7 @@ const t3MinConsensus = aiLearning ? 1 : 3;
   }
 
   function v116CleanCoreDecision(asset, price, ind, setupSig) {
-    if(!setupSig) return {skip:true,reason:`HOLD · CANDIDATE 7B · ${lastIndicators.cleanCore?.reason||'waiting for qualified entry'}`};
+    if(!setupSig) return {skip:true,reason:`HOLD · KAOS STRATEGY · ${lastIndicators.cleanCore?.reason||'waiting for qualified entry'}`};
     const _bbType=String(setupSig.tradeType||'').toUpperCase();
     const sig={...setupSig,mode:_bbType==='MICRO_TREND_CYCLE'?'micro-5s-cycle-live':_bbType==='BB_CHOP'?'bb-chop-live':_bbType==='BB_RUNNER'?'bb-runner-live':'candidate-7b-live',confidence:Number(setupSig.confidence||.86),
       reason:`${String(setupSig.reason||'BB WINNER PRO')} · direct deterministic execution`};
@@ -10627,7 +10627,7 @@ const t3MinConsensus = aiLearning ? 1 : 3;
       },
       // V24.1.133: per-channel independent state + controller label
       // (V118 setup engine is the sole driver; AI is the only signal source).
-      controller: 'CANDIDATE 7B · ZIGZAG 5/3/1 · LIVE',
+      controller: 'KAOS STRATEGY · ZIGZAG 5/3/1 · LIVE',
       strategyPlan: 'REVERSAL 30s · RUNNER 15s · BREAKOUT 30s · ZIGZAG 5/3/1 STRUCTURE',
       debugReason: channelState[assetName]?.lastDebugReason || null,
       indicators: channelState[assetName]?.indicators || null,
