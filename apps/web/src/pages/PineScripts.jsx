@@ -37,6 +37,10 @@ export default function PineScripts({admin=false}){
   try{const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(Error('Could not read thumbnail'));reader.readAsDataURL(file);});change('thumbnail',data);}
   catch(e){setError(e.message);}
  }
+ async function installPack(){
+  if(!window.confirm('Install three original KAOS research drafts? Backtests did not establish a robust edge. They remain unpublished until you review and publish them.'))return;
+  setBusy(true);setError('');try{const {data}=await api.post('/api/admin/pine-scripts/starter-pack',{});setNotice(data.message+' Added '+data.created.length+'; already present '+data.skipped.length+'.');setStatus('');setPage(1);await load();}catch(e){setError(errMsg(e));}finally{setBusy(false);}
+ }
  async function save(event){event.preventDefault();setBusy(true);setError('');setNotice('');
   try{if(editing==='new')await api.post(endpoint,form);else await api.put(endpoint+'/'+editing,form);setEditing(null);setNotice(admin?'Script saved.':'Script saved. Submitted changes need approval before appearing in the library.');await load();}
   catch(e){setError(errMsg(e));}finally{setBusy(false);}
@@ -53,6 +57,7 @@ export default function PineScripts({admin=false}){
  }
  return <section className="mx-auto max-w-6xl space-y-6 text-white">
   <header className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs uppercase tracking-widest text-[#e8c46f]">TradingView · Pine Script</p><h1 className="mt-2 text-3xl font-bold">{admin?'Pine Script Management':'TradingView Script Library'}</h1><p className="mt-3 max-w-2xl text-sm text-slate-400">{admin?'Manage member submissions and KAOS official releases.':'Discover KAOS and community scripts, or share your own with a thumbnail and description.'} Copy or download source and use it in TradingView’s Pine Editor.</p></div><button className={button} onClick={create}>{admin?'Upload official script':'Upload your script'}</button></header>
+  {admin&&<div className="flex flex-wrap items-center gap-3"><button disabled={busy} className={button} onClick={installPack}>Install KAOS research starter pack</button><a className="text-sm text-[#e8c46f] underline" href="/research/kaos-pine-pack-v1.md" target="_blank" rel="noopener noreferrer">Read backtest report</a></div>}
   {error&&<p role="alert" className="rounded border border-red-700 p-3 text-red-300">{error}</p>}{notice&&<p role="status" className="rounded border border-[#66512d] p-3 text-[#e8c46f]">{notice}</p>}
   {editing&&<form onSubmit={save} className="space-y-4 rounded-xl border border-[#66512d] bg-[#111] p-5">
    <h2 className="text-xl font-semibold">{editing==='new'?'New script':'Edit script'}</h2>
