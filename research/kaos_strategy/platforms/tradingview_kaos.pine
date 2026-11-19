@@ -1,0 +1,108 @@
+//@version=5
+// KAOS Strategy v1 - TradingView port.
+//
+// Same rules as research/kaos_strategy/spec.md: Kaufman efficiency-ratio regime,
+// mean-reversion PULSE entries inside a range, 3.0 ATR target / 5.0 ATR stop, 24-bar expiry.
+// Every input is in bars or ATR units, so this runs unchanged on 5s through 4h charts.
+//
+// The 3.0/5.0 bracket wins 62.5% of the time on a coin flip (parity = stop/(target+stop)).
+// Judge this strategy on expectancy and on the win rate MINUS 62.5, never on win rate alone.
+
+strategy("KAOS Strategy v1", overlay=true, initial_capital=10000,
+     default_qty_type=strategy.percent_of_equity, default_qty_value=10,
+     commission_type=strategy.commission.percent, commission_value=0.02,
+     process_orders_on_close=false, calc_on_every_tick=false)
+
+// ---------------------------------------------------------------- inputs
+erLen      = input.int(20,  "Efficiency ratio length", minval=5)
+erRangeMax = input.float(0.28, "Range regime max ER", step=0.01)
+erTrendMin = input.float(0.30, "Trend regime min ER", step=0.01)
+emaFastLen = input.int(20,  "Fast EMA", minval=2)
+emaSlowLen = input.int(50,  "Slow EMA", minval=2)
+atrLen     = input.int(14,  "ATR length", minval=2)
+rsiLen     = input.int(14,  "RSI length", minval=2)
+bbLen      = input.int(20,  "Bollinger length", minval=5)
+bbSd       = input.float(2.0, "Bollinger SD", step=0.1)
+
+zEntry     = input.float(1.0, "PULSE entry distance (ATR from EMA20)", step=0.1)
+rsiPulse   = input.float(42.0, "RSI threshold (long below, short above 100-x)", step=1.0)
+knifeGuard = input.float(2.0, "Knife guard (max |ATR distance from EMA50|)", step=0.1)
+
+tpAtr      = input.float(3.0, "PULSE target (ATR)")
+slAtr      = input.float(5.0, "PULSE stop (ATR)")
+maxBars    = input.int(24,  "PULSE expiry (bars)")
+
+useDrive   = input.bool(false, "Enable DRIVE continuation engine", tooltip="No measurable edge out of sample; off by default")
+drTpAtr    = input.float(1.6, "DRIVE target (ATR)")
+drSlAtr    = input.float(1.0, "DRIVE stop (ATR)")
+drMaxBars  = input.int(24,  "DRIVE expiry (bars)")
+
+// ------------------------------------------------------------ indicators
+atr      = ta.atr(atrLen)                      // Wilder / RMA, matches the Python engine
+emaFast  = ta.ema(close, emaFastLen)
+emaSlow  = ta.ema(close, emaSlowLen)
+rsi      = ta.rsi(close, rsiLen)
+bbMid    = ta.sma(close, bbLen)
+bbSdVal  = ta.stdev(close, bbLen)              // population SD, matches ddof=0
+bbUp     = bbMid + bbSd * bbSdVal
+bbLo     = bbMid - bbSd * bbSdVal
+
+netMove  = math.abs(close - close[erLen])
+path     = ta.sum(math.abs(close - close[1]), erLen)
+er       = path > 0 ? math.min(math.max(netMove / path, 0.0), 1.0) : 0.0
+
+z        = atr > 0 ? (close - emaFast) / atr : 0.0
+zSlow    = atr > 0 ? (close - emaSlow) / atr : 0.0
+erSlope  = er - er[1]
+
+// ---------------------------------------------------------------- regime
+isTrend   = er >= erTrendMin and math.abs(zSlow) > 0.5
+isUp      = isTrend and emaFast > emaSlow
+isDown    = isTrend and emaFast < emaSlow
+isRange   = er <= erRangeMax
+regimeTxt = isUp ? "trend_up" : isDown ? "trend_down" : isRange ? "range" : "undecided"
+
+// ------------------------------------------------------------- PULSE (range MR)
+pulseLong  = isRange and z <= -zEntry and rsi <= rsiPulse and close < bbLo and zSlow > -knifeGuard
+pulseShort = isRange and z >=  zEntry and rsi >= 100 - rsiPulse and close > bbUp and zSlow <  knifeGuard
+
+// ---------------------------------------------------------- DRIVE (trend pullback)
+driveLong  = useDrive and isUp   and low  <= emaFast and close > emaFast and close > open and erSlope > 0
+driveShort = useDrive and isDown and high >= emaFast and close < emaFast and close < open and erSlope > 0
+
+// --------------------------------------------------------------- execution
+// Orders are submitted on bar close and filled at the next bar's open by the broker
+// emulator, which is the same convention the Python backtest uses.
+inTrade   = strategy.position_size != 0
+barsHeld  = inTrade ? bar_index - strategy.opentrades.entry_bar_index(0) : 0
+
+longSig   = (pulseLong or driveLong) and not inTrade and atr > 0
+shortSig  = (pulseShort or driveShort) and not inTrade and atr > 0
+
+if longSig
+    tp = close + (pulseLong ? tpAtr : drTpAtr) * atr
+    sl = close - (pulseLong ? slAtr : drSlAtr) * atr
+    strategy.entry("KAOS", strategy.long, comment="KAOS long")
+    strategy.exit("KAOS-x", from_entry="KAOS", stop=sl, limit=tp)
+
+if shortSig
+    tp = close - (pulseLong ? tpAtr : drTpAtr) * atr
+    sl = close + (pulseLong ? slAtr : drSlAtr) * atr
+    strategy.entry("KAOS", strategy.short, comment="KAOS short")
+    strategy.exit("KAOS-x", from_entry="KAOS", stop=sl, limit=tp)
+
+// bar-counted expiry: force a close once the trade has lived maxBars bars
+expiryBars = pulseLong or pulseShort ? maxBars : drMaxBars
+if inTrade and barsHeld >= expiryBars
+    strategy.close_all(comment="expiry")
+
+// --------------------------------------------------------------- visuals
+plot(emaFast, "EMA fast", color=color.new(color.orange, 0))
+plot(emaSlow, "EMA slow", color=color.new(color.blue, 0))
+bgcolor(isRange ? color.new(color.teal, 92) : isTrend ? color.new(color.purple, 94) : na)
+plotshape(pulseLong,  "PULSE long",  shape.triangleup,   location.belowbar, color.teal, size=size.tiny)
+plotshape(pulseShort, "PULSE short", shape.triangledown, location.abovebar, color.maroon, size=size.tiny)
+
+// --------------------------------------------------------------- alerts
+alertcondition(longSig,  "KAOS long",  "KAOS long signal on {{ticker}} {{interval}} at {{close}}")
+alertcondition(shortSig, "KAOS short", "KAOS short signal on {{ticker}} {{interval}} at {{close}}")

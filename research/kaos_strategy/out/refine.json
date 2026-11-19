@@ -1,0 +1,71 @@
+{
+  "cost_per_side_atr": 0.05,
+  "train": {
+    "baseline": {
+      "n": 2238,
+      "wr": 0.6915,
+      "excess_pp": 6.65,
+      "exp": -0.0175,
+      "pf": 0.987,
+      "positive_assets": 5,
+      "assets": 10
+    },
+    "deeper": {
+      "n": 983,
+      "wr": 0.7094,
+      "excess_pp": 8.44,
+      "exp": -0.0013,
+      "pf": 0.999,
+      "positive_assets": 4,
+      "assets": 10
+    },
+    "deepest": {
+      "n": 189,
+      "wr": 0.7327,
+      "excess_pp": 10.77,
+      "exp": 0.1737,
+      "pf": 1.146,
+      "positive_assets": 6,
+      "assets": 10
+    },
+    "vol_floor": {
+      "n": 1072,
+      "wr": 0.7083,
+      "excess_pp": 8.33,
+      "exp": 0.0094,
+      "pf": 1.007,
+      "positive_assets": 5,
+      "assets": 10
+    },
+    "deep_vol_floor": {
+      "n": 498,
+      "wr": 0.7353,
+      "excess_pp": 11.03,
+      "exp": 0.072,
+      "pf": 1.06,
+      "positive_assets": 6,
+      "assets": 10
+    }
+  },
+  "test": {
+    "deepest": {
+      "n": 120,
+      "wr": 0.6351,
+      "excess_pp": 1.01,
+      "exp": -0.244,
+      "pf": 0.84,
+      "positive_assets": 4,
+      "assets": 10
+    },
+    "baseline": {
+      "n": 1564,
+      "wr": 0.6613,
+      "excess_pp": 3.63,
+      "exp": -0.0749,
+      "pf": 0.949,
+      "positive_assets": 4,
+      "assets": 10
+    }
+  },
+  "selected": "deepest"
+}
