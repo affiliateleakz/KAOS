@@ -1,0 +1,27 @@
+{
+  "stocks": {
+    "action": "BUY",
+    "executionEnabled": false,
+    "input_is_synthetic": true
+  },
+  "options": {
+    "action": "BULL_CALL_SPREAD",
+    "executionEnabled": false,
+    "input_is_synthetic": true
+  },
+  "forex": {
+    "action": "BUY",
+    "executionEnabled": false,
+    "input_is_synthetic": true
+  },
+  "crypto": {
+    "action": "BUY",
+    "executionEnabled": false,
+    "input_is_synthetic": true
+  },
+  "binary": {
+    "action": "CALL",
+    "executionEnabled": false,
+    "input_is_synthetic": true
+  }
+}
