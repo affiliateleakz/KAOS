@@ -2,7 +2,7 @@ number,article_name,status,existing_research,assessment
 1,Dollar-Cost Averaging,market_style_or_framework,,Cash-flow accumulation method; compare equal cash flows and remember market risk remains.
 2,Position Trading,family_sampled,daily_edge_v1,Position-holding style partly represented; not every position strategy.
 3,Swing Trading,family_sampled,kaos_swing_v1,Hourly/four-hour swing tests; only fixed tested rules.
-4,End of Day Trading,new_rule_to_specify,,New overnight timing control; differs from article EOD chart-entry examples.
+4,End of Day Trading,new_session_tested,strategy_catalog_v1,Unconditional overnight timing control tested; this does not replicate every EOD chart setup.
 5,Range Trading,family_sampled,kaos_pulse_v2,Range PULSE and reclaim tests; no validated live edge.
 6,Trend-Following,family_sampled,daily_edge_v1;kaos_swing_v1,Moving average and breakout trend subsets already sampled.
 7,Index Trading,market_style_or_framework,,"Index is an instrument/exposure, not a complete entry/exit rule."
@@ -14,9 +14,9 @@ number,article_name,status,existing_research,assessment
 13,Portfolio Rebalancing Strategy,family_sampled,kaos_swing_v1,Weekly momentum allocations with cash and turnover costs tested.
 14,Day Trading,market_style_or_framework,,Intraday holding constraint; choose executable entry/exit rules.
 15,Momentum Trading,family_sampled,kaos_swing_v1,Weekly relative momentum portfolios tested; excessive drawdown/confidence failure.
-16,Breakout Trading,family_sampled,kaos_swing_v1;kaos_transfer_v1,Donchian breakout variants already tested; opening-range variant distinct.
+16,Breakout Trading,family_sampled,kaos_swing_v1;kaos_transfer_v1;strategy_catalog_v1,Donchian and now first-hour opening-range breakouts sampled; broad family not exhausted.
 17,Reversal Trading,family_sampled,video_strategies_v1;kaos_pulse_v2,"Specific reversal rules sampled, not every reversal pattern."
-18,Gap Trading,new_rule_to_specify,,Fixed stock gap-fade hypothesis with first-hour confirmation; new rule definition.
+18,Gap Trading,new_session_tested,strategy_catalog_v1,Frozen first-hour gap-fade rule tested on all eight stocks/ETFs; no parameter retuning.
 19,News Trading,additional_data_or_execution_model,,"Point-in-time news availability, event labels, revisions and execution latency."
 20,Mean Reversion,family_sampled,crypto_strategy_v1;kaos_pulse_v2,Range/stretch/reclaim hypotheses tested; retail execution costs matter.
 21,Scalping,family_sampled,crypto_strategy_v1;all_timeframes_v1,Seconds-level proxies sampled; no broker-verified scalping edge.

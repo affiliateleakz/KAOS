@@ -1,0 +1,416 @@
+{
+  "2025": {
+    "opening_range_60": {
+      "base": {
+        "trades": 744,
+        "days": 191,
+        "meanNetBps": 2.5671035302555403,
+        "profitFactor": 1.0974514128637487,
+        "profitableTradeRate": 0.5120967741935484,
+        "weeklyLowerMeanBpsSum": -146.53544888163248,
+        "assetSumBps": {
+          "SPY": 253.45532131483915,
+          "QQQ": -8.483739339831349,
+          "IWM": 371.02679621906435,
+          "DIA": 183.66396068907864,
+          "AAPL": 1407.7079507323006,
+          "MSFT": 357.89867955686975,
+          "NVDA": -1338.7642874234703,
+          "TSLA": 683.4203447612724
+        },
+        "notPortfolioROI": true
+      },
+      "stress": {
+        "trades": 641,
+        "days": 183,
+        "meanNetBps": -4.3474090481396175,
+        "profitFactor": 0.8322906036556004,
+        "profitableTradeRate": 0.49297971918876754,
+        "weeklyLowerMeanBpsSum": -164.8144151818978,
+        "assetSumBps": {
+          "SPY": -322.87170451900533,
+          "QQQ": -133.2478200163172,
+          "IWM": -380.07626364792594,
+          "DIA": -309.9931767575554,
+          "AAPL": 1252.3437978744962,
+          "MSFT": -32.980981663490695,
+          "NVDA": -807.6596403269804,
+          "TSLA": -2052.203410800715
+        },
+        "notPortfolioROI": true
+      },
+      "descriptive_gate": false
+    },
+    "gap_fade_60": {
+      "base": {
+        "trades": 115,
+        "days": 57,
+        "meanNetBps": 6.789386810420716,
+        "profitFactor": 1.325628159924924,
+        "profitableTradeRate": 0.6173913043478261,
+        "weeklyLowerMeanBpsSum": -33.51278399398582,
+        "assetSumBps": {
+          "SPY": 33.6314894913749,
+          "QQQ": 293.94059958482984,
+          "IWM": -335.6316052371734,
+          "DIA": -141.9389583628037,
+          "AAPL": 520.7640155867587,
+          "MSFT": 299.00410853922864,
+          "NVDA": 265.43428836453484,
+          "TSLA": -154.4244547683673
+        },
+        "notPortfolioROI": true
+      },
+      "stress": {
+        "trades": 100,
+        "days": 45,
+        "meanNetBps": 9.682617650104019,
+        "profitFactor": 1.5566010691849093,
+        "profitableTradeRate": 0.6,
+        "weeklyLowerMeanBpsSum": -25.795520057177963,
+        "assetSumBps": {
+          "SPY": -96.5316283830536,
+          "QQQ": 183.3178338025222,
+          "IWM": -227.3667148142223,
+          "DIA": -188.5642158591355,
+          "AAPL": 394.91978425065804,
+          "MSFT": 418.99829276106186,
+          "NVDA": 241.13271636260723,
+          "TSLA": 242.35569688996404
+        },
+        "notPortfolioROI": true
+      },
+      "descriptive_gate": false
+    },
+    "overnight_control": {
+      "base": {
+        "trades": 1944,
+        "days": 243,
+        "meanNetBps": 2.845026750794759,
+        "profitFactor": 1.0724080679973007,
+        "profitableTradeRate": 0.551440329218107,
+        "weeklyLowerMeanBpsSum": -616.3355627730201,
+        "assetSumBps": {
+          "SPY": 566.2645529792442,
+          "QQQ": 1052.2683285933692,
+          "IWM": -219.45863430775685,
+          "DIA": -440.0455432056624,
+          "AAPL": -1360.9876482178943,
+          "MSFT": 223.8004467528861,
+          "NVDA": 3335.201401654955,
+          "TSLA": 2373.689099295871
+        },
+        "notPortfolioROI": true
+      },
+      "stress": {
+        "trades": 1944,
+        "days": 243,
+        "meanNetBps": 0.8446862811310701,
+        "profitFactor": 1.0210130244525075,
+        "profitableTradeRate": 0.5329218106995884,
+        "weeklyLowerMeanBpsSum": -687.1148120854825,
+        "assetSumBps": {
+          "SPY": 80.21155201680111,
+          "QQQ": 566.111535177251,
+          "IWM": -705.3549951753279,
+          "DIA": -925.893479633506,
+          "AAPL": -1846.6623833097824,
+          "MSFT": -262.188379943066,
+          "NVDA": 2848.583287028391,
+          "TSLA": 1887.2629943580419
+        },
+        "notPortfolioROI": true
+      },
+      "descriptive_gate": false
+    },
+    "intraday_control": {
+      "base": {
+        "trades": 1976,
+        "days": 247,
+        "meanNetBps": 1.900955885668515,
+        "profitFactor": 1.0471574403616537,
+        "profitableTradeRate": 0.5156882591093117,
+        "weeklyLowerMeanBpsSum": -343.3556380649568,
+        "assetSumBps": {
+          "SPY": -92.55978210657678,
+          "QQQ": -254.23576748940474,
+          "IWM": 486.1786580768744,
+          "DIA": -223.33576642231932,
+          "AAPL": -771.8293766621309,
+          "MSFT": -159.2282144943987,
+          "NVDA": 2583.4906766272493,
+          "TSLA": 2187.808402551685
+        },
+        "notPortfolioROI": true
+      },
+      "stress": {
+        "trades": 1976,
+        "days": 247,
+        "meanNetBps": 2.5380834089442534,
+        "profitFactor": 1.0740744403793783,
+        "profitableTradeRate": 0.5,
+        "weeklyLowerMeanBpsSum": -315.0729165440857,
+        "assetSumBps": {
+          "SPY": 103.92694870047043,
+          "QQQ": 211.69355592509075,
+          "IWM": 545.6451913888616,
+          "DIA": -225.69947723636335,
+          "AAPL": 467.0431999182046,
+          "MSFT": 595.006224812782,
+          "NVDA": 2160.5028265386754,
+          "TSLA": 1157.134346026127
+        },
+        "notPortfolioROI": true
+      },
+      "descriptive_gate": null
+    },
+    "buy_hold_daily_control": {
+      "base": {
+        "trades": 1944,
+        "days": 243,
+        "meanNetBps": 9.59487686384006,
+        "profitFactor": 1.1517908980126443,
+        "profitableTradeRate": 0.5462962962962963,
+        "weeklyLowerMeanBpsSum": -454.79651603188006,
+        "assetSumBps": {
+          "SPY": 1774.0237073691176,
+          "QQQ": 2078.3854493927697,
+          "IWM": 1592.0544810280076,
+          "DIA": 1521.3839197268328,
+          "AAPL": 1507.743377293418,
+          "MSFT": 1609.485457914707,
+          "NVDA": 4077.9859531859224,
+          "TSLA": 4491.378277394307
+        },
+        "notPortfolioROI": true
+      },
+      "stress": {
+        "trades": 1944,
+        "days": 243,
+        "meanNetBps": 9.59487686384006,
+        "profitFactor": 1.1517908980126443,
+        "profitableTradeRate": 0.5462962962962963,
+        "weeklyLowerMeanBpsSum": -454.79651603188006,
+        "assetSumBps": {
+          "SPY": 1774.0237073691176,
+          "QQQ": 2078.3854493927697,
+          "IWM": 1592.0544810280076,
+          "DIA": 1521.3839197268328,
+          "AAPL": 1507.743377293418,
+          "MSFT": 1609.485457914707,
+          "NVDA": 4077.9859531859224,
+          "TSLA": 4491.378277394307
+        },
+        "notPortfolioROI": true
+      },
+      "descriptive_gate": null
+    }
+  },
+  "2026": {
+    "opening_range_60": {
+      "base": {
+        "trades": 588,
+        "days": 159,
+        "meanNetBps": -5.181694085043645,
+        "profitFactor": 0.7930333268778494,
+        "profitableTradeRate": 0.44727891156462585,
+        "weeklyLowerMeanBpsSum": -166.80971653309064,
+        "assetSumBps": {
+          "SPY": -406.5752627681256,
+          "QQQ": -434.6462303231309,
+          "IWM": -710.7278449457107,
+          "DIA": -291.7080456023137,
+          "AAPL": -24.977402475138533,
+          "MSFT": -388.8143793184915,
+          "NVDA": -686.591881012118,
+          "TSLA": -102.79507556063417
+        },
+        "notPortfolioROI": true
+      },
+      "stress": {
+        "trades": 539,
+        "days": 155,
+        "meanNetBps": -7.495271311974886,
+        "profitFactor": 0.6723767763024849,
+        "profitableTradeRate": 0.4397031539888683,
+        "weeklyLowerMeanBpsSum": -178.60941202208852,
+        "assetSumBps": {
+          "SPY": -505.9647655912037,
+          "QQQ": -545.3275393157463,
+          "IWM": -533.7239185290174,
+          "DIA": -294.51135613106993,
+          "AAPL": -89.92359555049299,
+          "MSFT": -512.0485895151127,
+          "NVDA": -847.6710123499839,
+          "TSLA": -710.7804601718373
+        },
+        "notPortfolioROI": true
+      },
+      "descriptive_gate": false
+    },
+    "gap_fade_60": {
+      "base": {
+        "trades": 116,
+        "days": 62,
+        "meanNetBps": -3.7627478114808626,
+        "profitFactor": 0.8653622869501371,
+        "profitableTradeRate": 0.5086206896551724,
+        "weeklyLowerMeanBpsSum": -58.42112392861141,
+        "assetSumBps": {
+          "SPY": -125.40572482850432,
+          "QQQ": 92.11822531254614,
+          "IWM": -82.79102884845395,
+          "DIA": 55.39506883580448,
+          "AAPL": 80.4755388310762,
+          "MSFT": 41.182404735849445,
+          "NVDA": -263.3965037726769,
+          "TSLA": -234.05672639742113
+        },
+        "notPortfolioROI": true
+      },
+      "stress": {
+        "trades": 87,
+        "days": 53,
+        "meanNetBps": -2.751178085704402,
+        "profitFactor": 0.8869906360629073,
+        "profitableTradeRate": 0.4367816091954023,
+        "weeklyLowerMeanBpsSum": -48.721993207802605,
+        "assetSumBps": {
+          "SPY": -157.02670422941011,
+          "QQQ": -67.07254218946201,
+          "IWM": -160.0478646225166,
+          "DIA": -23.068288860471576,
+          "AAPL": 81.1426790854554,
+          "MSFT": 79.21246685429638,
+          "NVDA": -190.95346502725897,
+          "TSLA": 198.4612255330845
+        },
+        "notPortfolioROI": true
+      },
+      "descriptive_gate": false
+    },
+    "overnight_control": {
+      "base": {
+        "trades": 1640,
+        "days": 205,
+        "meanNetBps": 2.493601224455266,
+        "profitFactor": 1.0724491341448343,
+        "profitableTradeRate": 0.5286585365853659,
+        "weeklyLowerMeanBpsSum": -247.34008898467957,
+        "assetSumBps": {
+          "SPY": 496.5333113865463,
+          "QQQ": 347.3400337091327,
+          "IWM": 738.1105849096706,
+          "DIA": 810.9974144255672,
+          "AAPL": 12.093611805761427,
+          "MSFT": 520.4292481159666,
+          "NVDA": 3265.5328916682065,
+          "TSLA": -2101.531087914213
+        },
+        "notPortfolioROI": true
+      },
+      "stress": {
+        "trades": 1640,
+        "days": 205,
+        "meanNetBps": 0.4933271123452317,
+        "profitFactor": 1.0139477045617271,
+        "profitableTradeRate": 0.5146341463414634,
+        "weeklyLowerMeanBpsSum": -321.4460431953266,
+        "assetSumBps": {
+          "SPY": 86.48277199608187,
+          "QQQ": -62.685040493819,
+          "IWM": 328.0107175953711,
+          "DIA": 400.8873028193501,
+          "AAPL": -397.8651018458135,
+          "MSFT": 110.37247696183671,
+          "NVDA": 2854.923173225724,
+          "TSLA": -2511.0698360125516
+        },
+        "notPortfolioROI": true
+      },
+      "descriptive_gate": false
+    },
+    "intraday_control": {
+      "base": {
+        "trades": 1656,
+        "days": 207,
+        "meanNetBps": -0.7944820108437713,
+        "profitFactor": 0.975811291808894,
+        "profitableTradeRate": 0.4891304347826087,
+        "weeklyLowerMeanBpsSum": -404.95505323955246,
+        "assetSumBps": {
+          "SPY": -348.09583919245216,
+          "QQQ": 90.6043832205435,
+          "IWM": 126.57618180737288,
+          "DIA": -550.0757552336754,
+          "AAPL": -296.2000998857888,
+          "MSFT": -20.570010567959443,
+          "NVDA": -979.7372098069003,
+          "TSLA": 661.8361397015748
+        },
+        "notPortfolioROI": true
+      },
+      "stress": {
+        "trades": 1656,
+        "days": 207,
+        "meanNetBps": -6.070995172098427,
+        "profitFactor": 0.797387567869709,
+        "profitableTradeRate": 0.4607487922705314,
+        "weeklyLowerMeanBpsSum": -565.3699467639988,
+        "assetSumBps": {
+          "SPY": -1170.2768756613025,
+          "QQQ": -986.2315605005665,
+          "IWM": -488.9153133815535,
+          "DIA": -1174.43225635072,
+          "AAPL": -1400.530976113492,
+          "MSFT": -1297.8423484452912,
+          "NVDA": -1906.520077976878,
+          "TSLA": -1628.8185965651921
+        },
+        "notPortfolioROI": true
+      },
+      "descriptive_gate": null
+    },
+    "buy_hold_daily_control": {
+      "base": {
+        "trades": 1640,
+        "days": 205,
+        "meanNetBps": 6.8248697541578,
+        "profitFactor": 1.118008054802555,
+        "profitableTradeRate": 0.5231707317073171,
+        "weeklyLowerMeanBpsSum": -323.0746891590549,
+        "assetSumBps": {
+          "SPY": 1220.9581075058395,
+          "QQQ": 1607.5255797357818,
+          "IWM": 1378.7244610608504,
+          "DIA": 804.0489442508042,
+          "AAPL": 2273.408786886998,
+          "MSFT": 2052.2661801176246,
+          "NVDA": 2057.4854480974004,
+          "TSLA": -201.63111083650034
+        },
+        "notPortfolioROI": true
+      },
+      "stress": {
+        "trades": 1640,
+        "days": 205,
+        "meanNetBps": 6.8248697541578,
+        "profitFactor": 1.118008054802555,
+        "profitableTradeRate": 0.5231707317073171,
+        "weeklyLowerMeanBpsSum": -323.0746891590549,
+        "assetSumBps": {
+          "SPY": 1220.9581075058395,
+          "QQQ": 1607.5255797357818,
+          "IWM": 1378.7244610608504,
+          "DIA": 804.0489442508042,
+          "AAPL": 2273.408786886998,
+          "MSFT": 2052.2661801176246,
+          "NVDA": 2057.4854480974004,
+          "TSLA": -201.63111083650034
+        },
+        "notPortfolioROI": true
+      },
+      "descriptive_gate": null
+    }
+  }
+}
