@@ -48,6 +48,12 @@ class JoinedTrainerTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "invalid forward label interval"):
             evaluate(doc, 300)
 
+    def test_all_missing_social_metrics_are_excluded_without_imputation(self):
+        report = evaluate(fixture(), 300)
+        self.assertIn("social_unique_authors", report["excluded_unobserved_features"])
+        self.assertIn("social_sampled_posts", report["excluded_unobserved_features"])
+        self.assertNotIn("social_unique_authors", report["feature_names"])
+
     def test_future_outcome_is_not_a_feature(self):
         doc = fixture()
         self.assertNotIn("future_return_proxy", doc["rows"][0]["features"])
