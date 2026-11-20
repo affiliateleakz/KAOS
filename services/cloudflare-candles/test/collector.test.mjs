@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
 import {validateMarkets,closedBars,storeBars,objectKey,runScheduled,recordRunStatus,providerBars} from "../src/index.mjs";
 
 const market={symbol:"AAPL",asset_class:"stock",seconds:60};
@@ -112,4 +113,37 @@ test("diagnostic status includes count of skipped Coinbase revisions",async()=>{
   const status=JSON.parse(b.mem.get("status/last-run.json"));
   assert.equal(status.results[0].revisionsSkipped,7);
   assert.equal(status.results[0].newBars,3);
+});
+
+test("production market configuration tracks 12 stocks/ETFs and 8 crypto",()=>{
+  const config=JSON.parse(readFileSync(new URL("../../../wrangler.jsonc",import.meta.url),"utf8"));
+  const markets=validateMarkets(JSON.parse(config.vars.MARKETS_JSON));
+  assert.equal(markets.length,20);
+  assert.equal(markets.filter(m=>m.asset_class==="crypto").length,8);
+  assert.equal(markets.filter(m=>["stock","etf"].includes(m.asset_class)).length,12);
+  assert.equal(new Set(markets.map(m=>m.symbol)).size,20);
+  const nested=JSON.parse(readFileSync(new URL("../wrangler.jsonc",import.meta.url),"utf8"));
+  assert.equal(config.vars.MARKETS_JSON,nested.vars.MARKETS_JSON);
+});
+
+test("20-market cycle bounds concurrent feed requests to three",async()=>{
+  const b=bucket();
+  const markets=JSON.parse(readFileSync(new URL("../../../wrangler.jsonc",import.meta.url),"utf8")).vars.MARKETS_JSON;
+  let active=0,maximum=0;
+  const seen=[];
+  const fetcher=async market=>{
+    active++;maximum=Math.max(maximum,active);
+    seen.push(market.symbol);
+    await new Promise(resolve=>setTimeout(resolve,2));
+    active--;
+    return {source:market.asset_class==="crypto"?"coinbase_exchange_public":"alpaca_iex",bars:[sample(0)]};
+  };
+  const result=await runScheduled({CANDLE_ARCHIVE:b,MARKETS_JSON:markets},{
+    nowMs:START+2*60000,fetcher
+  });
+  assert.equal(result.ok,20);
+  assert.equal(result.errors,0);
+  assert.equal(seen.length,20);
+  assert.equal(maximum,3);
+  assert.deepEqual(result.results.map(x=>x.market),JSON.parse(markets).map(x=>x.symbol));
 });
