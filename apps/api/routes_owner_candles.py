@@ -85,3 +85,44 @@ async def validate_direction(symbol:str=Query(pattern=r"^[A-Z0-9_-]{2,32}$"),
                                 observations=observations)
     except (ValueError,TypeError) as exc:
         raise HTTPException(422,str(exc)) from exc
+
+
+@router.get("/evaluate-multifactor")
+async def evaluate_multifactor(symbol:str=Query(pattern=r"^[A-Z0-9_-]{2,32}$"),
+                               asset_class:str=Query("crypto",pattern="^(crypto|stock|forex)$"),
+                               seconds:int=Query(60),
+                               horizon:int=Query(5,ge=1,le=30),
+                               fee_bps:float=Query(10.0,ge=0,le=250),
+                               user=Depends(owner)):
+    """Owner-only offline fitted baseline on existing single-source archives.
+
+    Returns held-out descriptive metrics, never a trained production model.
+    Bounded query; no model weights persisted and no quote/broker network call.
+    """
+    if seconds not in (60,300,900):
+        raise HTTPException(422,"Unsupported timeframe")
+    rows=await db.kaos_research_candles.find(
+        {"symbol":symbol,"asset_class":asset_class,"seconds":seconds},
+        {"_id":0}).sort("ts",-1).limit(5000).to_list(5000)
+    rows.reverse()
+    if not rows:
+        return {"status":"insufficient_point_in_time_training_data","samples":0,
+                "research_only":True,"model_trained":False,"options_validated":False}
+    sources={r.get("source") for r in rows}
+    if len(sources)!=1 or not all(sources):
+        raise HTTPException(409,"Mixed or missing candle providers: model requires one source")
+    from datetime import datetime,timezone,timedelta
+    cutoff=(datetime.fromtimestamp(rows[0]["ts"]/1000,timezone.utc)-
+            timedelta(days=7)).isoformat()
+    evidence=await db.kaos_intelligence.find(
+        {"asset":symbol,"asset_class":asset_class,"observed_at":{"$gte":cutoff}},
+        {"_id":0,"asset":1,"asset_class":1,"event_id":1,"source":1,
+         "observed_at":1,"published_at":1,"strength":1,"direction":1}
+    ).sort("observed_at",1).limit(5000).to_list(5000)
+    from kaos_multifactor_baseline import evaluate
+    try:
+        return evaluate(rows,evidence,symbol=symbol,asset_class=asset_class,
+                        seconds=seconds,source=next(iter(sources)),
+                        horizon=horizon,cost_bps=fee_bps)
+    except (ValueError,TypeError,OverflowError) as exc:
+        raise HTTPException(422,str(exc)) from exc
