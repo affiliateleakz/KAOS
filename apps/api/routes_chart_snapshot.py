@@ -178,7 +178,16 @@ async def patterns_scan(symbol:str,seconds:int=60,asset_class:str="crypto",
         raise HTTPException(422,str(exc))
     decorated=[{**m, "end_ms":segment[m["index"]]["ts"]+interval_ms}
                for m in matches]
-    return {"status":"research_only","patterns":decorated,"symbol":symbol,
+    chart_start=max(0,len(segment)-60)
+    chart_bars=[{"ts":b["ts"],"open":b["open"],"high":b["high"],
+                 "low":b["low"],"close":b["close"]} for b in segment[chart_start:]]
+    visual_patterns=[{**m, "start_index":m["start_index"]-chart_start,
+                      "index":m["index"]-chart_start}
+                     for m in decorated if m["index"]>=chart_start
+                     and m["start_index"]>=chart_start]
+    return {"status":"research_only","patterns":decorated,
+            "chart_bars":chart_bars,"visual_patterns":visual_patterns,
+            "symbol":symbol,
             "seconds":seconds,"asset_class":asset_class,"source":source,
             "history_count":len(segment),
             "note":"Rules use completed candles. Pattern names do not imply predictive accuracy or trade authorization."}
