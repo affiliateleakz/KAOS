@@ -287,3 +287,27 @@ async def approve_prediction_candidate(model_digest:str=Query(pattern=r"^[0-9a-f
     return {"status":"experimental_research_model_approved","key":key,
             "model_digest":model_digest,"orders_enabled":False,
             "note":"Approval enables advisory experiments only; never live options or order execution"}
+
+
+@router.get("/r2-status")
+async def r2_archive_status(symbol:str=Query("BTC-USD",pattern=r"^[A-Z0-9_.-]{2,32}$"),
+                            asset_class:str=Query("crypto",pattern="^(crypto|stock|etf|forex)$"),
+                            seconds:int=Query(60),
+                            user=Depends(owner)):
+    """Private end-to-end R2 read smoke test. Never returns credentials."""
+    from kaos_r2_archive import configured,read_archive,ArchiveUnavailable
+    if not configured():
+        return {"status":"not_configured","r2_connected":False,
+                "reason":"Set KAOS_R2_ENABLED=true and private R2 S3 credentials on KAOS API"}
+    try:
+        rows,source=await read_archive(symbol,asset_class,seconds,limit=300)
+    except ValueError as exc:
+        raise HTTPException(422,str(exc)) from exc
+    except ArchiveUnavailable:
+        return {"status":"read_failed","r2_connected":False,
+                "reason":"R2 credentials, bucket permissions or read availability need checking"}
+    return {"status":"archive_readable" if rows else "archive_empty",
+            "r2_connected":True,"source":source,"symbol":symbol,
+            "asset_class":asset_class,"seconds":seconds,
+            "closed_bars":len(rows),"last_ts":rows[-1]["ts"] if rows else None,
+            "research_only":True,"orders_enabled":False}
