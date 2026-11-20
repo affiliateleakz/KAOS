@@ -12,6 +12,33 @@ from pathlib import Path
 HORIZONS = (5, 30, 300, 3600, 14400, 86400)
 SOURCES = frozenset(("news", "social"))
 WINDOW_MS = 3_600_000
+# Deliberately narrow legacy mapping: these archived Bluesky cashtags were
+# labelled "stock" by the collector even when referring to crypto. Never infer
+# arbitrary crypto pairs, exchange aliases, or source-independent symbols.
+CRYPTO_BLUESKY_ALIASES = {
+    "BTC-USD": "BTC",
+    "ETH-USD": "ETH",
+    "SOL-USD": "SOL",
+}
+LEGACY_BLUESKY_PREFIXES = ("bsky-search:", "bsky-social:")
+
+
+def matching_asset(row, symbol, asset_class):
+    if row.get("asset") == symbol and row.get("asset_class") == asset_class:
+        return True
+    alias = CRYPTO_BLUESKY_ALIASES.get(symbol) if asset_class == "crypto" else None
+    event_id = row.get("event_id")
+    return (
+        bool(alias) and row.get("source") == "social" and
+        row.get("asset") == alias and row.get("asset_class") == "stock" and
+        isinstance(event_id, str) and event_id.startswith(LEGACY_BLUESKY_PREFIXES) and
+        (row.get("sample_metrics") is None or (
+            isinstance(row["sample_metrics"], dict) and
+            row["sample_metrics"].get("provider") in
+            ("bluesky_search", "bluesky_monitored_accounts")
+        ))
+    )
+
 
 
 def timestamp_ms(raw):
@@ -37,7 +64,7 @@ def normalized_observations(export, symbol, asset_class):
         if not isinstance(row, dict):
             ignored["invalid"] += 1
             continue
-        if row.get("asset") != symbol or row.get("asset_class") != asset_class:
+        if not matching_asset(row, symbol, asset_class):
             ignored["mismatched_asset"] += 1
             continue
         source, event = row.get("source"), row.get("event_id")
