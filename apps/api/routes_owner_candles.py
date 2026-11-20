@@ -28,13 +28,25 @@ async def status(user=Depends(owner)):
 
 @router.get("/export")
 async def export(symbol:str=Query(pattern=r"^[A-Z0-9_-]{2,32}$"),
-                 asset_class:str=Query("crypto",pattern="^(crypto|stock|forex)$"),
+                 asset_class:str=Query("crypto",pattern="^(crypto|stock|etf|forex)$"),
                  seconds:int=Query(60),limit:int=Query(1000,ge=1,le=5000),
                  user=Depends(owner)):
     if seconds not in (60,300,900):raise HTTPException(422,"Unsupported timeframe")
     query={"symbol":symbol,"seconds":seconds,"asset_class":asset_class}
     docs=await db.kaos_research_candles.find(query,{"_id":0}).sort("ts",-1).limit(limit).to_list(length=limit)
-    return {"symbol":symbol,"asset_class":asset_class,"seconds":seconds,"candles":list(reversed(docs)),
+    rows=list(reversed(docs))
+    origin="mongo_continuous_archive"
+    from kaos_r2_archive import read_archive, configured, ArchiveUnavailable
+    if configured() and len(rows)<limit:
+        try:
+            r2_rows,_=await read_archive(symbol,asset_class,seconds,limit=max(limit,100))
+        except ArchiveUnavailable as exc:
+            raise HTTPException(503,"Private R2 archive unavailable") from exc
+        if len(r2_rows)>len(rows):
+            rows=r2_rows[-limit:]
+            origin="cloudflare_r2_private_archive"
+    return {"symbol":symbol,"asset_class":asset_class,"seconds":seconds,"candles":rows,
+            "candle_origin":origin,
             "source":"Per-candle provider identifiers in each record","research_only":True}
 
 
