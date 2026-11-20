@@ -15,6 +15,25 @@ def require_owner(user):
 async def owner(user=Depends(get_current_user)):
     return require_owner(user)
 
+async def research_rows(symbol,asset_class,seconds,limit=5000):
+    """Prefer a larger private R2 archive when Mongo candle mirroring is absent."""
+    rows=await db.kaos_research_candles.find(
+        {"symbol":symbol,"asset_class":asset_class,"seconds":seconds},
+        {"_id":0}).sort("ts",-1).limit(limit).to_list(limit)
+    rows.reverse()
+    origin="mongo_continuous_archive"
+    if len(rows)<max(100,min(500,limit)):
+        from kaos_r2_archive import read_archive, ArchiveUnavailable
+        try:
+            r2_rows,_=await read_archive(symbol,asset_class,seconds,
+                                         limit=max(100,limit))
+        except ArchiveUnavailable as exc:
+            raise HTTPException(503,"Private R2 archive unavailable to KAOS research") from exc
+        if len(r2_rows)>len(rows):
+            rows=r2_rows[-limit:]
+            origin="cloudflare_r2_private_archive"
+    return rows,origin
+
 @router.get("/status")
 async def status(user=Depends(owner)):
     state=await db.kaos_candle_collector_state.find_one({"_id":"coinbase_worker"},{"_id":0})
@@ -44,9 +63,9 @@ async def export(symbol:str=Query(pattern=r"^[A-Z0-9_-]{2,32}$"),
                  seconds:int=Query(60),limit:int=Query(1000,ge=1,le=5000),
                  user=Depends(owner)):
     if seconds not in (60,300,900):raise HTTPException(422,"Unsupported timeframe")
-    query={"symbol":symbol,"seconds":seconds,"asset_class":asset_class}
-    docs=await db.kaos_research_candles.find(query,{"_id":0}).sort("ts",-1).limit(limit).to_list(length=limit)
-    return {"symbol":symbol,"asset_class":asset_class,"seconds":seconds,"candles":list(reversed(docs)),
+    rows,origin=await research_rows(symbol,asset_class,seconds,limit=limit)
+    return {"symbol":symbol,"asset_class":asset_class,"seconds":seconds,"candles":rows,
+            "candle_origin":origin,
             "source":"Per-candle provider identifiers in each record","research_only":True}
 
 
@@ -64,10 +83,7 @@ async def validate_direction(symbol:str=Query(pattern=r"^[A-Z0-9_-]{2,32}$"),
     """
     if seconds not in (60,300,900):
         raise HTTPException(422,"Unsupported timeframe")
-    rows=await db.kaos_research_candles.find(
-        {"symbol":symbol,"asset_class":asset_class,"seconds":seconds},
-        {"_id":0}).sort("ts",-1).limit(5000).to_list(length=5000)
-    rows.reverse()
+    rows,_=await research_rows(symbol,asset_class,seconds,limit=5000)
     if not rows:
         return {"status":"insufficient_archived_history","decision_count":0,
                 "research_only":True,"options_validated":False,
@@ -113,10 +129,7 @@ async def evaluate_multifactor(symbol:str=Query(pattern=r"^[A-Z0-9_-]{2,32}$"),
     """
     if seconds not in (60,300,900):
         raise HTTPException(422,"Unsupported timeframe")
-    rows=await db.kaos_research_candles.find(
-        {"symbol":symbol,"asset_class":asset_class,"seconds":seconds},
-        {"_id":0}).sort("ts",-1).limit(5000).to_list(5000)
-    rows.reverse()
+    rows,_=await research_rows(symbol,asset_class,seconds,limit=5000)
     if not rows:
         return {"status":"insufficient_point_in_time_training_data","samples":0,
                 "research_only":True,"model_trained":False,"options_validated":False}
@@ -150,10 +163,7 @@ async def walk_forward_research(symbol:str=Query(pattern=r"^[A-Z0-9_-]{2,32}$"),
     """Owner-only multi-period offline evaluation, no persisted weights/orders."""
     if seconds not in (60,300,900):
         raise HTTPException(422,"Unsupported interval")
-    rows=await db.kaos_research_candles.find(
-        {"symbol":symbol,"asset_class":asset_class,"seconds":seconds},
-        {"_id":0}).sort("ts",-1).limit(5000).to_list(5000)
-    rows.reverse()
+    rows,_=await research_rows(symbol,asset_class,seconds,limit=5000)
     if not rows:
         return {"status":"insufficient_walk_forward_history","samples":0,
                 "research_only":True,"orders_enabled":False}
@@ -185,10 +195,7 @@ async def archive_readiness(symbol:str=Query(pattern=r"^[A-Z0-9_-]{2,32}$"),
     """Owner-only market archive readiness and evidence coverage diagnosis."""
     if seconds not in (60,300,900):
         raise HTTPException(422,"Unsupported timeframe")
-    candles=await db.kaos_research_candles.find(
-        {"symbol":symbol,"asset_class":asset_class,"seconds":seconds},
-        {"_id":0}).sort("ts",-1).limit(5000).to_list(5000)
-    candles.reverse()
+    candles,_=await research_rows(symbol,asset_class,seconds,limit=5000)
     from datetime import datetime,timezone,timedelta
     lower=(datetime.fromtimestamp(candles[0]["ts"]/1000,timezone.utc)-
            timedelta(days=7)).isoformat() if candles else (
@@ -215,25 +222,7 @@ async def build_prediction_candidate(symbol:str=Query(pattern=r"^[A-Z0-9_-]{2,32
     """Owner-only fit and research screening; never activate on training."""
     if seconds not in (60,300,900):
         raise HTTPException(422,"Unsupported timeframe")
-    rows=await db.kaos_research_candles.find(
-        {"symbol":symbol,"asset_class":asset_class,"seconds":seconds},
-        {"_id":0}).sort("ts",-1).limit(5000).to_list(5000)
-    rows.reverse()
-    source_origin="mongo_continuous_archive"
-    if len(rows)<500:
-        # The R2 archive is the canonical candle store for the Cloudflare
-        # collector; use it directly if Mongo was not mirrored.
-        from kaos_r2_archive import read_archive, ArchiveUnavailable
-        try:
-            r2_rows,r2_source=await read_archive(
-                symbol,asset_class,seconds,limit=5000)
-        except ArchiveUnavailable:
-            return {"status":"r2_archive_unavailable","candidate":None,
-                    "reason":"Cloudflare R2 archive unavailable to research API",
-                    "orders_enabled":False}
-        if len(r2_rows)>len(rows):
-            rows=r2_rows
-            source_origin="cloudflare_r2_private_archive"
+    rows,source_origin=await research_rows(symbol,asset_class,seconds,limit=5000)
     sources={r.get("source") for r in rows}
     if len(sources)!=1 or not all(sources):
         return {"status":"insufficient_data","candidate":None,
