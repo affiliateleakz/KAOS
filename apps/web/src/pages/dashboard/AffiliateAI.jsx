@@ -5,6 +5,7 @@ import { Button } from "../../components/ui/button";
 import { Switch } from "../../components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 import { toast } from "sonner";
+import ChartSnapshotAnalyzer from "./ChartSnapshotAnalyzer";
 import { Copy, Brain, Share2, TrendingUp, Trophy } from "lucide-react";
 
 const H = ({ children }) => <h1 className="mb-6 font-heading text-2xl font-bold tracking-wide">{children}</h1>;
@@ -155,6 +156,7 @@ export function AIPage() {
         <Stat l="Real Samples" v={d.realSamples} /><Stat l="Paper Samples" v={d.paperSamples} />
         <div className="card-surface p-5"><div className="label-mono">Collective Learning</div><div className="mt-2"><StatusBadge value={d.consent ? "ACTIVE" : "NOT_STARTED"} /></div></div>
       </div>
+      <ChartSnapshotAnalyzer />
       <div className="card-surface mt-6 p-5">
         <div className="flex items-center justify-between">
           <div><h3 className="font-heading font-semibold">KAOS Collective Learning</h3>
