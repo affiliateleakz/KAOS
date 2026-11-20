@@ -12,6 +12,7 @@ from auth import get_current_user
 from db import db
 from services_trading import get_entitlements
 from kaos_chart_similarity import compare, PATTERN_TAGS
+from kaos_candlestick_patterns import scan as scan_classic_patterns, catalog as classic_catalog
 
 router = APIRouter(prefix="/api/v1/ai/chart-snapshot", tags=["chart-research"])
 VALID_MARKET = re.compile(r"^[A-Z0-9_.-]{2,32}$")
@@ -137,3 +138,47 @@ async def similar(symbol:str, seconds:int=60, asset_class:str="crypto",
             "lookback_bars":lookback,"horizon_bars":horizon,
             "source":source,"archive_candles":len(rows),
             "note":"Historical pattern analogs, not a validated AI forecast or execution-ready signal."}
+
+
+@router.get("/patterns/catalog")
+async def patterns_catalog(user=Depends(permission)):
+    """Show documented 50 names without pretending that all are implemented."""
+    return {"research_only":True, "patterns":classic_catalog(),
+            "note":"Heuristic detection is not a verified directional prediction."}
+
+
+@router.get("/patterns/scan")
+async def patterns_scan(symbol:str,seconds:int=60,asset_class:str="crypto",
+                        user=Depends(permission)):
+    if not VALID_MARKET.fullmatch(symbol) or asset_class not in ("crypto","stock","forex"):
+        raise HTTPException(422,"Invalid market or asset class")
+    if seconds not in (60,300,900):
+        raise HTTPException(422,"Unsupported archived candle interval")
+    rows=await db.kaos_research_candles.find(
+        {"symbol":symbol,"asset_class":asset_class,"seconds":seconds},
+        {"_id":0}).sort("ts",-1).limit(300).to_list(300)
+    rows.reverse()
+    if not rows:
+        return {"status":"unavailable","patterns":[],"reason":"No historical candles available",
+                "research_only":True}
+    source=rows[-1].get("source")
+    rows=[r for r in rows if r.get("source")==source]
+    interval_ms=seconds*1000
+    # Do not run across missing bars; use only final contiguous segment.
+    start=len(rows)-1
+    while start>0 and rows[start]["ts"]-rows[start-1]["ts"]==interval_ms:
+        start-=1
+    segment=rows[start:]
+    if len(segment)<5:
+        return {"status":"unavailable","patterns":[],
+                "reason":"Insufficient contiguous historical candles","research_only":True}
+    try:
+        matches=scan_classic_patterns(segment,max_patterns=40)
+    except ValueError as exc:
+        raise HTTPException(422,str(exc))
+    decorated=[{**m, "end_ms":segment[m["index"]]["ts"]+interval_ms}
+               for m in matches]
+    return {"status":"research_only","patterns":decorated,"symbol":symbol,
+            "seconds":seconds,"asset_class":asset_class,"source":source,
+            "history_count":len(segment),
+            "note":"Rules use completed candles. Pattern names do not imply predictive accuracy or trade authorization."}
