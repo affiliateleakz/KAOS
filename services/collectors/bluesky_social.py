@@ -92,7 +92,7 @@ def observe_accounts(feed_map, symbols, now=None):
                  'NOT total platform mentions, acceleration, verified sentiment, buying, or a trading signal.')
         out.append({'asset': ticker, 'asset_class':'stock', 'source':'social',
                     'direction':'neutral', 'strength':min(.35, .10 + .02*author_count),
-                    'event_id':'bsky-social:'+ticker+':'+now.strftime('%Y%m%d%H'),
+                    'event_id':'bsky-social:'+ticker+':'+now.strftime('%Y%m%d%H%M'),
                     'observed_at':now.isoformat(), 'published_at':latest[1].isoformat(),
                     'source_url':latest[2], 'summary':summary[:1200],
                     'sample_metrics': {
