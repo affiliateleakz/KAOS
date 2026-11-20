@@ -255,7 +255,7 @@ async def approve_prediction_candidate(model_digest:str=Query(pattern=r"^[0-9a-f
         {"$set":{"approved":True,"approved_by":str(user["id"]),
                  "approved_at":datetime.now(timezone.utc).isoformat(),
                  "model_digest":model_digest,
-                 "artifact":{k:v for k,v in candidate.items() if k not in ("_id","owner_id")}}},
+                 "artifact":{**{k:v for k,v in candidate.items() if k not in ("_id","owner_id")},"approved":True}}},
         upsert=True)
     return {"status":"experimental_research_model_approved","key":key,
             "model_digest":model_digest,"orders_enabled":False,
