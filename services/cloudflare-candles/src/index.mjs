@@ -34,7 +34,10 @@ export function validateMarkets(value) {
 
 async function jsonFetch(url,headers={}) {
   const response=await fetch(url,{headers:{...HEADERS,...headers},
-    redirect:"error",signal:AbortSignal.timeout(12000)});
+    // Cloudflare Workers does not implement redirect: "error".
+    // Manual handling also ensures credentials are never forwarded on redirects.
+    redirect:"manual",signal:AbortSignal.timeout(12000)});
+  if(response.status>=300 && response.status<400)throw Error(`feed_redirect_${response.status}`);
   if(!response.ok)throw Error(`feed_http_${response.status}`);
   const obj=await response.json();
   if(!obj)throw Error("empty_feed_response");
