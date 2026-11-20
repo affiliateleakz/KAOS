@@ -62,6 +62,35 @@ class IntelligencePipelineTests(unittest.TestCase):
         results = build(candles(), {"observations": [foreign]}, (300,))
         self.assertEqual(results["observation_count"], 0)
 
+    def test_structured_sample_count_only_after_collector_observed(self):
+        event = observed("social", 80)
+        event["sample_metrics"] = {
+            "provider": "bluesky_search", "sampled_posts": 12,
+            "sampled_unique_authors": 8, "previous_hour_posts": 3,
+            "previous_hour_unique_authors": 3, "search_results_inspected": 60,
+            "search_limit": 100,
+            "coverage": "bounded_search_sample_not_platform_total",
+        }
+        output = build(candles(), {"observations": [event]}, (300,))
+        before = next(r for r in output["rows"] if r["decision_ms"] == MS+50*60000)
+        after = next(r for r in output["rows"] if r["decision_ms"] == MS+81*60000)
+        self.assertIsNone(before["features"]["social_sampled_posts"])
+        self.assertIsNone(before["features"]["social_unique_authors"])
+        self.assertEqual(after["features"]["social_sampled_posts"], 12)
+        self.assertEqual(after["features"]["social_unique_authors"], 8)
+        self.assertEqual(after["features"]["social_sampled_post_change"], 9)
+
+    def test_inconsistent_sample_author_count_rejected(self):
+        event = observed("social", 30)
+        event["sample_metrics"] = {
+            "provider": "bluesky_search", "sampled_posts": 1,
+            "sampled_unique_authors": 12,
+            "coverage": "bounded_search_sample_not_platform_total",
+        }
+        output = build(candles(), {"observations": [event]}, (300,))
+        self.assertEqual(output["observation_count"], 0)
+        self.assertEqual(output["ignored_observations"]["invalid"], 1)
+
     def test_unknown_sentiment_is_not_invented(self):
         result = build(candles(), {"observations": [observed("social", 30)]}, (300,))
         self.assertIsNone(result["rows"][0]["features"]["social_sentiment"])
