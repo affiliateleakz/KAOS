@@ -56,8 +56,22 @@ def normalized_observations(export, symbol, asset_class):
             ignored["duplicate"] += 1
             if observed >= by_identity[key]["observed_ms"]:
                 continue
+        metrics = row.get("sample_metrics") if source == "social" else None
+        if metrics is not None:
+            if (not isinstance(metrics, dict) or
+                metrics.get("provider") not in ("bluesky_search", "bluesky_monitored_accounts") or
+                metrics.get("coverage") not in (
+                    "bounded_search_sample_not_platform_total",
+                    "bounded_monitored_accounts_not_platform_total"
+                ) or
+                any(type(metrics.get(k)) is not int or not 0 <= metrics[k] <= 100
+                    for k in ("sampled_posts", "sampled_unique_authors")) or
+                metrics["sampled_unique_authors"] > metrics["sampled_posts"]):
+                ignored["invalid"] += 1
+                continue
         by_identity[key] = {
             "source": source, "event_id": event, "observed_ms": observed,
+            "sample_metrics": metrics,
             # Existing source direction is a research heuristic, not measured sentiment.
         }
     return sorted(by_identity.values(), key=lambda x: x["observed_ms"]), ignored
@@ -97,6 +111,8 @@ def build(candles_export, intelligence_export, horizons=(300, 3600)):
             raise ValueError("invalid OHLC")
     observations, ignored = normalized_observations(intelligence_export, symbol, asset_class)
     event_times = {source: [o["observed_ms"] for o in observations if o["source"] == source] for source in SOURCES}
+    social_snapshots = [o for o in observations if o["source"] == "social" and o.get("sample_metrics")]
+    snapshot_times = [o["observed_ms"] for o in social_snapshots]
     interval_ms = seconds * 1000
     horizons = tuple(horizons)
     if not horizons or any(type(h) is not int or h < seconds or h % seconds or h not in HORIZONS for h in horizons):
@@ -134,6 +150,26 @@ def build(candles_export, intelligence_export, horizons=(300, 3600)):
             # Explicitly NULL when no provider has supplied auditable distinct
             # author counts or text-sentiment analysis.
             features["social_unique_authors"] = None
+            features["social_sampled_posts"] = None
+            features["social_sampled_previous_hour_posts"] = None
+            features["social_sampled_post_change"] = None
+            features["social_sample_provider"] = None
+            features["social_sample_age_seconds"] = None
+            latest_snapshot_idx = bisect.bisect_right(snapshot_times, decision_ms) - 1
+            if latest_snapshot_idx >= 0:
+                snap = social_snapshots[latest_snapshot_idx]
+                age = decision_ms - snap["observed_ms"]
+                # Stale snapshots must be unknown, not fabricated zeros.
+                if 0 <= age <= WINDOW_MS:
+                    metrics = snap["sample_metrics"]
+                    features["social_sampled_posts"] = metrics["sampled_posts"]
+                    features["social_unique_authors"] = metrics["sampled_unique_authors"]
+                    features["social_sample_provider"] = metrics["provider"]
+                    features["social_sample_age_seconds"] = age / 1000.
+                    previous = metrics.get("previous_hour_posts")
+                    if type(previous) is int and 0 <= previous <= 100:
+                        features["social_sampled_previous_hour_posts"] = previous
+                        features["social_sampled_post_change"] = metrics["sampled_posts"] - previous
             features["social_sentiment"] = None
             features["news_sentiment"] = None
             outputs.append({
