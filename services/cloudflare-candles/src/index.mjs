@@ -181,11 +181,51 @@ export async function runScheduled(env,{nowMs=Date.now(),fetcher=providerBars}={
     ok:results.filter(x=>x.status!=="error").length,errors:results.filter(x=>x.status==="error").length};
 }
 
+/**
+ * Keep the last collection result in the private R2 bucket even when all
+ * upstream feeds fail. Never include secret values or raw upstream responses.
+ * This is a single small object overwritten on each cron invocation.
+ */
+export async function recordRunStatus(env,report) {
+  if (!env?.CANDLE_ARCHIVE) throw Error("R2 binding CANDLE_ARCHIVE required");
+  const safe = {
+    schema:"kaos_candle_collector_status_v1",
+    ranAt:report.ranAt,
+    ok:report.ok,
+    errors:report.errors,
+    results:report.results.map(item=>({
+      market:item.market,
+      status:item.status,
+      ...(item.reason ? {reason:item.reason} : {}),
+      ...(typeof item.newBars==="number" ? {newBars:item.newBars} : {}),
+      ...(item.mirror ? {mirror:item.mirror.status} : {}),
+    })),
+  };
+  await env.CANDLE_ARCHIVE.put("status/last-run.json",JSON.stringify(safe),
+    {httpMetadata:{contentType:"application/json"}});
+  return safe;
+}
+
 export default {
   async scheduled(controller,env,ctx) {
-    ctx.waitUntil(runScheduled(env,{nowMs:controller.scheduledTime||Date.now()})
-      .then(report=>console.log(JSON.stringify(report)))
-      .catch(e=>console.error("KAOS scheduled collection failure",String(e.message))));
+    ctx.waitUntil((async()=>{
+      const nowMs=controller.scheduledTime||Date.now();
+      let report;
+      try {
+        report=await runScheduled(env,{nowMs});
+      } catch (error) {
+        // Even fatal configuration errors should be visible in the R2 status.
+        report={ranAt:new Date(nowMs).toISOString(),ok:0,errors:1,
+          results:[{market:"collector",status:"error",
+            reason:String(error?.message||error).slice(0,90)}]};
+      }
+      try {
+        const result=await recordRunStatus(env,report);
+        console.log("KAOS scheduled collection",JSON.stringify(result));
+      } catch(error) {
+        console.error("KAOS R2 status write failure",String(error?.message||error));
+      }
+    })());
   },
   async fetch(){
     // No public history, status or control endpoint; private R2 binding only.
