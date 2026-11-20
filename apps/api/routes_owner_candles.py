@@ -163,3 +163,32 @@ async def walk_forward_research(symbol:str=Query(pattern=r"^[A-Z0-9_-]{2,32}$"),
             horizon=horizon,cost_bps=cost_bps,folds=folds)
     except (ValueError,TypeError,OverflowError) as exc:
         raise HTTPException(422,str(exc)) from exc
+
+
+@router.get("/readiness")
+async def archive_readiness(symbol:str=Query(pattern=r"^[A-Z0-9_-]{2,32}$"),
+                            asset_class:str=Query("crypto",pattern="^(crypto|stock|forex)$"),
+                            seconds:int=Query(60),
+                            user=Depends(owner)):
+    """Owner-only market archive readiness and evidence coverage diagnosis."""
+    if seconds not in (60,300,900):
+        raise HTTPException(422,"Unsupported timeframe")
+    candles=await db.kaos_research_candles.find(
+        {"symbol":symbol,"asset_class":asset_class,"seconds":seconds},
+        {"_id":0}).sort("ts",-1).limit(5000).to_list(5000)
+    candles.reverse()
+    from datetime import datetime,timezone,timedelta
+    lower=(datetime.fromtimestamp(candles[0]["ts"]/1000,timezone.utc)-
+           timedelta(days=7)).isoformat() if candles else (
+           datetime.now(timezone.utc)-timedelta(days=7)).isoformat()
+    obs=await db.kaos_intelligence.find(
+        {"asset":symbol,"asset_class":asset_class,"observed_at":{"$gte":lower}},
+        {"_id":0,"asset":1,"asset_class":1,"event_id":1,"source":1,
+         "observed_at":1,"published_at":1,"strength":1,"direction":1}
+    ).sort("observed_at",1).limit(5000).to_list(5000)
+    from kaos_archive_readiness import inspect_market
+    try:
+        return inspect_market(candles,obs,symbol=symbol,
+                              asset_class=asset_class,seconds=seconds)
+    except (ValueError,TypeError,OverflowError) as exc:
+        raise HTTPException(422,str(exc)) from exc
