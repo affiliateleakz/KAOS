@@ -79,6 +79,13 @@ def evaluate(dataset, horizon_seconds, cost_bps=10.0):
         raise ValueError("too few examples after split purging")
     if len(np.unique(y[tr])) != 2:
         raise ValueError("training labels contain only one direction")
+    # Scikit-learn histogram binning can fail on columns with no observed
+    # training values. Exclude only columns entirely missing in the TRAIN split.
+    # Never inspect validation/test features to decide this selection.
+    usable = np.isfinite(X[tr]).any(axis=0)
+    if not np.any(usable):
+        raise ValueError("no observed training features available")
+    X = X[:, usable]
     model = HistGradientBoostingClassifier(
         max_iter=80, max_leaf_nodes=7, learning_rate=.04,
         l2_regularization=5.0, random_state=42,
@@ -121,7 +128,8 @@ def evaluate(dataset, horizon_seconds, cost_bps=10.0):
         "test_majority_class_baseline_accuracy": float(max(np.mean(y[te]), 1-np.mean(y[te]))),
         "selected_validation_threshold": threshold,
         "test_trade_proxies": proxy(test_p, te, threshold) if threshold is not None else None,
-        "feature_names": list(NUMERIC_FEATURES),
+        "feature_names": [name for name, keep in zip(NUMERIC_FEATURES, usable) if keep],
+        "excluded_unobserved_features": [name for name, keep in zip(NUMERIC_FEATURES, usable) if not keep],
         "limits": [
             "experimental directional classifier; not calibrated winning probabilities",
             "sampled public social posts do not represent total mentions",
