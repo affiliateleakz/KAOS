@@ -236,3 +236,39 @@ async def search(symbol:str=Query(min_length=2,max_length=32),
         await db.kaos_market_history_cache.update_one(
             {"_id":cache_key,"lease_until_ms":now_ms+25000},
             {"$set":{"lease_until_ms":0}})
+
+
+@router.get("/assessment")
+async def market_assessment(symbol:str=Query(min_length=2,max_length=32),
+                            asset_class:str="stock",seconds:int=60,
+                            user=Depends(guard)):
+    """Fuse bounded cached market candles with existing collected evidence.
+
+    Deliberately doesn't launch a second external fetch; UI first calls /search.
+    """
+    try:sym=validate_market(symbol,asset_class,seconds)
+    except ValueError as exc:raise HTTPException(422,str(exc)) from exc
+    from kaos_market_assessment import assess
+    from datetime import timedelta
+    import time
+    now_ms=int(time.time()*1000)
+    key=f"{asset_class}:{sym}:{seconds}"
+    cached=await db.kaos_market_history_cache.find_one({"_id":key})
+    if not cached or not cached.get("candles"):
+        raise HTTPException(404,"Search and retrieve this market's historical candles first")
+    if cached.get("expire_ms",0)<=now_ms:
+        raise HTTPException(409,"Historical research sample is stale; search again")
+    cutoff=(datetime.now(timezone.utc)-timedelta(days=7)).isoformat()
+    # Research evidence is sourced from the same already-ingested intelligence
+    # corpus. Not a live news/social fetch or claim of complete coverage.
+    rows=await db.kaos_intelligence.find(
+        {"asset":sym,"asset_class":asset_class,"observed_at":{"$gte":cutoff}},
+        {"_id":0,"source":1,"direction":1,"event_id":1,"summary":1,
+         "observed_at":1,"source_url":1}).sort("observed_at",-1).limit(100).to_list(100)
+    try:
+        report=assess(cached["candles"],rows,symbol=sym,asset_class=asset_class,
+                      seconds=seconds,source=cached["source"],now_ms=now_ms)
+    except ValueError as exc:
+        raise HTTPException(422,str(exc)) from exc
+    return {**report,"history_cache_hit":True,"news_social_collection":"already_ingested_only",
+            "options_chain_checked":False}
