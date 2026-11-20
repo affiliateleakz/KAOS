@@ -327,3 +327,47 @@ async def review_options_chain(symbol:str=Query(min_length=1,max_length=12),
         raise HTTPException(502,str(exc)) from exc
     return {**result,"available_expirations":len(dates),
             "options_chain_checked":True}
+
+
+@router.get("/prediction")
+async def experimental_prediction(symbol:str=Query(min_length=2,max_length=32),
+                                  asset_class:str="stock",seconds:int=60,
+                                  user=Depends(guard)):
+    """Advisory-only forecast from an explicitly approved archived model.
+
+    Only enabled for AI-insights entitled members. No model means WAIT.
+    The server never trains models inside member requests.
+    """
+    ent=await get_entitlements(user)
+    if not ent.get("aiInsights") and user.get("role") not in ("admin","super_admin"):
+        raise HTTPException(403,"KAOS AI research insights require an eligible membership")
+    try:sym=validate_market(symbol,asset_class,seconds)
+    except ValueError as exc:raise HTTPException(422,str(exc)) from exc
+    from kaos_active_research_prediction import infer_candidate
+    from datetime import timedelta
+    import time
+    now_ms=int(time.time()*1000)
+    key=f"{asset_class}:{sym}:{seconds}"
+    entry=await db.kaos_research_prediction_active.find_one({"_id":key},{"_id":0})
+    if not entry or not entry.get("approved"):
+        return {"status":"no_approved_model","symbol":sym,
+                "direction":"WAIT","reason":"No independently reviewed KAOS research model for this exact market, provider and timeframe",
+                "research_only":True,"orders_enabled":False,"options":{"call_put":"NONE","expiration":None}}
+    artifact=entry.get("artifact") or {}
+    cached=await db.kaos_market_history_cache.find_one({"_id":key},{"_id":0})
+    if not cached or cached.get("expire_ms",0)<=now_ms or not cached.get("candles"):
+        return {"status":"history_unavailable","symbol":sym,"direction":"WAIT",
+                "reason":"Search market history first to refresh completed candles",
+                "research_only":True,"orders_enabled":False}
+    # Cached history may be truncated to 300 candles, enough for 100-bar
+    # short-horizon inference but never a model retraining request.
+    cutoff=(datetime.now(timezone.utc)-timedelta(days=7)).isoformat()
+    observations=await db.kaos_intelligence.find(
+        {"asset":sym,"asset_class":asset_class,"observed_at":{"$gte":cutoff}},
+        {"_id":0,"asset":1,"asset_class":1,"source":1,"event_id":1,
+         "direction":1,"strength":1,"observed_at":1,"published_at":1}
+    ).sort("observed_at",-1).limit(500).to_list(500)
+    result=infer_candidate(artifact,cached["candles"],observations,now_ms=now_ms)
+    return {**result,"model_approval":"owner_research_approval",
+            "confidence_calibrated":False,"authority":"ADVISORY_RESEARCH_ONLY",
+            "orders_enabled":False,"options_recommendations_enabled":False}
