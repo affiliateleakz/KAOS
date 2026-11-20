@@ -9,10 +9,11 @@ export default function OpportunityRadar(){
  const [history,setHistory]=useState(null),[historyBusy,setHistoryBusy]=useState(false),[historyError,setHistoryError]=useState("");
  const [searchedMarket,setSearchedMarket]=useState("");
  const [assessment,setAssessment]=useState(null),[assessmentError,setAssessmentError]=useState("");
+ const [optionsReview,setOptionsReview]=useState(null),[optionsError,setOptionsError]=useState("");
  const searchMarket=async()=>{
    const symbol=ticker.trim().toUpperCase();
    if(!symbol)return;
-   setHistoryBusy(true);setHistoryError("");setHistory(null);setAssessment(null);setAssessmentError("");setSearchedMarket(symbol);
+   setHistoryBusy(true);setHistoryError("");setHistory(null);setAssessment(null);setAssessmentError("");setOptionsReview(null);setOptionsError("");setSearchedMarket(symbol);
    try{
      const response=await api.get("/api/v1/research/market-history/search",{params:{
        symbol,asset_class:marketType,seconds:Number(marketSeconds)
@@ -24,6 +25,12 @@ export default function OpportunityRadar(){
            symbol,asset_class:marketType,seconds:Number(marketSeconds)
          }});
          setAssessment(result.data);
+         if(marketType==="stock"||marketType==="etf"){
+           try{
+             const options=await api.get("/api/v1/research/market-history/options/chain-review",{params:{symbol}});
+             setOptionsReview(options.data);
+           }catch(e){setOptionsError(e?.response?.data?.detail||"Options contracts unavailable");}
+         }
        }catch(e){setAssessmentError(e?.response?.data?.detail||"Research assessment unavailable");}
      }
    }catch(e){setHistoryError(e?.response?.data?.detail||e.message||"Historical data unavailable");}
@@ -55,6 +62,17 @@ export default function OpportunityRadar(){
      <details className="text-xs text-slate-300"><summary className="cursor-pointer">Research evidence</summary>{(assessment.evidence||[]).slice(0,12).map((e,i)=><p key={i} className="border-t border-slate-800 py-2">{e.source}: {e.direction} · {e.summary}</p>)}</details>
      <div className="rounded border border-slate-700 p-2 text-xs"><b>Options</b><p>{assessment.options?.reason||"No verified options research"}</p><p>Call/Put: {assessment.options?.call_put||"NONE"} · Expiration: {assessment.options?.expiry||"Not verified"}</p></div>
      {assessment.scenario&&<p className="text-xs text-slate-400">ATR references: {assessment.scenario.atr_down_reference}–{assessment.scenario.atr_up_reference}; these are not target forecasts.</p>}
+   </div>}
+   {optionsError&&<p className="mt-2 text-xs text-slate-400">Options-chain review: {optionsError}</p>}
+   {optionsReview&&<div className="mt-3 rounded-lg border border-slate-700 p-3" data-testid="kaos-options-chain-review">
+     <h3 className="font-semibold text-[#D4AF37]">Verified listed options — liquidity research</h3>
+     <p className="text-xs text-slate-400">{optionsReview.environment} · Underlying {optionsReview.underlying} · Listed expiration {optionsReview.expiration||"none"} · {optionsReview.eligible_contract_count||0} screened contracts</p>
+     <p className="text-xs text-amber-300">Contract scores measure bid/ask spread, volume and open interest—not the probability of a profitable CALL or PUT.</p>
+     {optionsReview.candidates?.length>0?<div className="overflow-x-auto"><table className="mt-2 w-full text-left text-xs">
+       <thead><tr>{["Contract","Type","Strike","Expiration","Bid","Ask","Spread %","Volume","OI","Liquidity"].map(k=><th key={k} className="p-2">{k}</th>)}</tr></thead>
+       <tbody>{optionsReview.candidates.map((o,i)=><tr key={o.contract+"-"+i} className="border-t border-slate-800">{[o.contract,o.right,o.strike,o.expiration,o.bid,o.ask,o.spread_pct,o.volume,o.open_interest,o.liquidity_score].map((v,j)=><td key={j} className="p-2">{v}</td>)}</tr>)}</tbody>
+     </table></div>:<p className="text-xs text-slate-400">No contracts passed the initial liquidity filter.</p>}
+     <p className="mt-2 text-xs text-slate-400">{optionsReview.note||"Options screening is research only; no contract recommendation or order."}</p>
    </div>}
    {history&&<div className="mt-3 text-sm text-slate-200">
      <p>{history.symbol} · {history.source||"provider pending"} · {history.bar_count||0} closed bars · {history.gaps??"—"} gap(s) · {history.cache_hit?"cached":"new request"}</p>
