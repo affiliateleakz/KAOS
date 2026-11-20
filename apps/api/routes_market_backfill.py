@@ -354,20 +354,33 @@ async def experimental_prediction(symbol:str=Query(min_length=2,max_length=32),
                 "direction":"WAIT","reason":"No independently reviewed KAOS research model for this exact market, provider and timeframe",
                 "research_only":True,"orders_enabled":False,"options":{"call_put":"NONE","expiration":None}}
     artifact=entry.get("artifact") or {}
-    cached=await db.kaos_market_history_cache.find_one({"_id":key},{"_id":0})
-    if not cached or cached.get("expire_ms",0)<=now_ms or not cached.get("candles"):
-        return {"status":"history_unavailable","symbol":sym,"direction":"WAIT",
-                "reason":"Search market history first to refresh completed candles",
-                "research_only":True,"orders_enabled":False}
-    # Cached history may be truncated to 300 candles, enough for 100-bar
-    # short-horizon inference but never a model retraining request.
+    # Continuous archive is the preferred authority. Same source and exact
+    # market/timeframe; never mix providers or rely on user search to fetch.
+    archive=await db.kaos_research_candles.find(
+        {"symbol":sym,"asset_class":asset_class,"seconds":seconds,
+         "source":artifact.get("source")},{"_id":0}
+    ).sort("ts",-1).limit(300).to_list(300)
+    archive.reverse()
+    if len(archive)>=100:
+        candle_history=archive
+        candle_origin="continuous_archive"
+    else:
+        # Transitional fallback for deployments where the independent worker
+        # has not yet archived the requested symbol.
+        cached=await db.kaos_market_history_cache.find_one({"_id":key},{"_id":0})
+        if not cached or cached.get("expire_ms",0)<=now_ms or not cached.get("candles"):
+            return {"status":"history_unavailable","symbol":sym,"direction":"WAIT",
+                    "reason":"No recent archived candles. Check the continuous collector or search for an authorized backfill.",
+                    "research_only":True,"orders_enabled":False}
+        candle_history=cached["candles"]
+        candle_origin="on_demand_cache"
     cutoff=(datetime.now(timezone.utc)-timedelta(days=7)).isoformat()
     observations=await db.kaos_intelligence.find(
         {"asset":sym,"asset_class":asset_class,"observed_at":{"$gte":cutoff}},
         {"_id":0,"asset":1,"asset_class":1,"source":1,"event_id":1,
          "direction":1,"strength":1,"observed_at":1,"published_at":1}
     ).sort("observed_at",-1).limit(500).to_list(500)
-    result=infer_candidate(artifact,cached["candles"],observations,now_ms=now_ms)
-    return {**result,"model_approval":"owner_research_approval",
+    result=infer_candidate(artifact,candle_history,observations,now_ms=now_ms)
+    return {**result,"candle_origin":candle_origin,"model_approval":"owner_research_approval",
             "confidence_calibrated":False,"authority":"ADVISORY_RESEARCH_ONLY",
             "orders_enabled":False,"options_recommendations_enabled":False}
