@@ -71,6 +71,34 @@ class MultiFactorTests(unittest.TestCase):
             row["ts"]+=60*60000
         rows=dataset(data,[],symbol="AAPL",asset_class="stock",seconds=60,source="test_local")
         self.assertLess(len(rows),len(dataset(bars(),[],symbol="AAPL",asset_class="stock",seconds=60,source="test_local")))
+    def test_no_observed_training_evidence_blocks_uplift_claim(self):
+        result=run(observations=[])
+        self.assertEqual(result["status"],"unvalidated_multifactor_baseline")
+        self.assertFalse(result["multifactor_comparison_available"])
+        self.assertIsNone(result["holdout"])
+        self.assertIsNone(result["holdout_multifactor_minus_technical_accuracy"])
+        self.assertEqual(result["point_in_time_evidence_coverage"]["train"]
+                         ["samples_with_observed_evidence"],0)
+        self.assertGreater(result["technical_only_holdout"]["samples"],0)
+
+    def test_multifactor_and_technical_share_exact_holdout(self):
+        result=run()
+        self.assertTrue(result["multifactor_comparison_available"])
+        self.assertEqual(result["holdout"]["samples"],
+                         result["technical_only_holdout"]["samples"])
+        self.assertEqual(result["validation"]["samples"],
+                         result["technical_only_validation"]["samples"])
+        self.assertEqual(result["comparison_design"],
+                         "same_market_dates_labels_costs_threshold_and_purged_split")
+
+    def test_future_only_intelligence_not_available_to_train(self):
+        future=datetime.fromtimestamp((BASE+3000*60000)/1000,timezone.utc)
+        report=run(observations=[{"asset":"AAPL","asset_class":"stock",
+            "source":"news","direction":"bullish","strength":1,
+            "event_id":"future","observed_at":future.isoformat(),
+            "published_at":(future-timedelta(hours=1)).isoformat()}])
+        self.assertFalse(report["multifactor_comparison_available"])
+
     def test_invalid_market_metadata_rejected(self):
         data=bars()
         data[20]["source"]="another_feed"
