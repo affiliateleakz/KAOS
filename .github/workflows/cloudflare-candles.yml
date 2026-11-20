@@ -1,0 +1,23 @@
+name: Cloudflare Candle Archive Tests
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/cloudflare-candles/**'
+      - 'wrangler.jsonc'
+      - '.github/workflows/cloudflare-candles.yml'
+  pull_request:
+    paths:
+      - 'services/cloudflare-candles/**'
+      - 'wrangler.jsonc'
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test services/cloudflare-candles/test/*.test.mjs
