@@ -365,15 +365,29 @@ async def experimental_prediction(symbol:str=Query(min_length=2,max_length=32),
         candle_history=archive
         candle_origin="continuous_archive"
     else:
-        # Transitional fallback for deployments where the independent worker
-        # has not yet archived the requested symbol.
-        cached=await db.kaos_market_history_cache.find_one({"_id":key},{"_id":0})
-        if not cached or cached.get("expire_ms",0)<=now_ms or not cached.get("candles"):
-            return {"status":"history_unavailable","symbol":sym,"direction":"WAIT",
-                    "reason":"No recent archived candles. Check the continuous collector or search for an authorized backfill.",
-                    "research_only":True,"orders_enabled":False}
-        candle_history=cached["candles"]
-        candle_origin="on_demand_cache"
+        # Direct private Cloudflare R2 read when the legacy Mongo archive has
+        # not been mirrored. Never mix market feeds or sample identities.
+        from kaos_r2_archive import read_archive, ArchiveUnavailable
+        try:
+            r2_rows,r2_source=await read_archive(
+                sym,asset_class,seconds,limit=300,now_ms=now_ms)
+        except ArchiveUnavailable:
+            return {"status":"r2_archive_unavailable","symbol":sym,
+                    "direction":"WAIT","research_only":True,"orders_enabled":False,
+                    "reason":"Cloudflare R2 archive could not be read securely"}
+        if r2_source==artifact.get("source") and len(r2_rows)>=100:
+            candle_history=r2_rows
+            candle_origin="cloudflare_r2_private_archive"
+        else:
+            # Transitional fallback for deployments where no R2 archive
+            # exists yet for the exact trained model provider.
+            cached=await db.kaos_market_history_cache.find_one({"_id":key},{"_id":0})
+            if not cached or cached.get("expire_ms",0)<=now_ms or not cached.get("candles"):
+                return {"status":"history_unavailable","symbol":sym,"direction":"WAIT",
+                        "reason":"No recent provider-matched candles in Mongo or R2 archives.",
+                        "research_only":True,"orders_enabled":False}
+            candle_history=cached["candles"]
+            candle_origin="on_demand_cache"
     cutoff=(datetime.now(timezone.utc)-timedelta(days=7)).isoformat()
     observations=await db.kaos_intelligence.find(
         {"asset":sym,"asset_class":asset_class,"observed_at":{"$gte":cutoff}},
