@@ -54,11 +54,32 @@ export default function ChartSnapshotAnalyzer() {
     }catch(e){setError(errMsg(e)||"Historical comparison unavailable");}
     finally {setBusy("");}
   }
+  // Pair the two research views for the same user-selected market. This does
+  // not imply pixel-derived OHLC or a calibrated screenshot forecast.
+  async function analyzeAndCompare() {
+    if (!preview) {setError("Upload or paste a chart screenshot first.");return;}
+    setBusy("both");setError("");setAnalysis(null);setMatches(null);
+    const imageRequest = api.post("/api/v1/ai/chart-snapshot/analyze", {
+      image_data:preview,symbol:symbol.toUpperCase(),timeframe:seconds+"s"
+    });
+    const historyRequest = api.get("/api/v1/ai/chart-snapshot/similar",{params:{
+      symbol:symbol.toUpperCase(),seconds:Number(seconds),asset_class:assetClass,
+      lookback:20,horizon:5
+    }});
+    const [vision,history] = await Promise.allSettled([imageRequest,historyRequest]);
+    if (vision.status==="fulfilled") setAnalysis(vision.value.data);
+    if (history.status==="fulfilled") setMatches(history.value.data);
+    const failures = [];
+    if (vision.status==="rejected") failures.push("Screenshot: "+(errMsg(vision.reason)||"unavailable"));
+    if (history.status==="rejected") failures.push("Historical archive: "+(errMsg(history.reason)||"unavailable"));
+    if (failures.length) setError(failures.join(" | "));
+    setBusy("");
+  }
   const pct=n=>n==null?"—":(n*100).toFixed(2)+"%";
   return <section className="card-surface mt-6 p-5 space-y-4" data-testid="chart-snapshot-analyzer">
     <div>
       <h3 className="font-heading text-xl font-semibold text-[#D4AF37]">KAOS Chart Snapshot Analyzer</h3>
-      <p className="mt-1 text-xs text-slate-400">Paste a chart image (Ctrl+V) or upload one. Visual analysis is educational; historical matching uses archived KAOS market candles, not pixels from your screenshot.</p>
+      <p className="mt-1 text-xs text-slate-400">Paste a chart image (Ctrl+V) or upload one. Visual analysis is educational; the combined action runs two separate research checks for your selected market. Historical matching uses archived KAOS candles, not pixels from your screenshot.</p>
     </div>
     <div className="grid gap-3 md:grid-cols-3">
       <label className="text-xs text-slate-300">Market symbol
@@ -85,7 +106,8 @@ export default function ChartSnapshotAnalyzer() {
     </label>
     {preview&&<img src={preview} alt="Uploaded chart preview" className="max-h-64 max-w-full rounded border border-[#444] object-contain"/>}
     <div className="flex flex-wrap gap-3">
-      <button disabled={!!busy||!preview} onClick={analyze} className="rounded bg-[#D4AF37] px-4 py-2 text-sm font-semibold text-black disabled:opacity-40">{busy==="analyze"?"Analyzing…":"Interpret screenshot"}</button>
+      <button disabled={!!busy||!preview} onClick={analyzeAndCompare} className="rounded bg-[#D4AF37] px-4 py-2 text-sm font-semibold text-black disabled:opacity-40">{busy==="both"?"Researching…":"Analyze chart + compare history"}</button>
+      <button disabled={!!busy||!preview} onClick={analyze} className="rounded border border-[#555] px-4 py-2 text-sm text-white disabled:opacity-40">{busy==="analyze"?"Analyzing…":"Interpret screenshot only"}</button>
       <button disabled={!!busy} onClick={findSimilar} className="rounded border border-[#D4AF37] px-4 py-2 text-sm text-[#D4AF37] disabled:opacity-40">{busy==="similar"?"Searching archive…":"Find historical patterns"}</button>
     </div>
     {error&&<p role="alert" className="text-sm text-red-400">{error}</p>}
