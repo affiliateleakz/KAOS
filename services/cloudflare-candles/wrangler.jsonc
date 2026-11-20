@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "kaos-candle-archive",
+  "main": "src/index.mjs",
+  "compatibility_date": "2026-11-19",
+  "workers_dev": false,
+  "triggers": {"crons": ["*/5 * * * *"]},
+  "r2_buckets": [
+    {"binding": "CANDLE_ARCHIVE", "bucket_name": "kaos-candle-archive"}
+  ],
+  "vars": {
+    "ALPACA_FEED": "iex",
+    "OANDA_ENVIRONMENT": "practice",
+    "MARKETS_JSON": "[{\"symbol\":\"AAPL\",\"asset_class\":\"stock\",\"seconds\":60},{\"symbol\":\"NVDA\",\"asset_class\":\"stock\",\"seconds\":60},{\"symbol\":\"SPY\",\"asset_class\":\"etf\",\"seconds\":60},{\"symbol\":\"BTC-USD\",\"asset_class\":\"crypto\",\"seconds\":60},{\"symbol\":\"ETH-USD\",\"asset_class\":\"crypto\",\"seconds\":60}]"
+  }
+}

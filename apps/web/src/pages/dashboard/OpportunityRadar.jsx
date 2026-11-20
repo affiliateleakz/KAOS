@@ -5,6 +5,44 @@ const modules=["Stock Screener","Crypto Screener","DEX Screener","Options Screen
 export default function OpportunityRadar(){
  const [asset,setAsset]=useState("all"),[data,setData]=useState(null),[error,setError]=useState(""),[loading,setLoading]=useState(false);
  const [health,setHealth]=useState(null);
+ const [marketType,setMarketType]=useState("stock"),[marketSeconds,setMarketSeconds]=useState("60");
+ const [history,setHistory]=useState(null),[historyBusy,setHistoryBusy]=useState(false),[historyError,setHistoryError]=useState("");
+ const [searchedMarket,setSearchedMarket]=useState("");
+ const [assessment,setAssessment]=useState(null),[assessmentError,setAssessmentError]=useState("");
+ const [forecast,setForecast]=useState(null),[forecastError,setForecastError]=useState("");
+ const [optionsReview,setOptionsReview]=useState(null),[optionsError,setOptionsError]=useState("");
+ const searchMarket=async()=>{
+   const symbol=ticker.trim().toUpperCase();
+   if(!symbol)return;
+   setHistoryBusy(true);setHistoryError("");setHistory(null);setAssessment(null);setAssessmentError("");setForecast(null);setForecastError("");setOptionsReview(null);setOptionsError("");setSearchedMarket(symbol);
+   try{
+     const response=await api.get("/api/v1/research/market-history/search",{params:{
+       symbol,asset_class:marketType,seconds:Number(marketSeconds)
+     }});
+     setHistory(response.data);
+     if(response.data?.candles?.length){
+       try{
+         const result=await api.get("/api/v1/research/market-history/assessment",{params:{
+           symbol,asset_class:marketType,seconds:Number(marketSeconds)
+         }});
+         setAssessment(result.data);
+         try{
+           const prediction=await api.get("/api/v1/research/market-history/prediction",{params:{
+             symbol,asset_class:marketType,seconds:Number(marketSeconds)
+           }});
+           setForecast(prediction.data);
+         }catch(e){setForecastError(e?.response?.data?.detail||"AI prediction unavailable");}
+         if(marketType==="stock"||marketType==="etf"){
+           try{
+             const options=await api.get("/api/v1/research/market-history/options/chain-review",{params:{symbol}});
+             setOptionsReview(options.data);
+           }catch(e){setOptionsError(e?.response?.data?.detail||"Options contracts unavailable");}
+         }
+       }catch(e){setAssessmentError(e?.response?.data?.detail||"Research assessment unavailable");}
+     }
+   }catch(e){setHistoryError(e?.response?.data?.detail||e.message||"Historical data unavailable");}
+   finally{setHistoryBusy(false);}
+ };
  const [evidenceFilter,setEvidenceFilter]=useState("all");
  const [ticker,setTicker]=useState("AAPL"),[newsMsg,setNewsMsg]=useState(""),[newsBusy,setNewsBusy]=useState(false);
  const syncNews=async()=>{const s=ticker.trim().toUpperCase();if(!s)return;setNewsBusy(true);setNewsMsg("");try{const r=await api.post(`/api/v1/intelligence/sync-news?symbol=${encodeURIComponent(s)}`);setNewsMsg(`${r.data.observations_stored} new headline observation(s) for ${s} from ${r.data.articles_examined} article(s) via ${r.data.provider}.`);await load();loadHealth()}catch(e){setNewsMsg(e?.response?.data?.detail||e.message||"News discovery unavailable")}finally{setNewsBusy(false)}};
@@ -13,7 +51,60 @@ export default function OpportunityRadar(){
  const load=async()=>{setLoading(true);setError("");try{const r=await api.get(`/api/v1/intelligence/opportunities?limit=50${asset==="all"?"":`&asset_class=${asset}`}`);setData(r.data)}catch(e){setData(null);setError(e?.response?.data?.detail||e.message||"Unavailable")}finally{setLoading(false)}};
  useEffect(()=>{load();loadHealth()},[asset]);
  return <section className="space-y-6" data-testid="kaos-opportunity-radar"><div><h1 className="text-3xl font-bold text-[#D4AF37]">KAOS Opportunity Radar</h1><p className="mt-2 text-slate-400">Research only · Ingested data sources only · Scores are not probabilities or trading recommendations.</p></div>
- <div className="flex flex-wrap gap-2">{classes.map(c=><button key={c} onClick={()=>setAsset(c)} className={`rounded-lg border px-3 py-2 text-sm ${asset===c?"border-[#D4AF37] bg-[#D4AF37]/10 text-[#D4AF37]":"border-slate-700 text-slate-300"}`}>{c.toUpperCase()}</button>)}<button onClick={()=>{load();loadHealth()}} className="rounded-lg border border-slate-600 px-3 py-2 text-sm">Refresh</button><span className="inline-flex items-center gap-2"><input value={ticker} onChange={e=>setTicker(e.target.value.toUpperCase())} placeholder="Ticker" aria-label="Ticker for news discovery" className="w-20 rounded-lg border border-slate-700 bg-[#141414] px-2 py-2 text-sm text-slate-200"/><button onClick={syncNews} disabled={newsBusy} className="rounded-lg border border-[#D4AF37] px-3 py-2 text-sm text-[#D4AF37] disabled:opacity-50">{newsBusy?"Loading news…":"Load latest news"}</button></span>{newsMsg?<p className="w-full text-xs text-slate-400">{newsMsg}</p>:null}</div>
+ <div className="flex flex-wrap gap-2">{classes.map(c=><button key={c} onClick={()=>setAsset(c)} className={`rounded-lg border px-3 py-2 text-sm ${asset===c?"border-[#D4AF37] bg-[#D4AF37]/10 text-[#D4AF37]":"border-slate-700 text-slate-300"}`}>{c.toUpperCase()}</button>)}<button onClick={()=>{load();loadHealth()}} className="rounded-lg border border-slate-600 px-3 py-2 text-sm">Refresh</button><span className="inline-flex items-center gap-2"><input value={ticker} onChange={e=>setTicker(e.target.value.toUpperCase())} placeholder="Ticker" aria-label="Ticker for news discovery" className="w-20 rounded-lg border border-slate-700 bg-[#141414] px-2 py-2 text-sm text-slate-200"/><button onClick={syncNews} disabled={newsBusy} className="rounded-lg border border-[#D4AF37] px-3 py-2 text-sm text-[#D4AF37] disabled:opacity-50">{newsBusy?"Loading news…":"Load latest news"}</button><select aria-label="Historical market asset class" value={marketType} onChange={e=>setMarketType(e.target.value)} className="rounded-lg border border-slate-700 bg-[#141414] px-2 py-2 text-xs text-slate-200"><option value="stock">Stock</option><option value="etf">ETF</option><option value="crypto">Crypto</option><option value="forex">Forex</option></select><select aria-label="Historical market interval" value={marketSeconds} onChange={e=>setMarketSeconds(e.target.value)} className="rounded-lg border border-slate-700 bg-[#141414] px-2 py-2 text-xs text-slate-200"><option value="60">1m</option><option value="300">5m</option><option value="900">15m</option></select><button onClick={searchMarket} disabled={historyBusy} className="rounded-lg border border-[#D4AF37] px-3 py-2 text-sm text-[#D4AF37] disabled:opacity-50">{historyBusy?"Loading candles…":"Search market + backfill"}</button></span>{newsMsg?<p className="w-full text-xs text-slate-400">{newsMsg}</p>:null}</div>
+ <div className="rounded-xl border border-slate-700 bg-[#141414] p-4" data-testid="market-history-search-results">
+   <h2 className="font-semibold text-[#D4AF37]">Market history & AI research data</h2>
+   <p className="mt-1 text-xs text-slate-400">Search above to automatically request an authorized provider's recent closed candles. Results are cached to reduce API usage. Crypto pairs use e.g. BTC-USD, forex uses EUR_USD, stocks use AAPL. This does not train AI or place orders.</p>
+   {historyBusy&&<p role="status" className="mt-2 text-sm text-slate-300">Retrieving available historical candles…</p>}
+   {historyError&&<p role="alert" className="mt-2 text-sm text-amber-300">{searchedMarket}: {historyError}</p>}
+   {assessmentError&&<p role="alert" className="mt-2 text-xs text-amber-300">{assessmentError}</p>}
+   {forecastError&&<p role="status" className="mt-2 text-xs text-amber-300">AI forecast: {forecastError}</p>}
+   {forecast&&<div className="mt-3 rounded-lg border border-[#D4AF37]/40 p-3" data-testid="kaos-experimental-prediction">
+     <h3 className="font-semibold text-[#D4AF37]">KAOS AI Direction Research</h3>
+     <div className="mt-2 flex flex-wrap items-center gap-3 text-sm"><span>Direction: <b>{forecast.direction||"WAIT"}</b></span>
+       <span>State: {forecast.status}</span>
+       {forecast.horizon_seconds!=null&&<span>Forecast horizon: {forecast.horizon_seconds}s</span>}
+     </div>
+     {forecast.raw_model_up_score!=null&&<p className="mt-2 text-xs text-slate-300">Raw directional model score: {forecast.raw_model_up_score} (not a calibrated chance of profit)</p>}
+     <p className="mt-2 text-xs text-amber-300">{forecast.note||forecast.reason||"No approved model or verified prediction is available for this market."}</p>
+     <p className="mt-1 text-xs text-slate-400">Research only. No BUY/SELL trade authorization, options contract, or expiration recommendation.</p>
+   </div>}
+   {assessment&&<div className="mt-4 space-y-3 rounded-lg border border-[#D4AF37]/40 p-4" data-testid="kaos-market-assessment">
+     <div className="flex flex-wrap items-center gap-3"><b className="text-[#D4AF37]">KAOS Market Research</b><span>{assessment.buy_sell} · {assessment.bias}</span><span>Technical index: {assessment.score??"—"}/100</span></div>
+     <p className="text-xs text-amber-300">An uncalibrated technical alignment score, NOT a buy/sell probability, price forecast, or trade signal.</p>
+     <p className="text-xs text-slate-300">{assessment.reason||assessment.coverage?.reason}</p>
+     {assessment.indicators&&<div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">{Object.entries(assessment.indicators).map(([k,v])=><div key={k} className="rounded bg-black/30 p-2">{k}: <strong>{v??"—"}</strong></div>)}</div>}
+     {assessment.patterns?.length>0&&<p className="text-xs text-slate-300">Structures: {assessment.patterns.join(", ")}</p>}
+     <p className="text-xs text-slate-400">History: {assessment.coverage?.closed_candles||0} candles · Gaps: {assessment.coverage?.gaps_in_sample??"—"} · Missing categories: {(assessment.coverage?.missing_sources||[]).join(", ")||"None noted"}</p>
+     <p className="text-xs text-slate-400">{assessment.evidence?.length||0} previously ingested news/social/other observations. Missing coverage is not zero activity.</p>
+     <details className="text-xs text-slate-300"><summary className="cursor-pointer">Research evidence</summary>{(assessment.evidence||[]).slice(0,12).map((e,i)=><p key={i} className="border-t border-slate-800 py-2">{e.source}: {e.direction} · {e.summary}</p>)}</details>
+     <div className="rounded border border-slate-700 p-2 text-xs"><b>Options</b><p>{assessment.options?.reason||"No verified options research"}</p><p>Call/Put: {assessment.options?.call_put||"NONE"} · Expiration: {assessment.options?.expiry||"Not verified"}</p></div>
+     {assessment.scenario&&<p className="text-xs text-slate-400">ATR references: {assessment.scenario.atr_down_reference}–{assessment.scenario.atr_up_reference}; these are not target forecasts.</p>}
+   </div>}
+   {optionsError&&<p className="mt-2 text-xs text-slate-400">Options-chain review: {optionsError}</p>}
+   {optionsReview&&<div className="mt-3 rounded-lg border border-slate-700 p-3" data-testid="kaos-options-chain-review">
+     <h3 className="font-semibold text-[#D4AF37]">Verified listed options — liquidity research</h3>
+     <p className="text-xs text-slate-400">{optionsReview.environment} · Underlying {optionsReview.underlying} · Listed expiration {optionsReview.expiration||"none"} · {optionsReview.eligible_contract_count||0} screened contracts</p>
+     <p className="text-xs text-amber-300">Contract scores measure bid/ask spread, volume and open interest—not the probability of a profitable CALL or PUT.</p>
+     {optionsReview.candidates?.length>0?<div className="overflow-x-auto"><table className="mt-2 w-full text-left text-xs">
+       <thead><tr>{["Contract","Type","Strike","Expiration","Bid","Ask","Spread %","Volume","OI","Liquidity"].map(k=><th key={k} className="p-2">{k}</th>)}</tr></thead>
+       <tbody>{optionsReview.candidates.map((o,i)=><tr key={o.contract+"-"+i} className="border-t border-slate-800">{[o.contract,o.right,o.strike,o.expiration,o.bid,o.ask,o.spread_pct,o.volume,o.open_interest,o.liquidity_score].map((v,j)=><td key={j} className="p-2">{v}</td>)}</tr>)}</tbody>
+     </table></div>:<p className="text-xs text-slate-400">No contracts passed the initial liquidity filter.</p>}
+     <p className="mt-2 text-xs text-slate-400">{optionsReview.note||"Options screening is research only; no contract recommendation or order."}</p>
+   </div>}
+   {history&&<div className="mt-3 text-sm text-slate-200">
+     <p>{history.symbol} · {history.source||"provider pending"} · {history.bar_count||0} closed bars · {history.gaps??"—"} gap(s) · {history.cache_hit?"cached":"new request"}</p>
+     {history.status==="fetch_in_progress"&&<p className="text-xs text-amber-300">A history request is already running for this market. Search again shortly.</p>}
+     {history.candles?.length>0&&<div className="mt-2 overflow-x-auto"><table className="w-full text-left text-xs">
+       <thead><tr>{["UTC candle time","Open","High","Low","Close","Volume"].map(v=><th key={v} className="p-2">{v}</th>)}</tr></thead>
+       <tbody>{history.candles.slice(-8).reverse().map((b,i)=><tr key={b.ts+"-"+i} className="border-t border-slate-800">
+         <td className="p-2">{new Date(b.ts).toISOString()}</td>
+         {["open","high","low","close","volume"].map(k=><td key={k} className="p-2">{b[k]??"—"}</td>)}
+       </tr>)}</tbody>
+     </table></div>}
+     <p className="mt-2 text-xs text-slate-400">{history.note||"Historical data availability is provider-specific."}</p>
+   </div>}
+ </div>
  {health&&<div className="rounded-xl border border-slate-700 bg-[#141414] p-4"><h2 className="font-semibold text-[#D4AF37]">Data source health</h2><p className="my-2 text-xs text-slate-400">Recent observation timestamps, not confirmation that exchanges or feeds are currently open.</p>{!health.sources?.length?<p className="text-sm text-amber-300">No verified collector observations stored yet.</p>:<div className="flex flex-wrap gap-2">{health.sources?.map((s,i)=><span key={i} className={`rounded-md border px-2 py-1 text-xs ${s.state==='recent_observation'?'border-emerald-800 text-emerald-300':'border-amber-900 text-amber-300'}`}>{s.provider} · {s.asset_class} · {s.state==='recent_observation'?'Recent':'Stale / market closed'} · {s.age_minutes}m</span>)}</div>}{health.sample_truncated&&<p className="text-xs text-amber-300">Coverage is a limited sample of recent stored events.</p>}</div>}
  <div className="rounded-xl border border-slate-700 bg-[#141414] p-4"><h2 className="font-semibold text-[#D4AF37]">News, Social & Follow the Money</h2><p className="mt-1 text-xs text-slate-400">News articles are identified by GDELT first-seen timestamps, not verified publication time. SEC Form 4 filing discovery is distinct from parsed purchase/sale transactions. Native ETH large-value transfers do not establish wallet ownership or a bullish/bearish trade. Quarterly 13F holdings are delayed snapshots, not live institutional purchases. Bluesky social data includes monitored-account samples and optional bounded public-search samples, not platform-wide sentiment or verified acceleration. Short-squeeze research requires separately sourced short-interest positions and remains a local review tool, not an automated candidate feed. Unusual option volume detected between two chain snapshots does not reveal buyers, sellers, or whales. Congressional disclosures require a commercial-use rights review before publishing them to members. No single source predicts returns.</p><div className="mt-3 flex flex-wrap gap-2">{[["all","All evidence"],["news","News"],["filing","SEC filings"],["insider","Insider filings / reported P&S"],["onchain","ETH whale transfers"],["institutional","Institutional 13F"],["politician","Congress (rights review)"],["social","Social mentions"],["options_flow","Options activity (if entitled)"]].map(([key,label])=><button key={key} onClick={()=>setEvidenceFilter(key)} aria-pressed={evidenceFilter===key} className={`rounded-md border px-3 py-2 text-xs ${evidenceFilter===key?"border-[#D4AF37] text-[#D4AF37]":"border-slate-700 text-slate-300"}`}>{label}</button>)}</div></div>
  {loading&&<p role="status">Loading intelligence…</p>}{error&&<div role="alert" className="rounded-lg border border-amber-800 bg-amber-950/30 p-4 text-amber-200">{String(error)}. Check the KAOS backend deployment and your membership.</div>}

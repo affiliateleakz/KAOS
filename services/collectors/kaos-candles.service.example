@@ -1,0 +1,26 @@
+# EXAMPLE ONLY: customize all paths and secure permissions before installation.
+# Copy to /etc/systemd/system/kaos-candles.service after review.
+[Unit]
+Description=KAOS continuous research candle archive collector
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=kaos-worker
+Group=kaos-worker
+WorkingDirectory=/opt/kaos
+EnvironmentFile=/etc/kaos/candle-recorder.env
+ExecStart=/usr/bin/python3 /opt/kaos/services/collectors/continuous_candle_worker.py --config /etc/kaos/continuous_markets.json --interval 60 --api https://api.tradingwithkaos.com
+Restart=always
+RestartSec=20
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/log/kaos
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

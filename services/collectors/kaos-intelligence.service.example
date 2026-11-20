@@ -1,0 +1,26 @@
+# Example independent continuously polled intelligence service.
+# Run alongside kaos-candles.service; never inside Passenger/ASGI startup.
+[Unit]
+Description=KAOS continual news social filings and market opportunity collector
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=kaos-worker
+Group=kaos-worker
+WorkingDirectory=/opt/kaos/services/collectors
+EnvironmentFile=/etc/kaos/candle-recorder.env
+ExecStart=/usr/bin/python3 /opt/kaos/services/collectors/market_collection_runner.py --config /etc/kaos/market_universe.json --loop --interval 300 --news-minutes 15 --sec-minutes 60 --institutional-minutes 360 --social-minutes 15 --api https://api.tradingwithkaos.com
+Restart=always
+RestartSec=30
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/kaos /var/log/kaos
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
