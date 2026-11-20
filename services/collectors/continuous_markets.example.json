@@ -1,0 +1,12 @@
+{
+  "markets": [
+    {"symbol":"BTC-USD","asset_class":"crypto","seconds":60},
+    {"symbol":"ETH-USD","asset_class":"crypto","seconds":60},
+    {"symbol":"SOL-USD","asset_class":"crypto","seconds":60},
+    {"symbol":"BTC-USD","asset_class":"crypto","seconds":300},
+    {"symbol":"AAPL","asset_class":"stock","seconds":60},
+    {"symbol":"NVDA","asset_class":"stock","seconds":60},
+    {"symbol":"SPY","asset_class":"etf","seconds":60},
+    {"symbol":"EUR_USD","asset_class":"forex","seconds":60}
+  ]
+}
