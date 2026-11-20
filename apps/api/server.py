@@ -25,6 +25,7 @@ import routes_stock_heatmap
 import routes_ai_outcomes
 import routes_owner_candles
 import routes_market_backfill
+import routes_candle_recording
 import routes_paper
 import routes_broker_selection
 import routes_broker_connections
@@ -87,6 +88,7 @@ app.include_router(routes_stock_heatmap.router)
 app.include_router(routes_ai_outcomes.router)
 app.include_router(routes_owner_candles.router)
 app.include_router(routes_market_backfill.router)
+app.include_router(routes_candle_recording.router)
 app.include_router(routes_paper.router)
 app.include_router(routes_broker_selection.router)
 app.include_router(routes_broker_connections.router)
