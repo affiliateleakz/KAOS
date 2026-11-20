@@ -114,6 +114,7 @@ export async function storeBars(bucket,rows) {
     byKey.get(key).push(bar);
   }
   let written=0;
+  let revisionsSkipped=0;
   for(const [key,newBars] of byKey){
     const existing=await bucket.get(key);
     let past=[];
@@ -123,11 +124,16 @@ export async function storeBars(bucket,rows) {
         throw Error("incompatible_r2_archive");
       past=payload.candles;
     }
-    const merged=new Map();
-    for(const row of [...past,...newBars]){
+    // Provider candles may be revised after they close (often volume).
+    // Keep the first archived version; count conflicts for data-quality review.
+    // Never let a revision prevent unrelated new candles from being saved.
+    const merged=new Map(past.map(row=>[row.ts,row]));
+    for(const row of newBars){
       const found=merged.get(row.ts);
-      if(found && JSON.stringify(found)!==JSON.stringify(row))
-        throw Error("historical_price_revision_needs_manual_review");
+      if(found){
+        if(JSON.stringify(found)!==JSON.stringify(row))revisionsSkipped++;
+        continue;
+      }
       merged.set(row.ts,row);
     }
     const candles=[...merged.values()].sort((a,b)=>a.ts-b.ts);
@@ -140,7 +146,7 @@ export async function storeBars(bucket,rows) {
     }),{httpMetadata:{contentType:"application/json"}});
     written+=candles.length-past.length;
   }
-  return {newBars:written,objectsTouched:byKey.size};
+  return {newBars:written,objectsTouched:byKey.size,revisionsSkipped};
 }
 
 async function mirrorToKaos(env,rows){
@@ -201,6 +207,7 @@ export async function recordRunStatus(env,report) {
       status:item.status,
       ...(item.reason ? {reason:item.reason} : {}),
       ...(typeof item.newBars==="number" ? {newBars:item.newBars} : {}),
+      ...(typeof item.revisionsSkipped==="number" ? {revisionsSkipped:item.revisionsSkipped} : {}),
       ...(item.mirror ? {mirror:item.mirror.status} : {}),
     })),
   };
