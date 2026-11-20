@@ -18,13 +18,25 @@ async def owner(user=Depends(get_current_user)):
 @router.get("/status")
 async def status(user=Depends(owner)):
     state=await db.kaos_candle_collector_state.find_one({"_id":"coinbase_worker"},{"_id":0})
+    continuous=await db.kaos_candle_collector_state.find_one(
+        {"_id":"continuous_candles_v1"},{"_id":0})
+    if continuous and continuous.get("updated_at"):
+        from datetime import datetime,timezone
+        try:
+            observed=datetime.fromisoformat(continuous["updated_at"].replace("Z","+00:00"))
+            age=(datetime.now(timezone.utc)-observed).total_seconds()
+            continuous["heartbeat_age_seconds"]=max(0,int(age))
+            continuous["heartbeat_recent"]=0<=age<=900
+        except (ValueError,TypeError):
+            continuous["heartbeat_recent"]=False
     pairs=await db.kaos_research_candles.distinct("symbol")
     result=[]
     for symbol in pairs[:30]:
         count=await db.kaos_research_candles.count_documents({"symbol":symbol})
         latest=await db.kaos_research_candles.find_one({"symbol":symbol},{"_id":0},sort=[("ts",-1)])
         result.append({"symbol":symbol,"candles":count,"last_ts":latest.get("ts") if latest else None})
-    return {"state":state,"markets":result,"research_only":True,"orders_enabled":False}
+    return {"state":state,"continuous_worker":continuous,
+            "markets":result,"research_only":True,"orders_enabled":False}
 
 @router.get("/export")
 async def export(symbol:str=Query(pattern=r"^[A-Z0-9_-]{2,32}$"),
