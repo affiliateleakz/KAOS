@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {validateMarkets,closedBars,storeBars,objectKey,runScheduled,recordRunStatus} from "../src/index.mjs";
+import {validateMarkets,closedBars,storeBars,objectKey,runScheduled,recordRunStatus,providerBars} from "../src/index.mjs";
 
 const market={symbol:"AAPL",asset_class:"stock",seconds:60};
 const START=1761955200000;
@@ -71,4 +71,26 @@ test("R2 status file captures feed errors even when no candles were stored",asyn
   const status=JSON.parse(b.mem.get("status/last-run.json"));
   assert.equal(status.results[0].reason,"alpaca_keys_not_configured");
   assert.equal(b.mem.size,1);
+});
+
+test("Cloudflare fetch uses manual redirects for Coinbase API",async()=>{
+  const old=globalThis.fetch;
+  let seen;
+  globalThis.fetch=async (url,options)=>{
+    seen={url,options};
+    return {ok:true,status:200,json:async()=>[[1761955200,99,101,100,100.2,42]]};
+  };
+  try {
+    const result=await providerBars({symbol:"BTC-USD",asset_class:"crypto",seconds:60},{});
+    assert.equal(result.bars.length,1);
+    assert.equal(seen.options.redirect,"manual");
+    assert.match(seen.url,/api.exchange.coinbase.com/);
+  } finally {globalThis.fetch=old;}
+});
+test("Cloudflare refuses redirects rather than forwarding Alpaca credentials",async()=>{
+  const old=globalThis.fetch;
+  globalThis.fetch=async ()=>({ok:false,status:302});
+  try {
+    await assert.rejects(()=>providerBars(market,{APCA_API_KEY_ID:"test",APCA_API_SECRET_KEY:"test"}),/feed_redirect_302/);
+  } finally {globalThis.fetch=old;}
 });
