@@ -93,3 +93,28 @@ python research/market_intelligence/train_candle_cnn.py --input chart_windows.js
 Compare the CNN `test_accuracy` and `test_majority_baseline_accuracy` on exactly the same market and held-out period. To compare with the joined intelligence model, align its market, source, timeframe, target horizon, test dates, execution-cost assumptions and underlying outcome definitions first. The CNN's `test_all_direction_net_return_mean_proxy` is an illustrative *overlapping* signal-return proxy, not feasible portfolio P&L or validated trade win rate.
 
 No CNN weights are registered or deployed; no production screenshot image prediction is connected. This offline baseline is preparation for the future always-running candle recorder, not evidence that it is already collecting candles.
+
+## Kronos foundation-model adapter — research only
+
+Primary implementation: [shiyu-coder/Kronos](https://github.com/shiyu-coder/Kronos) (MIT). Its pretrained model zoo offers `Kronos-mini` (4.1M parameters, 2048 context), `Kronos-small` (24.7M, 512 context) and `Kronos-base` (102.3M, 512 context), each paired with a tokenizer. These are transformer-based probabilistic K-line **forecast generators**, not image detectors or verified profitable trading strategies. The external [mech.app overview](https://www.mech.app/articles/kronos-foundation-model-for-financial-candlesticks/) is secondary; follow the official repository's `KronosPredictor` API, not generic Transformers AutoModel instructions.
+
+KAOS adds `kronos_adapter.py`, an original isolated adapter (no Kronos source/weights checked in) that:
+- Prepares source-consistent, closed archived OHLCV bars at supported 60/300/900s intervals, requiring contiguous UTC timestamps, no imputation and no mixed markets.
+- Constructs deterministic *future timestamps only*, without reading any future prices.
+- Verifies the model-to-tokenizer pair and context limit, defaults to the small `Kronos-mini` footprint for experimentation.
+- On explicit `--execute`, optionally calls the official package through a separately installed, trusted local Kronos checkout; upstream code downloads its pretrained weights when called. Never run untrusted code/checkpoints in the API process.
+- Returns an **unvalidated research-only** price-path estimate without order authorization. Research-only smoke tests do not require torch or download weights.
+
+Prepare and inspect offline inputs (stdlib only):
+
+```bash
+python research/market_intelligence/kronos_adapter.py --input candles.json --output kronos_input.json --model mini --lookback 128 --pred-len 5
+```
+
+To run the model, separately clone and review the upstream MIT repository, install its pinned dependencies in an isolated CPU/GPU environment, then explicitly use:
+
+```bash
+python research/market_intelligence/kronos_adapter.py --input candles.json --output kronos_forecast.json --model mini --lookback 128 --pred-len 5 --execute --kronos-checkout /trusted/path/to/Kronos --device cpu
+```
+
+Only after collecting genuine archival candle history should KAOS compare Kronos forecast MAE/RMSE and direction metrics against simple naive-price, tabular, and 1D CNN baselines on identical **purged and chronological out-of-sample decisions**. Measure transaction fees/spread/slippage before any strategy claim; model-predicted candle paths can violate OHLC consistency and are not executable broker quotes. No weights are downloaded or training performed in KAOS CI, no background worker is deployed, and no live trading is enabled.
