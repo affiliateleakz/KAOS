@@ -159,15 +159,21 @@ jobs:
           test -s "$HOME/$STAGE/web/index.html"
           mkdir -p "$HOME/kaos-deploy-backups"
           TS="$(date -u +%Y%m%dT%H%M%SZ)"
-          # Backup current code and public assets, but do not export credentials.
-          tar -C "$API_DIR" --exclude='.env' --exclude='.env.*' --exclude='__pycache__' --exclude='*.log' --exclude='*.db' -czf "$HOME/kaos-deploy-backups/api-$TS.tgz" . 
-          tar -C "$WEB_DIR" --exclude='.env' --exclude='.env.*' --exclude='*.log' -czf "$HOME/kaos-deploy-backups/web-$TS.tgz" .
-          # No --delete: preserve hosting-controlled files, user uploads and .env.
-          rsync -a --exclude='.env' --exclude='.env.*' "$HOME/$STAGE/api/" "$API_DIR/"
+          # Back up overwritten files only. Do not read/copy other
+          # server files, uploads, .env, database files or customer content.
+          mkdir -p "$HOME/kaos-deploy-backups/api-$TS" "$HOME/kaos-deploy-backups/web-$TS"
+          rsync -a --backup --backup-dir="$HOME/kaos-deploy-backups/api-$TS" \\
+            --exclude='.env' --exclude='.env.*' --exclude='*.log' \\
+            "$HOME/$STAGE/api/" "$API_DIR/"
           if [[ "$INSTALL" == "true" ]]; then
             "$PYTHON_BIN" -m pip install -r "$API_DIR/requirements.txt"
           fi
-          rsync -a --exclude='index.html' "$HOME/$STAGE/web/" "$WEB_DIR/"
+          rsync -a --backup --backup-dir="$HOME/kaos-deploy-backups/web-$TS" \\
+            --exclude='index.html' --exclude='.env' --exclude='.env.*' \\
+            "$HOME/$STAGE/web/" "$WEB_DIR/"
+          if [[ -f "$WEB_DIR/index.html" ]]; then
+            cp "$WEB_DIR/index.html" "$HOME/kaos-deploy-backups/web-$TS/index.html"
+          fi
           cp "$HOME/$STAGE/web/index.html" "$WEB_DIR/index.html"
           mkdir -p "$API_DIR/tmp"
           touch "$API_DIR/tmp/restart.txt"
