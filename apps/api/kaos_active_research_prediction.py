@@ -104,7 +104,7 @@ def infer_candidate(artifact,candles,observations,*,now_ms):
     cutoff=recent[-1]["ts"]+interval
     if cutoff>now_ms or now_ms-cutoff>max(3*interval,5*60000):
         return {"status":"stale_or_incomplete_candles","direction":"WAIT"}
-    if cutoff<=artifact["last_training_candle_ms"]:
+    if recent[-1]["ts"]<=artifact["last_training_candle_ms"]:
         return {"status":"model_not_forward_of_training","direction":"WAIT"}
     try:
         x=_features(recent,observations,symbol=artifact["symbol"],
