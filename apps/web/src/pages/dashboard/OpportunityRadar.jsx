@@ -8,15 +8,24 @@ export default function OpportunityRadar(){
  const [marketType,setMarketType]=useState("stock"),[marketSeconds,setMarketSeconds]=useState("60");
  const [history,setHistory]=useState(null),[historyBusy,setHistoryBusy]=useState(false),[historyError,setHistoryError]=useState("");
  const [searchedMarket,setSearchedMarket]=useState("");
+ const [assessment,setAssessment]=useState(null),[assessmentError,setAssessmentError]=useState("");
  const searchMarket=async()=>{
    const symbol=ticker.trim().toUpperCase();
    if(!symbol)return;
-   setHistoryBusy(true);setHistoryError("");setHistory(null);setSearchedMarket(symbol);
+   setHistoryBusy(true);setHistoryError("");setHistory(null);setAssessment(null);setAssessmentError("");setSearchedMarket(symbol);
    try{
      const response=await api.get("/api/v1/research/market-history/search",{params:{
        symbol,asset_class:marketType,seconds:Number(marketSeconds)
      }});
      setHistory(response.data);
+     if(response.data?.candles?.length){
+       try{
+         const result=await api.get("/api/v1/research/market-history/assessment",{params:{
+           symbol,asset_class:marketType,seconds:Number(marketSeconds)
+         }});
+         setAssessment(result.data);
+       }catch(e){setAssessmentError(e?.response?.data?.detail||"Research assessment unavailable");}
+     }
    }catch(e){setHistoryError(e?.response?.data?.detail||e.message||"Historical data unavailable");}
    finally{setHistoryBusy(false);}
  };
@@ -34,6 +43,19 @@ export default function OpportunityRadar(){
    <p className="mt-1 text-xs text-slate-400">Search above to automatically request an authorized provider's recent closed candles. Results are cached to reduce API usage. Crypto pairs use e.g. BTC-USD, forex uses EUR_USD, stocks use AAPL. This does not train AI or place orders.</p>
    {historyBusy&&<p role="status" className="mt-2 text-sm text-slate-300">Retrieving available historical candles…</p>}
    {historyError&&<p role="alert" className="mt-2 text-sm text-amber-300">{searchedMarket}: {historyError}</p>}
+   {assessmentError&&<p role="alert" className="mt-2 text-xs text-amber-300">{assessmentError}</p>}
+   {assessment&&<div className="mt-4 space-y-3 rounded-lg border border-[#D4AF37]/40 p-4" data-testid="kaos-market-assessment">
+     <div className="flex flex-wrap items-center gap-3"><b className="text-[#D4AF37]">KAOS Market Research</b><span>{assessment.buy_sell} · {assessment.bias}</span><span>Technical index: {assessment.score??"—"}/100</span></div>
+     <p className="text-xs text-amber-300">An uncalibrated technical alignment score, NOT a buy/sell probability, price forecast, or trade signal.</p>
+     <p className="text-xs text-slate-300">{assessment.reason||assessment.coverage?.reason}</p>
+     {assessment.indicators&&<div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">{Object.entries(assessment.indicators).map(([k,v])=><div key={k} className="rounded bg-black/30 p-2">{k}: <strong>{v??"—"}</strong></div>)}</div>}
+     {assessment.patterns?.length>0&&<p className="text-xs text-slate-300">Structures: {assessment.patterns.join(", ")}</p>}
+     <p className="text-xs text-slate-400">History: {assessment.coverage?.closed_candles||0} candles · Gaps: {assessment.coverage?.gaps_in_sample??"—"} · Missing categories: {(assessment.coverage?.missing_sources||[]).join(", ")||"None noted"}</p>
+     <p className="text-xs text-slate-400">{assessment.evidence?.length||0} previously ingested news/social/other observations. Missing coverage is not zero activity.</p>
+     <details className="text-xs text-slate-300"><summary className="cursor-pointer">Research evidence</summary>{(assessment.evidence||[]).slice(0,12).map((e,i)=><p key={i} className="border-t border-slate-800 py-2">{e.source}: {e.direction} · {e.summary}</p>)}</details>
+     <div className="rounded border border-slate-700 p-2 text-xs"><b>Options</b><p>{assessment.options?.reason||"No verified options research"}</p><p>Call/Put: {assessment.options?.call_put||"NONE"} · Expiration: {assessment.options?.expiry||"Not verified"}</p></div>
+     {assessment.scenario&&<p className="text-xs text-slate-400">ATR references: {assessment.scenario.atr_down_reference}–{assessment.scenario.atr_up_reference}; these are not target forecasts.</p>}
+   </div>}
    {history&&<div className="mt-3 text-sm text-slate-200">
      <p>{history.symbol} · {history.source||"provider pending"} · {history.bar_count||0} closed bars · {history.gaps??"—"} gap(s) · {history.cache_hit?"cached":"new request"}</p>
      {history.status==="fetch_in_progress"&&<p className="text-xs text-amber-300">A history request is already running for this market. Search again shortly.</p>}
