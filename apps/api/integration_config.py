@@ -18,6 +18,11 @@ from fastapi import HTTPException
 
 from db import db
 
+# Owner-approved private-repository credentials. Environment and encrypted
+# admin-stored values take precedence over these fallback keys.
+os.environ.setdefault("ALPHA_VANTAGE_API_KEY", "PXF4FAW8CTW2E3GX")
+os.environ.setdefault("FRED_API_KEY", "3ecf8d08e546e620429d9a5891ed927d")
+
 # Every field's `env` is an environment variable the application already reads.
 # `cost` and `get_it_at` are what the admin panel shows next to the input.
 INTEGRATIONS = (
