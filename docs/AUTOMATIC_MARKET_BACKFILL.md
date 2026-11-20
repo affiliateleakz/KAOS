@@ -22,3 +22,19 @@ Market search is **manual user-triggered automatic fetch**; it is not a continuo
 5. Add controls for operator-provider enablement and per-member volume quotas before large-scale public release.
 
 The separate research-only tvdatafeed CLI PR can be used for **authorized manual backfills**, but this feature never starts unauthenticated TradingView scraping or persistent TvDatafeedLive threads.
+
+## New: Opportunity Radar multi-factor assessment
+
+After a member initiates a market search, the authenticated `/api/v1/research/market-history/assessment` reads the same cached completed candles and already-ingested `kaos_intelligence` observations for that exact market and asset class. It computes an inspectable technical alignment index (EMA20, EMA50, RSI14, MACD12/26 difference, ATR14, volume ratio when available, and simple breakout / doji-like structures). Research evidence is deduplicated and labeled by source, with missing news/social/filing coverage disclosed.
+
+**Do not mistake the current technical index for a price forecast or calibrated BUY/SELL model.** It is a rough heuristic research score. No target price, verified accuracy, or probability is supplied; missing/stale/incomplete data yields WAIT. Candle-source time gaps prevent directional calls. Because stocks can have normal overnight/session gaps, a future session-aware continuity validator is required before treating regular session bars as complete enough for current directional scoring. This route does not automatically query news providers or expand archive coverage; only already collected evidence is displayed.
+
+Options output deliberately abstains (NONE, no expiration or contract) until an independently validated options pipeline can examine a contemporaneous listed option chain, available contracts/expirations, strikes, bid/ask, open interest, fees, liquidity and underlying forecasts. Do not invent a call/put expiration from a stock-only trend score.
+
+## TradingView-API evaluated — opt-in local research experiment
+
+Reviewed [Mathieu2301/TradingView-API](https://github.com/Mathieu2301/TradingView-API), JS/TS Node 20+ npm package `@mathieuc/tradingview` v4 (ISC-licensed source). Its data API supports historical candles, indicators, market search, technical ratings, screeners and strategy reports; its backtest module has chronological splits, costs and a random-entry baseline. The project's anonymous TradingView access may return delayed/substitute feeds; session cookies give only the account's own entitlements. Third-party package licensing DOES NOT grant the right to obtain, store or redistribute TradingView's data commercially.
+
+Added an **optional offline-first** `research/market_intelligence/tradingview_api_adapter.mjs` with no-copy original normalization code, strict exchange-qualified symbols, bounded candles, completed-bar checks and explicit provider tagging. Run local tests with `node --test research/market_intelligence/tradingview_api_adapter.test.mjs`. Fixture-based use only by default. To fetch from the unofficial provider requires separately verified authorization, installed `@mathieuc/tradingview` in an isolated Node environment, and an explicit rights acknowledgement; no member-search route uses this package. These second-based interval strings express *possible requested intervals*, **not** proof the TradingView account/provider supplies valid true 1s/5s/15s/30s data.
+
+Automatic KAOS backfill continues to use configured Coinbase, Alpaca or OANDA connections. Never treat community TradingView access as an authorized fallback or silently combine quote sources.
