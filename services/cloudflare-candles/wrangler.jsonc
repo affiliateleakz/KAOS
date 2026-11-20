@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "kaos-candle-archive",
+  "name": "kaos",
   "main": "src/index.mjs",
   "compatibility_date": "2026-11-19",
   "workers_dev": false,
