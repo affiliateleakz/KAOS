@@ -14,6 +14,20 @@ from kaos_source_health import summarize_health
 
 router=APIRouter(prefix='/api/v1/intelligence',tags=['opportunity-radar'])
 
+class SocialSampleMetrics(BaseModel):
+    """A bounded public social sample, NOT a complete platform mention count."""
+    provider: Literal['bluesky_search', 'bluesky_monitored_accounts']
+    sampled_posts: int = Field(ge=0, le=3000)
+    sampled_unique_authors: int = Field(ge=0, le=3000)
+    previous_hour_posts: int | None = Field(default=None, ge=0, le=100)
+    previous_hour_unique_authors: int | None = Field(default=None, ge=0, le=100)
+    search_results_inspected: int | None = Field(default=None, ge=0, le=100)
+    search_limit: int = Field(default=100, ge=1, le=100)
+    coverage: Literal[
+        'bounded_search_sample_not_platform_total',
+        'bounded_monitored_accounts_not_platform_total',
+    ]
+
 class Observation(BaseModel):
     asset: str = Field(min_length=1,max_length=60)
     asset_class: Literal['stock','etf','option','crypto','dex','forex','future']
@@ -25,6 +39,7 @@ class Observation(BaseModel):
     published_at: datetime
     source_url: str = Field(min_length=8,max_length=2000)
     summary: str = Field(default='',max_length=1200)
+    sample_metrics: SocialSampleMetrics | None = None
 
 async def member(user=Depends(get_current_user)):
     if not (await get_entitlements(user)).get('scanners'):

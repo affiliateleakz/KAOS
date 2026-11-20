@@ -92,9 +92,18 @@ def observe_accounts(feed_map, symbols, now=None):
                  'NOT total platform mentions, acceleration, verified sentiment, buying, or a trading signal.')
         out.append({'asset': ticker, 'asset_class':'stock', 'source':'social',
                     'direction':'neutral', 'strength':min(.35, .10 + .02*author_count),
-                    'event_id':'bsky-social:'+ticker+':'+now.strftime('%Y%m%d%H'),
+                    'event_id':'bsky-social:'+ticker+':'+now.strftime('%Y%m%d%H%M'),
                     'observed_at':now.isoformat(), 'published_at':latest[1].isoformat(),
-                    'source_url':latest[2], 'summary':summary[:1200]})
+                    'source_url':latest[2], 'summary':summary[:1200],
+                    'sample_metrics': {
+                        'provider': 'bluesky_monitored_accounts',
+                        'sampled_posts': len(mentions),
+                        'sampled_unique_authors': author_count,
+                        'previous_hour_posts': None,
+                        'previous_hour_unique_authors': None,
+                        'search_results_inspected': None, 'search_limit': 100,
+                        'coverage': 'bounded_monitored_accounts_not_platform_total',
+                    }})
     return out
 
 
