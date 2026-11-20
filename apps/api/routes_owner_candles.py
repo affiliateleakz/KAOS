@@ -219,6 +219,21 @@ async def build_prediction_candidate(symbol:str=Query(pattern=r"^[A-Z0-9_-]{2,32
         {"symbol":symbol,"asset_class":asset_class,"seconds":seconds},
         {"_id":0}).sort("ts",-1).limit(5000).to_list(5000)
     rows.reverse()
+    source_origin="mongo_continuous_archive"
+    if len(rows)<500:
+        # The R2 archive is the canonical candle store for the Cloudflare
+        # collector; use it directly if Mongo was not mirrored.
+        from kaos_r2_archive import read_archive, ArchiveUnavailable
+        try:
+            r2_rows,r2_source=await read_archive(
+                symbol,asset_class,seconds,limit=5000)
+        except ArchiveUnavailable:
+            return {"status":"r2_archive_unavailable","candidate":None,
+                    "reason":"Cloudflare R2 archive unavailable to research API",
+                    "orders_enabled":False}
+        if len(r2_rows)>len(rows):
+            rows=r2_rows
+            source_origin="cloudflare_r2_private_archive"
     sources={r.get("source") for r in rows}
     if len(sources)!=1 or not all(sources):
         return {"status":"insufficient_data","candidate":None,
@@ -247,7 +262,7 @@ async def build_prediction_candidate(symbol:str=Query(pattern=r"^[A-Z0-9_-]{2,32
             {"$set":{**candidate,"owner_id":str(user["id"])}},upsert=True)
     return {**result,"candidate":None if candidate is None else {
         k:v for k,v in candidate.items() if k!="model"},
-        "approval_required":True,"orders_enabled":False}
+        "candle_origin":source_origin,"approval_required":True,"orders_enabled":False}
 
 
 @router.post("/prediction-candidates/approve")
