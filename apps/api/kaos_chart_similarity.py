@@ -5,9 +5,39 @@ descriptive nearest-neighbor measure, not calibrated predictive confidence.
 """
 import math
 
-def compare(rows, lookback=20, horizon=5, limit=5):
+PATTERN_TAGS = ("uptrend", "downtrend", "range", "breakout_up", "breakout_down")
+PATTERN_UNKNOWN = "unknown"
+
+
+def classify_pattern(segment):
+    """Deterministic market structure tag from completed OHLCV candles only.
+
+    This is a rough structural classification, not a validated pattern detector.
+    """
+    if len(segment) < 10:
+        return PATTERN_UNKNOWN
+    previous = segment[:-1]
+    last = segment[-1]
+    # Use completed prior bar extrema for breakout context; no future prices.
+    prev_high = max(c["high"] for c in previous[-10:])
+    prev_low = min(c["low"] for c in previous[-10:])
+    if last["close"] > prev_high:
+        return "breakout_up"
+    if last["close"] < prev_low:
+        return "breakout_down"
+    close_earlier = previous[0]["close"]
+    relative = last["close"] / close_earlier - 1.
+    if relative >= .01:
+        return "uptrend"
+    if relative <= -.01:
+        return "downtrend"
+    return "range"
+
+def compare(rows, lookback=20, horizon=5, limit=5, pattern=None):
     if not (5 <= lookback <= 60 and 1 <= horizon <= 60 and 1 <= limit <= 10):
         raise ValueError("invalid lookback, horizon, or limit")
+    if pattern is not None and pattern not in PATTERN_TAGS:
+        raise ValueError("unsupported historical pattern label")
     if len(rows) < lookback * 3 + horizon + 2:
         return {"matches": [], "count": 0, "reason": "insufficient archived candle history"}
     bars = sorted(rows, key=lambda r: r["ts"])
@@ -36,9 +66,13 @@ def compare(rows, lookback=20, horizon=5, limit=5):
         scale = max(math.sqrt(sum(v*v for v in seq)/len(seq)), .002)
         return [v/scale for v in seq]
     target = shape(last)
+    current_tag = classify_pattern(bars[last-lookback+1:last+1])
     candidates=[]
     for end in range(lookback-1, last-lookback-horizon):
         if not contiguous(end-lookback+1, end+horizon):
+            continue
+        candidate_tag = classify_pattern(bars[end-lookback+1:end+1])
+        if pattern is not None and candidate_tag != pattern:
             continue
         arr=shape(end)
         distance=math.sqrt(sum((a-b)**2 for a,b in zip(arr,target))/lookback)
@@ -46,7 +80,8 @@ def compare(rows, lookback=20, horizon=5, limit=5):
         after=bars[end+horizon]["close"]
         candidates.append({"distance": round(distance,5), "decision_ms":bars[end]["ts"]+interval,
                            "outcome_ms":bars[end+horizon]["ts"]+interval,
-                           "forward_return_proxy": round(after/entry-1,8)})
+                           "forward_return_proxy": round(after/entry-1,8),
+                           "pattern":candidate_tag})
     candidates.sort(key=lambda c:c["distance"])
     chosen=[]
     for c in candidates:
@@ -55,6 +90,9 @@ def compare(rows, lookback=20, horizon=5, limit=5):
             if len(chosen)>=limit:
                 break
     return {"matches": chosen, "count":len(chosen),
+            "current_archived_pattern": current_tag,
+            "requested_pattern": pattern,
+            "match_basis": "screenshot_pattern_category_filter" if pattern else "latest_archived_price_shape",
             "historical_up_fraction": (sum(m["forward_return_proxy"]>0 for m in chosen)/len(chosen)) if chosen else None,
             "status":"historical_similarity_only",
             "note":"Nearest historical structures, no calibrated forecast, execution model, or trade signal."}
