@@ -17,6 +17,18 @@ async def intelligence_export(
     require_owner(user)
     query = {"asset": asset, "asset_class": asset_class,
              "source": {"$in": ["news", "social"]}}
+    # Legacy Bluesky records use cashtags and "stock" as their asset class.
+    # Include only explicitly recognized crypto aliases from this known
+    # collector family, never an arbitrary stock ticker with the same name.
+    aliases = {"BTC-USD": "BTC", "ETH-USD": "ETH", "SOL-USD": "SOL"}
+    alias = aliases.get(asset) if asset_class == "crypto" else None
+    if alias:
+        query = {"$or": [
+            query,
+            {"asset": alias, "asset_class": "stock", "source": "social",
+             "$or": [{"event_id": {"$regex": "^bsky-search:"}},
+                      {"event_id": {"$regex": "^bsky-social:"}}]}
+        ]}
     docs = (await db.kaos_intelligence.find(query, {"_id": 0})
             .sort("observed_at", -1).limit(limit).to_list(length=limit))
     return {"asset": asset, "asset_class": asset_class, "observations": list(reversed(docs)),
