@@ -2,6 +2,7 @@
 and archived price-structure matching. Screenshots are never persisted.
 """
 import base64
+import json
 import os
 import re
 import httpx
@@ -10,7 +11,7 @@ from pydantic import BaseModel, Field
 from auth import get_current_user
 from db import db
 from services_trading import get_entitlements
-from kaos_chart_similarity import compare
+from kaos_chart_similarity import compare, PATTERN_TAGS
 
 router = APIRouter(prefix="/api/v1/ai/chart-snapshot", tags=["chart-research"])
 VALID_MARKET = re.compile(r"^[A-Z0-9_.-]{2,32}$")
@@ -52,14 +53,31 @@ async def analyze(req: SnapshotInput, user=Depends(permission)):
         "Never guess numerical confidence, price targets, asset identities or timeframes. "
         "Describe visible trend, candidate chart patterns, approximate qualitative support/resistance "
         "and both bullish and bearish scenarios. If text is unreadable state that. "
-        "Do not tell the user to buy or sell or claim a winning trade. Keep under 220 words. "
+        "Do not tell the user to buy or sell or claim a winning trade. "
+        "Choose one coarse visible structural pattern: uptrend, downtrend, range, "
+        "breakout_up, breakout_down, or unknown. Choose unknown if the screenshot "
+        "is too ambiguous. Pattern is an unvalidated visual classification. "
         f"User-supplied symbol: {req.symbol}; claimed timeframe: {req.timeframe}."
     )
+    output_schema = {
+        "type": "object",
+        "properties": {
+            "pattern": {"type":"string", "enum":[*PATTERN_TAGS, "unknown"]},
+            "analysis": {"type":"string"},
+            "bullish_scenario": {"type":"string"},
+            "bearish_scenario": {"type":"string"},
+            "limitations": {"type":"string"}
+        },
+        "required": ["pattern","analysis","bullish_scenario","bearish_scenario","limitations"],
+        "additionalProperties": False,
+    }
     payload={"model":os.getenv("KAOS_CHART_VISION_MODEL","gpt-4.1-mini"),
              "input":[{"role":"user","content":[
                  {"type":"input_text","text":prompt},
                  {"type":"input_image","image_url":req.image_data}
-             ]}],"max_output_tokens":450}
+             ]}],"max_output_tokens":650,
+             "text":{"format":{"type":"json_schema","name":"kaos_chart_structure_v1",
+                               "strict":True,"schema":output_schema}}}
     try:
         async with httpx.AsyncClient(timeout=35,follow_redirects=False) as client:
             response=await client.post("https://api.openai.com/v1/responses",
@@ -72,20 +90,36 @@ async def analyze(req: SnapshotInput, user=Depends(permission)):
         result="\n".join(paragraphs).strip()
         if not result:
             raise HTTPException(502,"No chart interpretation returned")
-        return {"status":"visual_interpretation_only","analysis":result[:3500],
+        try:
+            structured=json.loads(result)
+        except (ValueError, TypeError):
+            raise HTTPException(502,"Vision provider returned invalid chart classification")
+        if (not isinstance(structured,dict) or structured.get("pattern") not in (*PATTERN_TAGS,"unknown")
+                or any(not isinstance(structured.get(k),str) for k in
+                       ("analysis","bullish_scenario","bearish_scenario","limitations"))):
+            raise HTTPException(502,"Vision provider chart classification is incomplete")
+        return {"status":"visual_interpretation_only",
+                "analysis":structured["analysis"][:2000],
+                "pattern":structured["pattern"], "pattern_source":"vision_unverified",
+                "bullish_scenario":structured["bullish_scenario"][:800],
+                "bearish_scenario":structured["bearish_scenario"][:800],
+                "limitations":structured["limitations"][:500],
                 "model":payload["model"],"prediction":None,"confidence":None,
-                "note":"Screenshot is not authenticated market data. Not a validated prediction or trade signal.",
+                "note":"Visual pattern label is unverified; historical analogs only compare coarse structure, not screenshot prices. No validated price forecast.",
                 "image_stored":False}
     except httpx.HTTPError:
         raise HTTPException(502,"Vision provider temporarily unavailable")
 
 @router.get("/similar")
 async def similar(symbol:str, seconds:int=60, asset_class:str="crypto",
-                  lookback:int=20, horizon:int=5, user=Depends(permission)):
+                  lookback:int=20, horizon:int=5, pattern:str|None=None,
+                  user=Depends(permission)):
     if not VALID_MARKET.fullmatch(symbol) or asset_class not in ("crypto","stock","forex"):
         raise HTTPException(422,"Invalid symbol or asset class")
-    if seconds not in (60,300,900) or not 5<=lookback<=60 or not 1<=horizon<=60:
+    if seconds not in (60,300,900) or not 10<=lookback<=60 or not 1<=horizon<=60:
         raise HTTPException(422,"Unsupported candle interval, lookback, or horizon")
+    if pattern is not None and pattern not in PATTERN_TAGS:
+        raise HTTPException(422,"Unsupported or uncertain screenshot pattern")
     rows=await db.kaos_research_candles.find(
         {"symbol":symbol,"asset_class":asset_class,"seconds":seconds},
         {"_id":0}).sort("ts",-1).limit(5000).to_list(5000)
@@ -96,7 +130,7 @@ async def similar(symbol:str, seconds:int=60, asset_class:str="crypto",
     source=rows[-1].get("source")
     rows=[r for r in rows if r.get("source")==source]
     try:
-        result=compare(rows,lookback=lookback,horizon=horizon)
+        result=compare(rows,lookback=lookback,horizon=horizon,pattern=pattern)
     except ValueError as e:
         raise HTTPException(422,str(e))
     return {**result,"symbol":symbol,"asset_class":asset_class,"seconds":seconds,
