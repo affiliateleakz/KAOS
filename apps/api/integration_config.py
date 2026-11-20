@@ -18,9 +18,40 @@ from fastapi import HTTPException
 
 from db import db
 
+# Owner-approved private-repository credentials. Environment and encrypted
+# admin-stored values take precedence over these fallback keys.
+os.environ.setdefault("ALPHA_VANTAGE_API_KEY", "PXF4FAW8CTW2E3GX")
+os.environ.setdefault("FRED_API_KEY", "3ecf8d08e546e620429d9a5891ed927d")
+
 # Every field's `env` is an environment variable the application already reads.
 # `cost` and `get_it_at` are what the admin panel shows next to the input.
 INTEGRATIONS = (
+    {
+        "id": "alpha_vantage",
+        "name": "Alpha Vantage",
+        "category": "Market data",
+        "powers": ["Historical market research", "KAOS AI training data (future collector integration)"],
+        "purpose": "Market data provider credentials for bounded historical research; collectors must be separately configured.",
+        "get_it_at": "https://www.alphavantage.co/support/#api-key",
+        "docs": "https://www.alphavantage.co/documentation/",
+        "cost": "Free plan is limited; check current call allowances and redistribution terms before commercial use.",
+        "fields": [
+            {"env": "ALPHA_VANTAGE_API_KEY", "label": "API Key", "secret": True, "hint": "provider-issued key"},
+        ],
+    },
+    {
+        "id": "fred",
+        "name": "FRED Economic Data",
+        "category": "Market data",
+        "powers": ["Economic indicators", "KAOS AI macro training data (future collector integration)"],
+        "purpose": "US economic series for research and future time-aligned AI macro features.",
+        "get_it_at": "https://fred.stlouisfed.org/docs/api/api_key.html",
+        "docs": "https://fred.stlouisfed.org/docs/api/fred/",
+        "cost": "Free API key; some underlying series have separate usage and attribution requirements.",
+        "fields": [
+            {"env": "FRED_API_KEY", "label": "API Key", "secret": True, "hint": "provider-issued key"},
+        ],
+    },
     {
         "id": "alpaca",
         "name": "Alpaca Market Data",
@@ -411,6 +442,38 @@ async def probe(provider):
     timeout = httpx.Timeout(12.0, connect=8.0)
     async with httpx.AsyncClient(timeout=timeout, follow_redirects=False) as client:
         try:
+            if provider == "alpha_vantage":
+                key = os.getenv("ALPHA_VANTAGE_API_KEY", "")
+                if not key:
+                    return _fail("Add an Alpha Vantage API key first")
+                r = await _get(client, "https://www.alphavantage.co/query",
+                               params={"function": "GLOBAL_QUOTE", "symbol": "IBM", "apikey": key})
+                if r.status_code != 200:
+                    return _result(r, {200}, "Alpha Vantage accepted the key")
+                try:
+                    payload = r.json()
+                except ValueError:
+                    return _fail("Alpha Vantage returned invalid JSON")
+                if payload.get("Error Message") or payload.get("Information") or payload.get("Note"):
+                    return _fail("Alpha Vantage rejected or rate-limited this request")
+                if isinstance(payload.get("Global Quote"), dict) and payload["Global Quote"]:
+                    return {"ok": True, "detail": "Alpha Vantage returned an IBM quote", "checked_at": _now()}
+                return _fail("Alpha Vantage returned no quote; verify the key and quota")
+            if provider == "fred":
+                key = os.getenv("FRED_API_KEY", "")
+                if not key:
+                    return _fail("Add a FRED API key first")
+                r = await _get(client, "https://api.stlouisfed.org/fred/series",
+                               params={"series_id": "GDP", "api_key": key, "file_type": "json"})
+                if r.status_code != 200:
+                    return _result(r, {200}, "FRED accepted the key")
+                try:
+                    payload = r.json()
+                except ValueError:
+                    return _fail("FRED returned invalid JSON")
+                if isinstance(payload.get("seriess"), list) and payload["seriess"]:
+                    return {"ok": True, "detail": "FRED returned GDP series metadata", "checked_at": _now()}
+                return _fail("FRED returned no series metadata; verify the key")
             if provider == "alpaca":
                 key, secret = os.getenv("APCA_API_KEY_ID", ""), os.getenv("APCA_API_SECRET_KEY", "")
                 if not key or not secret:
