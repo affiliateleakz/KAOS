@@ -56,6 +56,32 @@ class IntelligencePipelineTests(unittest.TestCase):
         results = build(candles(), {"observations": [e,e]}, (300,))
         self.assertEqual(results["observation_count"], 1)
 
+    def test_legacy_crypto_bluesky_alias_is_source_restricted(self):
+        mapped = observed("social", 30, event_id="bsky-search:BTC:202601010030")
+        mapped["asset"] = "BTC"
+        mapped["asset_class"] = "stock"
+        mapped["sample_metrics"] = {
+            "provider": "bluesky_search", "sampled_posts": 9,
+            "sampled_unique_authors": 7, "previous_hour_posts": 4,
+            "coverage": "bounded_search_sample_not_platform_total",
+        }
+        result = build(candles(), {"observations": [mapped]}, (300,))
+        later = next(r for r in result["rows"] if r["decision_ms"] == MS+31*60000)
+        self.assertEqual(result["observation_count"], 1)
+        self.assertEqual(later["features"]["social_sampled_posts"], 9)
+        self.assertEqual(later["features"]["social_sampled_post_change"], 5)
+
+        unsafe = dict(mapped, event_id="user-generated:BTC")
+        blocked = build(candles(), {"observations": [unsafe]}, (300,))
+        self.assertEqual(blocked["observation_count"], 0)
+
+    def test_legacy_crypto_alias_does_not_pretend_all_sources_match(self):
+        news = observed("news", 30, event_id="bsky-search:BTC:202601010030")
+        news["asset"] = "BTC"
+        news["asset_class"] = "stock"
+        blocked = build(candles(), {"observations": [news]}, (300,))
+        self.assertEqual(blocked["observation_count"], 0)
+
     def test_cross_asset_records_excluded(self):
         foreign = observed("social", 30)
         foreign["asset"] = "ETH-USD"
