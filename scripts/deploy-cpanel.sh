@@ -37,10 +37,10 @@ echo "Changes will preserve .env, server secrets and existing files not in this 
 STAGE="$(mktemp -d "${TMPDIR:-/tmp}/kaos-deploy.XXXXXXXX")"
 trap 'rm -rf "$STAGE"' EXIT
 mkdir -p "$STAGE/api/packages/kaos-core" "$STAGE/web"
-find "$HERE/apps/api" -maxdepth 1 -type f \\( -name '*.py' -o -name requirements.txt \\) ! -name 'test_*.py' -exec cp {} "$STAGE/api/" \\;
+find "$HERE/apps/api" -maxdepth 1 -type f \( -name '*.py' -o -name requirements.txt \) ! -name 'test_*.py' -exec cp {} "$STAGE/api/" \;
 cp -R "$HERE/packages/kaos-core/." "$STAGE/api/packages/kaos-core/"
 cp "$HERE/apps/api/passenger_wsgi.KAOS" "$STAGE/api/passenger_wsgi.py"
-printf '%s\\n' "$REV" > "$STAGE/api/.kaos-release-sha"
+printf '%s\n' "$REV" > "$STAGE/api/.kaos-release-sha"
 
 if [[ "$DO_WEB" == "1" ]]; then
   command -v npm >/dev/null || { echo "ERROR: npm missing. Use KAOS_DEPLOY_WEB=0 to update API only."; exit 1; }
@@ -53,14 +53,14 @@ if [[ "$DO_WEB" == "1" ]]; then
   )
   test -s "$HERE/apps/web/build/index.html" || { echo "ERROR: website build failed"; exit 1; }
   cp -R "$HERE/apps/web/build/." "$STAGE/web/"
-  printf '%s\\n' "$REV" > "$STAGE/web/.kaos-release-sha"
+  printf '%s\n' "$REV" > "$STAGE/web/.kaos-release-sha"
 fi
 
 BACKUPS="$HOME/kaos-deploy-backups/$STAMP"
 mkdir -p "$BACKUPS/api" "$BACKUPS/web"
 echo "Deploying API with backups at $BACKUPS ..."
-rsync -a --backup --backup-dir="$BACKUPS/api" \\
-  --exclude='.env' --exclude='.env.*' --exclude='*.log' \\
+rsync -a --backup --backup-dir="$BACKUPS/api" \
+  --exclude='.env' --exclude='.env.*' --exclude='*.log' \
   "$STAGE/api/" "$API_DIR/"
 
 if [[ "$DO_PIP" == "1" ]]; then
@@ -73,7 +73,7 @@ fi
 
 if [[ "$DO_WEB" == "1" ]]; then
   echo "Deploying website..."
-  rsync -a --backup --backup-dir="$BACKUPS/web" --exclude=index.html \\
+  rsync -a --backup --backup-dir="$BACKUPS/web" --exclude=index.html \
     --exclude='.env' --exclude='.env.*' "$STAGE/web/" "$WEB_DIR/"
   if [[ -f "$WEB_DIR/index.html" ]]; then cp -p "$WEB_DIR/index.html" "$BACKUPS/web/index.html"; fi
   cp "$STAGE/web/index.html" "$WEB_DIR/index.html"
