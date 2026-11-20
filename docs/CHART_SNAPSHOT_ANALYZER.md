@@ -21,3 +21,11 @@ Run `PYTHONPATH=apps/api python -m unittest apps/api/test_chart_similarity.py` t
 Admin → API Keys & Integrations already supports encrypted OpenAI credentials. This PR updates its OpenAI entry to list **Chart Screenshot Analyzer (vision)** and to expose an optional `KAOS_CHART_VISION_MODEL` setting (default `gpt-4.1-mini`). The provider connection check tests API-key access, **not** whether a particular vision model is available on the account. No secret is written to Git.
 
 The KAOS AI member page now offers **Analyze chart + compare history**. That action calls the vision interpreter and archived-candle similarity service for the same user-entered market/timeframe, displaying each result independently, including a useful partial result if one service is unavailable. The historical matching remains **independent of the screenshot content**; it is not a validated screenshot-to-price prediction. This is a foundation for later verified screenshot pattern extraction and historical outcome matching.
+
+## Structured screenshot pattern linking — experimental
+
+The vision response now uses a restricted structured JSON schema: `pattern` is one of `uptrend`, `downtrend`, `range`, `breakout_up`, `breakout_down`, or `unknown`; explanatory text and opposing scenarios are returned separately. The combined action only requests historical *pattern category* matches if the vision response is not `unknown`.
+
+The archive matcher calculates the same coarse category on fully closed OHLCV windows and filters candidates to that category. **Within that category, candidates are still ranked by similarity to the latest archived candle sequence, not similarity to the screenshot's pixel geometry.** No calibrated probability, identified formation verification, or price prediction is inferred from matching the category. For unknown screenshot patterns, the automatic matching step is skipped and the user can run the independent archive search. This prevents invented visual-to-numeric similarity.
+
+The category classifier is a deterministic, intentionally simple prototype and must be evaluated and refined using authentic candle archives, with held-out historical validation and a no-trade outcome for uncertainty, before marketing it as a predictor.
