@@ -9,11 +9,12 @@ export default function OpportunityRadar(){
  const [history,setHistory]=useState(null),[historyBusy,setHistoryBusy]=useState(false),[historyError,setHistoryError]=useState("");
  const [searchedMarket,setSearchedMarket]=useState("");
  const [assessment,setAssessment]=useState(null),[assessmentError,setAssessmentError]=useState("");
+ const [forecast,setForecast]=useState(null),[forecastError,setForecastError]=useState("");
  const [optionsReview,setOptionsReview]=useState(null),[optionsError,setOptionsError]=useState("");
  const searchMarket=async()=>{
    const symbol=ticker.trim().toUpperCase();
    if(!symbol)return;
-   setHistoryBusy(true);setHistoryError("");setHistory(null);setAssessment(null);setAssessmentError("");setOptionsReview(null);setOptionsError("");setSearchedMarket(symbol);
+   setHistoryBusy(true);setHistoryError("");setHistory(null);setAssessment(null);setAssessmentError("");setForecast(null);setForecastError("");setOptionsReview(null);setOptionsError("");setSearchedMarket(symbol);
    try{
      const response=await api.get("/api/v1/research/market-history/search",{params:{
        symbol,asset_class:marketType,seconds:Number(marketSeconds)
@@ -25,6 +26,12 @@ export default function OpportunityRadar(){
            symbol,asset_class:marketType,seconds:Number(marketSeconds)
          }});
          setAssessment(result.data);
+         try{
+           const prediction=await api.get("/api/v1/research/market-history/prediction",{params:{
+             symbol,asset_class:marketType,seconds:Number(marketSeconds)
+           }});
+           setForecast(prediction.data);
+         }catch(e){setForecastError(e?.response?.data?.detail||"AI prediction unavailable");}
          if(marketType==="stock"||marketType==="etf"){
            try{
              const options=await api.get("/api/v1/research/market-history/options/chain-review",{params:{symbol}});
@@ -51,6 +58,17 @@ export default function OpportunityRadar(){
    {historyBusy&&<p role="status" className="mt-2 text-sm text-slate-300">Retrieving available historical candles…</p>}
    {historyError&&<p role="alert" className="mt-2 text-sm text-amber-300">{searchedMarket}: {historyError}</p>}
    {assessmentError&&<p role="alert" className="mt-2 text-xs text-amber-300">{assessmentError}</p>}
+   {forecastError&&<p role="status" className="mt-2 text-xs text-amber-300">AI forecast: {forecastError}</p>}
+   {forecast&&<div className="mt-3 rounded-lg border border-[#D4AF37]/40 p-3" data-testid="kaos-experimental-prediction">
+     <h3 className="font-semibold text-[#D4AF37]">KAOS AI Direction Research</h3>
+     <div className="mt-2 flex flex-wrap items-center gap-3 text-sm"><span>Direction: <b>{forecast.direction||"WAIT"}</b></span>
+       <span>State: {forecast.status}</span>
+       {forecast.horizon_seconds!=null&&<span>Forecast horizon: {forecast.horizon_seconds}s</span>}
+     </div>
+     {forecast.raw_model_up_score!=null&&<p className="mt-2 text-xs text-slate-300">Raw directional model score: {forecast.raw_model_up_score} (not a calibrated chance of profit)</p>}
+     <p className="mt-2 text-xs text-amber-300">{forecast.note||forecast.reason||"No approved model or verified prediction is available for this market."}</p>
+     <p className="mt-1 text-xs text-slate-400">Research only. No BUY/SELL trade authorization, options contract, or expiration recommendation.</p>
+   </div>}
    {assessment&&<div className="mt-4 space-y-3 rounded-lg border border-[#D4AF37]/40 p-4" data-testid="kaos-market-assessment">
      <div className="flex flex-wrap items-center gap-3"><b className="text-[#D4AF37]">KAOS Market Research</b><span>{assessment.buy_sell} · {assessment.bias}</span><span>Technical index: {assessment.score??"—"}/100</span></div>
      <p className="text-xs text-amber-300">An uncalibrated technical alignment score, NOT a buy/sell probability, price forecast, or trade signal.</p>
