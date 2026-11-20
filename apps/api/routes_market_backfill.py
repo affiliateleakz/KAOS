@@ -272,3 +272,58 @@ async def market_assessment(symbol:str=Query(min_length=2,max_length=32),
         raise HTTPException(422,str(exc)) from exc
     return {**report,"history_cache_hit":True,"news_social_collection":"already_ingested_only",
             "options_chain_checked":False}
+
+
+@router.get("/options/chain-review")
+async def review_options_chain(symbol:str=Query(min_length=1,max_length=12),
+                               user=Depends(guard)):
+    """Read-only, bounded Tradier listed-options chain research.
+
+    Not a call/put or expiration recommendation. Sandbox quotes are delayed.
+    No provider request unless operator configured market-data credentials.
+    """
+    symbol=symbol.strip().upper()
+    if not STOCK.fullmatch(symbol):
+        raise HTTPException(422,"Options require a valid stock or ETF underlying")
+    token=os.getenv("TRADIER_TOKEN","")
+    if not token:
+        raise HTTPException(503,"Tradier options market data is not configured")
+    sandbox=os.getenv("KAOS_TRADIER_SANDBOX","true").lower()!="false"
+    api="https://sandbox.tradier.com/v1" if sandbox else "https://api.tradier.com/v1"
+    headers={"Authorization":"Bearer "+token,"Accept":"application/json"}
+    async with httpx.AsyncClient(timeout=12,follow_redirects=False) as client:
+        try:
+            resp=await client.get(api+"/markets/options/expirations",
+                                  params={"symbol":symbol,"includeAllRoots":"false"},headers=headers)
+            if resp.status_code!=200:
+                raise HTTPException(503,"Options expiration feed unavailable or not entitled")
+            raw=(resp.json().get("expirations") or {}).get("date") or []
+            if isinstance(raw,str):raw=[raw]
+            if not isinstance(raw,list):
+                raise HTTPException(502,"Invalid expiration response")
+            from datetime import date
+            today=datetime.now(timezone.utc).date()
+            dates=sorted(d for item in raw if isinstance(item,str)
+                         for d in [date.fromisoformat(item)]
+                         if d>=today)
+            if not dates:
+                return {"status":"no_listed_expirations","underlying":symbol,
+                        "candidates":[],"call_put_recommendation":"NONE",
+                        "recommended_expiration":None,"research_only":True}
+            # Query at most one nearest listed expiry to bound provider costs.
+            expiry=dates[0].isoformat()
+            chain=await client.get(api+"/markets/options/chains",
+                    params={"symbol":symbol,"expiration":expiry,"greeks":"true"},headers=headers)
+        except (httpx.HTTPError,ValueError,KeyError,TypeError) as exc:
+            raise HTTPException(503,"Options market data unavailable") from exc
+    if chain.status_code!=200:
+        raise HTTPException(503,"Options chain unavailable or not entitled")
+    raw=(chain.json().get("options") or {}).get("option") or []
+    if isinstance(raw,dict):raw=[raw]
+    from kaos_options_candidates import screen
+    try:
+        result=screen(symbol,expiry,raw,sandbox=sandbox)
+    except ValueError as exc:
+        raise HTTPException(502,str(exc)) from exc
+    return {**result,"available_expirations":len(dates),
+            "options_chain_checked":True}
