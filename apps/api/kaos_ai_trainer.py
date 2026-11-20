@@ -18,6 +18,7 @@ except Exception:
     LGBMClassifier = None
     HAS_LIGHTGBM = False
 from sklearn.metrics import accuracy_score
+from kaos_training_samples import sample_bucket_key
 
 FEATURES = 104
 
@@ -215,6 +216,12 @@ def fit_lightgbm_rows(rows, target_horizon_ms, now_ms=0):
 def main(msg):
     if not isinstance(msg, dict) or msg.get('type') != 'train_xgboost':
         return {'ok': False, 'error': 'invalid training request'}
+    try:
+        target = int(msg.get('targetHorizonMs', 30000))
+        if target < 5000 or target > 3600000:
+            raise ValueError('unsupported horizon')
+    except (TypeError, ValueError):
+        return {'ok': False, 'error': 'targetHorizonMs must be between 5000 and 3600000'}
     raw = msg.get('samples') or []
     rows = []
     seen = set()
@@ -241,10 +248,9 @@ def main(msg):
             raw_t = s.get('t', s.get('ts', 0))
             t = int(raw_t or 0)
             asset = str(s.get('asset', 'UNKNOWN'))
-            # V24.1.112: one truly independent row per asset per 30s target candle,
-            # regardless of whether JS tagged it setup/paper/trade or timestamps differ by ms.
-            bucket = (t // 30000) * 30000 if t else 0
-            key = (asset, bucket) if bucket else ('row', row_index, asset)
+            # Reject mixed-horizon rows; deduplicate within the selected horizon,
+            # never using the historical fixed 30s bucket for other horizons.
+            key = sample_bucket_key(s, target, row_index)
             if key in seen:
                 continue
             seen.add(key)
@@ -255,7 +261,6 @@ def main(msg):
             continue
 
     raw_valid_count = len(raw)
-    target = int(msg.get('targetHorizonMs', 30000))
     now_ms = int(msg.get('now', 0) or 0)
     global_model, global_report, global_sklearn = fit_rows(rows, target, now_ms)
     if global_model is None:
