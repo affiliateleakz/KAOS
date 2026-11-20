@@ -41,3 +41,30 @@ The upstream README advertises up to 5000 historical bars per request and minute
 A 24/7 KAOS candle recorder must use authorized feed contracts, a separate supervised long-running worker, retries, historical catch-up, immutable source/timeframe/asset IDs, idempotent archive writing, last-complete-bar checks, gap/duplicate detection and quality monitoring. Market closures and exchange sessions must be modeled explicitly. If an optional TradingView research sample is later compared against exchange feeds, **do not blend their OHLCV histories** into one synthetic record.
 
 This code is not a continuously running recorder and does not establish that market feeds or historical archives are available. Nothing is merged or deployed.
+
+## KAOS Historical Candle Backfill — on-demand script
+
+The convenient entry point is `kaos_backfill.py`, which supports permitted one-shot provider fetches or offline fixture normalization and writes a versioned, immutable-by-default JSON research archive:
+
+```bash
+python research/market_intelligence/kaos_backfill.py \
+  --provider tvdatafeed --symbol BTCUSDT --exchange BINANCE \
+  --asset-class crypto --seconds 60 --bars 500 \
+  --source-timezone UTC --fetch --acknowledge-provider-terms \
+  --output ./research_data/btcusdt_1m_20261120.json
+```
+
+This requires installation of the third-party client in an isolated environment, sufficient permission from TradingView and relevant data providers, and a manually confirmed timestamp timezone. The `--acknowledge-provider-terms` flag **does not grant permission**. The result is local and deliberately does not ingest into KAOS's production DB.
+
+The output includes source, exchange, asset class, interval, UTC OHLCV candles, gap count, and an *indicative* `usable_for_training` flag for a contiguous sample of at least 64 completed candles. This flag is only a minimal structural check, not evidence of licensing, provider accuracy, enough history to train, or any measured predictive edge. Downstream models must perform their own point-in-time integrity checks.
+
+Offline verification (no provider access needed):
+
+```bash
+python -m unittest discover -s research/market_intelligence -p 'test_tvdatafeed_adapter.py'
+python -m unittest discover -s research/market_intelligence -p 'test_kaos_backfill.py'
+```
+
+KAOS's existing `chart_windows.py` can consume the exported JSON as candle input for testing once the export is checked for training suitability. The pipeline branch is separate from this PR, so merge integration carefully and avoid assuming data collection already runs.
+
+For your eventual always-on recorder, prefer an **authorized, supervised market-feed worker** that archives incremental closed bars and backfills gaps. The manual script is a research tool that can help recover history on demand; it cannot create missing sub-minute bars or guarantee that previously unavailable candles can be recovered.
