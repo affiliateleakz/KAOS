@@ -64,6 +64,28 @@ class HistoricalValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"Duplicate"):
             report(r)
 
+    def test_historical_news_cannot_create_false_signal(self):
+        from datetime import datetime,timezone,timedelta
+        rows=candles()
+        # This headline is not available until after every archived decision.
+        future=datetime.fromtimestamp((BASE+2000*60000)/1000,timezone.utc)
+        record={"asset":"BTC-USD","asset_class":"crypto","source":"news",
+                "event_id":"later-headline","direction":"bullish","strength":1,
+                "published_at":(future-timedelta(hours=1)).isoformat(),
+                "observed_at":future.isoformat()}
+        result=evaluate_history(rows,symbol="BTC-USD",asset_class="crypto",
+             seconds=60,source="synthetic_unit_test",observations=[record],min_test=20)
+        self.assertEqual(result["status"],"unvalidated_historical_research")
+        fusion=result["point_in_time_fusion"]
+        self.assertEqual(fusion["holdout_fusion_signals"],0)
+        self.assertIsNone(fusion["mean_fusion_return_proxy"])
+
+    def test_replay_with_no_social_or_news_abstains_on_fusion(self):
+        result=evaluate_history(candles(),symbol="BTC-USD",asset_class="crypto",
+             seconds=60,source="synthetic_unit_test",observations=[],min_test=20)
+        self.assertEqual(result["point_in_time_fusion"]["holdout_fusion_signals"],0)
+        self.assertIsNone(result["point_in_time_fusion"]["mean_baseline_proxy_on_fusion_dates"])
+
     def test_cost_range_is_enforced(self):
         with self.assertRaisesRegex(ValueError,"cost"):
             report(fee_bps=-1)
