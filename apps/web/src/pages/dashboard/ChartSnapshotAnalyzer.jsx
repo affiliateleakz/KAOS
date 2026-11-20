@@ -1,0 +1,185 @@
+import React, {useEffect,useState} from "react";
+import {api,errMsg} from "../../lib/api";
+import HistoricalPatternChart from "./HistoricalPatternChart";
+
+export default function ChartSnapshotAnalyzer() {
+  const [preview,setPreview]=useState("");
+  const [symbol,setSymbol]=useState("BTC-USD");
+  const [seconds,setSeconds]=useState("60");
+  const [assetClass,setAssetClass]=useState("crypto");
+  const [busy,setBusy]=useState("");
+  const [error,setError]=useState("");
+  const [analysis,setAnalysis]=useState(null);
+  const [matches,setMatches]=useState(null);
+  const [candlePatterns,setCandlePatterns]=useState(null);
+  const [patternCatalog,setPatternCatalog]=useState(null);
+
+  function loadFile(file) {
+    if (!file) return;
+    setError("");setAnalysis(null);
+    if (!["image/png","image/jpeg","image/webp"].includes(file.type)) {
+      setError("Choose a PNG, JPEG, or WebP screenshot.");return;
+    }
+    if (file.size>1500000) {setError("Screenshot must be under 1.5 MB.");return;}
+    const reader=new FileReader();
+    reader.onload=()=>setPreview(String(reader.result||""));
+    reader.onerror=()=>setError("Could not read the image.");
+    reader.readAsDataURL(file);
+  }
+  useEffect(()=>{
+    const pasted=e=>{
+      const file=Array.from(e.clipboardData?.files||[]).find(x=>x.type.startsWith("image/"));
+      if (file) {e.preventDefault();loadFile(file);}
+    };
+    window.addEventListener("paste",pasted);
+    return ()=>window.removeEventListener("paste",pasted);
+  },[]);
+
+  async function analyze() {
+    if (!preview) {setError("Upload or paste a chart screenshot first.");return;}
+    setBusy("analyze");setError("");setAnalysis(null);
+    try {
+      const res=await api.post("/api/v1/ai/chart-snapshot/analyze", {
+        image_data:preview,symbol:symbol.toUpperCase(),timeframe:seconds+"s"
+      });
+      setAnalysis(res.data);
+    } catch(e) {setError(errMsg(e)||"Chart interpretation unavailable");}
+    finally {setBusy("");}
+  }
+  async function findSimilar() {
+    setBusy("similar");setError("");setMatches(null);
+    try {
+      const res=await api.get("/api/v1/ai/chart-snapshot/similar",{params:{
+        symbol:symbol.toUpperCase(),seconds:Number(seconds),asset_class:assetClass,
+        lookback:20,horizon:5
+      }});
+      setMatches(res.data);
+    }catch(e){setError(errMsg(e)||"Historical comparison unavailable");}
+    finally {setBusy("");}
+  }
+  async function scanCandles() {
+    setBusy("patterns");setError("");
+    try {
+      const [history,catalog]=await Promise.all([
+        api.get("/api/v1/ai/chart-snapshot/patterns/scan",{params:{
+          symbol:symbol.toUpperCase(),seconds:Number(seconds),asset_class:assetClass
+        }}),
+        api.get("/api/v1/ai/chart-snapshot/patterns/catalog")
+      ]);
+      setCandlePatterns(history.data);
+      setPatternCatalog(catalog.data);
+    } catch(e) {setError(errMsg(e)||"Pattern scanner unavailable");}
+    finally {setBusy("");}
+  }
+  // Pair the two research views for the same user-selected market. This does
+  // not imply pixel-derived OHLC or a calibrated screenshot forecast.
+  async function analyzeAndCompare() {
+    if (!preview) {setError("Upload or paste a chart screenshot first.");return;}
+    setBusy("both");setError("");setAnalysis(null);setMatches(null);
+    const failures = [];
+    let visionPattern = null;
+    try {
+      const res = await api.post("/api/v1/ai/chart-snapshot/analyze", {
+        image_data:preview,symbol:symbol.toUpperCase(),timeframe:seconds+"s"
+      });
+      setAnalysis(res.data);
+      if (res.data.pattern && res.data.pattern!=="unknown") visionPattern=res.data.pattern;
+    } catch(e) {
+      failures.push("Screenshot: "+(errMsg(e)||"unavailable"));
+    }
+    if (visionPattern) {
+      try {
+        const res=await api.get("/api/v1/ai/chart-snapshot/similar",{params:{
+          symbol:symbol.toUpperCase(),seconds:Number(seconds),asset_class:assetClass,
+          lookback:20,horizon:5,pattern:visionPattern
+        }});
+        setMatches(res.data);
+      } catch(e) {
+        failures.push("Historical archive: "+(errMsg(e)||"unavailable"));
+      }
+    } else {
+      failures.push("No reliable screenshot pattern label available; historical category matching skipped. You can still search the archive separately.");
+    }
+    if (failures.length) setError(failures.join(" | "));
+    setBusy("");
+  }
+  const pct=n=>n==null?"—":(n*100).toFixed(2)+"%";
+  return <section className="card-surface mt-6 p-5 space-y-4" data-testid="chart-snapshot-analyzer">
+    <div>
+      <h3 className="font-heading text-xl font-semibold text-[#D4AF37]">KAOS Chart Snapshot Analyzer</h3>
+      <p className="mt-1 text-xs text-slate-400">Paste a chart image (Ctrl+V) or upload one. Visual analysis is educational; the combined action runs two separate research checks for your selected market. Historical matching uses archived KAOS candles, not pixels from your screenshot.</p>
+    </div>
+    <div className="grid gap-3 md:grid-cols-3">
+      <label className="text-xs text-slate-300">Market symbol
+        <input aria-label="Market symbol" value={symbol} onChange={e=>setSymbol(e.target.value.toUpperCase())}
+          className="mt-1 w-full rounded border border-[#444] bg-black p-2"/>
+      </label>
+      <label className="text-xs text-slate-300">Asset class
+        <select aria-label="Asset class" value={assetClass} onChange={e=>setAssetClass(e.target.value)}
+          className="mt-1 w-full rounded border border-[#444] bg-black p-2">
+          <option value="crypto">Crypto</option><option value="stock">Stock</option><option value="forex">Forex</option>
+        </select>
+      </label>
+      <label className="text-xs text-slate-300">Archived candle interval
+        <select aria-label="Archived candle interval" value={seconds} onChange={e=>setSeconds(e.target.value)}
+          className="mt-1 w-full rounded border border-[#444] bg-black p-2">
+          <option value="60">1 minute</option><option value="300">5 minutes</option><option value="900">15 minutes</option>
+        </select>
+      </label>
+    </div>
+    <label className="block rounded border border-dashed border-[#555] bg-[#090909] p-4 text-center text-sm text-slate-300">
+      Select chart screenshot
+      <input aria-label="Chart screenshot" className="mt-2 block w-full text-xs"
+        type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>loadFile(e.target.files?.[0])}/>
+    </label>
+    {preview&&<img src={preview} alt="Uploaded chart preview" className="max-h-64 max-w-full rounded border border-[#444] object-contain"/>}
+    <div className="flex flex-wrap gap-3">
+      <button disabled={!!busy||!preview} onClick={analyzeAndCompare} className="rounded bg-[#D4AF37] px-4 py-2 text-sm font-semibold text-black disabled:opacity-40">{busy==="both"?"Researching…":"Analyze chart + compare history"}</button>
+      <button disabled={!!busy||!preview} onClick={analyze} className="rounded border border-[#555] px-4 py-2 text-sm text-white disabled:opacity-40">{busy==="analyze"?"Analyzing…":"Interpret screenshot only"}</button>
+      <button disabled={!!busy} onClick={scanCandles} className="rounded border border-[#555] px-4 py-2 text-sm text-white disabled:opacity-40">{busy==="patterns"?"Scanning…":"Scan candle patterns"}</button>
+      <button disabled={!!busy} onClick={findSimilar} className="rounded border border-[#D4AF37] px-4 py-2 text-sm text-[#D4AF37] disabled:opacity-40">{busy==="similar"?"Searching archive…":"Find historical patterns"}</button>
+    </div>
+    {error&&<p role="alert" className="text-sm text-red-400">{error}</p>}
+    {analysis&&<div className="rounded border border-[#333] p-4 space-y-2" data-testid="chart-vision-result">
+      <h4 className="font-semibold text-white">Screenshot interpretation</h4>
+      <p className="text-xs text-[#D4AF37]">Visual pattern: <strong>{analysis.pattern||"unknown"}</strong> (unverified)</p>
+      <p className="whitespace-pre-wrap text-sm text-slate-200">{analysis.analysis}</p>
+      {analysis.bullish_scenario&&<p className="text-sm text-slate-300"><strong>Potential bullish scenario:</strong> {analysis.bullish_scenario}</p>}
+      {analysis.bearish_scenario&&<p className="text-sm text-slate-300"><strong>Potential bearish scenario:</strong> {analysis.bearish_scenario}</p>}
+      {analysis.limitations&&<p className="text-xs text-slate-400">{analysis.limitations}</p>}
+      <p className="text-xs text-amber-300">{analysis.note}</p>
+    </div>}
+    {matches&&<div className="rounded border border-[#333] p-4 space-y-2" data-testid="historical-chart-matches">
+      <h4 className="font-semibold text-white">Historical pattern comparisons</h4>
+      <p className="text-xs text-slate-400">{matches.requested_pattern?"Filtered to visual category: "+matches.requested_pattern+". ":""}{matches.count} nonoverlapping historical analogs found in {matches.archive_candles||0} archived candles. {matches.reason||matches.note}</p>
+      {matches.count>0&&<>
+        <p className="text-sm">Matched historical upward outcomes: {pct(matches.historical_up_fraction)} of {matches.count} matches (descriptive, not a calibrated prediction).</p>
+        <div className="overflow-x-auto"><table className="w-full text-xs">
+          <thead><tr><th className="p-2 text-left">Historical date</th><th className="p-2 text-left">Distance</th><th className="p-2 text-left">Subsequent return proxy</th></tr></thead>
+          <tbody>{matches.matches.map(m=><tr className="border-t border-[#333]" key={m.decision_ms}>
+            <td className="p-2">{new Date(m.decision_ms).toLocaleString()}</td>
+            <td className="p-2">{m.distance}</td><td className="p-2">{pct(m.forward_return_proxy)}</td>
+          </tr>)}</tbody>
+        </table></div>
+      </>}
+    </div>}
+    {candlePatterns&&<div className="rounded border border-[#333] p-4 space-y-2" data-testid="classic-candlestick-patterns">
+      <h4 className="font-semibold text-white">Classic candlestick formations</h4>
+      <p className="text-xs text-slate-400">{candlePatterns.reason||candlePatterns.note} {candlePatterns.history_count?("Analyzed "+candlePatterns.history_count+" consecutive closed candles. "):""}</p>
+      <HistoricalPatternChart bars={candlePatterns.chart_bars||[]} patterns={candlePatterns.visual_patterns||[]}/>
+      {candlePatterns.patterns?.length>0?<div className="max-h-64 overflow-y-auto">
+        {candlePatterns.patterns.slice(-25).reverse().map((p,i)=><div key={p.end_ms+"-"+p.pattern+"-"+i} className="flex justify-between gap-2 border-b border-[#333] py-2 text-xs">
+          <span>{p.pattern} <span className="text-slate-500">({p.direction})</span></span>
+          <span className="text-slate-400">{new Date(p.end_ms).toLocaleString()}</span>
+        </div>)}
+      </div>:<p className="text-sm text-slate-400">No implemented patterns detected in the available candles.</p>}
+      {patternCatalog&&<details className="text-xs text-slate-400"><summary className="cursor-pointer">View 50-pattern reference catalog</summary>
+        <div className="mt-2 grid gap-1 sm:grid-cols-2">
+          {patternCatalog.patterns.map(p=><div key={p.name}>{p.name} — {p.implemented?"Detection rule available":"Reference only"}</div>)}
+        </div>
+      </details>}
+      <p className="text-xs text-amber-300">These are heuristic formations, not verified winning signals or instructions to trade.</p>
+    </div>}
+    <p className="text-xs text-slate-500">No trades are placed. Chart screenshots are processed in memory and are not saved by KAOS. A separate vision provider processes screenshots when enabled.</p>
+  </section>;
+}
