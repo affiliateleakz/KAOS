@@ -1,0 +1,181 @@
+name: KAOS cPanel release
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: 'Upload built site and API to cPanel after configuring SSH secrets'
+        type: boolean
+        default: false
+        required: true
+      install_python_dependencies:
+        description: 'Install requirements in cPanel Passenger Python virtualenv'
+        type: boolean
+        default: false
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kaos-cpanel-production
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      revision: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Install and build website
+        working-directory: apps/web
+        env:
+          CI: 'false'
+          REACT_APP_BACKEND_URL: https://api.tradingwithkaos.com
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+          test -s build/index.html
+      - name: Prepare website payload
+        run: |
+          mkdir -p release/web
+          cp -a apps/web/build/. release/web/
+      - name: Prepare Passenger API payload
+        run: |
+          mkdir -p release/api/packages/kaos-core
+          find apps/api -maxdepth 1 -type f \\( -name '*.py' -o -name 'requirements.txt' \\) -not -name 'test_*.py' -exec cp {} release/api/ \\;
+          cp -a packages/kaos-core/. release/api/packages/kaos-core/
+          cp apps/api/passenger_wsgi.KAOS release/api/passenger_wsgi.py
+          printf '%s\\n' "${GITHUB_SHA}" > release/api/.kaos-release-sha
+          printf '%s\\n' "${GITHUB_SHA}" > release/web/.kaos-release-sha
+          test -s release/api/server.py
+          test -s release/api/kaos_r2_archive.py
+          test -s release/api/passenger_wsgi.py
+          test -s release/api/requirements.txt
+          ! find release -name '.env' -o -name '.env.*' | grep .
+      - name: Create versioned release bundle
+        run: |
+          tar -C release -czf kaos-cpanel-release.tar.gz api web
+          sha256sum kaos-cpanel-release.tar.gz > kaos-cpanel-release.sha256
+          tar -tzf kaos-cpanel-release.tar.gz | grep -E '(passenger_wsgi.py|kaos_r2_archive.py|web/index.html)' >/dev/null
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kaos-cpanel-release-${{ github.sha }}
+          path: |
+            kaos-cpanel-release.tar.gz
+            kaos-cpanel-release.sha256
+          retention-days: 14
+      - name: Prepare extension archive (not deployed to hosting)
+        run: |
+          tar -C apps -czf kaos-extension-source.tar.gz extension
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kaos-extension-source-${{ github.sha }}
+          path: kaos-extension-source.tar.gz
+          retention-days: 14
+
+  deploy:
+    if: ${{ inputs.deploy == true }}
+    needs: build
+    environment: kaos-production
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: kaos-cpanel-release-${{ github.sha }}
+          path: package
+      - name: Validate SSH deployment settings
+        env:
+          SSH_HOST: ${{ secrets.KAOS_SSH_HOST }}
+          SSH_PORT: ${{ secrets.KAOS_SSH_PORT }}
+          SSH_USER: ${{ secrets.KAOS_SSH_USER }}
+          SSH_KEY: ${{ secrets.KAOS_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.KAOS_SSH_KNOWN_HOSTS }}
+          API_DIR: ${{ secrets.KAOS_API_DIR }}
+          WEB_DIR: ${{ secrets.KAOS_WEB_DIR }}
+          PYTHON_BIN: ${{ secrets.KAOS_PYTHON_BIN }}
+        run: |
+          set -euo pipefail
+          for v in SSH_HOST SSH_PORT SSH_USER SSH_KEY SSH_KNOWN_HOSTS API_DIR WEB_DIR; do
+            test -n "${!v}" || { echo "::error::Missing secret $v"; exit 1; }
+          done
+          [[ "$SSH_PORT" =~ ^[0-9]{1,5}$ ]] || exit 1
+          for dir in "$API_DIR" "$WEB_DIR"; do
+            [[ "$dir" =~ ^/home/[a-zA-Z0-9._/-]+$ ]] || { echo "::error::Unsafe destination path"; exit 1; }
+            [[ "$dir" != /home/*/ ]] || exit 1
+          done
+          [[ "$API_DIR" != "$WEB_DIR" ]] || exit 1
+          if [[ "${{ inputs.install_python_dependencies }}" == "true" ]]; then
+            test -n "$PYTHON_BIN" || { echo "::error::KAOS_PYTHON_BIN is required"; exit 1; }
+            [[ "$PYTHON_BIN" =~ ^/home/[a-zA-Z0-9._/-]+/bin/python([0-9.]*)?$ ]] || exit 1
+          fi
+      - name: Configure pinned SSH host key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.KAOS_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.KAOS_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\\n' "$SSH_PRIVATE_KEY" > ~/.ssh/kaos_deploy
+          chmod 600 ~/.ssh/kaos_deploy
+          printf '%s\\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+      - name: Upload and activate with backup
+        env:
+          SSH_HOST: ${{ secrets.KAOS_SSH_HOST }}
+          SSH_PORT: ${{ secrets.KAOS_SSH_PORT }}
+          SSH_USER: ${{ secrets.KAOS_SSH_USER }}
+          API_DIR: ${{ secrets.KAOS_API_DIR }}
+          WEB_DIR: ${{ secrets.KAOS_WEB_DIR }}
+          PYTHON_BIN: ${{ secrets.KAOS_PYTHON_BIN }}
+          PYTHON_INSTALL: ${{ inputs.install_python_dependencies }}
+        run: |
+          set -euo pipefail
+          cd package
+          sha256sum -c kaos-cpanel-release.sha256
+          mkdir -p /tmp/kaos-cpanel-payload/api /tmp/kaos-cpanel-payload/web
+          tar -xzf kaos-cpanel-release.tar.gz -C /tmp/kaos-cpanel-payload
+          SSH_CMD="ssh -i $HOME/.ssh/kaos_deploy -p $SSH_PORT -o StrictHostKeyChecking=yes -o BatchMode=yes"
+          # Upload to a unique staging area; do not copy any .env or upload files.
+          REMOTE_STAGE=".kaos-release-${GITHUB_SHA:0:12}"
+          $SSH_CMD "$SSH_USER@$SSH_HOST" "mkdir -p ~/$REMOTE_STAGE"
+          rsync -az -e "$SSH_CMD" /tmp/kaos-cpanel-payload/api/ "$SSH_USER@$SSH_HOST:$REMOTE_STAGE/api/"
+          rsync -az -e "$SSH_CMD" /tmp/kaos-cpanel-payload/web/ "$SSH_USER@$SSH_HOST:$REMOTE_STAGE/web/"
+          # Use env arguments, never interpolate a user-configured remote path into shell code.
+          $SSH_CMD "$SSH_USER@$SSH_HOST" bash -s -- "$API_DIR" "$WEB_DIR" "$REMOTE_STAGE" "$PYTHON_INSTALL" "$PYTHON_BIN" <<'REMOTE'
+          set -euo pipefail
+          API_DIR="$1"; WEB_DIR="$2"; STAGE="$3"; INSTALL="$4"; PYTHON_BIN="$5"
+          [[ "$API_DIR" == /home/* && "$WEB_DIR" == /home/* ]] || exit 1
+          test -d "$API_DIR" || { echo "Missing cPanel API dir"; exit 1; }
+          test -d "$WEB_DIR" || { echo "Missing website public dir"; exit 1; }
+          test -s "$HOME/$STAGE/api/server.py"
+          test -s "$HOME/$STAGE/web/index.html"
+          mkdir -p "$HOME/kaos-deploy-backups"
+          TS="$(date -u +%Y%m%dT%H%M%SZ)"
+          # Backup current code and public assets, but do not export credentials.
+          tar -C "$API_DIR" --exclude='.env' --exclude='.env.*' --exclude='__pycache__' --exclude='*.log' --exclude='*.db' -czf "$HOME/kaos-deploy-backups/api-$TS.tgz" . 
+          tar -C "$WEB_DIR" --exclude='.env' --exclude='.env.*' --exclude='*.log' -czf "$HOME/kaos-deploy-backups/web-$TS.tgz" .
+          # No --delete: preserve hosting-controlled files, user uploads and .env.
+          rsync -a --exclude='.env' --exclude='.env.*' "$HOME/$STAGE/api/" "$API_DIR/"
+          if [[ "$INSTALL" == "true" ]]; then
+            "$PYTHON_BIN" -m pip install -r "$API_DIR/requirements.txt"
+          fi
+          rsync -a --exclude='index.html' "$HOME/$STAGE/web/" "$WEB_DIR/"
+          cp "$HOME/$STAGE/web/index.html" "$WEB_DIR/index.html"
+          mkdir -p "$API_DIR/tmp"
+          touch "$API_DIR/tmp/restart.txt"
+          echo "KAOS cPanel payload installed. Verify API health and R2 owner route."
+          REMOTE
+      - name: Verify API and website reachability
+        run: |
+          set -e
+          curl -fsS --retry 3 --retry-delay 2 --max-time 15 https://api.tradingwithkaos.com/api >/dev/null
+          curl -fsS --retry 3 --retry-delay 2 --max-time 15 https://tradingwithkaos.com/ >/dev/null
+          echo "Reachable. R2 credential validation still requires owner auth."
