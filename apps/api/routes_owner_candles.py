@@ -43,6 +43,7 @@ async def validate_direction(symbol:str=Query(pattern=r"^[A-Z0-9_-]{2,32}$"),
                              asset_class:str=Query("crypto",pattern="^(crypto|stock|forex)$"),
                              seconds:int=Query(60),horizon:int=Query(5,ge=1,le=60),
                              fee_bps:float=Query(10.0,ge=0,le=250),
+                             include_intelligence:bool=False,
                              user=Depends(owner)):
     """Owner-only chronological research validation of an archived market.
 
@@ -62,10 +63,25 @@ async def validate_direction(symbol:str=Query(pattern=r"^[A-Z0-9_-]{2,32}$"),
     sources={r.get("source") for r in rows}
     if len(sources)!=1 or not all(sources):
         raise HTTPException(409,"Mixed or missing historical price providers; use a single trusted source")
+    observations=None
+    if include_intelligence:
+        # Capture ONLY already-stored observations with their original observed
+        # and published timestamps. Do not re-fetch today's news during replay.
+        # Limit volume to avoid unbounded DB reads and computation.
+        first=rows[0]["ts"]
+        from datetime import datetime,timezone,timedelta
+        from_ts=datetime.fromtimestamp(first/1000,timezone.utc)-timedelta(days=7)
+        observations=await db.kaos_intelligence.find(
+            {"asset":symbol,"asset_class":asset_class,
+             "observed_at":{"$gte":from_ts.isoformat()}},
+            {"_id":0,"asset":1,"asset_class":1,"event_id":1,"source":1,
+             "observed_at":1,"published_at":1,"strength":1,"direction":1}
+        ).sort("observed_at",1).limit(5000).to_list(length=5000)
     from kaos_prediction_validation import evaluate_history
     try:
         return evaluate_history(rows,symbol=symbol,asset_class=asset_class,
                                 seconds=seconds,source=next(iter(sources)),
-                                horizon=horizon,fee_bps=fee_bps)
+                                horizon=horizon,fee_bps=fee_bps,
+                                observations=observations)
     except (ValueError,TypeError) as exc:
         raise HTTPException(422,str(exc)) from exc
