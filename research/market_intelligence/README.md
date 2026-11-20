@@ -76,3 +76,20 @@ python research/market_intelligence/chart_windows.py --input candles.json --look
 ```
 
 Important safeguards: window-only normalization, source consistency, closed-candle decisions, contiguous bars, separate forward labels, and a standard-library-only dataset build. Train a future sequence model with purged chronological splits, comparing against the same held-out periods and transaction-cost assumptions as `train_joined.py`. Do not random-shuffle overlapping windows into train and test.
+
+## Original PyTorch OHLCV CNN baseline — external research inspiration
+
+The public [hardyqr/CNN-for-Stock-Market-Prediction-PyTorch](https://github.com/hardyqr/CNN-for-Stock-Market-Prediction-PyTorch) project explored both rendered candlestick images and direct 5-row OHLCV matrices, with an early PyTorch CNN. It includes older training/test methods and model artifacts, **not validated KAOS trading strategies**. Its source directory uses legacy PyTorch and pandas APIs; its evaluation routines do not provide a dependable, modern, time-safe comparison. No license was listed in the top-level repository files inspected. **No external code, datasets or pretrained weights were copied into KAOS.**
+
+KAOS now has independently implemented `train_candle_cnn.py`: a small 1D PyTorch CNN for the `chart_windows.py` OHLCV sequences. It is optional, offline and isolated from all production APIs and trading logic. It uses deterministic CPU training, an original lightweight architecture, chronological splitting, purging on future-label completion, and a validation-selected epoch before a single held-out test assessment.
+
+```bash
+# Dependencies only for an isolated training environment, NOT the KAOS API:
+python -m pip install numpy torch
+python research/market_intelligence/chart_windows.py --input candles.json --lookback 24 --horizon-bars 5 --output chart_windows.json
+python research/market_intelligence/train_candle_cnn.py --input chart_windows.json --epochs 12 --cost-bps 10 --output candle_cnn_report.json
+```
+
+Compare the CNN `test_accuracy` and `test_majority_baseline_accuracy` on exactly the same market and held-out period. To compare with the joined intelligence model, align its market, source, timeframe, target horizon, test dates, execution-cost assumptions and underlying outcome definitions first. The CNN's `test_all_direction_net_return_mean_proxy` is an illustrative *overlapping* signal-return proxy, not feasible portfolio P&L or validated trade win rate.
+
+No CNN weights are registered or deployed; no production screenshot image prediction is connected. This offline baseline is preparation for the future always-running candle recorder, not evidence that it is already collecting candles.
