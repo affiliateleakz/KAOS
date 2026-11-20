@@ -62,3 +62,17 @@ python research/market_intelligence/train_joined.py --input joined_dataset.json 
 The evaluator fits a small hist-gradient-boosted classifier on training rows, chooses a hypothetical threshold from validation rows, and reports held-out test classification and indicative return statistics. It uses purged chronological train/validation/test splits. Each market and forecast horizon requires a **separate** run. It will refuse short, mixed-source, or invalid datasets.
 
 Tests use synthetic market fixtures only. **No real-world win-rate or profitability has been established.** Missing news/social counts often reflect missing collection coverage, not absence of market attention. The evaluator does not model overlapping holdings, realistic order book fills, or broker-specific trading constraints; research results cannot be treated as deployable signals.
+
+## Experimental candle-image learning inspiration
+
+The external public project [amit-agni/candlesticks-deeplearning](https://github.com/amit-agni/candlesticks-deeplearning) explored candlestick-image CNN and MobileNet classification for next-day price movement. The author's README reports unsatisfactory model performance. No clear license file was present in the root listing when reviewed; **no upstream source code has been copied** into KAOS.
+
+KAOS includes an independently written `chart_windows.py` dataset generator. Instead of screenshots, it produces normalized, fixed-length OHLCV sequences. The format can later feed a separately evaluated 1D CNN or other sequence model, with consistent source/horizon definitions and timestamps. It does **not** fit a neural network or claim an advantage over KAOS's tabular model.
+
+Example:
+
+```bash
+python research/market_intelligence/chart_windows.py --input candles.json --lookback 24 --horizon-bars 5 --output chart_windows.json
+```
+
+Important safeguards: window-only normalization, source consistency, closed-candle decisions, contiguous bars, separate forward labels, and a standard-library-only dataset build. Train a future sequence model with purged chronological splits, comparing against the same held-out periods and transaction-cost assumptions as `train_joined.py`. Do not random-shuffle overlapping windows into train and test.
