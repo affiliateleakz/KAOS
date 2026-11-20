@@ -79,3 +79,13 @@ The private, owner-only, read-only API is:
 `GET /api/v1/owner/candles/evaluate-multifactor?symbol=BTC-USD&asset_class=crypto&seconds=60&horizon=5&fee_bps=10`
 
 It reads at most 5000 archive candles + 5000 recorded evidence observations, never downloads provider candles, writes weights, alters models, authorizes trades or returns production signals. No actual model run or accuracy claim is made by adding this code. Results are generated only on request against available real historical archives. The independent always-running recorder and properly licensed market history remain important future prerequisites.
+
+## Paired technical-only vs. multi-factor ablation (November 2026)
+
+The owner-only `evaluate-multifactor` report now evaluates a **technical-only logistic model** (the original eight candle-derived indicators/returns) and the **full technical+point-in-time intelligence model** on the exact same chronological train/validation/test partitions. Both use train-only scaling, fixed optimization settings, a fixed abstention threshold and the same label horizon / assumed costs. Technical-only test metrics are retained even where the news/social archive has no useful historical evidence.
+
+The report includes `technical_only_validation`, `technical_only_holdout`, `point_in_time_evidence_coverage`, and paired descriptive differences in held-out accuracy and Brier score. Positive `holdout_multifactor_minus_technical_accuracy` means the combined model's observed accuracy was higher on that particular test sample; positive `holdout_technical_minus_multifactor_brier` means its Brier score was lower. **Neither means a dependable causal contribution or a profitable trading strategy.**
+
+Crucially, if **zero training examples** have genuinely point-in-time-observed external evidence, `multifactor_comparison_available=false`, full-model `holdout=null` and comparison fields are null. This avoids claiming news/social gains when none of those sources were actually available to train on. Sparse/biased evidence, late discovery, market-regime changes, delayed data, and repeated testing remain major limitations; the full model needs an untouched fresh walk-forward test before any use in member-facing buy/sell or options predictions.
+
+This is not deployed; no trained weights are persisted, no option expirations are recommended, and no live trades are authorized.
