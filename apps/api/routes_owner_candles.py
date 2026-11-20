@@ -126,3 +126,40 @@ async def evaluate_multifactor(symbol:str=Query(pattern=r"^[A-Z0-9_-]{2,32}$"),
                         horizon=horizon,cost_bps=fee_bps)
     except (ValueError,TypeError,OverflowError) as exc:
         raise HTTPException(422,str(exc)) from exc
+
+
+@router.get("/walk-forward")
+async def walk_forward_research(symbol:str=Query(pattern=r"^[A-Z0-9_-]{2,32}$"),
+                                asset_class:str=Query("crypto",pattern="^(crypto|stock|forex)$"),
+                                seconds:int=Query(60),horizon:int=Query(5,ge=1,le=30),
+                                folds:int=Query(3,ge=2,le=5),
+                                cost_bps:float=Query(10.0,ge=0,le=250),
+                                user=Depends(owner)):
+    """Owner-only multi-period offline evaluation, no persisted weights/orders."""
+    if seconds not in (60,300,900):
+        raise HTTPException(422,"Unsupported interval")
+    rows=await db.kaos_research_candles.find(
+        {"symbol":symbol,"asset_class":asset_class,"seconds":seconds},
+        {"_id":0}).sort("ts",-1).limit(5000).to_list(5000)
+    rows.reverse()
+    if not rows:
+        return {"status":"insufficient_walk_forward_history","samples":0,
+                "research_only":True,"orders_enabled":False}
+    sources={r.get("source") for r in rows}
+    if len(sources)!=1 or not all(sources):
+        raise HTTPException(409,"Use a single price feed for this research evaluation")
+    from datetime import datetime,timezone,timedelta
+    cutoff=(datetime.fromtimestamp(rows[0]["ts"]/1000,timezone.utc)-
+            timedelta(days=7)).isoformat()
+    observations=await db.kaos_intelligence.find(
+        {"asset":symbol,"asset_class":asset_class,"observed_at":{"$gte":cutoff}},
+        {"_id":0,"asset":1,"asset_class":1,"event_id":1,"source":1,
+         "observed_at":1,"published_at":1,"strength":1,"direction":1}
+    ).sort("observed_at",1).limit(5000).to_list(5000)
+    from kaos_walk_forward import walk_forward
+    try:
+        return walk_forward(rows,observations,symbol=symbol,
+            asset_class=asset_class,seconds=seconds,source=next(iter(sources)),
+            horizon=horizon,cost_bps=cost_bps,folds=folds)
+    except (ValueError,TypeError,OverflowError) as exc:
+        raise HTTPException(422,str(exc)) from exc
