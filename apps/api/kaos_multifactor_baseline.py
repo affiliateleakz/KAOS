@@ -16,6 +16,20 @@ FEATURES=(
     "news_observed","social_observed","filing_observed","options_flow_observed",
 )
 
+# The first eight features derive solely from historical OHLCV.
+# The remaining features require point-in-time, originally observed external
+# intelligence. This is a predeclared ablation, not an OOS-selected subset.
+TECHNICAL_INDICES=tuple(range(8))
+ALL_INDICES=tuple(range(len(FEATURES)))
+EVIDENCE_INDICES=tuple(range(8,len(FEATURES)))
+
+def evidence_coverage(rows):
+    # Observed-category flags must be taken from timestamp-safe feature rows.
+    observed=sum(any(r["x"][j]>0 for j in range(13,17)) for r in rows)
+    return {"samples_with_observed_evidence":observed,
+            "samples_without_observed_evidence":len(rows)-observed,
+            "observed_evidence_fraction":round(observed/len(rows),5) if rows else 0.}
+
 def sigmoid(x):
     z=max(-35.0,min(35.0,x))
     return 1.0/(1.0+exp(-z))
@@ -108,13 +122,17 @@ def split(rows,minimum=20):
         return None
     return train,validation,test
 
-def train_logistic(rows, epochs=350,lr=.12,l2=.015):
+def train_logistic(rows, epochs=350,lr=.12,l2=.015, feature_indices=ALL_INDICES):
     """Train only on train partition, with train-only standardization."""
-    n=len(FEATURES)
-    means=[sum(r["x"][j] for r in rows)/len(rows) for j in range(n)]
-    scales=[max(sqrt(sum((r["x"][j]-means[j])**2 for r in rows)/len(rows)),1e-6)
-            for j in range(n)]
-    xs=[[(r["x"][j]-means[j])/scales[j] for j in range(n)] for r in rows]
+    feature_indices=tuple(feature_indices)
+    if not feature_indices or len(set(feature_indices))!=len(feature_indices) or any(
+            type(j) is not int or j<0 or j>=len(FEATURES) for j in feature_indices):
+        raise ValueError("Invalid feature selection")
+    n=len(feature_indices)
+    means=[sum(r["x"][j] for r in rows)/len(rows) for j in feature_indices]
+    scales=[max(sqrt(sum((r["x"][j]-means[k])**2 for r in rows)/len(rows)),1e-6)
+            for k,j in enumerate(feature_indices)]
+    xs=[[(r["x"][j]-means[k])/scales[k] for k,j in enumerate(feature_indices)] for r in rows]
     w=[0.]*n
     base=sum(r["up"] for r in rows)/len(rows)
     bias=log(max(.01,min(.99,base))/max(.01,1-min(.99,base)))
@@ -126,11 +144,12 @@ def train_logistic(rows, epochs=350,lr=.12,l2=.015):
             for j,val in enumerate(features):gw[j]+=diff*val/len(rows)
         bias-=lr*gb/len(rows)
         w=[a-lr*g for a,g in zip(w,gw)]
-    return {"weights":w,"bias":bias,"means":means,"scales":scales}
+    return {"weights":w,"bias":bias,"means":means,"scales":scales,
+            "feature_indices":feature_indices}
 
 def predict(model,x):
-    z=model["bias"]+sum(w*(v-m)/s for w,v,m,s in zip(
-        model["weights"],x,model["means"],model["scales"]))
+    z=model["bias"]+sum(w*(x[j]-m)/s for w,j,m,s in zip(
+        model["weights"],model["feature_indices"],model["means"],model["scales"]))
     return sigmoid(z)
 
 def metrics(model,partition,*,cost_bps,threshold=.55):
@@ -164,11 +183,30 @@ def evaluate(candles,observations,*,symbol,asset_class,seconds,source,
                 "samples":len(rows),"research_only":True,"model_trained":False,
                 "options_validated":False}
     train,val,test=parts
-    model=train_logistic(train)
-    # Validation is assessed before the untouched test but does not control
-    # model tuning; fixed 0.55 abstention threshold across partitions.
-    validation=metrics(model,val,cost_bps=cost_bps)
-    holdout=metrics(model,test,cost_bps=cost_bps)
+    technical_model=train_logistic(train,feature_indices=TECHNICAL_INDICES)
+    # Compare EXACT same chronology, labels, costs, threshold and data across
+    # technical-only and all-feature arms. No test-driven feature selection.
+    technical_validation=metrics(technical_model,val,cost_bps=cost_bps)
+    technical_holdout=metrics(technical_model,test,cost_bps=cost_bps)
+    train_coverage=evidence_coverage(train)
+    validation_coverage=evidence_coverage(val)
+    test_coverage=evidence_coverage(test)
+    # Without any past observed evidence in the TRAIN partition, the combined
+    # hypothesis is untestable: do not train/present a spurious uplift.
+    comparison_available=train_coverage["samples_with_observed_evidence"]>0
+    if comparison_available:
+        model=train_logistic(train,feature_indices=ALL_INDICES)
+        validation=metrics(model,val,cost_bps=cost_bps)
+        holdout=metrics(model,test,cost_bps=cost_bps)
+    else:
+        validation=None
+        holdout=None
+    # Predeclared "uplift" measures are paired descriptive differences, not
+    # significance tests or evidence of a reproducible market advantage.
+    delta_accuracy=(round(holdout["accuracy_all"]-technical_holdout["accuracy_all"],5)
+                    if holdout is not None else None)
+    delta_brier=(round(technical_holdout["brier_score"]-holdout["brier_score"],6)
+                 if holdout is not None else None)
     majority=1 if sum(r["up"] for r in train)*2>=len(train) else 0
     base_acc=sum(r["up"]==majority for r in test)/len(test)
     base_brier=sum((majority-r["up"])**2 for r in test)/len(test)
@@ -185,6 +223,15 @@ def evaluate(candles,observations,*,symbol,asset_class,seconds,source,
         "validation_last_outcome_ms":val[-1]["label_end_ms"],
         "test_first_decision_ms":test[0]["decision_ms"],
         "validation":validation,"holdout":holdout,
+        "technical_only_validation":technical_validation,
+        "technical_only_holdout":technical_holdout,
+        "point_in_time_evidence_coverage":{
+            "train":train_coverage,"validation":validation_coverage,
+            "holdout":test_coverage},
+        "multifactor_comparison_available":comparison_available,
+        "holdout_multifactor_minus_technical_accuracy":delta_accuracy,
+        "holdout_technical_minus_multifactor_brier":delta_brier,
+        "comparison_design":"same_market_dates_labels_costs_threshold_and_purged_split",
         "holdout_majority_accuracy":round(base_acc,5),
         "holdout_majority_brier_score":round(base_brier,6),
         "holdout_majority_mean_cost_adjusted_proxy":round(base_return,8),
@@ -193,7 +240,8 @@ def evaluate(candles,observations,*,symbol,asset_class,seconds,source,
         "options_validated":False,"orders_enabled":False,"research_only":True,
         "warnings":[
             "Toy statistical baseline is NOT trained Kronos/CNN or a validated trading predictor",
-            "Missing evidence is encoded separately; historical archive coverage may be incomplete",
+            "Missing evidence is encoded separately; no observed TRAIN evidence disables multifactor comparison",
+            "Paired out-of-sample differences are descriptive, not proof of causal benefit or statistical significance",
             "Probabilities are raw uncalibrated logistic scores and not reliable trade probabilities",
             "Price-return proxies omit realistic option contract execution and fill risks",
         ],
