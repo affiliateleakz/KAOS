@@ -37,11 +37,20 @@ test("R2 day partition merges without rewriting identical backfills",async()=>{
   const row=JSON.parse(b.mem.get(objectKey(rows[0])));
   assert.equal(row.candles.length,2);
 });
-test("different real bar values cannot overwrite past immutable archive",async()=>{
+test("provider revisions preserve first archived candle and don't block new candles",async()=>{
   const b=bucket();
   const rows=closedBars(market,source,[sample(0)],START+3*60000);
   await storeBars(b,rows);
-  await assert.rejects(()=>storeBars(b,[{...rows[0],close:100.4}]),/revision/);
+  const result=await storeBars(b,[{...rows[0],close:100.4},{...rows[0],ts:START+60000}]);
+  assert.equal(result.revisionsSkipped,1);
+  assert.equal(result.newBars,1);
+  const saved=JSON.parse(b.mem.get(objectKey(rows[0]))).candles;
+  assert.equal(saved.length,2);
+  assert.equal(saved[0].close,100.2);
+  const repeated=await storeBars(b,[{...rows[0],close:100.4}]);
+  assert.equal(repeated.revisionsSkipped,1);
+  assert.equal(repeated.newBars,0);
+  assert.equal(b.puts.length,2);
 });
 test("worker isolates failed feeds and keeps permitted market running",async()=>{
   const b=bucket();
@@ -93,4 +102,14 @@ test("Cloudflare refuses redirects rather than forwarding Alpaca credentials",as
   try {
     await assert.rejects(()=>providerBars(market,{APCA_API_KEY_ID:"test",APCA_API_SECRET_KEY:"test"}),/feed_redirect_302/);
   } finally {globalThis.fetch=old;}
+});
+
+test("diagnostic status includes count of skipped Coinbase revisions",async()=>{
+  const b=bucket();
+  const report={ranAt:new Date(START).toISOString(),ok:1,errors:0,
+    results:[{market:"BTC-USD",status:"archived",newBars:3,revisionsSkipped:7,mirror:{status:"disabled"}}]};
+  await recordRunStatus({CANDLE_ARCHIVE:b},report);
+  const status=JSON.parse(b.mem.get("status/last-run.json"));
+  assert.equal(status.results[0].revisionsSkipped,7);
+  assert.equal(status.results[0].newBars,3);
 });
