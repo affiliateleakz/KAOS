@@ -17,8 +17,8 @@ router=APIRouter(prefix='/api/v1/intelligence',tags=['opportunity-radar'])
 class SocialSampleMetrics(BaseModel):
     """A bounded public social sample, NOT a complete platform mention count."""
     provider: Literal['bluesky_search', 'bluesky_monitored_accounts']
-    sampled_posts: int = Field(ge=0, le=100)
-    sampled_unique_authors: int = Field(ge=0, le=100)
+    sampled_posts: int = Field(ge=0, le=3000)
+    sampled_unique_authors: int = Field(ge=0, le=3000)
     previous_hour_posts: int | None = Field(default=None, ge=0, le=100)
     previous_hour_unique_authors: int | None = Field(default=None, ge=0, le=100)
     search_results_inspected: int | None = Field(default=None, ge=0, le=100)
