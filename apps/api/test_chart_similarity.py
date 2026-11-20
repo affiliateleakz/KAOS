@@ -16,6 +16,26 @@ class HistoricalChartTests(unittest.TestCase):
         self.assertTrue(first)
         r[-1]["volume"]=123
         self.assertEqual(first,compare(r)["matches"])
+    def test_structured_pattern_filter_preserves_history_only(self):
+        rows=self.candles(180)
+        result=compare(rows,pattern="range",limit=5)
+        self.assertEqual(result["requested_pattern"],"range")
+        self.assertTrue(all(m["pattern"]=="range" for m in result["matches"]))
+        self.assertTrue(all(m["outcome_ms"]<rows[-1]["ts"] for m in result["matches"]))
+
+    def test_invalid_pattern_rejected(self):
+        with self.assertRaisesRegex(ValueError,"unsupported historical pattern"):
+            compare(self.candles(),pattern="guaranteed_win")
+
+    def test_breakout_classifier_has_no_future_price_dependency(self):
+        from kaos_chart_similarity import classify_pattern
+        rows=self.candles(30)
+        last=rows[-1]
+        last["close"]=last["high"]+2
+        last["high"]=last["close"]+.5
+        self.assertEqual(classify_pattern(rows[-20:]),"breakout_up")
+        self.assertEqual(classify_pattern(rows[-20:]),"breakout_up")
+
     def test_no_data(self):
         self.assertEqual(compare(self.candles(20))["count"],0)
     def test_gap_latest(self):
