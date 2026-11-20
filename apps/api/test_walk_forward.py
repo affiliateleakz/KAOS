@@ -5,10 +5,11 @@ from kaos_walk_forward import walk_forward
 from test_multifactor_baseline import bars, news, BASE
 
 def run(data=None,observations=None,**kwargs):
+    params={"folds":3,"min_train":60,"min_test":15,**kwargs}
     return walk_forward(bars() if data is None else data,
         news() if observations is None else observations,
         symbol="AAPL",asset_class="stock",seconds=60,source="test_local",
-        folds=3,min_train=60,min_test=15,**kwargs)
+        **params)
 
 class WalkForwardTests(unittest.TestCase):
     def test_folds_chronological_and_disjoint(self):
