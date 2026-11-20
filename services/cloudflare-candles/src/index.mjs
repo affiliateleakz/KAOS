@@ -168,24 +168,39 @@ async function mirrorToKaos(env,rows){
 export async function runScheduled(env,{nowMs=Date.now(),fetcher=providerBars}={}) {
   if(!env?.CANDLE_ARCHIVE)throw Error("R2 binding CANDLE_ARCHIVE required");
   const markets=validateMarkets(JSON.parse(env.MARKETS_JSON||"[]"));
-  const results=[];
-  for(const market of markets){
+  // Limit outbound concurrency to stay below Cloudflare socket limits and
+  // avoid hitting Alpaca/Coinbase burst rate limits as the market list grows.
+  // Each archive key belongs to one unique market, so these writes don't race.
+  const results=new Array(markets.length);
+  let cursor=0;
+  async function processMarket(index) {
+    const market=markets[index];
     try {
       const {source,bars}=await fetcher(market,env);
       const closed=closedBars(market,source,bars,nowMs);
-      if(!closed.length){results.push({market:market.symbol,status:"no_new_closed_bars"});continue;}
+      if(!closed.length){
+        results[index]={market:market.symbol,status:"no_new_closed_bars"};
+        return;
+      }
       const written=await storeBars(env.CANDLE_ARCHIVE,closed);
-      // Mirror can fail independently; archive remains durable in R2.
+      // Mirror is optional; an API outage must not lose R2 archives.
       let mirror={status:"disabled"};
       try{mirror=await mirrorToKaos(env,closed);}
       catch(e){mirror={status:"failed",reason:String(e.message).slice(0,80)};}
-      results.push({market:market.symbol,source,status:"archived",
-        closed:closed.length,...written,mirror});
-    } catch(e){
-      results.push({market:market.symbol,status:"error",
-        reason:String(e.message).slice(0,90)});
+      results[index]={market:market.symbol,source,status:"archived",
+        closed:closed.length,...written,mirror};
+    }catch(e){
+      results[index]={market:market.symbol,status:"error",
+        reason:String(e.message).slice(0,90)};
     }
   }
+  const concurrency=Math.min(3,markets.length);
+  await Promise.all(Array.from({length:concurrency},async()=>{
+    while(cursor<markets.length){
+      const index=cursor++;
+      await processMarket(index);
+    }
+  }));
   return {ranAt:new Date(nowMs).toISOString(),results,
     ok:results.filter(x=>x.status!=="error").length,errors:results.filter(x=>x.status==="error").length};
 }
