@@ -1,5 +1,6 @@
 import React, {useEffect,useState} from "react";
 import {api,errMsg} from "../../lib/api";
+import HistoricalPatternChart from "./HistoricalPatternChart";
 
 export default function ChartSnapshotAnalyzer() {
   const [preview,setPreview]=useState("");
@@ -165,6 +166,7 @@ export default function ChartSnapshotAnalyzer() {
     {candlePatterns&&<div className="rounded border border-[#333] p-4 space-y-2" data-testid="classic-candlestick-patterns">
       <h4 className="font-semibold text-white">Classic candlestick formations</h4>
       <p className="text-xs text-slate-400">{candlePatterns.reason||candlePatterns.note} {candlePatterns.history_count?("Analyzed "+candlePatterns.history_count+" consecutive closed candles. "):""}</p>
+      <HistoricalPatternChart bars={candlePatterns.chart_bars||[]} patterns={candlePatterns.visual_patterns||[]}/>
       {candlePatterns.patterns?.length>0?<div className="max-h-64 overflow-y-auto">
         {candlePatterns.patterns.slice(-25).reverse().map((p,i)=><div key={p.end_ms+"-"+p.pattern+"-"+i} className="flex justify-between gap-2 border-b border-[#333] py-2 text-xs">
           <span>{p.pattern} <span className="text-slate-500">({p.direction})</span></span>
