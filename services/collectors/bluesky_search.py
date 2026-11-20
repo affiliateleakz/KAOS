@@ -69,6 +69,15 @@ def summarize_search(symbol, posts, *, now=None):
         'event_id':f'bsky-search:{symbol}:{now.strftime("%Y%m%d%H")}',
         'observed_at':now.isoformat(),'published_at':latest[1].isoformat(),
         'source_url':latest[2],'summary':summary[:1200],
+        'sample_metrics': {
+            'provider': 'bluesky_search', 'sampled_posts': len(current),
+            'sampled_unique_authors': distinct_current,
+            'previous_hour_posts': len(earlier),
+            'previous_hour_unique_authors': distinct_prior,
+            'search_results_inspected': min(len(posts), 100),
+            'search_limit': 100,
+            'coverage': 'bounded_search_sample_not_platform_total',
+        },
     }
 
 
