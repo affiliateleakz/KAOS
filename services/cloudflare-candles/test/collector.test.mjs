@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {validateMarkets,closedBars,storeBars,objectKey,runScheduled} from "../src/index.mjs";
+import {validateMarkets,closedBars,storeBars,objectKey,runScheduled,recordRunStatus} from "../src/index.mjs";
 
 const market={symbol:"AAPL",asset_class:"stock",seconds:60};
 const START=1761955200000;
@@ -60,4 +60,15 @@ test("R2 never exposes or serves saved candles over public fetch",async()=>{
   const worker=(await import("../src/index.mjs")).default;
   const r=await worker.fetch();
   assert.equal(r.status,404);
+});
+
+test("R2 status file captures feed errors even when no candles were stored",async()=>{
+  const b=bucket();
+  const report={ranAt:new Date(START).toISOString(),ok:0,errors:1,
+    results:[{market:"AAPL",status:"error",reason:"alpaca_keys_not_configured"}]};
+  const saved=await recordRunStatus({CANDLE_ARCHIVE:b},report);
+  assert.equal(saved.errors,1);
+  const status=JSON.parse(b.mem.get("status/last-run.json"));
+  assert.equal(status.results[0].reason,"alpaca_keys_not_configured");
+  assert.equal(b.mem.size,1);
 });
