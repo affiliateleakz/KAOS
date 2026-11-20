@@ -62,7 +62,9 @@ def normalize_history(records, *, symbol, exchange, asset_class, seconds,
         if min(o,h,l,c)<=0 or v<0 or l>min(o,c) or h<max(o,c):
             raise ValueError("inconsistent OHLCV")
         ms=seconds*1000
-        if when<=0 or when%ms:
+        # Daily session bars can start at local exchange midnight, not UTC.
+        # Intraday intervals are aligned to their UTC boundaries.
+        if when<=0 or (seconds<86400 and when%ms):
             raise ValueError("unaligned UTC candle timestamp")
         # Provider may include a still-forming candle; drop it explicitly.
         if when+ms > observed_at_ms:
@@ -130,8 +132,8 @@ def main():
     p.add_argument("--input-json",help="Offline fixture with records array")
     p.add_argument("--fetch",action="store_true",help="Explicitly fetch from unofficial provider")
     p.add_argument("--acknowledge-provider-terms",action="store_true")
-    p.add_argument("--source-timezone",default="UTC",
-                   help="Explicit timezone for naive source timestamps; defaults UTC ONLY if intentionally selected")
+    p.add_argument("--source-timezone",
+                   help="Required if the upstream timestamps are naive; use explicit provider market timezone")
     a=p.parse_args()
     if a.fetch == bool(a.input_json):
         p.error("Choose exactly one of --input-json or --fetch")
@@ -140,10 +142,12 @@ def main():
     if not 1 <= a.n_bars <= 5000:
         p.error("n-bars must be 1..5000")
     from zoneinfo import ZoneInfo
-    try:
-        tz=ZoneInfo(a.source_timezone)
-    except (KeyError,ValueError) as exc:
-        p.error("Unknown source timezone")
+    tz=None
+    if a.source_timezone:
+        try:
+            tz=ZoneInfo(a.source_timezone)
+        except (KeyError,ValueError) as exc:
+            p.error("Unknown source timezone")
     if a.fetch:
         records=fetch_once(symbol=a.symbol,exchange=a.exchange,seconds=a.seconds,n_bars=a.n_bars)
     else:
