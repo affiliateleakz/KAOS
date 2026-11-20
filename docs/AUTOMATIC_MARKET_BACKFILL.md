@@ -68,3 +68,14 @@ The first fusion rule is fixed and inspectable: an existing uncalibrated technic
 Output `point_in_time_fusion` contains holdout sample counts and mean after-assumed-cost proxies only when at least 20 matched signals exist. Otherwise it reports `insufficient_matched_fusion_signals` with null metrics; never fabricates wins. This work is owner-only, read-only, no trades, no option contract predictions. Needs real archived data, independent evidence-quality calibration and careful source/date synchronization before member-facing predictions.
 
 Synthetic tests: `test_point_in_time.py` and expanded `test_prediction_validation.py`. These tests establish code behavior, **not strategy performance**.
+
+## Offline trainable multi-factor baseline — development, no production model
+
+Added `apps/api/kaos_multifactor_baseline.py` and `test_multifactor_baseline.py`. This original standard-library logistic-regression research baseline builds samples from complete, contiguous *single-provider* closed candle windows and evidence with independently verified original `observed_at` and `published_at` timestamps no later than each decision. Input features include EMA20/50, RSI14, MACD difference, ATR14, volume ratio, recent returns, point-in-time news/social/filing/options-flow/other directional vote aggregates and explicit missing-category flags.
+
+The model uses a chronological **60% train / 20% validation / 20% untouched test** sequence, with boundaries purged for forward-label overlap. Standardization is fitted on TRAIN ONLY. A fixed model architecture, learning rate and score threshold are used without peeking at test outcomes. Validation and test metrics report class direction accuracy, Brier score, signal coverage, and illustrative cost-adjusted underlying-direction returns; the majority-class comparator uses training labels only. It does not infer option contract P&L or real fills. The scores are **uncalibrated logistic outputs**, not proven win probabilities; calibration, tuning, walk-forward studies and independent live data are prerequisites to marketing any predictions. Missing or insufficient archives return a no-data status.
+
+The private, owner-only, read-only API is:
+`GET /api/v1/owner/candles/evaluate-multifactor?symbol=BTC-USD&asset_class=crypto&seconds=60&horizon=5&fee_bps=10`
+
+It reads at most 5000 archive candles + 5000 recorded evidence observations, never downloads provider candles, writes weights, alters models, authorizes trades or returns production signals. No actual model run or accuracy claim is made by adding this code. Results are generated only on request against available real historical archives. The independent always-running recorder and properly licensed market history remain important future prerequisites.
