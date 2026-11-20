@@ -1,0 +1,24 @@
+name: Cloudflare Candles (offline tests)
+on:
+  push:
+    paths:
+      - 'services/cloudflare-candles/**'
+      - '.github/workflows/cloudflare-candles.yml'
+  pull_request:
+    paths:
+      - 'services/cloudflare-candles/**'
+      - '.github/workflows/cloudflare-candles.yml'
+permissions:
+  contents: read
+jobs:
+  mock-r2-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/cloudflare-candles
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm test
