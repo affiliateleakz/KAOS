@@ -179,7 +179,22 @@ async def search(symbol:str=Query(min_length=2,max_length=32),
     if row and row.get("expire_ms",0)>now_ms and row.get("candles"):
         return {**{k:v for k,v in row.items() if k!="_id"},
                 "cache_hit":True,"research_only":True}
-    # Shared DB throttle; concurrent searches do not all hit the provider.
+    # Member-scoped Mongo cooldown across web workers. Cache hits do not
+    # consume a request; uncached symbol hopping is rate-limited globally per
+    # account so one member cannot exhaust the configured upstream feed.
+    from pymongo.errors import DuplicateKeyError
+    throttle_id="member:"+str(user["id"])
+    try:
+        member_lease=await db.kaos_market_history_throttle.find_one_and_update(
+            {"_id":throttle_id,"$or":[{"next_ms":{"$lte":now_ms}},
+                                      {"next_ms":{"$exists":False}}]},
+            {"$set":{"next_ms":now_ms+10000}},
+            upsert=True,return_document=True)
+    except DuplicateKeyError:
+        raise HTTPException(429,"Please allow 10 seconds between new market history requests")
+    if member_lease is None:
+        raise HTTPException(429,"Please allow 10 seconds between new market history requests")
+    # Shared market-key lease prevents duplicate simultaneous upstream fetches.
     if row and row.get("lease_until_ms",0)>now_ms:
         return {"symbol":sym,"asset_class":asset_class,"seconds":seconds,
                 "status":"fetch_in_progress","candles":[],"research_only":True}
