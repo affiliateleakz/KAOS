@@ -67,9 +67,19 @@ async def register_device(req: DeviceReq, request: Request, user: dict = Depends
     from routes_billing import get_plans
     existing = await db.devices.find_one({"installId": req.installId, "userId": user["id"]})
     if existing:
-        await db.devices.update_one({"id": existing["id"]},
-                                    {"$set": {"extensionVersion": req.extensionVersion, "lastActive": now_iso(), "revoked": False}})
-        return clean(await db.devices.find_one({"id": existing["id"]}))
+        # A revoked installation must never reactivate itself by registering again.
+        if existing.get("revoked"):
+            raise HTTPException(status_code=403, detail="Device revoked")
+        updated = await db.devices.update_one(
+            {"id": existing["id"], "userId": user["id"], "revoked": {"$ne": True}},
+            {"$set": {"extensionVersion": req.extensionVersion, "lastActive": now_iso()}})
+        if updated.matched_count != 1:
+            # Prevent races with a simultaneous owner/admin revocation.
+            raise HTTPException(status_code=403, detail="Device revoked")
+        current = await db.devices.find_one({"id": existing["id"], "userId": user["id"]})
+        if not current or current.get("revoked"):
+            raise HTTPException(status_code=403, detail="Device revoked")
+        return clean(current)
     plans = await get_plans()
     plan = next((p for p in plans if p["id"] == user.get("membership_plan")), None)
     limit = plan["deviceLimit"] if plan else 3
