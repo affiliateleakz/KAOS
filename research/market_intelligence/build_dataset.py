@@ -64,7 +64,8 @@ def normalized_observations(export, symbol, asset_class):
                     "bounded_search_sample_not_platform_total",
                     "bounded_monitored_accounts_not_platform_total"
                 ) or
-                any(type(metrics.get(k)) is not int or not 0 <= metrics[k] <= 100
+                any(type(metrics.get(k)) is not int or not 0 <= metrics[k] <= (
+                    100 if metrics["provider"] == "bluesky_search" else 3000)
                     for k in ("sampled_posts", "sampled_unique_authors")) or
                 metrics["sampled_unique_authors"] > metrics["sampled_posts"]):
                 ignored["invalid"] += 1
