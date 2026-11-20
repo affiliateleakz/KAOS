@@ -26,6 +26,16 @@ jobs:
         working-directory: ${{ matrix.suite }}
         env: { MONGO_URL: "mongodb://localhost:27017", DB_NAME: kaos_test, PYTHONPATH: "${{ github.workspace }}/packages/kaos-core" }
         run: python -m pytest -q
+  intelligence-research:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - name: Test news/social and market candle as-of joins
+        env:
+          PYTHONPATH: ${{ github.workspace }}/research/market_intelligence
+        run: python -m unittest discover -s research/market_intelligence -p 'test_*.py' -v
   web:
     runs-on: ubuntu-latest
     defaults: { run: { working-directory: apps/web } }
