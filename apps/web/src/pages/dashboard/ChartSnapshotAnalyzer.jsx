@@ -59,19 +59,30 @@ export default function ChartSnapshotAnalyzer() {
   async function analyzeAndCompare() {
     if (!preview) {setError("Upload or paste a chart screenshot first.");return;}
     setBusy("both");setError("");setAnalysis(null);setMatches(null);
-    const imageRequest = api.post("/api/v1/ai/chart-snapshot/analyze", {
-      image_data:preview,symbol:symbol.toUpperCase(),timeframe:seconds+"s"
-    });
-    const historyRequest = api.get("/api/v1/ai/chart-snapshot/similar",{params:{
-      symbol:symbol.toUpperCase(),seconds:Number(seconds),asset_class:assetClass,
-      lookback:20,horizon:5
-    }});
-    const [vision,history] = await Promise.allSettled([imageRequest,historyRequest]);
-    if (vision.status==="fulfilled") setAnalysis(vision.value.data);
-    if (history.status==="fulfilled") setMatches(history.value.data);
     const failures = [];
-    if (vision.status==="rejected") failures.push("Screenshot: "+(errMsg(vision.reason)||"unavailable"));
-    if (history.status==="rejected") failures.push("Historical archive: "+(errMsg(history.reason)||"unavailable"));
+    let visionPattern = null;
+    try {
+      const res = await api.post("/api/v1/ai/chart-snapshot/analyze", {
+        image_data:preview,symbol:symbol.toUpperCase(),timeframe:seconds+"s"
+      });
+      setAnalysis(res.data);
+      if (res.data.pattern && res.data.pattern!=="unknown") visionPattern=res.data.pattern;
+    } catch(e) {
+      failures.push("Screenshot: "+(errMsg(e)||"unavailable"));
+    }
+    if (visionPattern) {
+      try {
+        const res=await api.get("/api/v1/ai/chart-snapshot/similar",{params:{
+          symbol:symbol.toUpperCase(),seconds:Number(seconds),asset_class:assetClass,
+          lookback:20,horizon:5,pattern:visionPattern
+        }});
+        setMatches(res.data);
+      } catch(e) {
+        failures.push("Historical archive: "+(errMsg(e)||"unavailable"));
+      }
+    } else {
+      failures.push("No reliable screenshot pattern label available; historical category matching skipped. You can still search the archive separately.");
+    }
     if (failures.length) setError(failures.join(" | "));
     setBusy("");
   }
@@ -113,12 +124,16 @@ export default function ChartSnapshotAnalyzer() {
     {error&&<p role="alert" className="text-sm text-red-400">{error}</p>}
     {analysis&&<div className="rounded border border-[#333] p-4 space-y-2" data-testid="chart-vision-result">
       <h4 className="font-semibold text-white">Screenshot interpretation</h4>
+      <p className="text-xs text-[#D4AF37]">Visual pattern: <strong>{analysis.pattern||"unknown"}</strong> (unverified)</p>
       <p className="whitespace-pre-wrap text-sm text-slate-200">{analysis.analysis}</p>
+      {analysis.bullish_scenario&&<p className="text-sm text-slate-300"><strong>Potential bullish scenario:</strong> {analysis.bullish_scenario}</p>}
+      {analysis.bearish_scenario&&<p className="text-sm text-slate-300"><strong>Potential bearish scenario:</strong> {analysis.bearish_scenario}</p>}
+      {analysis.limitations&&<p className="text-xs text-slate-400">{analysis.limitations}</p>}
       <p className="text-xs text-amber-300">{analysis.note}</p>
     </div>}
     {matches&&<div className="rounded border border-[#333] p-4 space-y-2" data-testid="historical-chart-matches">
       <h4 className="font-semibold text-white">Historical pattern comparisons</h4>
-      <p className="text-xs text-slate-400">{matches.count} nonoverlapping historical analogs found in {matches.archive_candles||0} archived candles. {matches.reason||matches.note}</p>
+      <p className="text-xs text-slate-400">{matches.requested_pattern?"Filtered to visual category: "+matches.requested_pattern+". ":""}{matches.count} nonoverlapping historical analogs found in {matches.archive_candles||0} archived candles. {matches.reason||matches.note}</p>
       {matches.count>0&&<>
         <p className="text-sm">Matched historical upward outcomes: {pct(matches.historical_up_fraction)} of {matches.count} matches (descriptive, not a calibrated prediction).</p>
         <div className="overflow-x-auto"><table className="w-full text-xs">
