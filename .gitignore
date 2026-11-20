@@ -22,3 +22,8 @@ __pycache__/
 *.log
 .venv/
 venv/
+
+# generated trade lists (regenerable from run.py/charts.py)
+research/kaos_strategies/out/trades-*.csv
+__pycache__/
+*.pyc
