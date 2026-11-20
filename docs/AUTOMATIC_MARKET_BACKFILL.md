@@ -89,3 +89,13 @@ The report includes `technical_only_validation`, `technical_only_holdout`, `poin
 Crucially, if **zero training examples** have genuinely point-in-time-observed external evidence, `multifactor_comparison_available=false`, full-model `holdout=null` and comparison fields are null. This avoids claiming news/social gains when none of those sources were actually available to train on. Sparse/biased evidence, late discovery, market-regime changes, delayed data, and repeated testing remain major limitations; the full model needs an untouched fresh walk-forward test before any use in member-facing buy/sell or options predictions.
 
 This is not deployed; no trained weights are persisted, no option expirations are recommended, and no live trades are authorized.
+
+## Expanding-window walk-forward evaluation — owner research
+
+Owner-only endpoint: `GET /api/v1/owner/candles/walk-forward?symbol=BTC-USD&asset_class=crypto&seconds=60&horizon=5&folds=3&cost_bps=10`.
+
+Original `kaos_walk_forward.py` evaluates the fixed technical-only logistic baseline and, only where enough legitimately first-observed point-in-time evidence exists, a technical-plus-intelligence model. The oldest half of prepared, nonoverlapping completed-candle decisions is training-only; a predeclared 2–5 chronological set of disjoint later test folds is evaluated with an **expanding historical training window**. Label-completion purging keeps all training outcomes before the next test decision time. Both models use exactly the same chronological decisions, train-only feature standardization, fixed score threshold and assumed transaction cost per fold.
+
+The report contains individual fold coverage, timestamp boundaries, technical-only and conditional full-model Brier/accuracy/abstention and cost-adjusted underlying-price proxies. Comparison requires at least 15 genuinely evidence-observed examples in **each** train/test fold; otherwise that fold reports no multi-factor score. If any fold is missing comparable evidence, aggregate improvement counts are null. This prevents fake improvement claims when all useful news/social data were collected only recently.
+
+These multiple test windows are **descriptive robustness analysis**, not an independent never-touched confirmation or strategy optimization license. Looking at many folds and selecting the best performing model can itself overfit. The endpoint does not store trained weights, produce calibrated buy/sell signals or call/put contract expirations, and is not exposed to public members. A continuously accumulating licensed archive is needed to make these tests meaningful over real market regimes.
