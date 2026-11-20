@@ -192,3 +192,71 @@ async def archive_readiness(symbol:str=Query(pattern=r"^[A-Z0-9_-]{2,32}$"),
                               asset_class=asset_class,seconds=seconds)
     except (ValueError,TypeError,OverflowError) as exc:
         raise HTTPException(422,str(exc)) from exc
+
+
+@router.post("/prediction-candidates/build")
+async def build_prediction_candidate(symbol:str=Query(pattern=r"^[A-Z0-9_-]{2,32}$"),
+                                    asset_class:str=Query("crypto",pattern="^(crypto|stock|forex)$"),
+                                    seconds:int=Query(60),horizon:int=Query(5,ge=1,le=30),
+                                    fee_bps:float=Query(10.,ge=0,le=250),
+                                    user=Depends(owner)):
+    """Owner-only fit and research screening; never activate on training."""
+    if seconds not in (60,300,900):
+        raise HTTPException(422,"Unsupported timeframe")
+    rows=await db.kaos_research_candles.find(
+        {"symbol":symbol,"asset_class":asset_class,"seconds":seconds},
+        {"_id":0}).sort("ts",-1).limit(5000).to_list(5000)
+    rows.reverse()
+    sources={r.get("source") for r in rows}
+    if len(sources)!=1 or not all(sources):
+        return {"status":"insufficient_data","candidate":None,
+                "reason":"No complete single-provider archive"}
+    from datetime import datetime,timezone,timedelta
+    cutoff=(datetime.fromtimestamp(rows[0]["ts"]/1000,timezone.utc)-timedelta(days=7)).isoformat()
+    evidence=await db.kaos_intelligence.find(
+        {"asset":symbol,"asset_class":asset_class,"observed_at":{"$gte":cutoff}},
+        {"_id":0,"asset":1,"asset_class":1,"event_id":1,"source":1,
+         "observed_at":1,"published_at":1,"strength":1,"direction":1}
+    ).sort("observed_at",1).limit(5000).to_list(5000)
+    from kaos_active_research_prediction import build_candidate
+    try:
+        result=build_candidate(rows,evidence,symbol=symbol,asset_class=asset_class,
+                               seconds=seconds,source=next(iter(sources)),
+                               horizon=horizon,cost_bps=fee_bps)
+    except (ValueError,TypeError,OverflowError) as exc:
+        raise HTTPException(422,str(exc)) from exc
+    candidate=result["candidate"]
+    if candidate:
+        from datetime import datetime,timezone
+        candidate["approved"]=False
+        candidate["created_at"]=datetime.now(timezone.utc).isoformat()
+        await db.kaos_research_prediction_candidates.update_one(
+            {"_id":candidate["model_digest"]},
+            {"$set":{**candidate,"owner_id":str(user["id"])}},upsert=True)
+    return {**result,"candidate":None if candidate is None else {
+        k:v for k,v in candidate.items() if k!="model"},
+        "approval_required":True,"orders_enabled":False}
+
+
+@router.post("/prediction-candidates/approve")
+async def approve_prediction_candidate(model_digest:str=Query(pattern=r"^[0-9a-f]{64}$"),
+                                       user=Depends(owner)):
+    """Explicit owner approval of only pre-screened archived research models."""
+    candidate=await db.kaos_research_prediction_candidates.find_one({"_id":model_digest})
+    if not candidate:
+        raise HTTPException(404,"Unknown model candidate")
+    if not candidate.get("quality_screen_pass") or candidate.get("model_digest")!=model_digest:
+        raise HTTPException(409,"Candidate failed quality screen")
+    # Stable exact-identity key; approval of one market doesn't authorize other
+    # markets, timeframes, feeds or forecast horizons.
+    key=f"{candidate['asset_class']}:{candidate['symbol']}:{candidate['seconds']}"
+    from datetime import datetime,timezone
+    await db.kaos_research_prediction_active.update_one({"_id":key},
+        {"$set":{"approved":True,"approved_by":str(user["id"]),
+                 "approved_at":datetime.now(timezone.utc).isoformat(),
+                 "model_digest":model_digest,
+                 "artifact":{k:v for k,v in candidate.items() if k not in ("_id","owner_id")}}},
+        upsert=True)
+    return {"status":"experimental_research_model_approved","key":key,
+            "model_digest":model_digest,"orders_enabled":False,
+            "note":"Approval enables advisory experiments only; never live options or order execution"}
