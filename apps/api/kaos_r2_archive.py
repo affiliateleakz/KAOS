@@ -146,4 +146,4 @@ async def read_archive(symbol,asset_class,seconds,*,limit=300,now_ms=None):
     if now_ms is None:
         now_ms=int(datetime.now(timezone.utc).timestamp()*1000)
     rows=await asyncio.to_thread(_fetch_days,symbol,asset_class,seconds,source,limit,now_ms)
-    return normalize(rows,symbol,asset_class,seconds,source,now_ms,limit)
+    return normalize(rows,symbol,asset_class,seconds,source,now_ms,limit),source
