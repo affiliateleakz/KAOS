@@ -40,3 +40,25 @@ The dataset uses the latest fresh (at most one hour old) structured social sampl
 ### Important next integration
 
 The legacy Bluesky collectors currently label observations as `asset_class=stock` and use symbols like `BTC`, while the candle archive identifies crypto pairs such as `BTC-USD`. A source-verified symbol mapping and explicit crypto asset classification are required before crypto social samples can be joined correctly. Until then the builder excludes mismatched identities rather than silently attaching unrelated observations. Also verify provider usage terms and worker uptime before claiming live monitoring.
+
+## Crypto alias reconciliation and offline model testing
+
+Legacy Bluesky collectors record cashtags as stock-class tickers, while Coinbase records crypto pairs. A strictly allowlisted, collector-event-specific mapping now recognizes:
+
+| Bluesky cashtag | Coinbase pair |
+|---|---|
+| BTC | BTC-USD |
+| ETH | ETH-USD |
+| SOL | SOL-USD |
+
+Owner intelligence exports include those legacy Bluesky events. The builder **will not** map arbitrary tickers or news records to a crypto pair.
+
+Train an isolated model *after* building the dataset with enough contiguous real candles:
+
+```bash
+python research/market_intelligence/train_joined.py --input joined_dataset.json --horizon-seconds 300 --cost-bps 10 --output evaluation.json
+```
+
+The evaluator fits a small hist-gradient-boosted classifier on training rows, chooses a hypothetical threshold from validation rows, and reports held-out test classification and indicative return statistics. It uses purged chronological train/validation/test splits. Each market and forecast horizon requires a **separate** run. It will refuse short, mixed-source, or invalid datasets.
+
+Tests use synthetic market fixtures only. **No real-world win-rate or profitability has been established.** Missing news/social counts often reflect missing collection coverage, not absence of market attention. The evaluator does not model overlapping holdings, realistic order book fills, or broker-specific trading constraints; research results cannot be treated as deployable signals.
