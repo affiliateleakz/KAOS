@@ -32,6 +32,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.11" }
+      - name: Install offline model evaluation dependencies
+        run: python -m pip install numpy scikit-learn
       - name: Test news/social and market candle as-of joins
         env:
           PYTHONPATH: ${{ github.workspace }}/research/market_intelligence
