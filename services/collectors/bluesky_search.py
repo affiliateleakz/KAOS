@@ -66,7 +66,7 @@ def summarize_search(symbol, posts, *, now=None):
     return {
         'asset':symbol,'asset_class':'stock','source':'social','direction':'neutral',
         'strength':round(min(.50, .08 + .015*distinct_current),4),
-        'event_id':f'bsky-search:{symbol}:{now.strftime("%Y%m%d%H")}',
+        'event_id':f'bsky-search:{symbol}:{now.strftime("%Y%m%d%H%M")}',
         'observed_at':now.isoformat(),'published_at':latest[1].isoformat(),
         'source_url':latest[2],'summary':summary[:1200],
         'sample_metrics': {
