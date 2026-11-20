@@ -10,6 +10,8 @@ export default function ChartSnapshotAnalyzer() {
   const [error,setError]=useState("");
   const [analysis,setAnalysis]=useState(null);
   const [matches,setMatches]=useState(null);
+  const [candlePatterns,setCandlePatterns]=useState(null);
+  const [patternCatalog,setPatternCatalog]=useState(null);
 
   function loadFile(file) {
     if (!file) return;
@@ -52,6 +54,20 @@ export default function ChartSnapshotAnalyzer() {
       }});
       setMatches(res.data);
     }catch(e){setError(errMsg(e)||"Historical comparison unavailable");}
+    finally {setBusy("");}
+  }
+  async function scanCandles() {
+    setBusy("patterns");setError("");
+    try {
+      const [history,catalog]=await Promise.all([
+        api.get("/api/v1/ai/chart-snapshot/patterns/scan",{params:{
+          symbol:symbol.toUpperCase(),seconds:Number(seconds),asset_class:assetClass
+        }}),
+        api.get("/api/v1/ai/chart-snapshot/patterns/catalog")
+      ]);
+      setCandlePatterns(history.data);
+      setPatternCatalog(catalog.data);
+    } catch(e) {setError(errMsg(e)||"Pattern scanner unavailable");}
     finally {setBusy("");}
   }
   // Pair the two research views for the same user-selected market. This does
@@ -119,6 +135,7 @@ export default function ChartSnapshotAnalyzer() {
     <div className="flex flex-wrap gap-3">
       <button disabled={!!busy||!preview} onClick={analyzeAndCompare} className="rounded bg-[#D4AF37] px-4 py-2 text-sm font-semibold text-black disabled:opacity-40">{busy==="both"?"Researching…":"Analyze chart + compare history"}</button>
       <button disabled={!!busy||!preview} onClick={analyze} className="rounded border border-[#555] px-4 py-2 text-sm text-white disabled:opacity-40">{busy==="analyze"?"Analyzing…":"Interpret screenshot only"}</button>
+      <button disabled={!!busy} onClick={scanCandles} className="rounded border border-[#555] px-4 py-2 text-sm text-white disabled:opacity-40">{busy==="patterns"?"Scanning…":"Scan candle patterns"}</button>
       <button disabled={!!busy} onClick={findSimilar} className="rounded border border-[#D4AF37] px-4 py-2 text-sm text-[#D4AF37] disabled:opacity-40">{busy==="similar"?"Searching archive…":"Find historical patterns"}</button>
     </div>
     {error&&<p role="alert" className="text-sm text-red-400">{error}</p>}
@@ -144,6 +161,22 @@ export default function ChartSnapshotAnalyzer() {
           </tr>)}</tbody>
         </table></div>
       </>}
+    </div>}
+    {candlePatterns&&<div className="rounded border border-[#333] p-4 space-y-2" data-testid="classic-candlestick-patterns">
+      <h4 className="font-semibold text-white">Classic candlestick formations</h4>
+      <p className="text-xs text-slate-400">{candlePatterns.reason||candlePatterns.note} {candlePatterns.history_count?("Analyzed "+candlePatterns.history_count+" consecutive closed candles. "):""}</p>
+      {candlePatterns.patterns?.length>0?<div className="max-h-64 overflow-y-auto">
+        {candlePatterns.patterns.slice(-25).reverse().map((p,i)=><div key={p.end_ms+"-"+p.pattern+"-"+i} className="flex justify-between gap-2 border-b border-[#333] py-2 text-xs">
+          <span>{p.pattern} <span className="text-slate-500">({p.direction})</span></span>
+          <span className="text-slate-400">{new Date(p.end_ms).toLocaleString()}</span>
+        </div>)}
+      </div>:<p className="text-sm text-slate-400">No implemented patterns detected in the available candles.</p>}
+      {patternCatalog&&<details className="text-xs text-slate-400"><summary className="cursor-pointer">View 50-pattern reference catalog</summary>
+        <div className="mt-2 grid gap-1 sm:grid-cols-2">
+          {patternCatalog.patterns.map(p=><div key={p.name}>{p.name} — {p.implemented?"Detection rule available":"Reference only"}</div>)}
+        </div>
+      </details>}
+      <p className="text-xs text-amber-300">These are heuristic formations, not verified winning signals or instructions to trade.</p>
     </div>}
     <p className="text-xs text-slate-500">No trades are placed. Chart screenshots are processed in memory and are not saved by KAOS. A separate vision provider processes screenshots when enabled.</p>
   </section>;
