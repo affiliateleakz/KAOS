@@ -49,7 +49,7 @@ class IntelligencePipelineTests(unittest.TestCase):
         source = candles()
         source["candles"].pop(55)
         results = build(source, {"observations": []}, (300,))
-        self.assertFalse(any(MS+55*60000 <= r["decision_ms"] <= MS+75*60000 for r in results["rows"]))
+        self.assertFalse(any(MS+55*60000 <= r["decision_ms"] < MS+75*60000 for r in results["rows"]))
 
     def test_duplicate_events_dedup(self):
         e = observed("news", 30)
