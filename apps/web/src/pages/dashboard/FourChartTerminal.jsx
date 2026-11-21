@@ -37,14 +37,23 @@ function Tile({index,config,onChange,onSave}){
  return <article className="rounded-lg border border-slate-700 bg-[#101010] p-3" data-testid={`kaos-chart-${index+1}`}>
   <div className="mb-3 flex flex-wrap items-center gap-2">
    <strong className="text-sm">Chart {index+1}</strong>
-   <select aria-label={`Chart ${index+1} broker`} value={config.broker} onChange={e=>onChange({...config,broker:e.target.value})} className="rounded bg-[#222] p-1 text-xs"><option value="kaos_paper">KAOS market data</option><option value="alpaca_paper">Alpaca Paper · US stocks</option><option value="coinbase">Coinbase (pending chart verification)</option><option value="alpaca">Alpaca (pending live chart data)</option><option value="oanda">OANDA (pending live chart data)</option></select>
+   <select aria-label={`Chart ${index+1} broker`} value={config.broker} onChange={e=>onChange({...config,broker:e.target.value,symbol:e.target.value==="alpaca_paper"?"AAPL":e.target.value==="kaos_paper"?"BTC-USD":config.symbol})} className="rounded bg-[#222] p-1 text-xs"><option value="kaos_paper">KAOS market data</option><option value="alpaca_paper">Alpaca Paper · US stocks</option><option value="coinbase">Coinbase (pending chart verification)</option><option value="alpaca">Alpaca (pending live chart data)</option><option value="oanda">OANDA (pending live chart data)</option></select>
    <input aria-label={`Chart ${index+1} symbol`} value={config.symbol} onChange={e=>onChange({...config,symbol:e.target.value.toUpperCase().slice(0,32)})} className="w-28 rounded bg-[#222] p-1 text-xs"/>
    <select aria-label={`Chart ${index+1} timeframe`} value={config.seconds} onChange={e=>onChange({...config,seconds:Number(e.target.value)})} className="rounded bg-[#222] p-1 text-xs"><option value={60}>1m</option><option value={300}>5m</option><option value={900}>15m</option></select>
    <button type="button" onClick={load} className="ml-auto rounded border border-slate-600 px-2 py-1 text-xs">Refresh</button>
    <button type="button" onClick={()=>onSave(index,config)} className="rounded border border-[#D4AF37] px-2 py-1 text-xs">Save chart</button>
   </div>
   {error?<p role="status" className="text-xs text-amber-300">{error}</p>:<CandleChart candles={response?.candles}/>}
-  <p className="mt-2 text-xs text-slate-400">{loading?"Refreshing · ":""}Source: {response?.source||"Not available"} · read-only · no order submission</p>
+  {response?.candles?.length>0&&(()=>{
+    const last=response.candles[response.candles.length-1];
+    const end=Number(last.time)*1000+Number(config.seconds)*1000;
+    const age=Date.now()-end;
+    const stale=!Number.isFinite(end)||age>Math.max(Number(config.seconds)*3*1000,300000);
+    return <p className={`mt-2 text-xs ${stale?"text-amber-300":"text-slate-300"}`}>
+      Last completed candle: {Number.isFinite(end)?new Date(end).toLocaleString():"Unknown"} · {stale?"Historical/stale — do not treat as current":"Recently updated"}
+    </p>;
+  })()}
+  <p className="mt-2 text-xs text-slate-400">{loading?"Refreshing · ":""}Source: {response?.source||"Not available"} · last requested: {response?.fetched_at||"—"} · read-only · no order submission</p>
  </article>;
 }
 export default function FourChartTerminal({entitlements}){
