@@ -27,7 +27,8 @@ for f in "${FILES[@]}"; do [[ -s "$SOURCE/apps/api/$f" ]] || { echo "Missing sou
 )
 [[ -s "$SOURCE/apps/web/build/index.html" ]] || { echo "Website build not created"; exit 1; }
 # Check all API code in source before touching live.
-"$PY" -m py_compile "${FILES[@]/#/$SOURCE/apps/api/}" "$SOURCE/apps/api/kaos_r2_segmented_research.py"
+for f in "${FILES[@]}"; do "$PY" -m py_compile "$SOURCE/apps/api/$f"; done
+"$PY" -m py_compile "$SOURCE/apps/api/kaos_r2_segmented_research.py"
 mkdir -p "$BACKUP/api" "$BACKUP/web"
 for f in "${FILES[@]}"; do
   [[ ! -f "$LIVE/apps/api/$f" ]] || cp -p "$LIVE/apps/api/$f" "$BACKUP/api/$f"
