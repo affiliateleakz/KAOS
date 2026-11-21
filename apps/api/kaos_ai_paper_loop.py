@@ -67,6 +67,30 @@ def settle_prediction(prediction, exit_price, exit_ts):
     }
 
 
+async def paper_candles(symbol, asset_class):
+    """Use fresh authorized Coinbase crypto candles, otherwise source-validated R2.
+
+    The live Coinbase Exchange public candles and archived crypto candles share
+    a provider; never combine distinct stock feeds or mix candle histories.
+    """
+    if asset_class == "crypto":
+        from market_data import get_candles, QuoteUnavailable
+        try:
+            response = await get_candles(symbol, "CRYPTO_SPOT", 60)
+            rows = [{
+                "ts": int(r["time"]) * 1000,
+                "open": float(r["open"]), "high": float(r["high"]),
+                "low": float(r["low"]), "close": float(r["close"]),
+                "volume": float(r["volume"])
+            } for r in response["candles"]]
+            if rows:
+                return rows, "coinbase_exchange_public", "coinbase_exchange_public_candles"
+        except (QuoteUnavailable, ValueError, TypeError, KeyError):
+            pass
+    rows, source = await read_archive(symbol, asset_class, 60, limit=300)
+    return rows, source, "r2_closed_candles"
+
+
 async def tick():
     if not configured() or os.getenv("KAOS_R2_TRAIN_WORKER_ENABLED") != "1":
         return {"status": "disabled", "reason": "R2 training configuration unavailable"}
@@ -106,7 +130,7 @@ async def tick():
             if not 1 <= horizon <= 30:
                 result["skipped"] += 1
                 continue
-            candles, source = await read_archive(symbol, asset_class, 60, limit=300)
+            candles, source, candle_feed = await paper_candles(symbol, asset_class)
             result["markets_checked"] += 1
             if not candles:
                 result["skipped"] += 1
@@ -145,14 +169,14 @@ async def tick():
             document = {
                 "_id": "aipaper:%s:%s:%s" % (owner_id, symbol, ts),
                 "owner_id": owner_id, "symbol": symbol, "asset_class": asset_class,
-                "source": source, "model_id": model["id"], "direction": direction,
+                "source": source, "candle_feed": candle_feed, "model_id": model["id"], "direction": direction,
                 "prob_up": round(p, 6), "confidence": round(max(p, 1-p), 6),
                 "entry_price": float(latest["close"]), "entry_ts": ts,
                 "target_ts": ts + horizon * BARS_MS, "horizon_bars": horizon,
                 "notional_usd": NOTIONAL, "state": "open", "created_at": now_iso(),
-                "fill_type": "archived_closed_candle_simulation",
+                "fill_type": "closed_provider_candle_simulation",
                 "paper_only": True, "broker_order": False,
-                "simulation": "1x directional outcome, not actual stock/crypto order or broker fill"
+                "simulation": "1x directional outcome from closed market candles; not an actual broker order or fill"
             }
             try:
                 await db[FORECASTS].insert_one(document)
@@ -198,7 +222,7 @@ async def status(owner_id):
             "realized_net_pnl_usd": net, "settled": len(settled), "direction_correct": wins,
             "direction_accuracy": round(wins / len(settled), 4) if settled else None,
             "recent": recent,
-            "note": "R2 closed-candle directional 1x notional simulation; fills are not broker quotes. No live orders."}
+            "note": "Coinbase public closed candles for crypto, R2 closed candles for other markets; directional 1x notional simulation, not broker fills. No live orders."}
 
 
 if __name__ == "__main__":
