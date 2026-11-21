@@ -25,6 +25,15 @@ export default function R2ResearchLab() {
   const [patternCatalog, setPatternCatalog] = useState(null);
   const [shadow, setShadow] = useState({predictions:[],summary:{}});
   const [accessDenied, setAccessDenied] = useState(false);
+  const [botSignals, setBotSignals] = useState([]);
+  const [botSignalError, setBotSignalError] = useState("");
+  const loadBotSignals = async (symbol = market) => {
+    try {
+      const {data} = await api.get(API + "/bot-signal-preview", {params:{symbol,limit:10}});
+      setBotSignals(data.signals || []);
+      setBotSignalError("");
+    } catch(e) { setBotSignalError(errMsg(e) || "Research signal preview unavailable"); }
+  };
 
   const selected = markets.find(m => m.symbol === market);
   const load = async () => {
@@ -59,8 +68,8 @@ export default function R2ResearchLab() {
       setShadow(data);
     } catch(e) { setError(errMsg(e) || "Shadow forecasts unavailable"); }
   };
-  useEffect(() => { load(); loadPatterns("BTC-USD"); loadShadow("BTC-USD"); }, []);
-  const switchMarket = value => {setMarket(value);setObservations([]);setShadow({predictions:[],summary:{}});loadPatterns(value);loadShadow(value);};
+  useEffect(() => { load(); loadPatterns("BTC-USD"); loadShadow("BTC-USD"); loadBotSignals("BTC-USD"); }, []);
+  const switchMarket = value => {setMarket(value);setObservations([]);setShadow({predictions:[],summary:{}});loadPatterns(value);loadShadow(value);loadBotSignals(value);};
   const runBacktest = async e => {
     e.preventDefault();
     if (!selected) return;
@@ -179,6 +188,33 @@ export default function R2ResearchLab() {
             <span className="font-mono">{r.summary?.trades ?? 0} trades · {win(r.summary?.win_rate_ex_ties)} WR · {r.created_at}</span>
           </div>)}
         </div>
+      </div>
+
+      <div className={box + " space-y-3"} data-testid="kaos-ai-bot-signal-preview">
+        <div className="flex flex-wrap justify-between gap-3">
+          <div>
+            <h2 className="font-semibold text-[#D4AF37]">KAOS AI → Trading Bot Signal Preview</h2>
+            <p className="text-xs text-slate-400">Versioned research observations · not order instructions · no execution authority</p>
+          </div>
+          <button type="button" onClick={() => loadBotSignals(market)}
+            className="rounded border border-[#D4AF37] px-3 py-2 text-xs text-[#D4AF37]">Refresh signals</button>
+        </div>
+        {botSignalError && <p className="text-sm text-amber-300">{botSignalError}</p>}
+        {!botSignals.length && <p className="text-sm text-slate-400">No valid model-backed research signals available for {market}.</p>}
+        <div className="max-h-64 overflow-x-auto">
+          <table className="w-full min-w-[720px] text-left text-xs">
+            <thead><tr>{["Market","AI direction","P(up)","Horizon","Model","Block reasons"].map(s =>
+              <th key={s} className="border-b border-[#34302A] p-2">{s}</th>)}</tr></thead>
+            <tbody>{botSignals.map(s => <tr key={s.id} className="border-b border-[#292929]">
+              <td className="p-2">{s.symbol}</td><td className="p-2">{s.bias}</td>
+              <td className="p-2">{ratio(s.prob_up)}</td>
+              <td className="p-2">{s.horizon_seconds}s</td>
+              <td className="p-2">{s.model_validation_status}</td>
+              <td className="p-2">{s.block_reasons.join(", ")}</td>
+            </tr>)}</tbody>
+          </table>
+        </div>
+        <p className="text-xs text-amber-300">AI research signals are not executable orders. The trading bot must independently verify entitlement, current broker quotes, strategy authority, risk limits and emergency stop before any future paper/live integration.</p>
       </div>
 
       <div className={box + " space-y-3"} data-testid="kaos-ai-shadow-forecasts">
