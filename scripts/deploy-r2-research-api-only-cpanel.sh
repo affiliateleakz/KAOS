@@ -13,6 +13,7 @@ FILES=(
   kaos_r2_ai_lab.py
   kaos_r2_ai_cron.py
   kaos_r2_shadow_predict.py
+  kaos_ai_bot_signal.py
   kaos_r2_shadow_cron.py
   kaos_candlestick_patterns.py
   kaos_r2_pattern_observer.py
