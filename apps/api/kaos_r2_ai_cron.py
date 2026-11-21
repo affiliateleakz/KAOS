@@ -59,10 +59,10 @@ async def run(now=None):
     model=result.pop("model")
     doc={"id":new_id("r2model"),"owner_id":owner,
          "symbol":symbol,"asset_class":asset_class,"source":source,
-         "created_at":now_iso(),"status":"candidate",
-         "validation_status":result["status"],"research_only":True,
-         "execution_enabled":False,"strategy":"R2_OHLC_LOGISTIC_V1",
-         "model":model,"trainer":"scheduled_r2_research",**result}
+         "created_at":now_iso(),"strategy":"R2_OHLC_LOGISTIC_V1",
+         "model":model,"trainer":"scheduled_r2_research",**result,
+         "status":"candidate","validation_status":result["status"],
+         "research_only":True,"execution_enabled":False}
     await db.kaos_r2_research_models.insert_one(dict(doc))
     await db.kaos_r2_research_events.insert_one({
         "model_id":doc["id"],"actor_id":owner,"event":"scheduled_candidate",
