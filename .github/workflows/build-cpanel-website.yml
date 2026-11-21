@@ -9,7 +9,7 @@ on:
       - ".github/workflows/build-cpanel-website.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -46,3 +46,24 @@ jobs:
           path: apps/web/build/
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publish built static website to deployment branch
+        working-directory: ${{ runner.temp }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          REVISION: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p kaos-cpanel-publish
+          cd kaos-cpanel-publish
+          git init
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b kaos-cpanel-build
+          cp -a "$GITHUB_WORKSPACE/apps/web/build/." .
+          printf '%s\n' "$REVISION" > kaos-build-revision.txt
+          git add -A
+          git commit -m "Build KAOS website from $REVISION"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"
+          git push --force origin HEAD:refs/heads/kaos-cpanel-build
