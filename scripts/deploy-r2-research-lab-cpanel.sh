@@ -10,7 +10,7 @@ WEB="$HOME/tradingwithkaos.com"
 PY="$HOME/virtualenv/tradingwithkaos.com/backend/3.11/bin/python"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 BACKUP="$HOME/kaos-r2-lab-backups/$STAMP"
-FILES=(routes_owner_candles.py kaos_r2_ai_lab.py kaos_r2_ai_cron.py)
+FILES=(routes_owner_candles.py kaos_r2_ai_lab.py kaos_r2_ai_cron.py kaos_candlestick_patterns.py kaos_r2_pattern_observer.py kaos_r2_pattern_cron.py)
 [[ -x "$PY" && -d "$LIVE/apps/api" && -d "$WEB" ]] || { echo "Active cPanel paths missing"; exit 1; }
 [[ -f "$LIVE/passenger_wsgi.py" && -f "$LIVE/apps/api/server.py" ]] || { echo "Live customized Passenger/API missing"; exit 1; }
 grep -q 'routes_owner_candles.router' "$LIVE/apps/api/server.py" || { echo "Live server does not already mount owner candles router"; exit 1; }
