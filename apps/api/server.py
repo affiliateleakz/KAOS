@@ -28,6 +28,7 @@ import routes_paper
 import routes_broker_selection
 import routes_broker_connections
 import routes_alpaca_paper
+import routes_alpaca_paper_orders
 import routes_research_replay
 import routes_chart_settings
 import routes_free_apis
@@ -90,6 +91,7 @@ app.include_router(routes_paper.router)
 app.include_router(routes_broker_selection.router)
 app.include_router(routes_broker_connections.router)
 app.include_router(routes_alpaca_paper.router)
+app.include_router(routes_alpaca_paper_orders.router)
 app.include_router(routes_research_replay.router)
 app.include_router(routes_chart_settings.router)
 app.include_router(routes_chart_settings.candles_router)
