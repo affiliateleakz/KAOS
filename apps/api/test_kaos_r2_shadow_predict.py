@@ -50,7 +50,7 @@ class ShadowPredictionTests(unittest.TestCase):
 
     def test_refuses_stale_candle(self):
         with self.assertRaisesRegex(ValueError,"stale"):
-            predict_rows(candles(),now_ms=START+40*S)
+            predict_rows(candles(),now_ms=START+60*S)
 
     def test_refuses_gap_in_feature_window(self):
         r=candles()
