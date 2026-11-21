@@ -177,7 +177,7 @@ export default function R2ResearchLab() {
             {busy === "training" ? "Training…" : "Train Selected Market Only"}
           </button>
         </div>
-        <p className="text-xs text-amber-300">Train AI — All R2 Markets queues independent research models for the configured stock, ETF and crypto archives. It uses completed one-minute R2 OHLCV candles; all-market training does NOT automatically ingest news, social, insider, options flow, or unsupported forex/binary feeds. Those require verified collectors and time-safe feature joining. Results are research-only, not live AI or broker trading.</p>
+        <p className="text-xs text-amber-300">Train AI — All R2 Markets queues independent research models for the configured stock, ETF and crypto archives. It always trains a separate candle-only model from validated R2 OHLCV. If existing KAOS intelligence records have enough historical coverage and were observed before the historical forecast cutoff, it can ALSO train a distinct enriched research model. Missing news, social, insider, options-flow, macro or other sources are never fabricated. Forex/options/binary price training is not yet in this 20-market job. No broker orders.</p>
       </form>
 
       <div className={box + " space-y-3"} data-testid="kaos-ai-training-jobs">
@@ -212,6 +212,11 @@ export default function R2ResearchLab() {
             {(j.results||[]).map((r,i)=><div key={r.symbol+"-"+i} className="border-b border-[#302B23] py-1">
               <strong>{r.symbol}</strong> · {r.status} · {r.rows??0} bars · {r.validation_status||r.reason||"research only"}
               {r.training_sources&&<p className="text-slate-500">Trained sources: {r.training_sources.filter(s=>s.used_in_training).map(s=>s.key).join(", ")||"none"}</p>}
+              {r.intelligence_model&&<p className="mt-1 text-[#D4AF37]">Enriched intelligence research: {r.intelligence_model.status}
+                {r.intelligence_model.validation_status?" · "+r.intelligence_model.validation_status:""}
+                {r.intelligence_model.source_categories?.length?" · Historical categories: "+r.intelligence_model.source_categories.join(", "):""}
+                {r.intelligence_model.reason?" · "+r.intelligence_model.reason:""}
+              </p>}
             </div>)}
           </div>
         </article>)}
