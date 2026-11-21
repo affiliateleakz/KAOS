@@ -12,11 +12,20 @@ command -v tar >/dev/null
 test -s "$WEB/index.html" || { echo "Missing working Viking homepage"; exit 1; }
 test -f "$WEB/.htaccess" || { echo "No existing LiteSpeed rewrite config. Stop: manual review required."; exit 1; }
 grep -q '^RewriteEngine On' "$WEB/.htaccess" || { echo "Unknown rewrite syntax. Stop."; exit 1; }
-git -C "$REPO" fetch origin main kaos-cpanel-build
+git -C "$REPO" fetch origin main
 MAIN="$(git -C "$REPO" rev-parse origin/main)"
 STAGE="$(mktemp -d "$HOME/kaos-portal-stage.XXXXXX")"
 trap 'rm -rf "$STAGE"' EXIT
-git -C "$REPO" archive origin/kaos-cpanel-build | tar -xf - -C "$STAGE"
+if [ -n "${KAOS_PORTAL_BUILD_DIR:-}" ]; then
+  # Use GitHub Actions' version-stamped web build artifact, downloaded and
+  # extracted to a private folder before this script is invoked.
+  test -d "$KAOS_PORTAL_BUILD_DIR" || { echo "Build directory missing"; exit 1; }
+  rsync -a --no-perms --no-owner --no-group "$KAOS_PORTAL_BUILD_DIR/" "$STAGE/"
+else
+  # Legacy compiled branch is safe only when it EXACTLY matches main.
+  git -C "$REPO" fetch origin kaos-cpanel-build
+  git -C "$REPO" archive origin/kaos-cpanel-build | tar -xf - -C "$STAGE"
+fi
 test -s "$STAGE/index.html" || { echo "Compiled portal missing"; exit 1; }
 test -d "$STAGE/static" || { echo "Compiled assets missing"; exit 1; }
 BUILT="$(cat "$STAGE/kaos-build-revision.txt")"
