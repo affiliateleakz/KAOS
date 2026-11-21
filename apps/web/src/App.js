@@ -21,6 +21,7 @@ import CryptoScanner from "./pages/dashboard/CryptoScanner";
 import StockHeatmap from "./pages/dashboard/StockHeatmap";
 import BrokerConnections from "./pages/dashboard/BrokerConnections";
 import PaperTrading from "./pages/dashboard/PaperTrading";
+import R2ResearchLab from "./pages/dashboard/R2ResearchLab";
 import { AffiliatePage, AIPage } from "./pages/dashboard/AffiliateAI";
 import AdminLayout from "./pages/admin/AdminLayout";
 import * as AP from "./pages/admin/pages";
@@ -39,6 +40,11 @@ function Protected({ children, role }) {
     if ((rank[user.role] || 0) < rank[role]) return <Navigate to="/dashboard" replace />;
   }
   return children;
+}
+
+function BacktestsRoute() {
+  const { user } = useAuth();
+  return ["admin", "super_admin"].includes(user?.role) ? <R2ResearchLab /> : <DP.Backtests />;
 }
 
 function AppRouter() {
@@ -76,7 +82,7 @@ function AppRouter() {
         <Route path="community" element={<DP.CommunityFeed />} />
         <Route path="indicators" element={<DP.Indicators />} />
         <Route path="scripts" element={<DP.Scripts />} />
-        <Route path="backtests" element={<DP.Backtests />} />
+        <Route path="backtests" element={<BacktestsRoute />} />
         <Route path="saved" element={<DP.Saved />} />
         <Route path="following" element={<DP.Following />} />
         <Route path="subscription" element={<DP.Subscription />} />
