@@ -22,6 +22,7 @@ from kaos_paper_journal import PaperOrderJournal
 from kaos_risk_engine import RiskLimits, RiskSnapshot, RiskRejected
 from kaos_durable_paper_pipeline import DurablePaperPipeline
 from kaos_paper_book import base_units, build_book, book_view, money
+from market_data import get_quote, QuoteUnavailable
 
 router = APIRouter(prefix="/api/v1/paper", tags=["paper-trading"])
 admin_dep = require_role("admin")
@@ -44,6 +45,14 @@ class PaperOrderReq(BaseModel):
     client_order_id: Optional[str] = Field(default=None, max_length=64)
 
 
+class MarketPaperOrderReq(BaseModel):
+    symbol: str = Field(min_length=3, max_length=30)
+    asset_class: Literal['CRYPTO_SPOT'] = 'CRYPTO_SPOT'
+    side: Literal['BUY','SELL'] = 'BUY'
+    quantity: str = Field(description='USD notional, capped by paper risk limits')
+    client_order_id: Optional[str] = Field(default=None,max_length=64)
+
+
 class ClosePositionReq(BaseModel):
     quote_price: str
     client_order_id: Optional[str] = Field(default=None, max_length=64)
@@ -53,10 +62,10 @@ class KillSwitchReq(BaseModel):
     active: bool
 
 
-def build_snapshot(book, quote_price, now, emergency_stopped):
+def build_snapshot(book, quote_price, now, emergency_stopped, quote_timestamp=None):
     """Risk snapshot from the user's simulated paper book."""
     return RiskSnapshot(
-        now=now, quote_timestamp=now, quote_price=quote_price, daily_realized_pnl=str(book["realized_today"]),
+        now=now, quote_timestamp=quote_timestamp or now, quote_price=quote_price, daily_realized_pnl=str(book["realized_today"]),
         open_exposure=str(book["open_cost"]), open_positions=len(book["open"]),
         available_quote_balance=str(max(book["cash"], Decimal("0"))),
         emergency_stopped=emergency_stopped)
@@ -89,7 +98,7 @@ async def _reject(user, now, client_order_id, symbol, side, quantity, quote_pric
     raise HTTPException(status_code=422, detail=f"Paper order rejected: {reason}")
 
 
-async def _submit(user, symbol, asset_class, side, quantity, quote_price, client_order_id, *, close_all=False):
+async def _submit(user, symbol, asset_class, side, quantity, quote_price, client_order_id, *, close_all=False, market_quote=None):
     now = datetime.now(timezone.utc)
     symbol = symbol.upper()
     client_order_id = client_order_id or f"web-{uuid.uuid4().hex[:16]}"
@@ -123,7 +132,8 @@ async def _submit(user, symbol, asset_class, side, quantity, quote_price, client
         client_order_id=client_order_id, symbol=symbol, asset_class=AssetClass(asset_class),
         side=side, order_kind=OrderKind.MARKET, quantity=quantity, quantity_unit="QUOTE",
         strategy_signal_id="manual", metadata=metadata)
-    snapshot = build_snapshot(book, quote_price, now, await kill_switch_active())
+    snapshot = build_snapshot(book, quote_price, now, await kill_switch_active(),
+                              quote_timestamp=market_quote.quote_time if market_quote else None)
     try:
         report = await _pipeline.submit(intent, snapshot, closing_position=closing)
     except (RiskRejected, BrokerUnavailable) as exc:
@@ -132,7 +142,8 @@ async def _submit(user, symbol, asset_class, side, quantity, quote_price, client
         return existing
     doc = {"user_id": user["id"], "client_order_id": client_order_id, "symbol": symbol, "asset_class": asset_class,
            "side": side, "quantity": quantity, "quote_price": quote_price, "fill_price": quote_price,
-           "base_qty": format(units, "f"), "fill_type": "SIMULATED",
+           "base_qty": format(units, "f"), "fill_type": "SIMULATED_MARKET_QUOTE" if market_quote else "SIMULATED",
+           "quote_provenance":market_quote.provenance() if market_quote else None,
            "state": report.state.value, "broker": report.broker, "paper": True, "created_at": now.isoformat()}
     if side == "SELL":
         avg = pos["cost"] / pos["units"]
@@ -144,6 +155,31 @@ async def _submit(user, symbol, asset_class, side, quantity, quote_price, client
 @router.post("/orders")
 async def place_paper_order(req: PaperOrderReq, user: dict = Depends(get_current_user)):
     return await _submit(user, req.symbol, req.asset_class, req.side, req.quantity, req.quote_price, req.client_order_id)
+
+
+@router.post("/orders/market")
+async def place_market_derived_paper_order(req: MarketPaperOrderReq, user: dict = Depends(get_current_user)):
+    """Market-derived *simulation*. Never accepts a client quote or routes live.
+
+    Only a Coinbase public spot market quote is supported today. Server quote
+    timestamp goes to the actual pretrade risk age check (<=10s).
+    """
+    import re
+    from datetime import datetime, timezone
+    symbol=req.symbol.upper()
+    if not re.fullmatch(r"[A-Z0-9]{2,10}-[A-Z]{3,5}",symbol):
+        raise HTTPException(422,"Invalid crypto spot symbol")
+    try:
+        quote=await get_quote(symbol,"CRYPTO_SPOT")
+    except QuoteUnavailable as exc:
+        raise HTTPException(503,str(exc)) from exc
+    now=datetime.now(timezone.utc)
+    age=(now-quote.quote_time).total_seconds()
+    if age<0 or age>RiskLimits().max_price_age_seconds:
+        raise HTTPException(503,"Missing or stale market-derived quote")
+    price=quote.ask if req.side=="BUY" else quote.bid
+    return await _submit(user,symbol,req.asset_class,req.side,req.quantity,
+                         str(price),req.client_order_id,market_quote=quote)
 
 
 @router.post("/positions/{symbol}/close")
