@@ -41,11 +41,14 @@ class R2BatchTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(report["markets"][1]["error_type"],"RuntimeError")
         self.assertEqual(report["aggregate"]["trades_per_hour"],None)
 
-    def test_gaps_block_entire_market_backtest(self):
+    def test_gaps_split_into_all_eligible_segments(self):
         r=summarize_market("BTC-USD","crypto",candles(gap=True),"coinbase_exchange_public")
-        self.assertEqual(r["status"],"insufficient_contiguous_history")
-        self.assertIsNone(r["summary"])
-        self.assertEqual(r["trades"],[])
+        self.assertEqual(r["status"],"completed")
+        self.assertEqual(r["history"]["gap_count"],1)
+        self.assertEqual(r["history"]["eligible_segments"],2)
+        self.assertEqual(r["history"]["eligible_bars"],130)
+        self.assertEqual(r["history"]["skipped_bars"],0)
+        self.assertTrue(all(t["segment_index"] in (0,1) for t in r["trades"]))
 
     def test_short_history_does_not_produce_win_rate(self):
         r=summarize_market("BTC-USD","crypto",candles(count=15),"coinbase_exchange_public")
