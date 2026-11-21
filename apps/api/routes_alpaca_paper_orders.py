@@ -214,6 +214,73 @@ async def paper_reconcile(req:ReconcileReq,user:dict=Depends(get_current_user)):
             "execution_enabled_for_ai":False}
 
 
+@router.post("/orders/recovery-audit")
+async def alpaca_paper_recovery_audit(user:dict=Depends(get_current_user)):
+    """Reconcile up to 10 saved paper orders after crash/timeout.
+
+    No order is submitted or retried. A 404 or network error retains the
+    inflight lock and must be investigated, even if the request timed out.
+    """
+    from alpaca_paper_recovery import classify
+    key,secret=await guard(user,reconciliation=True)
+    inflight=await db.alpaca_paper_inflight.find(
+        {"_id":user["id"]},{"_id":0}).limit(1).to_list(length=1)
+    # Existing gateway enforces one in-flight order per owner.
+    if not inflight:
+        return {"checked":0,"results":[],"unresolved":0,
+                "paper_only":True,"orders_submitted":0,
+                "ai_execution_enabled":False}
+    results=[]
+    for slot in inflight:
+        cid=slot.get("client_order_id")
+        row=await db.alpaca_paper_manual_orders.find_one(
+            {"_id":cid,"user_id":user["id"],"broker":"alpaca_paper"})
+        if not row:
+            results.append({"status":"ORPHAN_INFLIGHT_LOCK",
+                            "retain_inflight_lock":True,
+                            "can_submit_again_automatically":False})
+            continue
+        try:
+            from alpaca_paper_recovery import classify
+            broker_record=await lookup_paper_order(key,secret,cid)
+            report=classify(row,broker_record)
+        except (AlpacaPaperUnavailable,ValueError,TypeError):
+            report={"client_order_id":cid,"broker_status":"UNKNOWN_PROVIDER_ERROR",
+                    "retain_inflight_lock":True,"terminal":False,
+                    "can_submit_again_automatically":False}
+        results.append(report)
+        if report["broker_status"] not in ("UNKNOWN_PROVIDER_ERROR",
+                                            "UNKNOWN_NOT_FOUND",
+                                            "UNKNOWN_BROKER_STATUS"):
+            await db.alpaca_paper_manual_orders.update_one(
+                {"_id":cid,"user_id":user["id"]},
+                {"$set":{"state":"BROKER_REPORTED",
+                         "broker_status":report["broker_status"],
+                         "filled_qty":report.get("filled_qty"),
+                         "filled_avg_price":report.get("filled_avg_price"),
+                         "reconciled_at":now_iso()}})
+        if report.get("terminal") and not report["retain_inflight_lock"]:
+            await db.alpaca_paper_inflight.delete_one(
+                {"_id":user["id"],"client_order_id":cid})
+    return {"checked":len(results),"results":results,
+            "unresolved":sum(int(v["retain_inflight_lock"]) for v in results),
+            "orders_submitted":0,"paper_only":True,
+            "ai_execution_enabled":False,
+            "note":"Reconciliation only. Unknown orders remain locked until verified."}
+
+
+@router.get("/risk-ledger-readiness")
+async def alpaca_paper_risk_ledger_readiness(user:dict=Depends(get_current_user)):
+    """Read-only ledger completeness audit; never treat equity delta as P&L."""
+    from alpaca_paper_recovery import risk_ledger_status
+    key,secret=await guard(user,reconciliation=True)
+    try:
+        account=await paper_request(key,secret,"GET","/v2/account")
+    except AlpacaPaperUnavailable as exc:
+        raise HTTPException(503,"Alpaca paper account unavailable") from exc
+    return risk_ledger_status(account)
+
+
 @router.get("/ai-paper-readiness")
 async def alpaca_ai_paper_readiness(
     symbol:str="AAPL",user:dict=Depends(get_current_user)
