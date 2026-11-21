@@ -37,7 +37,9 @@ jobs:
         run: bash -n ../../scripts/deploy-kaos-paper-api-cpanel.sh ../../scripts/deploy-isolated-kaos-portal-cpanel.sh ../../scripts/install-kaos-r2-train-cron-cpanel.sh ../../scripts/run-kaos-r2-training-worker-cpanel.sh
       - run: npm ci --no-audit --no-fund
       - run: npm run build
-        env: { CI: "false" }
+        env:
+          CI: "false"
+          REACT_APP_BACKEND_URL: "https://api.tradingwithkaos.com"
       - name: Version compiled portal
         run: echo "$GITHUB_SHA" > build/kaos-build-revision.txt
       - name: Package static React portal for isolated hosting
