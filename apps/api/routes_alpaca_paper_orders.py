@@ -214,6 +214,50 @@ async def paper_reconcile(req:ReconcileReq,user:dict=Depends(get_current_user)):
             "execution_enabled_for_ai":False}
 
 
+@router.get("/research-review")
+async def paper_ai_research_review(user:dict=Depends(get_current_user)):
+    """Compare existing *manual* Alpaca paper orders to prior AI research.
+
+    No submission or modification of paper/AI orders, no implied auto-trading.
+    Only the configured KAOS research owner can see candidate predictions.
+    """
+    await guard(user,reconciliation=True)
+    from kaos_ai_paper_review import review_manual_paper_orders
+    from datetime import timedelta
+    # Keep bounded and avoid repeatedly scanning all forecasts.
+    orders=await db.alpaca_paper_manual_orders.find(
+        {"user_id":user["id"],"broker":"alpaca_paper"},
+        {"_id":0}).sort("created_at",-1).limit(50).to_list(length=50)
+    symbols=sorted({r.get("symbol") for r in orders
+                    if isinstance(r.get("symbol"),str)})
+    model_ids=await db.kaos_r2_research_models.distinct(
+        "id",{"owner_id":user["id"],"research_only":True,
+              "execution_enabled":False,
+              "asset_class":{"$in":["stock","etf"]}})
+    predictions=[]
+    if orders and symbols and model_ids:
+        try:
+            earliest=min(datetime.fromisoformat(o["created_at"].replace("Z","+00:00"))
+                         for o in orders)
+            latest=max(datetime.fromisoformat(o["created_at"].replace("Z","+00:00"))
+                       for o in orders)
+        except (ValueError,TypeError,KeyError) as exc:
+            raise HTTPException(503,"Paper order timestamps cannot be audited") from exc
+        if earliest.tzinfo is None or latest.tzinfo is None:
+            raise HTTPException(503,"Paper order timestamps lack timezone")
+        # Only owner-model forecasts, and only candles that closed before
+        # a manual order; _forecast_ok does a per-row final temporal check.
+        from_ms=int((earliest-timedelta(minutes=5)).timestamp()*1000)
+        through_ms=int(latest.timestamp()*1000)
+        predictions=await db.kaos_r2_shadow_predictions.find(
+            {"model_id":{"$in":model_ids},
+             "symbol":{"$in":symbols},
+             "asset_class":{"$in":["stock","etf"]},
+             "candle_end_ts":{"$gte":from_ms,"$lte":through_ms}},
+            {"_id":0}).sort("candle_end_ts",-1).limit(1500).to_list(length=1500)
+    return review_manual_paper_orders(orders,predictions,model_ids)
+
+
 @router.get("/orders/kaos")
 async def kaos_paper_orders(user:dict=Depends(get_current_user)):
     await guard(user,reconciliation=True)
