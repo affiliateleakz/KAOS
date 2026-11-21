@@ -23,6 +23,7 @@ export default function R2ResearchLab() {
   const [patternStatus, setPatternStatus] = useState([]);
   const [observations, setObservations] = useState([]);
   const [patternCatalog, setPatternCatalog] = useState(null);
+  const [shadow, setShadow] = useState({predictions:[],summary:{}});
   const [accessDenied, setAccessDenied] = useState(false);
 
   const selected = markets.find(m => m.symbol === market);
@@ -52,8 +53,14 @@ export default function R2ResearchLab() {
       setPatternCatalog(cats);
     } catch(e) { setError(errMsg(e) || "Pattern observations unavailable"); }
   };
-  useEffect(() => { load(); loadPatterns("BTC-USD"); }, []);
-  const switchMarket = value => {setMarket(value);setObservations([]);loadPatterns(value);};
+  const loadShadow = async (symbol = market) => {
+    try {
+      const {data} = await api.get(API + "/shadow", {params:{symbol,limit:60}});
+      setShadow(data);
+    } catch(e) { setError(errMsg(e) || "Shadow forecasts unavailable"); }
+  };
+  useEffect(() => { load(); loadPatterns("BTC-USD"); loadShadow("BTC-USD"); }, []);
+  const switchMarket = value => {setMarket(value);setObservations([]);setShadow({predictions:[],summary:{}});loadPatterns(value);loadShadow(value);};
   const runBacktest = async e => {
     e.preventDefault();
     if (!selected) return;
@@ -171,6 +178,42 @@ export default function R2ResearchLab() {
             <span>{r.symbol} · {r.expiry_bars}m · {r.status}</span>
             <span className="font-mono">{r.summary?.trades ?? 0} trades · {win(r.summary?.win_rate_ex_ties)} WR · {r.created_at}</span>
           </div>)}
+        </div>
+      </div>
+
+      <div className={box + " space-y-3"} data-testid="kaos-ai-shadow-forecasts">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-semibold text-[#D4AF37]">KAOS AI Shadow Predictions</h2>
+            <p className="text-xs text-slate-400">Trained-model forecasts on completed R2 candles · independently verified later · no orders</p>
+          </div>
+          <button type="button" onClick={() => loadShadow(market)} className="rounded border border-[#D4AF37] px-3 py-2 text-xs text-[#D4AF37]">Refresh forecasts</button>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            ["Saved forecasts",shadow.summary?.shown ?? 0],
+            ["Verified outcomes",shadow.summary?.settled ?? 0],
+            ["HOLD decisions",shadow.summary?.hold ?? 0],
+            ["Directional accuracy",ratio(shadow.summary?.directional_accuracy)]
+          ].map(([label,value]) => <div key={label} className="rounded bg-[#1C1A16] p-3">
+            <p className="text-xs text-slate-400">{label}</p><p className="font-semibold">{value}</p>
+          </div>)}
+        </div>
+        <p className="text-xs text-amber-300">Shadow signals may come from unvalidated candidate models. An accuracy value here is not a live trading win rate: predictions overlap and exclude spread, costs, fills and payout. Automatic research schedules require separate cPanel activation.</p>
+        {!shadow.predictions?.length && <p className="text-sm text-slate-500">No shadow predictions for {market} yet. Run training and activate the research prediction schedule after deployment.</p>}
+        <div className="max-h-64 overflow-auto">
+          <table className="w-full min-w-[730px] text-left text-xs">
+            <thead><tr className="border-b border-[#444]">{["Observation UTC","Direction","P(up)","Horizon","Validation","Actual outcome","Result"].map(h=><th key={h} className="p-2">{h}</th>)}</tr></thead>
+            <tbody>{(shadow.predictions || []).map(p => <tr key={p.id} className="border-b border-[#282828]">
+              <td className="p-2">{new Date(p.observed_ts).toISOString()}</td>
+              <td className="p-2">{p.direction}</td>
+              <td className="p-2">{ratio(p.prob_up)}</td>
+              <td className="p-2">{p.horizon_bars} bars</td>
+              <td className="p-2">{p.validation_status}</td>
+              <td className="p-2">{p.outcome_status === "settled" ? p.outcome_direction : "Pending"}</td>
+              <td className="p-2">{p.correct === true ? "Matched" : p.correct === false ? "Missed" : "—"}</td>
+            </tr>)}</tbody>
+          </table>
         </div>
       </div>
 

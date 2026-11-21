@@ -40,10 +40,21 @@ echo "=== INSTALL RESEARCH API (BACKUP INCLUDED) ==="
 bash "$REPO/scripts/deploy-r2-research-api-only-cpanel.sh"
 echo "=== INSTALL GITHUB-BUILT WEBSITE ==="
 # Preserve backend, secrets, server configs. Keep older hashed assets for rollback.
-rsync -a --exclude='index.html' --exclude='.htaccess' --exclude='backend/' \
+(umask 022; rsync -a --no-perms --no-owner --no-group --exclude='index.html' --exclude='.htaccess' --exclude='backend/' \
   --exclude='.env' --exclude='.env.*' --exclude='passenger_wsgi.py' \
-  "$STAGE/" "$WEB/"
+  "$STAGE/" "$WEB/")
+# A mktemp staging directory has mode 700; rsync must never copy that
+# directory mode onto the public domain document root (2026-11 incident).
+# Ensure generated static assets can be read by LiteSpeed without exposing
+# the backend tree; keep the document root non-listable by other users.
+if test -d "$WEB/static"; then
+  find "$WEB/static" -type d -exec chmod 755 {} +
+  find "$WEB/static" -type f -exec chmod 644 {} +
+fi
+chmod 711 "$WEB"
+chmod 644 "$WEB/index.html"
 cp "$STAGE/index.html" "$WEB/index.html"
+chmod 644 "$WEB/index.html"
 echo "KAOS WEBSITE + RESEARCH API INSTALLED; no npm required."
 echo "Revision: $BUILT_FOR"
 echo "Previous index backup: $BACKUP/index.html"
