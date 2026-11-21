@@ -140,6 +140,28 @@ export function AffiliatePage() {
   );
 }
 export function AIPage() {
+  const [paperAI,setPaperAI]=useState(null);
+  const [paperBusy,setPaperBusy]=useState(false);
+  const [paperError,setPaperError]=useState("");
+  const refreshPaperAI=async()=>{
+    try{
+      const {data}=await api.get("/api/v1/owner/candles/r2-lab/paper-ai/status");
+      setPaperAI(data);setPaperError("");
+    }catch(e){if(e?.response?.status!==403)setPaperError(errMsg(e));}
+  };
+  const togglePaperAI=async(enabled)=>{
+    setPaperBusy(true);setPaperError("");
+    try {
+      const {data}=await api.post("/api/v1/owner/candles/r2-lab/paper-ai/"+(enabled?"start":"stop"));
+      setPaperAI(data);toast.success(enabled?"Experimental AI paper predictions enabled":"AI paper predictions paused");
+    }catch(e){setPaperError(errMsg(e));}
+    finally{setPaperBusy(false);}
+  };
+  useEffect(()=>{
+    refreshPaperAI();
+    const id=setInterval(()=>{if(!document.hidden)refreshPaperAI();},15000);
+    return ()=>clearInterval(id);
+  },[]);
   const [trainingJob,setTrainingJob]=useState(null);
   const [trainingBusy,setTrainingBusy]=useState(false);
   const [trainingError,setTrainingError]=useState("");
@@ -183,6 +205,36 @@ export function AIPage() {
   return (
     <div><H>KAOS AI</H>
       <div className="mb-6 rounded-lg border border-[#D4AF37]/20 bg-[#D4AF37]/5 p-3 text-xs text-[#D4AF37]">KAOS AI is not yet production-trained. Predictions shown are SIMULATED until the trained model is deployed. No guaranteed accuracy.</div>
+      {canTrain&&<section className="card-surface mb-6 space-y-3 p-5" data-testid="kaos-ai-experimental-paper">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-heading text-lg font-semibold text-[#D4AF37]">Experimental AI · Automatic Paper Predictions</h2>
+            <p className="mt-1 text-xs text-slate-400">Use trained R2 candidate models before production validation. Closed-candle, simulated 1x directional positions only; no real orders.</p>
+          </div>
+          <button type="button" className="rounded bg-[#D4AF37] px-4 py-2 text-sm font-semibold text-black disabled:opacity-40"
+            disabled={paperBusy} onClick={()=>togglePaperAI(!paperAI?.enabled)}>
+            {paperBusy?"Updating…":paperAI?.enabled?"Stop AI Paper":"Start AI Paper"}
+          </button>
+        </div>
+        {paperError&&<p role="alert" className="text-xs text-red-300">{paperError}</p>}
+        {paperAI&&<div className="grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
+          <div>Status: <b>{paperAI.enabled?"RUNNING":"PAUSED"}</b></div>
+          <div>Settled: <b>{paperAI.settled}</b></div>
+          <div>Direction accuracy: <b>{paperAI.direction_accuracy==null?"—":(paperAI.direction_accuracy*100).toFixed(1)+"%"}</b></div>
+          <div>Net simulated P&amp;L: <b>${paperAI.realized_net_pnl_usd?.toFixed(2)}</b></div>
+        </div>}
+        {paperAI?.recent?.length>0&&<div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead><tr><th className="py-2">Market</th><th>Forecast</th><th>Confidence</th><th>Status</th><th>Simulated P&amp;L</th></tr></thead>
+            <tbody>{paperAI.recent.slice(0,12).map(item=><tr key={item.symbol+item.entry_ts} className="border-t border-[#34302A]">
+              <td className="py-2">{item.symbol}</td><td>{item.direction}</td>
+              <td>{(item.confidence*100).toFixed(1)}%</td><td>{item.state}</td>
+              <td>{item.net_pnl_usd==null?"—":"$"+Number(item.net_pnl_usd).toFixed(2)}</td>
+            </tr>)}</tbody>
+          </table>
+        </div>}
+        <p className="text-xs text-amber-300">This ledger is a directional price-change experiment, not a broker-fill simulation. Paper prices are historical closed R2 candle closes; trading costs are modeled. Actual fills, spreads and execution may differ. Training uses new price history after labeled outcomes; there is no live-money authority.</p>
+      </section>}
       {canTrain&&<section className="card-surface mb-6 space-y-3 p-5" data-testid="kaos-ai-main-train-button">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div><h2 className="font-heading text-lg font-semibold text-[#D4AF37]">KAOS AI · Train Across R2 Markets</h2>
