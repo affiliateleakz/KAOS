@@ -93,8 +93,8 @@ def initial_job(owner_id,scope,symbol,limit,horizon):
         "model_family":"kaos_r2_ohlc_logistic_v1",
         "trained_feature_names":list(TRAINED_FEATURES),
         "feature_sources_manifest":source_report(),
-        "other_sources_enabled":False,
-        "note":"Only closed R2 OHLCV candles are model inputs in this job. News, social, insider, options, macro and pattern collectors are NOT combined or trained."
+        "other_sources_enabled":True,
+        "note":"Closed R2 OHLCV feeds the primary model; eligible already-ingested time-safe intelligence may separately train an enriched RESEARCH model. Per-market coverage states which categories actually trained. Other categories remain unavailable."
     }
 
 def public_job(job):
@@ -107,6 +107,74 @@ def public_job(job):
     result={k:job.get("_id") if k=="id" else job.get(k) for k in keys}
     result["orders_enabled"]=False
     return result
+
+async def try_enriched_intelligence(job,market,rows,source):
+    """Fit an additional research model ONLY with verified as-of evidence."""
+    from kaos_ai_intelligence_training import (
+        train_enriched,MAX_RECORDS,SCHEMA,FEATURE_NAMES
+    )
+    symbol=market["symbol"]
+    asset_class=market["asset_class"]
+    try:
+        observations=await db.kaos_intelligence.find(
+            {"asset":symbol,"asset_class":asset_class},
+            {"_id":0,"event_id":1,"asset":1,"asset_class":1,
+             "source":1,"direction":1,"strength":1,
+             "observed_at":1,"published_at":1}
+        ).sort("observed_at",1).limit(MAX_RECORDS+1).to_list(length=MAX_RECORDS+1)
+    except Exception as exc:
+        return {"status":"source_unavailable","reason":type(exc).__name__}
+    if len(observations)>MAX_RECORDS:
+        return {"status":"source_history_truncated",
+                "reason":"Historical intelligence records exceed safe audit limit"}
+    try:
+        report=await asyncio.to_thread(
+            train_enriched,rows,observations,
+            symbol=symbol,asset_class=asset_class,seconds=60,
+            horizon=job["horizon_bars"])
+    except (ValueError,RuntimeError,OverflowError,ZeroDivisionError) as exc:
+        return {"status":"not_trained","reason":type(exc).__name__}
+    coverage=report.get("coverage",{})
+    if report["status"] in ("insufficient_history","insufficient_external_history"):
+        return {"status":report["status"],"coverage":coverage,
+                "reason":report.get("reason","Not enough historically available evidence")}
+    model=report.pop("model")
+    fingerprint=report["dataset_fingerprint"]
+    existing=await db.kaos_r2_research_models.find_one(
+        {"owner_id":job["owner_id"],"symbol":symbol,"asset_class":asset_class,
+         "source":source,"horizon_bars":job["horizon_bars"],
+         "dataset_fingerprint":fingerprint,"model.schema":SCHEMA},
+        {"id":1,"_id":0})
+    if existing:
+        return {"status":"reused","model_id":existing["id"],
+                "source_categories":report["source_categories_in_training"],
+                "coverage":coverage}
+    document={
+        "id":new_id("r2enriched"),"owner_id":job["owner_id"],
+        "symbol":symbol,"asset_class":asset_class,"source":source,
+        "created_at":now_iso(),"status":"candidate",
+        "validation_status":report["status"],
+        "research_only":True,"execution_enabled":False,
+        "strategy":"R2_INTELLIGENCE_LOGISTIC_V1",
+        "model":model,"training_job_id":job["_id"],
+        "trained_feature_names":list(FEATURE_NAMES),
+        "intelligence_evidence_asof":True,
+        "production_inference_supported":False,
+        **report,
+    }
+    await db.kaos_r2_research_models.insert_one(document)
+    await db.kaos_r2_research_events.insert_one({
+        "model_id":document["id"],"actor_id":job["owner_id"],
+        "event":"intelligence_candidate_trained",
+        "created_at":now_iso(),"training_job_id":job["_id"],
+        "validation_status":document["validation_status"],
+    })
+    return {"status":"trained","model_id":document["id"],
+            "validation_status":document["validation_status"],
+            "source_categories":document["source_categories_in_training"],
+            "coverage":coverage,"test":document.get("test"),
+            "promotion_blockers":document.get("promotion_blockers",[])}
+
 
 async def train_one_market(job, market):
     symbol=market["symbol"]
@@ -137,33 +205,55 @@ async def train_one_market(job, market):
                   "dataset_fingerprint":fingerprint}
     existing=await db.kaos_r2_research_models.find_one(model_filter,{"id":1,"_id":0})
     if existing:
-        return {**identity,"status":"reused","rows":len(rows),"source":source,
+        output={**identity,"status":"reused","rows":len(rows),"source":source,
                 "model_id":existing["id"],"training_sources":inventory}
-    trained=result.pop("model")
-    document={
-        "id":new_id("r2model"),"owner_id":job["owner_id"],
-        "symbol":symbol,"asset_class":asset_class,"source":source,
-        "created_at":now_iso(),"status":"candidate",
-        "validation_status":result["status"],
-        "research_only":True,"execution_enabled":False,
-        "strategy":"R2_OHLC_LOGISTIC_V1","model":trained,
-        "training_job_id":job["_id"],"feature_sources":inventory,
-        "training_features":list(TRAINED_FEATURES),
-        "trained_on_news_social_insider_or_options":False,
-        **result,
-    }
-    await db.kaos_r2_research_models.insert_one(document)
-    await db.kaos_r2_research_events.insert_one({
-        "model_id":document["id"],"actor_id":job["owner_id"],
-        "event":"bulk_trained_candidate","created_at":now_iso(),
-        "validation_status":document["validation_status"],
-        "training_job_id":job["_id"],
-    })
-    return {**identity,"status":"trained","rows":len(rows),
-            "source":source,"model_id":document["id"],
+    else:
+        trained=result.pop("model")
+        document={
+            "id":new_id("r2model"),"owner_id":job["owner_id"],
+            "symbol":symbol,"asset_class":asset_class,"source":source,
+            "created_at":now_iso(),"status":"candidate",
+            "validation_status":result["status"],
+            "research_only":True,"execution_enabled":False,
+            "strategy":"R2_OHLC_LOGISTIC_V1","model":trained,
+            "training_job_id":job["_id"],"feature_sources":inventory,
+            "training_features":list(TRAINED_FEATURES),
+            "trained_on_news_social_insider_or_options":False,
+            **result,
+        }
+        await db.kaos_r2_research_models.insert_one(document)
+        await db.kaos_r2_research_events.insert_one({
+            "model_id":document["id"],"actor_id":job["owner_id"],
+            "event":"bulk_trained_candidate","created_at":now_iso(),
             "validation_status":document["validation_status"],
-            "test":document.get("test"),"promotion_blockers":document.get("promotion_blockers",[]),
-            "training_sources":inventory}
+            "training_job_id":job["_id"],
+        })
+        output={**identity,"status":"trained","rows":len(rows),
+                "source":source,"model_id":document["id"],
+                "validation_status":document["validation_status"],
+                "test":document.get("test"),
+                "promotion_blockers":document.get("promotion_blockers",[]),
+                "training_sources":inventory}
+    try:
+        enriched=await try_enriched_intelligence(job,market,rows,source)
+    except Exception as exc:
+        enriched={"status":"source_unavailable","reason":type(exc).__name__}
+    output["intelligence_model"]=enriched
+    if enriched["status"] in ("trained","reused"):
+        # Accurate per-market source manifest. Only categories with time-safe
+        # historical observations used by the enriched model get "trained".
+        mapping={"insider_trades":"insider",
+                 "institutional_trades":"institutional",
+                 "macro_events":"macro"}
+        categories=set(enriched.get("source_categories",[]))
+        for item in inventory:
+            source_key=mapping.get(item["key"],item["key"])
+            if source_key in categories:
+                item["used_in_training"]=True
+                item["status"]="trained_in_separate_intelligence_model"
+                item["rows"]=enriched["coverage"]["source_counts"].get(source_key)
+        output["training_sources"]=inventory
+    return output
 
 async def run_tick():
     if os.getenv("KAOS_R2_TRAIN_WORKER_ENABLED")!="1":
