@@ -214,6 +214,45 @@ async def paper_reconcile(req:ReconcileReq,user:dict=Depends(get_current_user)):
             "execution_enabled_for_ai":False}
 
 
+@router.get("/ai-paper-readiness")
+async def alpaca_ai_paper_readiness(
+    symbol:str="AAPL",user:dict=Depends(get_current_user)
+):
+    """Owner-only evaluation of recent stock forecasts against paper gates.
+
+    Deliberately returns no order intent or automatic paper-trade permission.
+    """
+    from kaos_ai_alpaca_readiness import review_signal
+    if not SYMBOL.fullmatch(symbol.upper()):
+        raise HTTPException(422,"Only US equity tickers supported")
+    # Does not need API keys or a currently open market to explain blocks.
+    owner=os.getenv("KAOS_CANDLE_OWNER_USER_ID","")
+    if not owner or user.get("id")!=owner or user.get("role") not in ("admin","super_admin"):
+        raise HTTPException(403,"Owner-only AI paper research")
+    models=await db.kaos_r2_research_models.find(
+        {"owner_id":user["id"],"symbol":symbol.upper(),
+         "asset_class":{"$in":["stock","etf"]},
+         "research_only":True,"execution_enabled":False},
+        {"_id":0}).sort("created_at",-1).limit(10).to_list(length=10)
+    lookup={m["id"]:m for m in models if isinstance(m.get("id"),str)}
+    docs=await db.kaos_r2_shadow_predictions.find(
+        {"symbol":symbol.upper(),"asset_class":{"$in":["stock","etf"]},
+         "model_id":{"$in":list(lookup)}},
+        {"_id":0}).sort("observed_ts",-1).limit(15).to_list(length=15)
+    evaluations=[]
+    for row in docs:
+        model=lookup.get(row.get("model_id"))
+        if not model:
+            continue
+        evaluations.append(review_signal(row,model))
+    return {"symbol":symbol.upper(),
+            "evaluations":evaluations,
+            "checked":len(evaluations),
+            "research_only":True,"paper_order_authorized":False,
+            "ai_paper_execution_enabled":False,
+            "note":"Shadow forecasts are not instructions to trade. All AI broker orders are blocked."}
+
+
 @router.get("/research-review")
 async def paper_ai_research_review(user:dict=Depends(get_current_user)):
     """Compare existing *manual* Alpaca paper orders to prior AI research.
