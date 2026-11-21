@@ -81,7 +81,11 @@ class ShadowPredictionTests(unittest.TestCase):
         future=candles(4,start=a[-1]["ts"]+S)
         result=settle(f,a+future)
         self.assertEqual(result["outcome_status"],"settled")
-        # The synthetic future series restarts at 100 rather than continuing\n        # from the past 20 bars, so it is correctly scored as DOWN.\n        self.assertEqual(result["outcome_direction"],"DOWN")\n        self.assertFalse(result["correct"])\n        self.assertFalse(result["actual_trade"])
+        # The synthetic future series restarts at 100 rather than continuing
+        # from the past 20 bars, so it is correctly scored as DOWN.
+        self.assertEqual(result["outcome_direction"],"DOWN")
+        self.assertFalse(result["correct"])
+        self.assertFalse(result["actual_trade"])
 
     def test_never_settles_across_missing_future_bar(self):
         a=candles(20)
