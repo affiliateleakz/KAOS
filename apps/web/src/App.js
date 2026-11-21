@@ -42,6 +42,11 @@ function Protected({ children, role }) {
   return children;
 }
 
+function BacktestsRoute() {
+  const { user } = useAuth();
+  return ["admin", "super_admin"].includes(user?.role) ? <R2ResearchLab /> : <DP.Backtests />;
+}
+
 function AppRouter() {
   const location = useLocation();
   if (location.hash?.includes("session_id=")) return <AuthCallback />;
@@ -77,7 +82,7 @@ function AppRouter() {
         <Route path="community" element={<DP.CommunityFeed />} />
         <Route path="indicators" element={<DP.Indicators />} />
         <Route path="scripts" element={<DP.Scripts />} />
-        <Route path="backtests" element={<R2ResearchLab />} />
+        <Route path="backtests" element={<BacktestsRoute />} />
         <Route path="saved" element={<DP.Saved />} />
         <Route path="following" element={<DP.Following />} />
         <Route path="subscription" element={<DP.Subscription />} />
