@@ -214,6 +214,41 @@ class R2TrainJobRequest(BaseModel):
     limit: int = Field(default=5000,ge=300,le=5000)
     horizon_bars: int = Field(default=4,ge=1,le=30)
 
+@router.get("/r2-lab/paper-ai/status")
+async def r2_paper_ai_status(user=Depends(owner)):
+    """Owner-only experimental AI prediction and synthetic paper-trading ledger."""
+    from kaos_ai_paper_loop import status
+    return await status(user["id"])
+
+
+@router.post("/r2-lab/paper-ai/start")
+async def r2_paper_ai_start(user=Depends(owner)):
+    from kaos_r2_archive import configured
+    if not configured() or os.getenv("KAOS_R2_TRAIN_WORKER_ENABLED")!="1":
+        raise HTTPException(503,"R2 research worker is not enabled")
+    from kaos_ai_paper_loop import CONTROL, status
+    from datetime import datetime, timezone
+    trained=await db.kaos_r2_research_models.count_documents({
+        "owner_id":user["id"],"strategy":"R2_OHLC_LOGISTIC_V1",
+        "status":{"$in":["candidate","research_active"]}})
+    if not trained:
+        raise HTTPException(409,"Train R2 research models first")
+    await db[CONTROL].update_one(
+        {"_id":user["id"]},
+        {"$set":{"enabled":True,"updated_at":datetime.now(timezone.utc).isoformat()},
+         "$setOnInsert":{"next_market_index":0,"last_retrain_settled":0}},
+        upsert=True)
+    return await status(user["id"])
+
+
+@router.post("/r2-lab/paper-ai/stop")
+async def r2_paper_ai_stop(user=Depends(owner)):
+    from kaos_ai_paper_loop import CONTROL, status
+    await db[CONTROL].update_one({"_id":user["id"]},
+        {"$set":{"enabled":False,"updated_at":now_iso()}},upsert=True)
+    return await status(user["id"])
+
+
 @router.post("/r2-lab/train-jobs",status_code=202)
 async def r2_training_queue(req:R2TrainJobRequest,user=Depends(owner)):
     """One-click persisted R2 AI training; no Passenger request-time fitting."""
