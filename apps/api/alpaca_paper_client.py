@@ -86,3 +86,41 @@ async def paper_orders(key, secret):
     fields=("id","client_order_id","symbol","asset_class","side","type",
             "status","qty","notional","filled_qty","filled_avg_price","created_at")
     return [{k:r.get(k) for k in fields} for r in data[:100] if isinstance(r,dict)]
+
+
+# This trading method is intentionally fixed to the dedicated Alpaca PAPER
+# hostname. Live API origin is never accepted from request/client settings.
+async def submit_stock_paper_buy(key,secret,*,symbol,notional,client_order_id):
+    if not isinstance(symbol,str) or not __import__("re").fullmatch(r"[A-Z]{1,5}(?:[.][A-Z])?",symbol):
+        raise AlpacaPaperUnavailable("Unsupported US equity symbol")
+    if not isinstance(client_order_id,str) or not __import__("re").fullmatch(r"kaos-paper-[a-f0-9]{32}",client_order_id):
+        raise AlpacaPaperUnavailable("Invalid paper order identity")
+    return await paper_request(key,secret,"POST","/v2/orders",payload={
+        "symbol":symbol,"notional":notional,"side":"buy",
+        "type":"market","time_in_force":"day",
+        "client_order_id":client_order_id,
+    })
+
+
+async def lookup_paper_order(key,secret,client_order_id):
+    # Not included in paper_request's generic path contract, to ensure
+    # the query string is never constructed from a caller-controlled URL.
+    from urllib.parse import urlencode
+    if not __import__("re").fullmatch(r"kaos-paper-[a-f0-9]{32}",client_order_id):
+        raise AlpacaPaperUnavailable("Invalid paper order identity")
+    headers=_check_credentials(key,secret)
+    try:
+        async with httpx.AsyncClient(timeout=12,follow_redirects=False) as client:
+            response=await client.get(
+                PAPER_ORIGIN+"/v2/orders:by_client_order_id",
+                params={"client_order_id":client_order_id},headers=headers)
+    except httpx.HTTPError as exc:
+        raise AlpacaPaperUnavailable("Alpaca paper reconciliation unavailable") from exc
+    if response.status_code==404:
+        return None
+    if response.status_code!=200:
+        raise AlpacaPaperUnavailable("Alpaca paper reconciliation failed")
+    data=response.json()
+    if not isinstance(data,dict) or data.get("client_order_id")!=client_order_id:
+        raise AlpacaPaperUnavailable("Alpaca returned an unexpected order identity")
+    return data

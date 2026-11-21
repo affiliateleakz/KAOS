@@ -3,7 +3,7 @@
 No live API hostname, no paper order submission, and no AI trade authority.
 This is the verified account/positions/order sync foundation.
 """
-from fastapi import APIRouter,Depends,HTTPException
+from fastapi import APIRouter,Depends,HTTPException,Query
 from auth import get_current_user
 from db import db
 from broker_vault import vault
@@ -43,3 +43,17 @@ async def snapshot(user:dict=Depends(get_current_user)):
         "ai_execution_enabled":False,
         "note":"Alpaca paper portfolio is simulated; KAOS AI order submission not connected."
     }
+
+
+@router.get("/candles/{symbol}")
+async def paper_stock_chart(
+    symbol:str,seconds:int=Query(default=60),
+    user:dict=Depends(get_current_user)
+):
+    """Authenticated read-only Alpaca stock chart. No order or AI authority."""
+    from alpaca_paper_quotes import stock_candles,MarketUnavailable
+    key,secret=await credentials(user)
+    try:
+        return await stock_candles(key,secret,symbol.strip().upper(),seconds)
+    except MarketUnavailable as exc:
+        raise HTTPException(503,str(exc)) from exc

@@ -10,7 +10,7 @@ from db import db
 from services_trading import get_entitlements
 
 router = APIRouter(prefix="/api/v1/trading/charts", tags=["trading-charts"])
-BROKERS = {"kaos_paper", "coinbase", "alpaca", "oanda"}
+BROKERS = {"kaos_paper", "coinbase", "alpaca_paper", "alpaca", "oanda"}
 DEFAULTS = [
     {"broker": "kaos_paper", "symbol": "BTC-USD", "seconds": 60},
     {"broker": "kaos_paper", "symbol": "ETH-USD", "seconds": 60},
@@ -19,7 +19,7 @@ DEFAULTS = [
 ]
 
 class ChartConfig(BaseModel):
-    broker: Literal["kaos_paper", "coinbase", "alpaca", "oanda"] = "kaos_paper"
+    broker: Literal["kaos_paper", "coinbase", "alpaca_paper", "alpaca", "oanda"] = "kaos_paper"
     symbol: str = Field(min_length=3, max_length=32, pattern=r"^[A-Za-z0-9_:/-]+$")
     seconds: Literal[60, 300, 900] = 60
 
