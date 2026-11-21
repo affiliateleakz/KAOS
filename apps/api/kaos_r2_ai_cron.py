@@ -32,7 +32,12 @@ async def run(now=None):
     # UTC hour deterministically rotates all 20 markets; at most one training job
     # on each invocation, protecting shared cPanel CPU and provider limits.
     slot=int(now.timestamp()//3600)
-    symbol,asset_class=MARKETS[slot%len(MARKETS)]
+    requested=os.getenv("KAOS_R2_AI_RESEARCH_SYMBOL","").strip().upper()
+    matched=[market for market in MARKETS if market[0]==requested] if requested else []
+    if requested and not matched:
+        print("Unsupported R2 research market override")
+        return 2
+    symbol,asset_class=matched[0] if matched else MARKETS[slot%len(MARKETS)]
     from kaos_r2_archive import ArchiveUnavailable
     try:
         rows,source=await read_archive(symbol,asset_class,60,limit=3000)
