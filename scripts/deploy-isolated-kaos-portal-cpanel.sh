@@ -50,6 +50,11 @@ test "$BUILT" = "$MAIN" || {
 grep -q 'src="/static/js/' "$STAGE/index.html" || {
   echo "Portal assets are not absolute /static paths. Stop."; exit 1;
 }
+# Prevent a React build without its API URL from sending auth/training calls
+# to the static Viking-homepage host instead of api.tradingwithkaos.com.
+grep -Rlq --include='*.js' 'api.tradingwithkaos.com' "$STAGE/static/js" || {
+  echo "Compiled portal is missing the KAOS API address. Stop safely."; exit 1;
+}
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 BACKUP="$HOME/kaos-deploy-backups/isolated-portal-$STAMP"
 mkdir -p "$BACKUP"
