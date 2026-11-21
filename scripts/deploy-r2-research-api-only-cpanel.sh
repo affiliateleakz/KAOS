@@ -11,6 +11,7 @@ PY="${KAOS_PYTHON_BIN:-$HOME/virtualenv/tradingwithkaos.com/backend/3.11/bin/pyt
 FILES=(
   routes_owner_candles.py
   kaos_r2_ai_lab.py
+  kaos_r2_ai_universe.py
   kaos_r2_ai_cron.py
   kaos_r2_shadow_predict.py
   kaos_r2_shadow_cron.py
