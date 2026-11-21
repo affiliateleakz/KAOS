@@ -52,7 +52,15 @@ Review these paths before installing; do not paste credentials into chat.
    entry running `run-kaos-r2-training-worker-cpanel.sh` each minute,
    and requests a Passenger restart. Existing cron jobs are preserved.
    Inspect cPanel → Cron Jobs afterward to verify installation.
-5. Deploy the matching compiled React member portal artifact using the
+5. GitHub Actions builds the matching React member portal with
+   `REACT_APP_BACKEND_URL=https://api.tradingwithkaos.com` set at
+   build time. If building on the cPanel terminal instead of using the
+   GitHub Actions artifact, run from `apps/web`:
+   `CI=false REACT_APP_BACKEND_URL=https://api.tradingwithkaos.com npm run build`.
+   Then place `git rev-parse HEAD` in `build/kaos-build-revision.txt`
+   and use `KAOS_PORTAL_BUILD_DIR` with the isolated portal installer.
+   The installer refuses compiled bundles without the API hostname.
+6. Deploy the matching compiled React member portal artifact using the
    *existing* revision-locked
    `deploy-isolated-kaos-portal-cpanel.sh` procedure. It must **not**
    overwrite the cinematic Viking homepage. Consult
