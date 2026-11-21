@@ -14,7 +14,7 @@ load_dotenv(Path(__file__).resolve().parents[2]/".env",override=False)
 
 from db import db, now_iso
 from kaos_r2_archive import read_archive, configured, ArchiveUnavailable
-from kaos_r2_market_audit import MARKETS
+from kaos_r2_ai_universe import selected_markets
 from kaos_r2_shadow_predict import prediction, settle
 
 async def _market(symbol,asset_class):
@@ -71,6 +71,17 @@ async def run():
     if not configured() or not os.getenv("KAOS_CANDLE_OWNER_USER_ID"):
         print("KAOS R2 or owner not configured")
         return 2
+    markets=await selected_markets(db)
+    if not markets:
+        print('No enrolled markets')
+        return 0
+    # At most 12 markets per 10-minute invocation, so cPanel R2 reads stay bounded.
+    # Model-free markets are reported as not trained, never guessed.
+    import time
+    batch_size=12
+    slot=int(time.time()//600)
+    start=(slot*batch_size)%len(markets)
+    batch=[markets[(start+i)%len(markets)] for i in range(min(batch_size,len(markets)))]
     semaphore=asyncio.Semaphore(3)
     async def bounded(market):
         async with semaphore:
@@ -78,11 +89,11 @@ async def run():
                 return await _market(*market)
             except (ArchiveUnavailable,ValueError,RuntimeError,OSError) as exc:
                 return {"symbol":market[0],"status":"error","reason":type(exc).__name__}
-    results=await asyncio.gather(*(bounded(market) for market in MARKETS))
+    results=await asyncio.gather(*(bounded(market) for market in batch))
     for result in results:
         print(result)
     failures=[r for r in results if r["status"]=="error"]
-    print(f"KAOS SHADOW: markets={len(results)}, failures={len(failures)}, orders=0")
+    print(f"KAOS SHADOW: checked={len(results)}, enrolled={len(markets)}, failures={len(failures)}, orders=0")
     return 1 if failures else 0
 
 if __name__=="__main__":

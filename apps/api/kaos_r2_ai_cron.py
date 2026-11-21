@@ -16,7 +16,7 @@ ROOT=Path(__file__).resolve().parents[2]
 load_dotenv(ROOT/".env",override=False)
 
 from db import db, new_id, now_iso
-from kaos_r2_market_audit import MARKETS
+from kaos_r2_ai_universe import selected_markets
 from kaos_r2_archive import configured,read_archive
 from kaos_r2_ai_lab import train_from_candles
 
@@ -29,15 +29,18 @@ async def run(now=None):
         print("Owner ID or private R2 reader not configured")
         return 2
     now=now or datetime.now(timezone.utc)
-    # UTC hour deterministically rotates all 20 markets; at most one training job
-    # on each invocation, protecting shared cPanel CPU and provider limits.
+    # Select one enrolled market per run, bounded for cPanel.
+    markets=await selected_markets(db)
+    if not markets:
+        print('No enrolled research markets')
+        return 0
     slot=int(now.timestamp()//3600)
     requested=os.getenv("KAOS_R2_AI_RESEARCH_SYMBOL","").strip().upper()
-    matched=[market for market in MARKETS if market[0]==requested] if requested else []
+    matched=[market for market in markets if market[0]==requested] if requested else []
     if requested and not matched:
         print("Unsupported R2 research market override")
         return 2
-    symbol,asset_class=matched[0] if matched else MARKETS[slot%len(MARKETS)]
+    symbol,asset_class=matched[0] if matched else markets[slot%len(markets)]
     from kaos_r2_archive import ArchiveUnavailable
     try:
         rows,source=await read_archive(symbol,asset_class,60,limit=3000)
@@ -59,10 +62,10 @@ async def run(now=None):
     model=result.pop("model")
     doc={"id":new_id("r2model"),"owner_id":owner,
          "symbol":symbol,"asset_class":asset_class,"source":source,
-         "created_at":now_iso(),"status":"candidate",
-         "validation_status":result["status"],"research_only":True,
-         "execution_enabled":False,"strategy":"R2_OHLC_LOGISTIC_V1",
-         "model":model,"trainer":"scheduled_r2_research",**result}
+         "created_at":now_iso(),"strategy":"R2_OHLC_LOGISTIC_V1",
+         "model":model,"trainer":"scheduled_r2_research",**result,
+         "status":"candidate","validation_status":result["status"],
+         "research_only":True,"execution_enabled":False}
     await db.kaos_r2_research_models.insert_one(dict(doc))
     await db.kaos_r2_research_events.insert_one({
         "model_id":doc["id"],"actor_id":owner,"event":"scheduled_candidate",
