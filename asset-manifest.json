@@ -1,0 +1,14 @@
+{
+  "files": {
+    "main.css": "/static/css/main.f7be7c6f.css",
+    "main.js": "/static/js/main.c6c9db80.js",
+    "static/media/kaos-cinematic-header.jpg": "/static/media/kaos-cinematic-header.54ec9e18dee6215c0ba9.jpg",
+    "index.html": "/index.html",
+    "main.f7be7c6f.css.map": "/static/css/main.f7be7c6f.css.map",
+    "main.c6c9db80.js.map": "/static/js/main.c6c9db80.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.f7be7c6f.css",
+    "static/js/main.c6c9db80.js"
+  ]
+}
