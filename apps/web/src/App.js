@@ -20,7 +20,6 @@ import PublicTradesScanner from "./pages/dashboard/PublicTradesScanner";
 import CryptoScanner from "./pages/dashboard/CryptoScanner";
 import StockHeatmap from "./pages/dashboard/StockHeatmap";
 import BrokerConnections from "./pages/dashboard/BrokerConnections";
-import PaperTrading from "./pages/dashboard/PaperTrading";
 import R2ResearchLab from "./pages/dashboard/R2ResearchLab";
 import { AffiliatePage, AIPage } from "./pages/dashboard/AffiliateAI";
 import AdminLayout from "./pages/admin/AdminLayout";
@@ -75,7 +74,7 @@ function AppRouter() {
         <Route path="crypto-scanner" element={<CryptoScanner />} />
         <Route path="stock-heatmap" element={<StockHeatmap />} />
         <Route path="brokers" element={<BrokerConnections />} />
-        <Route path="paper" element={<PaperTrading />} />
+        <Route path="paper" element={<Navigate to="/dashboard/trading?mode=paper" replace />} />
         <Route path="kaos-ai" element={<AIPage />} />
         <Route path="affiliate" element={<AffiliatePage />} />
         <Route path="strategies" element={<DP.MyStrategies />} />
