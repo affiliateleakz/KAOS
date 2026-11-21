@@ -25,6 +25,28 @@ export default function R2ResearchLab() {
   const [patternCatalog, setPatternCatalog] = useState(null);
   const [shadow, setShadow] = useState({predictions:[],summary:{}});
   const [accessDenied, setAccessDenied] = useState(false);
+  const [universe, setUniverse] = useState({catalog:[],selected:[],market_status:[]});
+  const [universeFilter, setUniverseFilter] = useState("");
+  const [universeClass, setUniverseClass] = useState("all");
+  const [chosen, setChosen] = useState([]);
+  const [universeBusy, setUniverseBusy] = useState(false);
+  const loadUniverse = async () => {
+    const {data} = await api.get(API + "/universe");
+    setUniverse(data);
+    setChosen((data.selected || []).map(x => x.symbol));
+  };
+  const saveUniverse = async () => {
+    setUniverseBusy(true); setError(""); setMessage("");
+    try {
+      const rows = (universe.catalog || []).filter(m => chosen.includes(m.symbol));
+      await api.post(API + "/universe", {markets: rows});
+      await loadUniverse(); await load();
+      setMessage("AI watchlist saved. Server research jobs use this list; new markets require real R2 candles and a trained model.");
+    } catch (e) { setError(errMsg(e) || "AI watchlist could not be saved"); }
+    finally { setUniverseBusy(false); }
+  };
+  const toggleSymbol = (symbol) => setChosen(prev => prev.includes(symbol)
+    ? prev.filter(x => x !== symbol) : [...prev, symbol]);
 
   const selected = markets.find(m => m.symbol === market);
   const load = async () => {
@@ -59,7 +81,7 @@ export default function R2ResearchLab() {
       setShadow(data);
     } catch(e) { setError(errMsg(e) || "Shadow forecasts unavailable"); }
   };
-  useEffect(() => { load(); loadPatterns("BTC-USD"); loadShadow("BTC-USD"); }, []);
+  useEffect(() => { load(); loadUniverse().catch(e => setError(errMsg(e))); loadPatterns("BTC-USD"); loadShadow("BTC-USD"); }, []);
   const switchMarket = value => {setMarket(value);setObservations([]);setShadow({predictions:[],summary:{}});loadPatterns(value);loadShadow(value);};
   const runBacktest = async e => {
     e.preventDefault();
@@ -111,6 +133,59 @@ export default function R2ResearchLab() {
       <p className="mt-2 text-sm text-slate-400">Private Cloudflare R2 candles · chronological AI evaluation · no broker orders</p>
     </div>
     {accessDenied ? <div className={box} role="alert">This private archive research lab is available only to the configured KAOS owner. Your ordinary member backtests remain separate.</div> : <>
+      <div className={box + " space-y-4"} data-testid="kaos-ai-market-universe">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold text-[#D4AF37]">KAOS AI Market Universe</h2>
+            <p className="mt-1 text-sm text-slate-400">Manage research for 100+ stocks, ETFs and cryptocurrencies from KAOS. Your existing server jobs rotate through saved markets.</p>
+          </div>
+          <button type="button" onClick={() => loadUniverse().catch(e => setError(errMsg(e)))}
+            className="rounded border border-[#D4AF37] px-3 py-2 text-xs text-[#D4AF37]">Refresh status</button>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            ["Available markets", universe.catalog?.length || 0],
+            ["Selected", chosen.length],
+            ["Trained models", universe.market_status?.filter(x => x.model_status !== "not_trained").length || 0],
+            ["Markets with forecasts", universe.market_status?.filter(x => x.forecast_status !== "none").length || 0]
+          ].map(([label, value]) => <div key={label} className="rounded bg-[#1C1A16] p-3">
+            <p className="text-xs text-slate-400">{label}</p><p className="text-lg font-semibold">{value}</p>
+          </div>)}
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <input value={universeFilter} onChange={e => setUniverseFilter(e.target.value.toUpperCase())}
+            placeholder="Search ticker (AAPL, BTC-USD...)" aria-label="Search AI markets" className={input}/>
+          <select value={universeClass} onChange={e => setUniverseClass(e.target.value)}
+            aria-label="Market type" className={input}>
+            <option value="all">All asset classes</option>
+            <option value="stock">Stocks</option><option value="etf">ETFs</option><option value="crypto">Cryptocurrencies</option>
+          </select>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <button type="button" className="rounded border border-[#D4AF37] px-3 py-2 text-xs text-[#D4AF37]"
+            onClick={() => setChosen((universe.catalog || []).map(m => m.symbol).slice(0, universe.max_enrolled || 160))}>Select all supported</button>
+          <button type="button" className="rounded border border-[#4B4334] px-3 py-2 text-xs"
+            onClick={() => setChosen((universe.selected || []).map(m => m.symbol))}>Reset changes</button>
+          <button type="button" disabled={universeBusy || chosen.length === 0 || chosen.length > (universe.max_enrolled || 160)}
+            className={button} onClick={saveUniverse}>{universeBusy ? "Saving…" : "Save AI watchlist"}</button>
+        </div>
+        <div className="max-h-72 overflow-y-auto rounded border border-[#34302A]" role="group" aria-label="AI market selection">
+          {(universe.catalog || []).filter(m => (universeClass === "all" || m.asset_class === universeClass)
+            && m.symbol.includes(universeFilter)).map(m => {
+            const status = universe.market_status?.find(x => x.symbol === m.symbol);
+            return <label key={m.symbol} className="flex cursor-pointer items-center justify-between gap-2 border-b border-[#262626] px-3 py-2 text-xs">
+              <span className="flex items-center gap-3">
+                <input type="checkbox" checked={chosen.includes(m.symbol)} onChange={() => toggleSymbol(m.symbol)}/>
+                <strong>{m.symbol}</strong><span className="text-slate-400">{m.asset_class}</span>
+              </span>
+              <span className="text-slate-400">{status?.model_status === "not_trained" || !status ? "Not trained" : status.model_status}
+                {" · "}{status?.forecast_status || "No forecast"}</span>
+            </label>;
+          })}
+        </div>
+        <p className="text-xs text-amber-300">Adding a ticker does not collect its candles, train it immediately, or authorize trading. The current R2 collector was configured for 20 markets; expanded collection must be deployed separately. Research models remain non-executable and unvalidated until tested. Forecast coverage depends on server cron frequency and completed candles.</p>
+      </div>
+
       <form onSubmit={runBacktest} className={box + " space-y-4"}>
         <h2 className="font-semibold text-[#D4AF37]">Historical R2 Backtesting</h2>
         <div className="grid gap-3 sm:grid-cols-4">
