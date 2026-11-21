@@ -10,6 +10,12 @@ import os
 from datetime import datetime, timezone, timedelta
 from uuid import uuid4
 
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Ensure cPanel cron has identical env lookup to Passenger before db imports.
+load_dotenv(Path(__file__).resolve().parents[2]/".env",override=False)
+
 from db import db, new_id, now_iso
 from kaos_r2_archive import read_archive, configured, ArchiveUnavailable
 from kaos_r2_market_audit import MARKETS
@@ -222,7 +228,4 @@ async def run_tick():
         raise
 
 if __name__=="__main__":
-    from pathlib import Path
-    from dotenv import load_dotenv
-    load_dotenv(Path(__file__).resolve().parents[2]/".env",override=False)
     print(asyncio.run(run_tick()))
