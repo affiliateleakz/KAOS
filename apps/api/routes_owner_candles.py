@@ -208,6 +208,59 @@ async def r2_lab_backtests(user=Depends(owner)):
         {"_id":0,"trades":0}).sort("created_at",-1).limit(30).to_list(length=30)
     return {"runs":docs,"research_only":True}
 
+class R2TrainJobRequest(BaseModel):
+    scope: Literal["all","single"] = "all"
+    symbol: str = Field(default="BTC-USD",max_length=32)
+    limit: int = Field(default=5000,ge=300,le=5000)
+    horizon_bars: int = Field(default=4,ge=1,le=30)
+
+@router.post("/r2-lab/train-jobs",status_code=202)
+async def r2_training_queue(req:R2TrainJobRequest,user=Depends(owner)):
+    """One-click persisted R2 AI training; no Passenger request-time fitting."""
+    from kaos_ai_training_jobs import initial_job,public_job,JOB_COLLECTION
+    from kaos_r2_archive import configured
+    if not configured():
+        raise HTTPException(503,"R2 archive not configured. Training cannot start.")
+    if os.getenv("KAOS_R2_TRAIN_WORKER_ENABLED")!="1":
+        raise HTTPException(503,"AI training worker is not enabled on the backend.")
+    try:
+        doc=initial_job(user["id"],req.scope,req.symbol.upper(),
+                        req.limit,req.horizon_bars)
+    except ValueError as exc:
+        raise HTTPException(422,str(exc)) from exc
+    existing=await db[JOB_COLLECTION].find_one(
+        {"owner_id":user["id"],"status":{"$in":["queued","running"]}},
+        {"_id":1})
+    if existing:
+        job=await db[JOB_COLLECTION].find_one(
+            {"_id":existing["_id"],"owner_id":user["id"]})
+        return {"ok":True,"already_running":True,"job":public_job(job)}
+    await db[JOB_COLLECTION].insert_one(doc)
+    return {"ok":True,"queued":True,"job":public_job(doc)}
+
+
+@router.get("/r2-lab/train-jobs")
+async def r2_training_recent(user=Depends(owner)):
+    from kaos_ai_training_jobs import JOB_COLLECTION,public_job
+    rows=await db[JOB_COLLECTION].find(
+        {"owner_id":user["id"]}).sort("created_at",-1).limit(10).to_list(length=10)
+    return {"jobs":[public_job(r) for r in rows],
+            "worker_enabled":os.getenv("KAOS_R2_TRAIN_WORKER_ENABLED")=="1",
+            "research_only":True,"execution_enabled":False}
+
+
+@router.get("/r2-lab/train-jobs/{job_id}")
+async def r2_training_status(job_id:str,user=Depends(owner)):
+    from kaos_ai_training_jobs import JOB_COLLECTION,public_job
+    if not job_id.startswith("train_") or len(job_id)>80:
+        raise HTTPException(422,"Invalid job ID")
+    job=await db[JOB_COLLECTION].find_one(
+        {"_id":job_id,"owner_id":user["id"]})
+    if not job:
+        raise HTTPException(404,"Training job not found")
+    return {"job":public_job(job)}
+
+
 @router.post("/r2-lab/train")
 async def r2_lab_train(req:R2LabTrainRequest,user=Depends(owner)):
     _check_market(req.symbol,req.asset_class)
