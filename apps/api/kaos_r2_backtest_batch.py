@@ -20,7 +20,7 @@ load_dotenv(ROOT / ".env", override=False)
 
 from kaos_r2_archive import configured, read_archive, ArchiveUnavailable
 from kaos_r2_market_audit import MARKETS
-from kaos_r2_research import structure_replay_from_archive
+from kaos_r2_segmented_research import gap_aware_replay
 
 STRATEGY = "KAOS_STRUCTURE_RESEARCH_V1"
 HORIZONS = (1, 2, 3, 5, 10)
@@ -29,7 +29,7 @@ MIN_LOOKBACK = 12
 def summarize_market(symbol, asset_class, candles, source, *, seconds=60,
                      expiry_bars=4, lookback=MIN_LOOKBACK):
     """Pure, deterministic summary; independent of R2 and file IO."""
-    outcome = structure_replay_from_archive(
+    outcome = gap_aware_replay(
         candles, seconds, expiry_bars=expiry_bars, lookback=lookback
     )
     return {
@@ -38,6 +38,7 @@ def summarize_market(symbol, asset_class, candles, source, *, seconds=60,
         "expiry_bars": expiry_bars, "lookback": lookback,
         "status": outcome["status"],
         "history": outcome["history"],
+        "segments": outcome["segments"],
         "summary": outcome.get("summary"),
         "trades": outcome.get("trades", []),
         "research_only": True, "execution_enabled": False,
@@ -99,8 +100,9 @@ async def collect_report(*, expiry_bars=4, lookback=MIN_LOOKBACK, limit=300,
             "exit": "expiry_bar_open",
             "fill_model": "idealized_ohlc_directional_only",
             "fees_spread_slippage_payout": "not_modeled",
-            "missing_intervals": "entire_market_backtest_blocked",
+            "missing_intervals": "all_eligible_contiguous_segments_included_no_cross_gap_trades",
             "interpretation": "not_live_executable_or_profitability_evidence",
+            "coverage": "reports eligible_fraction_and_skipped_bars_by_market",
         },
         "aggregate": {
             "markets_requested": len(markets),
