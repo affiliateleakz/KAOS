@@ -20,6 +20,9 @@ export default function R2ResearchLab() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState("");
+  const [patternStatus, setPatternStatus] = useState([]);
+  const [observations, setObservations] = useState([]);
+  const [patternCatalog, setPatternCatalog] = useState(null);
   const [accessDenied, setAccessDenied] = useState(false);
 
   const selected = markets.find(m => m.symbol === market);
@@ -37,7 +40,20 @@ export default function R2ResearchLab() {
       setError(errMsg(e) || "Could not load R2 research");
     }
   };
-  useEffect(() => { load(); }, []);
+  const loadPatterns = async (symbol = market) => {
+    try {
+      const [{data: states},{data: events},{data: cats}] = await Promise.all([
+        api.get(API + "/patterns/status"),
+        api.get(API + "/patterns/observations", {params:{symbol,limit:50}}),
+        api.get(API + "/patterns/catalog")
+      ]);
+      setPatternStatus(states.markets || []);
+      setObservations(events.observations || []);
+      setPatternCatalog(cats);
+    } catch(e) { setError(errMsg(e) || "Pattern observations unavailable"); }
+  };
+  useEffect(() => { load(); loadPatterns("BTC-USD"); }, []);
+  const switchMarket = value => {setMarket(value);setObservations([]);loadPatterns(value);};
   const runBacktest = async e => {
     e.preventDefault();
     if (!selected) return;
@@ -92,7 +108,7 @@ export default function R2ResearchLab() {
         <h2 className="font-semibold text-[#D4AF37]">Historical R2 Backtesting</h2>
         <div className="grid gap-3 sm:grid-cols-4">
           <label className="text-xs text-slate-300">Market
-            <select value={market} onChange={e => setMarket(e.target.value)} className={"mt-1 " + input}>
+            <select value={market} onChange={e => switchMarket(e.target.value)} className={"mt-1 " + input}>
               {markets.map(m => <option key={m.symbol} value={m.symbol}>{m.symbol} · {m.asset_class}</option>)}
             </select>
           </label>
@@ -155,6 +171,30 @@ export default function R2ResearchLab() {
             <span>{r.symbol} · {r.expiry_bars}m · {r.status}</span>
             <span className="font-mono">{r.summary?.trades ?? 0} trades · {win(r.summary?.win_rate_ex_ties)} WR · {r.created_at}</span>
           </div>)}
+        </div>
+      </div>
+
+      <div className={box + " space-y-3"} data-testid="kaos-pattern-observer">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-semibold text-[#D4AF37]">KAOS Market Pattern Observer</h2>
+            <p className="text-xs text-slate-400">Codex's completed-candle pattern library · runs without trades · research only</p>
+          </div>
+          <button type="button" onClick={() => loadPatterns(market)} className="rounded border border-[#D4AF37] px-3 py-2 text-xs text-[#D4AF37]">Refresh observations</button>
+        </div>
+        <p className="text-sm">{patternCatalog ? `${patternCatalog.implemented_count}/${patternCatalog.catalog_count} patterns implemented` : "Pattern catalog loading…"} · {patternStatus.length} markets with saved observer state</p>
+        <p className="text-xs text-slate-400">The private scheduled scanner must be activated separately in cPanel. Recording candle patterns is not the same as training a model on those features.</p>
+        {!observations.length && <p className="text-sm text-slate-500">No pattern observations stored for {market} yet.</p>}
+        <div className="max-h-64 overflow-x-auto">
+          <table className="w-full min-w-[660px] text-left text-xs">
+            <thead><tr className="border-b border-[#444]">{["Candle UTC","Pattern","Direction","1-bar outcome","4-bar outcome","10-bar outcome"].map(h=><th className="p-2" key={h}>{h}</th>)}</tr></thead>
+            <tbody>{observations.map(e => <tr key={e.id} className="border-b border-[#282828]">
+              <td className="p-2">{new Date(e.observed_ts).toISOString()}</td>
+              <td className="p-2">{e.pattern}</td>
+              <td className="p-2">{e.direction}</td>
+              {[1,4,10].map(h => <td key={h} className="p-2">{e.outcomes?.[h]?.direction ?? "Pending"}</td>)}
+            </tr>)}</tbody>
+          </table>
         </div>
       </div>
 
