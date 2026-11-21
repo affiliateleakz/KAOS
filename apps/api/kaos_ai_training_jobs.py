@@ -93,7 +93,7 @@ def initial_job(owner_id,scope,symbol,limit,horizon):
         "model_family":"kaos_r2_ohlc_logistic_v1",
         "trained_feature_names":list(TRAINED_FEATURES),
         "feature_sources_manifest":source_report(),
-        "other_sources_enabled":True,
+        "other_sources_enabled":False,\n        "enrichment_attempt_available":True,
         "note":"Closed R2 OHLCV feeds the primary model; eligible already-ingested time-safe intelligence may separately train an enriched RESEARCH model. Per-market coverage states which categories actually trained. Other categories remain unavailable."
     }
 
@@ -102,7 +102,7 @@ def public_job(job):
     keys=("id","scope","status","created_at","updated_at","total","completed",
           "trained","reused","not_validated","failed","next_index","markets",
           "results","model_family","trained_feature_names",
-          "feature_sources_manifest","other_sources_enabled","research_only",
+          "feature_sources_manifest","other_sources_enabled",\n          "enrichment_attempt_available","research_only",
           "execution_enabled","note","horizon_bars","history_limit")
     result={k:job.get("_id") if k=="id" else job.get(k) for k in keys}
     result["orders_enabled"]=False
