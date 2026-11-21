@@ -42,7 +42,7 @@ def normalize_events(raw, symbol, asset_class):
             strength=float(row["strength"])
         except (KeyError,TypeError,ValueError,OverflowError):
             continue
-        if published>observed or not isfinite(strength) or not 0<=strength<=1:
+        if published>observed or not isfinite(strength) or not 0<strength<=1 or side=="neutral":
             continue
         seen.add((kind,eid))
         observations.append({
@@ -69,6 +69,7 @@ def join_asof_samples(rows,events,seconds,horizon):
     count={k:0 for k in KINDS}
     hit=set()
     covered=0
+    current_directional_count=0
     by_source={k:0 for k in KINDS}
     joined=[]
     # samples are chronological. Each feature cutoff is at candle CLOSE,
@@ -82,16 +83,16 @@ def join_asof_samples(rows,events,seconds,horizon):
             active.append(event)
             count[event["source"]]+=1
             total[event["source"]]+=event["vote"]
+            hit.add(event["key"])
+            current_directional_count+=1
         while active and active[0]["observed_ms"]<cutoff-LOOKBACK_MS:
             event=active.popleft()
             count[event["source"]]-=1
             total[event["source"]]-=event["vote"]
-        has_evidence=bool(active)
+            current_directional_count-=1
+        has_evidence=current_directional_count>0
         if has_evidence:
             covered+=1
-            for event in active:
-                if event["source"] not in by_source:continue
-                hit.add(event["key"])
             for key in KINDS:
                 if count[key]>0:by_source[key]+=1
         # Scale to [-1,1], so a high-volume news source cannot dominate
