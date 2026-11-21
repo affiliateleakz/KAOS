@@ -12,6 +12,8 @@ FILES=(
   routes_owner_candles.py
   kaos_r2_ai_lab.py
   kaos_r2_ai_cron.py
+  kaos_r2_shadow_predict.py
+  kaos_r2_shadow_cron.py
   kaos_candlestick_patterns.py
   kaos_r2_pattern_observer.py
   kaos_r2_pattern_cron.py
