@@ -62,7 +62,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -b kaos-cpanel-build
           cp -a "$GITHUB_WORKSPACE/apps/web/build/." .
-          printf '%s\\n' "$REVISION" > kaos-build-revision.txt
+          printf '%s\n' "$REVISION" > kaos-build-revision.txt
           git add -A
           git commit -m "Build KAOS website from $REVISION"
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"
