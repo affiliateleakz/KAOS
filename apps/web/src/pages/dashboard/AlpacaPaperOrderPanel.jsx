@@ -18,6 +18,7 @@ export default function AlpacaPaperOrderPanel(){
   const [recovery,setRecovery]=useState(null);
   const [ledger,setLedger]=useState(null);
   const [fillAudit,setFillAudit]=useState(null);
+  const [fifoAudit,setFifoAudit]=useState(null);
   const [safetyError,setSafetyError]=useState("");
   const [safetyBusy,setSafetyBusy]=useState(false);
   const [busy,setBusy]=useState(false);
@@ -58,9 +59,10 @@ export default function AlpacaPaperOrderPanel(){
       const results=await Promise.all([
         api.post("/api/v1/alpaca-paper/orders/recovery-audit",{}),
         api.get("/api/v1/alpaca-paper/risk-ledger-readiness"),
-        api.get("/api/v1/alpaca-paper/fill-audit")
+        api.get("/api/v1/alpaca-paper/fill-audit"),
+        api.get("/api/v1/alpaca-paper/fifo-gross-research")
       ]);
-      setRecovery(results[0].data);setLedger(results[1].data);setFillAudit(results[2].data);
+      setRecovery(results[0].data);setLedger(results[1].data);setFillAudit(results[2].data);setFifoAudit(results[3].data);
       await load();
     }catch(e){setSafetyError(errMsg(e)||"Paper recovery or ledger checks unavailable");}
     finally{setSafetyBusy(false);}
@@ -121,6 +123,17 @@ export default function AlpacaPaperOrderPanel(){
           {(fillAudit.rows||[]).slice(0,12).map((r,i)=><p key={r.client_order_id||i} className="border-b border-[#292929] py-1 font-mono text-xs">{r.symbol}: {r.fills} fills · qty {r.filled_qty} · gross buy ${r.gross_buy_notional} · gross sell ${r.gross_sell_notional}</p>)}
         </div>
       </>}
+      {fifoAudit&&<div className="space-y-2 rounded border border-[#48402E] p-3" data-testid="alpaca-fifo-gross-research">
+        <h4 className="font-semibold text-[#D4AF37]">Alpaca Paper FIFO — provisional gross P&amp;L</h4>
+        <p className="font-mono text-sm">Gross matched-lot P&amp;L (unverified): ${fifoAudit.gross_fifo_pnl_provisional}</p>
+        <p className="text-xs text-amber-300">Verified realized net P&amp;L: unavailable. Do not use this estimate for risk approval or performance claims.</p>
+        <p className="text-xs text-slate-400">Outstanding verification: {(fifoAudit.blockers||[]).join(", ")}</p>
+        <div className="max-h-40 space-y-1 overflow-auto">
+          {(fifoAudit.symbol_summaries||[]).map(s=><p key={s.symbol} className="border-b border-[#292929] py-1 font-mono text-xs">
+            {s.symbol} · gross ${s.gross_fifo_pnl} · closed qty {s.gross_closed_qty} · unknown sell qty {s.unpaired_sell_qty}
+          </p>)}
+        </div>
+      </div>}
       {ledger&&<>
         <p className="text-xs text-amber-300">Verified daily realized loss: {ledger.realized_loss_limit_verified?"Yes":"Not yet"} · automated paper trading disabled</p>
         <p className="text-xs text-slate-400">Risk ledger missing: {ledger.incomplete_requirements?.join(", ")}</p>
