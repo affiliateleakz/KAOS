@@ -109,10 +109,11 @@ from pydantic import BaseModel, Field
 from typing import Literal
 from db import new_id, now_iso
 from kaos_r2_market_audit import MARKETS
+from kaos_r2_ai_universe import CATALOG, CATALOG_SET, selected_markets, validate_markets, MAX_ENROLLED
 from kaos_r2_segmented_research import gap_aware_replay
 from kaos_r2_ai_lab import train_from_candles
 
-SUPPORTED_MARKETS = {(symbol, kind) for symbol, kind in MARKETS}
+SUPPORTED_MARKETS = CATALOG_SET
 
 class R2LabBacktestRequest(BaseModel):
     symbol: str = Field(default="BTC-USD", max_length=32)
@@ -145,9 +146,65 @@ async def _r2_market(symbol,asset_class,limit):
     except ValueError as exc:
         raise HTTPException(422,str(exc)) from exc
 
+class R2UniverseRequest(BaseModel):
+    markets: list[dict[str, str]] = Field(min_length=1, max_length=MAX_ENROLLED)
+
+@router.get("/r2-lab/universe")
+async def r2_lab_universe(user=Depends(owner)):
+    selected = await selected_markets(db)
+    symbols = [symbol for symbol, _ in selected]
+    models = await db.kaos_r2_research_models.find(
+        {"owner_id": user["id"], "symbol": {"$in": symbols},
+         "research_only": True, "execution_enabled": False},
+        {"_id": 0, "symbol": 1, "status": 1, "validation_status": 1,
+         "created_at": 1}).sort("created_at", -1).limit(1000).to_list(length=1000)
+    forecasts = await db.kaos_r2_shadow_predictions.find(
+        {"symbol": {"$in": symbols}},
+        {"_id": 0, "symbol": 1, "direction": 1, "outcome_status": 1,
+         "observed_ts": 1}).sort("observed_ts", -1).limit(1500).to_list(length=1500)
+    latest_model, latest_forecast = {}, {}
+    for doc in models:
+        latest_model.setdefault(doc["symbol"], doc)
+    for doc in forecasts:
+        latest_forecast.setdefault(doc["symbol"], doc)
+    return {
+        "catalog": [{"symbol": s, "asset_class": a} for s, a in CATALOG],
+        "selected": [{"symbol": s, "asset_class": a} for s, a in selected],
+        "market_status": [
+            {"symbol": s, "asset_class": a,
+             "model_status": latest_model.get(s, {}).get("status", "not_trained"),
+             "validation_status": latest_model.get(s, {}).get("validation_status"),
+             "forecast_status": latest_forecast.get(s, {}).get("outcome_status", "none"),
+             "last_forecast_ts": latest_forecast.get(s, {}).get("observed_ts"),
+             "archive_verified": False}
+            for s, a in selected
+        ],
+        "max_enrolled": MAX_ENROLLED,
+        "archive_note": "Catalog membership does not verify that the R2 collector archives this symbol.",
+        "schedule_note": "Existing server crons rotate through enrolled markets. Enrollment does not start or accelerate cron schedules.",
+        "research_only": True, "execution_enabled": False
+    }
+
+@router.post("/r2-lab/universe")
+async def r2_lab_save_universe(req: R2UniverseRequest, user=Depends(owner)):
+    try:
+        pairs = validate_markets(req.markets)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    await db.kaos_r2_ai_universe.update_one(
+        {"_id": "owner"},
+        {"$set": {"owner_id": user["id"],
+                  "markets": [[s, a] for s, a in pairs],
+                  "updated_at": now_iso(), "research_only": True,
+                  "execution_enabled": False}}, upsert=True)
+    return {"ok": True, "selected_count": len(pairs),
+            "research_only": True, "execution_enabled": False,
+            "note": "Research watchlist saved; missing data must be collected separately."}
+
 @router.get("/r2-lab/markets")
 async def r2_lab_markets(user=Depends(owner)):
-    return {"markets":[{"symbol":s,"asset_class":a} for s,a in MARKETS],
+    selected = await selected_markets(db)
+    return {"markets":[{"symbol":s,"asset_class":a} for s,a in selected],
             "strategy":"KAOS_STRUCTURE_RESEARCH_V1",
             "seconds":60,"research_only":True,"execution_enabled":False}
 
@@ -205,7 +262,9 @@ async def r2_lab_train(req:R2LabTrainRequest,user=Depends(owner)):
             "source":source,"created_at":now_iso(),
             "status":"candidate","validation_status":result["status"],
             "research_only":True,"execution_enabled":False,
-            "strategy":"R2_OHLC_LOGISTIC_V1","model":model,**result}
+            "strategy":"R2_OHLC_LOGISTIC_V1","model":model,**result,
+            "status":"candidate","validation_status":result["status"],
+            "research_only":True,"execution_enabled":False}
     # Model kept in separate research collection; NEVER part of live inference.
     await db.kaos_r2_research_models.insert_one(dict(record))
     await db.kaos_r2_research_events.insert_one({
@@ -268,7 +327,7 @@ async def r2_lab_pattern_observations(
     limit:int=Query(50,ge=1,le=100),
     user=Depends(owner),
 ):
-    if symbol not in {s for s,_ in MARKETS}:
+    if symbol not in {s for s,_ in CATALOG}:
         raise HTTPException(422,"Unsupported market")
     docs=await db.kaos_r2_pattern_observations.find(
         {"symbol":symbol},{"_id":0}).sort("observed_ts",-1).limit(limit).to_list(length=limit)
