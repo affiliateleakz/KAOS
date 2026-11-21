@@ -1,3 +1,5 @@
+import PaperTrading from "./PaperTrading";
+import R2HistoryResearchPanel from "./R2HistoryResearchPanel";
 import FourChartTerminal from "./FourChartTerminal";
 import TrendPauseBacktest from "./TrendPauseBacktest";
 import React, { useEffect, useState } from "react";
@@ -361,6 +363,9 @@ function BacktestExplorer() {
 }
 
 export default function Trading() {
+  const [terminalMode,setTerminalMode] = useState(
+    () => new URLSearchParams(window.location.search).get("mode")==="live"?"live":"paper"
+  );
   const [d, setD] = useState(null);
   const [sync, setSync] = useState(null);
   const [syncExpired, setSyncExpired] = useState(false);
@@ -385,21 +390,42 @@ export default function Trading() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="font-heading text-2xl font-bold tracking-wide">Trading</h1>
+        <h1 className="font-heading text-2xl font-bold tracking-wide">KAOS Trading Terminal</h1>
         <StatusBadge value={ent.botAccess ? "ACTIVE" : "EXPIRED"} testid="trading-bot-access" />
       </div>
 
+      <section className="mb-5 space-y-3 rounded-lg border border-[#D4AF37]/40 bg-[#101010] p-4" data-testid="kaos-terminal-execution-mode">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div><h2 className="font-semibold text-[#D4AF37]">Trading environment</h2>
+            <p className="text-xs text-slate-400">One terminal. Real provider candles; paper and live execution are separate.</p></div>
+          <div className="inline-flex rounded border border-[#544729] p-1">
+            <button type="button" data-testid="kaos-terminal-paper-mode" onClick={()=>setTerminalMode("paper")}
+              className={`rounded px-4 py-2 text-sm ${terminalMode==="paper"?"bg-[#D4AF37] font-semibold text-black":"text-slate-300"}`}>Paper Trading</button>
+            <button type="button" data-testid="kaos-terminal-live-mode" onClick={()=>setTerminalMode("live")}
+              className={`rounded px-4 py-2 text-sm ${terminalMode==="live"?"bg-[#D4AF37] font-semibold text-black":"text-slate-300"}`}>Live Trading</button>
+          </div>
+        </div>
+        {terminalMode==="paper"?
+          <p className="text-sm text-[#22C55E]">PAPER — KAOS simulator and connected Alpaca Paper balances remain separate.</p>
+          :<p className="text-sm text-amber-300">LIVE — this website provides observation and extension status only. No brokerage orders are authorized by switching modes.</p>}
+        <p className="text-xs text-slate-400">Charts poll actual provider-sourced completed candles about every 15 seconds (1m, 5m, 15m). This is not tick streaming. Unsupported feeds never show invented prices.</p>
+      </section>
       <FourChartTerminal entitlements={ent} />
-      <div className="mb-6"><TrendPauseBacktest /></div>
+      <R2HistoryResearchPanel />
+      {terminalMode==="paper" ? <PaperTrading embedded /> : <>
       <div className="mb-6 rounded-lg border border-[#D4AF37]/20 bg-[#D4AF37]/5 p-3 text-xs text-[#D4AF37]">
-        The real KAOS Strategy (Berserker · Reversal/Runner/Breakout) runs server-side and returns live decisions when the extension streams market candles. KAOS AI serves live inference once a trained model is deployed. Broker execution happens only inside the extension — no live trades occur on this page.
+        KAOS Strategy requires actual market candles before issuing confirmed decisions. KAOS AI research forecasts are separate from trade authorization. The website's Live mode does not enable live orders.
       </div>
 
       <SyncHealth sync={sync} expired={syncExpired} onRefresh={loadSync} />
 
-      <StrategyReplay />
-
-      <BacktestExplorer />
+      <details className="card-surface mb-6 p-4">
+        <summary className="cursor-pointer text-sm font-semibold text-[#D4AF37]">Legacy strategy replay and demo backtests (not live market data)</summary>
+        <div className="mt-4"><TrendPauseBacktest /></div>
+        <StrategyReplay />
+        <BacktestExplorer />
+        <p className="text-xs text-slate-400">Demo/pasted candle replay is separate from live provider charts and R2 historical AI analysis.</p>
+      </details>
 
       {/* Mode selector */}
       <div className="mb-6">
@@ -470,6 +496,7 @@ export default function Trading() {
           </TableBody>
         </Table>
       </div>
+      </>}
     </div>
   );
 }

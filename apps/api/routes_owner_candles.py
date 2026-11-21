@@ -145,6 +145,34 @@ async def _r2_market(symbol,asset_class,limit):
     except ValueError as exc:
         raise HTTPException(422,str(exc)) from exc
 
+@router.get("/r2-lab/history")
+async def r2_lab_history(
+    symbol:str=Query("BTC-USD",pattern=r"^[A-Z0-9_.-]{2,32}$"),
+    limit:int=Query(200,ge=100,le=1000),
+    user=Depends(owner),
+):
+    """Owner-only validated archived R2 1-minute bars for AI research context.
+
+    Archive is historical data, NOT a live quote or trading order authority.
+    In particular, stock IEX/SIP and crypto data providers must not be merged.
+    """
+    choices={s:a for s,a in MARKETS}
+    asset_class=choices.get(symbol)
+    if asset_class is None:
+        raise HTTPException(422,"Market not configured in KAOS R2 universe")
+    rows,source=await _r2_market(symbol,asset_class,limit)
+    return {
+        "symbol":symbol,"asset_class":asset_class,"seconds":60,
+        "source":source,"requested":limit,"count":len(rows),
+        "candles":[{"ts":r["ts"],"open":r["open"],"high":r["high"],
+                    "low":r["low"],"close":r["close"],"volume":r.get("volume")}
+                   for r in rows],
+        "last_closed_ts":rows[-1]["ts"] if rows else None,
+        "research_only":True,"live_quote":False,"order_authorized":False,
+        "note":"R2 history is a separate source-validated archive. Never substitute its bars for live broker quotes."
+    }
+
+
 @router.get("/r2-lab/markets")
 async def r2_lab_markets(user=Depends(owner)):
     return {"markets":[{"symbol":s,"asset_class":a} for s,a in MARKETS],

@@ -4,7 +4,7 @@ import {api,errMsg} from "../../lib/api";
 
 const textBox="w-full rounded border border-[#48402E] bg-[#080808] p-2 text-sm text-white";
 
-export default function AlpacaPaperOrderPanel(){
+export default function AlpacaPaperOrderPanel({showChart=true}){
   const [symbol,setSymbol]=useState("AAPL");
   const [notional,setNotional]=useState("10");
   const [preview,setPreview]=useState(null);
@@ -102,7 +102,7 @@ export default function AlpacaPaperOrderPanel(){
       <h2 className="text-lg font-semibold text-[#D4AF37]">Alpaca Paper — Test a Stock Order</h2>
       <p className="mt-1 text-xs text-slate-400">Owner-only beta · manual BUY · US equities only · $1–$25 · market hours · real IEX quote, Alpaca simulated execution</p>
     </div>
-    <AlpacaPaperStockChart symbol={symbol}/>
+    {showChart&&<AlpacaPaperStockChart symbol={symbol}/>}
     <section className="space-y-3 rounded border border-[#48402E] p-3" data-testid="alpaca-paper-safety-audit">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
