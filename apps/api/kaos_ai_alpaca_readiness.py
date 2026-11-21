@@ -78,10 +78,10 @@ def review_signal(forecast,model,*,now_ms=None):
         horizon=_int(forecast["horizon_bars"])
         if seconds not in (60,300,900) or not 1<=horizon<=30:
             raise ValueError("Unsupported timeframe")
+        if end>now_ms or now_ms>=target+seconds*1000:
+            block("future_or_expired_forecast")
         if end!=start+seconds*1000 or target!=start+horizon*seconds*1000:
             raise ValueError("Misaligned")
-        if not end<=now_ms<target+seconds*1000:
-            block("future_or_expired_forecast")
         if now_ms-end>MAX_AGE_MS:
             block("stale_forecast")
     except (ValueError,TypeError,KeyError):
