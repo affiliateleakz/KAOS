@@ -52,7 +52,7 @@ def _notional(value):
 
 
 async def guard(user, *, reconciliation=False):
-    if os.getenv("KAOS_ALPACA_PAPER_ORDERS_ENABLED")!="1":
+    if not reconciliation and os.getenv("KAOS_ALPACA_PAPER_ORDERS_ENABLED")!="1":
         raise HTTPException(503,"Alpaca paper orders are not enabled on KAOS")
     owner=os.getenv("KAOS_CANDLE_OWNER_USER_ID","")
     if not owner or user.get("id")!=owner or user.get("role") not in ("admin","super_admin"):
@@ -149,7 +149,7 @@ async def paper_confirm(req:ConfirmReq,user:dict=Depends(get_current_user)):
         await db.alpaca_paper_order_previews.update_one(
             {"_id":req.preview_id},{"$set":{"status":"REJECTED_CONCURRENT"}})
         raise HTTPException(409,"Another paper order is pending reconciliation")
-    order={"_id":cid,"user_id":user["id"],"preview_id":req.preview_id,
+    order={"_id":cid,"client_order_id":cid,"user_id":user["id"],"preview_id":req.preview_id,
            "symbol":preview["symbol"],"notional":preview["notional"],
            "state":"RESERVED","paper_only":True,"ai_order":False,
            "created_at":now_iso(),"broker":"alpaca_paper"}
