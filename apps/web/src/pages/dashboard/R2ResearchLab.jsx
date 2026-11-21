@@ -25,6 +25,8 @@ export default function R2ResearchLab() {
   const [patternCatalog, setPatternCatalog] = useState(null);
   const [shadow, setShadow] = useState({predictions:[],summary:{}});
   const [accessDenied, setAccessDenied] = useState(false);
+  const [evidenceSource, setEvidenceSource] = useState("news");
+  const [evidenceCompare, setEvidenceCompare] = useState(null);
 
   const selected = markets.find(m => m.symbol === market);
   const load = async () => {
@@ -91,6 +93,22 @@ export default function R2ResearchLab() {
       const {data: latest} = await api.get(API + "/models");
       setModels(latest.models || []);
     } catch (e) { setError(errMsg(e) || "AI training failed"); }
+    finally { setBusy(""); }
+  };
+  const compareEvidence = async () => {
+    if (!selected) return;
+    setBusy("evidence"); setError(""); setMessage(""); setEvidenceCompare(null);
+    try {
+      const {data} = await api.post(API + "/compare-evidence", {
+        symbol: market, asset_class: selected.asset_class,
+        source_category: evidenceSource, limit: Math.max(300, Math.min(3000, Number(limit))),
+        horizon_bars: Number(expiry),
+      });
+      setEvidenceCompare(data);
+      setMessage(data.status === "comparison_complete_unvalidated"
+        ? "Research-only holdout comparison complete. No AI model was promoted or deployed."
+        : "Not enough paired historical evidence for a fair comparison.");
+    } catch (e) { setError(errMsg(e) || "Evidence comparison failed"); }
     finally { setBusy(""); }
   };
   const promote = async modelId => {
@@ -179,6 +197,39 @@ export default function R2ResearchLab() {
             <span className="font-mono">{r.summary?.trades ?? 0} trades · {win(r.summary?.win_rate_ex_ties)} WR · {r.created_at}</span>
           </div>)}
         </div>
+      </div>
+
+      <div className={box + " space-y-4"} data-testid="kaos-ai-evidence-comparison">
+        <div>
+          <h2 className="font-semibold text-[#D4AF37]">AI Market Intelligence Model Comparison</h2>
+          <p className="mt-1 text-xs text-slate-400">Check whether a selected, actually archived intelligence source improves holdout price prediction versus a candle-only model on the same eligible observations.</p>
+        </div>
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="text-xs text-slate-300">Evidence category
+            <select value={evidenceSource} onChange={e => setEvidenceSource(e.target.value)} className={"mt-1 " + input}>
+              {["news","social","technical","insider","filing","institutional","politician","options_flow","liquidity","short_interest","macro","onchain","dark_pool"].map(s => <option key={s} value={s}>{s.replace("_"," ")}</option>)}
+            </select>
+          </label>
+          <button type="button" className={button} disabled={!!busy || !selected} onClick={compareEvidence}>
+            {busy === "evidence" ? "Comparing…" : "Compare AI evidence"}
+          </button>
+        </div>
+        {evidenceCompare && <div className="rounded border border-[#423A2E] p-3 text-sm">
+          <p className="mb-2 font-semibold">Result: {evidenceCompare.status}</p>
+          <p className="mb-2 text-xs text-slate-400">Paired candles: {evidenceCompare.paired_samples ?? 0} / {evidenceCompare.candle_samples ?? 0} · Excluded for missing historical evidence: {evidenceCompare.excluded_no_relevant_point_in_time_evidence ?? 0}</p>
+          {evidenceCompare.holdout_test && <div className="grid grid-cols-2 gap-3">
+            {[["Candle-only",evidenceCompare.holdout_test.candle_only],
+              ["Candles + evidence",evidenceCompare.holdout_test.candle_plus_evidence]].map(([name,stats]) =>
+              <div key={name} className="rounded bg-[#1C1A16] p-3">
+                <strong>{name}</strong>
+                <p className="mt-1 text-xs">Holdout samples: {stats.samples}</p>
+                <p className="text-xs">Brier score: {stats.brier ?? "—"}</p>
+                <p className="text-xs">Signal accuracy: {ratio(stats.signal_accuracy)}</p>
+                <p className="text-xs">Signal coverage: {ratio(stats.coverage)}</p>
+              </div>)}
+          </div>}
+          <p className="mt-3 text-xs text-amber-300">This is an experimental point-in-time comparison, not a validated strategy or proof of profitable trading. Models are not saved or authorized to trade.</p>
+        </div>}
       </div>
 
       <div className={box + " space-y-3"} data-testid="kaos-ai-shadow-forecasts">
