@@ -1,3 +1,4 @@
+import AlpacaPaperStockChart from "./AlpacaPaperStockChart";
 import React,{useCallback,useEffect,useState} from "react";
 import {api,errMsg} from "../../lib/api";
 
@@ -51,6 +52,7 @@ export default function AlpacaPaperOrderPanel(){
       <h2 className="text-lg font-semibold text-[#D4AF37]">Alpaca Paper — Test a Stock Order</h2>
       <p className="mt-1 text-xs text-slate-400">Owner-only beta · manual BUY · US equities only · $1–$25 · market hours · real IEX quote, Alpaca simulated execution</p>
     </div>
+    <AlpacaPaperStockChart symbol={symbol}/>
     <form onSubmit={previewOrder} className="flex flex-wrap items-end gap-3">
       <label className="text-xs">Stock ticker
         <input className={textBox+" mt-1"} value={symbol} maxLength={6} onChange={e=>{setSymbol(e.target.value.toUpperCase());setPreview(null);}} required placeholder="AAPL"/>
