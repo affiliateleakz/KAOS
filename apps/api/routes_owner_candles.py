@@ -214,6 +214,53 @@ async def r2_lab_train(req:R2LabTrainRequest,user=Depends(owner)):
         "validation_status":record["validation_status"]})
     return {"ok":True,**{k:v for k,v in record.items() if k not in ("_id","model","test_predictions")}}
 
+class R2EvidenceCompareRequest(BaseModel):
+    symbol: str = Field(default="BTC-USD",max_length=32)
+    asset_class: Literal["stock","etf","crypto"] = "crypto"
+    source_category: Literal["technical","news","filing","social","insider",
+        "institutional","politician","onchain","options_flow","liquidity",
+        "macro","dark_pool","short_interest"] = "news"
+    limit: int = Field(default=1000, ge=300, le=3000)
+    horizon_bars: int = Field(default=4, ge=1, le=30)
+
+@router.post("/r2-lab/compare-evidence")
+async def r2_lab_compare_evidence(req:R2EvidenceCompareRequest,user=Depends(owner)):
+    """Compare identical holdout candles with and without one actual source.
+
+    This request never writes models or predictions and never places orders.
+    """
+    import asyncio
+    from datetime import datetime, timezone, timedelta
+    from kaos_ai_evidence_compare import compare_models
+    _check_market(req.symbol,req.asset_class)
+    rows,provider=await _r2_market(req.symbol,req.asset_class,req.limit)
+    if not rows:
+        return {"status":"no_r2_candles","symbol":req.symbol,"research_only":True,
+                "execution_enabled":False}
+    # Only fetch historical events close to the actual candle history.
+    from kaos_opportunity import SOURCES
+    if req.source_category not in SOURCES:
+        raise HTTPException(422,"Unsupported intelligence category")
+    earliest=datetime.fromtimestamp(rows[0]["ts"]/1000,timezone.utc)
+    latest=datetime.fromtimestamp((rows[-1]["ts"]+60000)/1000,timezone.utc)
+    cutoff=(earliest-timedelta(days=90)).isoformat()
+    observations=await db.kaos_intelligence.find(
+        {"asset":req.symbol,"asset_class":req.asset_class,
+         "source":req.source_category,
+         "observed_at":{"$gte":cutoff,"$lte":latest.isoformat()}},
+        {"_id":0,"asset":1,"asset_class":1,"source":1,"direction":1,
+         "strength":1,"provider":1,"event_id":1,"observed_at":1,
+         "published_at":1,"event_at":1}
+    ).sort("observed_at",1).limit(5000).to_list(length=5000)
+    try:
+        report=await asyncio.to_thread(compare_models,rows,observations,
+            symbol=req.symbol,asset_class=req.asset_class,seconds=60,
+            horizon=req.horizon_bars,source_category=req.source_category)
+    except (ValueError,ZeroDivisionError,OverflowError) as exc:
+        raise HTTPException(422,"Evidence comparison data failed validation") from exc
+    return {"candle_source":provider,**report}
+
+
 @router.get("/r2-lab/models")
 async def r2_lab_models(user=Depends(owner)):
     docs=await db.kaos_r2_research_models.find(
