@@ -69,6 +69,17 @@ class EvidenceFeaturesTest(unittest.TestCase):
         self.assertEqual(out["categories"]["news"]["independent_providers"], 2)
         self.assertAlmostEqual(out["categories"]["news"]["bullish_evidence"], 1.4)
 
+    def test_existing_intelligence_collector_record(self):
+        row = evidence()
+        row["asset"] = row.pop("symbol")
+        row.pop("provider")
+        row.pop("event_at")
+        row["event_id"] = "gdelt:apple:article-123"
+        out = snapshot([row])
+        self.assertEqual(out["categories"]["news"]["state"], "fresh")
+        self.assertEqual(out["categories"]["news"]["independent_providers"], 1)
+        self.assertEqual(out["rejected"]["invalid"], 0)
+
     def test_future_candle_rejected(self):
         with self.assertRaises(ValueError):
             snapshot([], candle_end_at=NOW + timedelta(seconds=5))
