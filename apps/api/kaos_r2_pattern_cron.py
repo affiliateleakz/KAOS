@@ -37,7 +37,11 @@ async def run():
                 rows,source=await read_archive(symbol,asset_class,60,limit=300)
                 if not rows:
                     return {"market":symbol,"status":"no_candles"}
-                report=await asyncio.to_thread(observe_market,rows,symbol,asset_class,60,source)
+                state_key={"symbol":symbol,"asset_class":asset_class,"seconds":60}
+                previous=await db.kaos_r2_pattern_market_state.find_one(state_key,{"_id":0,"last_observed_candle_ts":1,"source":1})
+                if previous and previous.get("last_observed_candle_ts")==rows[-1]["ts"] and previous.get("source")==source:
+                    return {"market":symbol,"status":"unchanged","bars":len(rows)}
+                report=await asyncio.to_thread(observe_market,rows,symbol,asset_class,60,source,max_patterns_per_segment=60)
                 from pymongo import UpdateOne
                 updates=[]
                 for evt in report["events"]:
@@ -64,7 +68,7 @@ async def run():
                             {"$set":{key:h}})
                         settled+=r.modified_count
                 await db.kaos_r2_pattern_market_state.update_one(
-                    {"symbol":symbol,"asset_class":asset_class,"seconds":60},
+                    state_key,
                     {"$set":{"status":"observing","last_observed_candle_ts":rows[-1]["ts"],
                              "pattern_counts_snapshot":report["pattern_counts"],
                              "archive_bars":len(rows),"segments":report["segments"],
@@ -77,7 +81,7 @@ async def run():
     results=await asyncio.gather(*(inspect(*m) for m in MARKETS))
     for item in results:
         print(item)
-    ok=sum(x["status"]=="observed" for x in results)
+    ok=sum(x["status"] in ("observed","unchanged") for x in results)
     print(f"KAOS pattern observer: {ok}/{len(MARKETS)} markets; no trades placed")
     return 0 if ok==len(MARKETS) else 1
 
