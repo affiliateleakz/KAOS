@@ -25,7 +25,42 @@ export default function R2ResearchLab() {
   const [patternCatalog, setPatternCatalog] = useState(null);
   const [shadow, setShadow] = useState({predictions:[],summary:{}});
   const [accessDenied, setAccessDenied] = useState(false);
+  const [trainJobs,setTrainJobs] = useState([]);
+  const [trainWorkerEnabled,setTrainWorkerEnabled] = useState(false);
+  const [trainJobBusy,setTrainJobBusy] = useState(false);
 
+
+  const refreshTrainingJobs = async () => {
+    try {
+      const {data}=await api.get(API+"/train-jobs");
+      setTrainJobs(data.jobs||[]);
+      setTrainWorkerEnabled(!!data.worker_enabled);
+    }catch(e){
+      if(e?.response?.status!==403) setError(errMsg(e)||"Training job status unavailable");
+    }
+  };
+  const startTrainingAll = async () => {
+    if(trainJobBusy)return;
+    setError("");setMessage("");setTrainJobBusy(true);
+    try{
+      const {data}=await api.post(API+"/train-jobs",{
+        scope:"all",symbol:market,
+        limit:5000,horizon_bars:Number(expiry)
+      });
+      setMessage(data.already_running
+        ? "A KAOS training job is already running. Showing its current progress."
+        : "KAOS AI training queued for all R2 configured markets. Scheduled worker processes two markets per invocation.");
+      await refreshTrainingJobs();
+    }catch(e){setError(errMsg(e)||"Could not start AI training job");}
+    finally{setTrainJobBusy(false);}
+  };
+  useEffect(()=>{
+    refreshTrainingJobs();
+    const id=setInterval(()=>{
+      if(!document.hidden)refreshTrainingJobs();
+    },10000);
+    return()=>clearInterval(id);
+  },[]);
   const selected = markets.find(m => m.symbol === market);
   const load = async () => {
     try {
@@ -133,13 +168,60 @@ export default function R2ResearchLab() {
         </div>
         <div className="flex flex-wrap gap-3">
           <button type="submit" disabled={!!busy || !selected} className={button}>{busy === "backtest" ? "Backtesting…" : "Run R2 Backtest"}</button>
+          <button type="button" disabled={!!busy || trainJobBusy || !trainWorkerEnabled} onClick={startTrainingAll}
+            data-testid="train-kaos-ai-all-markets" className={button}>
+            {trainJobBusy?"Queueing…":"Train AI — All R2 Markets"}
+          </button>
           <button type="button" disabled={!!busy || !selected || Number(limit) < 300} onClick={train}
             className="rounded border border-[#D4AF37] px-4 py-2 text-sm font-semibold text-[#D4AF37] disabled:opacity-40">
-            {busy === "training" ? "Training…" : "Train AI Research Candidate"}
+            {busy === "training" ? "Training…" : "Train Selected Market Only"}
           </button>
         </div>
-        <p className="text-xs text-amber-300">One-minute candles only. Results are idealized OHLC directional tests without fees, spread, slippage, payout or live-fill proof. AI training uses a separate deterministic logistic research model, not the live KAOS AI engine.</p>
+        <p className="text-xs text-amber-300">Train AI — All R2 Markets queues independent research models for the configured stock, ETF and crypto archives. It always trains a separate candle-only model from validated R2 OHLCV. If existing KAOS intelligence records have enough historical coverage and were observed before the historical forecast cutoff, it can ALSO train a distinct enriched research model. Missing news, social, insider, options-flow, macro or other sources are never fabricated. Forex/options/binary price training is not yet in this 20-market job. No broker orders.</p>
       </form>
+
+      <div className={box + " space-y-3"} data-testid="kaos-ai-training-jobs">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="font-semibold text-[#D4AF37]">KAOS AI Training Jobs</h2>
+            <p className="mt-1 text-xs text-slate-400">Persistent, checkpointed R2 historical training · refreshed every 10 seconds</p>
+          </div>
+          <button type="button" className="rounded border border-[#D4AF37] px-3 py-2 text-xs text-[#D4AF37]" onClick={refreshTrainingJobs}>Refresh jobs</button>
+        </div>
+        {!trainWorkerEnabled&&<p className="text-sm text-amber-300">Training worker is not configured on the server. Set up the cPanel training cron before clicking Train AI.</p>}
+        {!trainJobs.length&&<p className="text-sm text-slate-500">No training jobs recorded yet.</p>}
+        {trainJobs.slice(0,5).map(j=><article key={j.id} className="rounded border border-[#40372A] p-3 text-xs space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <strong>{j.scope==="all"?"All configured markets":"Selected market"} · {j.status}</strong>
+            <span>{j.completed||0} / {j.total||0} markets · {j.trained||0} trained · {j.reused||0} reused · {j.failed||0} unavailable</span>
+          </div>
+          <div className="h-2 overflow-hidden rounded bg-[#292929]">
+            <div className="h-full bg-[#D4AF37]" style={{width:`${j.total?Math.min(100,100*(j.completed||0)/j.total):0}%`}}/>
+          </div>
+          <p className="text-slate-400">Model: {j.model_family} · no orders · trained features: {(j.trained_feature_names||[]).join(", ")}</p>
+          <details>
+            <summary className="cursor-pointer text-[#D4AF37]">Data coverage and missing sources</summary>
+            <div className="mt-2 grid gap-1 sm:grid-cols-2">
+              {(j.feature_sources_manifest||[]).map(src=><p key={src.key}>
+                {src.label}: <span className={src.used_in_training?"text-[#22C55E]":"text-amber-300"}>{src.used_in_training?"included when R2 candles train":"not integrated or pending"}</span>
+              </p>)}
+            </div>
+            <p className="mt-2 text-slate-400">Coverage varies by market. Per-market results below show actual inputs.</p>
+          </details>
+          <div className="max-h-52 overflow-auto space-y-1">
+            {(j.results||[]).map((r,i)=><div key={r.symbol+"-"+i} className="border-b border-[#302B23] py-1">
+              <strong>{r.symbol}</strong> · {r.status} · {r.rows??0} bars · {r.validation_status||r.reason||"research only"}
+              {r.training_sources&&<p className="text-slate-500">Trained sources: {r.training_sources.filter(s=>s.used_in_training).map(s=>s.key).join(", ")||"none"}</p>}
+              {r.intelligence_model&&<p className="mt-1 text-[#D4AF37]">Enriched intelligence research: {r.intelligence_model.status}
+                {r.intelligence_model.validation_status?" · "+r.intelligence_model.validation_status:""}
+                {r.intelligence_model.source_categories?.length?" · Historical categories: "+r.intelligence_model.source_categories.join(", "):""}
+                {r.intelligence_model.reason?" · "+r.intelligence_model.reason:""}
+              </p>}
+            </div>)}
+          </div>
+        </article>)}
+        <p className="text-xs text-amber-300">No automated paper or live orders. A high model score does not prove live profitability or permit an unvalidated model to trade.</p>
+      </div>
 
       {error && <p role="alert" className="rounded border border-red-700 p-3 text-sm text-red-300">{error}</p>}
       {message && <p role="status" className="rounded border border-[#74612D] p-3 text-sm text-[#D4AF37]">{message}</p>}

@@ -34,7 +34,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: "20", cache: npm, cache-dependency-path: apps/web/package-lock.json }
       - name: Validate cPanel paper API and portal installers
-        run: bash -n ../../scripts/deploy-kaos-paper-api-cpanel.sh ../../scripts/deploy-isolated-kaos-portal-cpanel.sh
+        run: bash -n ../../scripts/deploy-kaos-paper-api-cpanel.sh ../../scripts/deploy-isolated-kaos-portal-cpanel.sh ../../scripts/install-kaos-r2-train-cron-cpanel.sh ../../scripts/run-kaos-r2-training-worker-cpanel.sh
       - run: npm ci --no-audit --no-fund
       - run: npm run build
         env: { CI: "false" }

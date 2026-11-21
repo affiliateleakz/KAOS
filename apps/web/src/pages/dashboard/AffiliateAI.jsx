@@ -140,6 +140,39 @@ export function AffiliatePage() {
   );
 }
 export function AIPage() {
+  const [trainingJob,setTrainingJob]=useState(null);
+  const [trainingBusy,setTrainingBusy]=useState(false);
+  const [trainingError,setTrainingError]=useState("");
+  const [trainingWorker,setTrainingWorker]=useState(false);
+  const [canTrain,setCanTrain]=useState(false);
+  const loadTrainJob=async()=>{
+    try{
+      const {data}=await api.get("/api/v1/owner/candles/r2-lab/train-jobs");
+      setTrainingWorker(!!data.worker_enabled);
+      setTrainingJob(data.jobs?.[0]||null);
+      setCanTrain(true);
+      setTrainingError("");
+    }catch(e){
+      if(e?.response?.status===403)setCanTrain(false);
+      else setTrainingError(errMsg(e)||"R2 AI training status unavailable");
+    }
+  };
+  useEffect(()=>{
+    loadTrainJob();
+    const interval=setInterval(()=>{if(!document.hidden)loadTrainJob();},10000);
+    return()=>clearInterval(interval);
+  },[]);
+  const clickTrainAll=async()=>{
+    setTrainingBusy(true);setTrainingError("");
+    try{
+      const {data}=await api.post("/api/v1/owner/candles/r2-lab/train-jobs",
+        {scope:"all",limit:5000,horizon_bars:4});
+      setTrainingJob(data.job);
+      toast.success(data.already_running?"Training already queued":"KAOS AI multi-market training queued");
+    }catch(e){setTrainingError(errMsg(e)||"Could not queue AI training");}
+    finally{setTrainingBusy(false);}
+  };
+
   const [d, setD] = useState(null);
   const [report, setReport] = useState(null);
   const [reportError, setReportError] = useState("");
@@ -150,6 +183,22 @@ export function AIPage() {
   return (
     <div><H>KAOS AI</H>
       <div className="mb-6 rounded-lg border border-[#D4AF37]/20 bg-[#D4AF37]/5 p-3 text-xs text-[#D4AF37]">KAOS AI is not yet production-trained. Predictions shown are SIMULATED until the trained model is deployed. No guaranteed accuracy.</div>
+      {canTrain&&<section className="card-surface mb-6 space-y-3 p-5" data-testid="kaos-ai-main-train-button">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div><h2 className="font-heading text-lg font-semibold text-[#D4AF37]">KAOS AI · Train Across R2 Markets</h2>
+            <p className="mt-1 text-xs text-slate-400">Owner-only job · historical OHLCV research models · all configured R2 stocks, ETFs and crypto</p></div>
+          <button type="button" onClick={clickTrainAll}
+            disabled={!trainingWorker||trainingBusy}
+            className="rounded bg-[#D4AF37] px-4 py-2 text-sm font-semibold text-black disabled:opacity-40">
+            {trainingBusy?"Queueing…":"Train AI"}
+          </button>
+        </div>
+        {!trainingWorker&&<p className="text-xs text-amber-300">cPanel training worker is not yet enabled. Training cannot start until the worker is installed.</p>}
+        {trainingError&&<p role="alert" className="text-xs text-amber-300">{trainingError}</p>}
+        {trainingJob&&<p className="text-sm text-slate-300">Latest job: {trainingJob.status} · {trainingJob.completed||0} / {trainingJob.total||0} markets · {trainingJob.trained||0} trained · {trainingJob.failed||0} unavailable</p>}
+        <p className="text-xs text-amber-300">Train AI fits R2 candle-only models and optionally separate enriched research models from existing, time-safe ingested news, social, insider and other observations. It shows which data actually trained. Unavailable sources are not claimed as learned; trading remains disabled.</p>
+        <a href="/dashboard/backtests" className="text-xs text-[#D4AF37] underline">View full training progress and source coverage</a>
+      </section>}
       <div className="grid gap-4 md:grid-cols-4">
         <div className="card-surface p-5"><Brain className="h-6 w-6 text-[#D4AF37]" /><div className="mt-3 label-mono">Active Model</div><div className="mt-1 font-mono text-sm text-white">{d.activeModel?.version}</div></div>
         <Stat l="Real Samples" v={d.realSamples} /><Stat l="Paper Samples" v={d.paperSamples} />
