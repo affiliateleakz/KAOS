@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from math import isfinite
 
 from kaos_opportunity import SOURCES, utc
-from kaos_source_health import SOURCE_AGE_MINUTES
+from kaos_source_health import SOURCE_AGE_MINUTES, provider as infer_provider
 
 SCHEMA = "kaos_ai_evidence_snapshot_v1"
 ASSET_CLASSES = frozenset(("stock", "etf", "crypto", "forex", "option", "binary_option"))
@@ -62,16 +62,19 @@ def make_feature_snapshot(*, symbol, asset_class, decision_at, observations,
         if source not in SOURCES or direction not in DIRECTIONS:
             rejected["invalid"] += 1
             continue
-        if event.get("symbol") != symbol or event.get("asset_class") != asset_class:
+        if event.get("symbol", event.get("asset")) != symbol or event.get("asset_class") != asset_class:
             rejected["wrong_asset"] += 1
             continue
         try:
             published = _timestamp(event["published_at"])
             observed = _timestamp(event["observed_at"])
-            happened = _timestamp(event["event_at"])
+            # Historical KAOS collector records do not always provide an event
+            # timestamp. Publication time is then the conservative availability
+            # anchor, not a claim about when an insider actually traded.
+            happened = _timestamp(event.get("event_at") or event["published_at"])
             strength = float(event["strength"])
             event_id = event["event_id"]
-            provider = event["provider"]
+            provider = event.get("provider") or infer_provider(event_id)
             if not isinstance(event_id, str) or not event_id or len(event_id) > 200:
                 raise ValueError("Missing event id")
             if not isinstance(provider, str) or not provider or len(provider) > 80:
