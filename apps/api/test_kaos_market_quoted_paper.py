@@ -57,7 +57,7 @@ def test_market_paper_fails_if_source_unavailable(monkeypatch):
     monkeypatch.setattr(paper,"get_quote",unavailable)
     req=paper.MarketPaperOrderReq(symbol="BTC-USD",quantity="5")
     with pytest.raises(paper.HTTPException) as info:
-        await paper.place_market_derived_paper_order(req,user={"id":"owner"})
+        asyncio.run(paper.place_market_derived_paper_order(req,user={"id":"owner"}))
     assert info.value.status_code==503
 
 def test_only_supported_crypto_market_accepted():
