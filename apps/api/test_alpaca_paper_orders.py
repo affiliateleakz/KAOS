@@ -84,3 +84,11 @@ def test_stale_qualitative_ai_cannot_be_converted_to_order():
     # it has no signal_id, prediction, broker URL, or live key arguments.
     assert set(order.PreviewReq.model_fields)=={"symbol","notional"}
     assert set(order.ConfirmReq.model_fields)=={"preview_id"}
+
+
+def test_invalid_candle_timeframe_refused_before_market_request():
+    from alpaca_paper_quotes import stock_candles
+    with pytest.raises(MarketUnavailable):
+        asyncio.run(stock_candles("key","secret","AAPL",seconds=5))
+    with pytest.raises(MarketUnavailable):
+        asyncio.run(stock_candles("key","secret","SPY/US",seconds=60))
