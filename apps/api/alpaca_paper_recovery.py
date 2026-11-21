@@ -37,6 +37,7 @@ def classify(order, broker_record, *, now=None):
         avg_price=broker_record.get("filled_avg_price")
     return {
         "client_order_id":order["client_order_id"],
+        "broker_order_id":broker_record.get("id") if isinstance(broker_record,dict) and isinstance(broker_record.get("id"),str) else None,
         "broker_status":status,
         "terminal":bool(unlock),
         "retain_inflight_lock":not unlock,
