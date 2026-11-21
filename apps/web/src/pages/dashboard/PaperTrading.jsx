@@ -12,6 +12,16 @@ export default function PaperTrading() {
   const [data, setData] = useState(null);
   const [form, setForm] = useState({ symbol: "BTC-USD", asset_class: "CRYPTO_SPOT", side: "BUY", quantity: "10", quote_price: "" });
   const [busy, setBusy] = useState(false);
+  const [alpaca,setAlpaca] = useState(null);
+  const [alpacaError,setAlpacaError] = useState("");
+  const [alpacaLoading,setAlpacaLoading] = useState(false);
+  const loadAlpaca=async()=>{
+    setAlpacaLoading(true);
+    try {const {data}=await api.get("/api/v1/alpaca-paper/snapshot");setAlpaca(data);setAlpacaError("");}
+    catch(e){setAlpaca(null);setAlpacaError(e?.response?.status===403?"Connect Alpaca Paper in Broker Connections to view its account.":errMsg(e)||"Alpaca Paper unavailable");}
+    finally{setAlpacaLoading(false);}
+  };
+  useEffect(()=>{loadAlpaca();},[]);
   const load = useCallback(() => api.get("/api/v1/paper/orders").then((r) => setData(r.data)).catch((e) => toast.error(errMsg(e))), []);
   useEffect(() => { load(); }, [load]);
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
@@ -46,6 +56,39 @@ export default function PaperTrading() {
           <ShieldAlert className="h-4 w-4" /> Emergency stop is active. All paper orders are blocked by an administrator.
         </div>
       )}
+      <section className="card-surface mb-6 p-5 space-y-3" data-testid="alpaca-paper-account">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div><h2 className="text-lg font-semibold text-[#D4AF37]">Alpaca Paper Account</h2>
+            <p className="text-xs text-slate-400">Broker-reported simulated account, orders and positions · read-only in this stage</p></div>
+          <button type="button" onClick={loadAlpaca} disabled={alpacaLoading} className="rounded border border-[#D4AF37] px-3 py-2 text-xs text-[#D4AF37]">{alpacaLoading?"Refreshing…":"Refresh Alpaca"}</button>
+        </div>
+        {alpacaError&&<p className="text-sm text-amber-300">{alpacaError} <a href="/dashboard/brokers" className="underline">Manage broker connection</a></p>}
+        {alpaca&&<>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            {[
+              ["Account status",alpaca.account?.status],
+              ["Paper equity",alpaca.account?.equity],
+              ["Paper cash",alpaca.account?.cash],
+              ["Buying power",alpaca.account?.buying_power]
+            ].map(([name,value])=><div key={name} className="rounded bg-[#080808] p-3">
+              <p className="text-xs text-slate-400">{name}</p><p className="font-mono text-sm">{value??"—"}</p>
+            </div>)}
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div><h3 className="mb-2 text-sm font-semibold">Alpaca paper positions ({alpaca.positions?.length||0})</h3>
+              <div className="max-h-48 overflow-y-auto">{(alpaca.positions||[]).length===0&&<p className="text-xs text-slate-400">No positions.</p>}
+                {(alpaca.positions||[]).map((p,i)=><p key={i} className="border-b border-[#292929] py-2 font-mono text-xs">{p.symbol} · {p.qty} · unrealized {p.unrealized_pl??"—"}</p>)}
+              </div>
+            </div>
+            <div><h3 className="mb-2 text-sm font-semibold">Recent Alpaca paper orders</h3>
+              <div className="max-h-48 overflow-y-auto">{(alpaca.orders||[]).length===0&&<p className="text-xs text-slate-400">No orders.</p>}
+                {(alpaca.orders||[]).map((o,i)=><p key={o.id||i} className="border-b border-[#292929] py-2 font-mono text-xs">{o.symbol} · {o.side} · {o.status} · filled {o.filled_qty||"0"}</p>)}
+              </div>
+            </div>
+          </div>
+          <p className="text-xs text-amber-300">This Alpaca account is separate from KAOS's internal $100 simulator below. Their balances, orders and performance are never combined. AI trading is disabled.</p>
+        </>}
+      </section>
       <div className="grid gap-6 lg:grid-cols-3">
         <form onSubmit={submit} className="card-surface space-y-3 p-5" data-testid="paper-order-form">
           <h3 className="font-heading font-semibold">New paper order</h3>
