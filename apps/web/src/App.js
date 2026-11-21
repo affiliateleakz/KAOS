@@ -21,6 +21,7 @@ import CryptoScanner from "./pages/dashboard/CryptoScanner";
 import StockHeatmap from "./pages/dashboard/StockHeatmap";
 import BrokerConnections from "./pages/dashboard/BrokerConnections";
 import PaperTrading from "./pages/dashboard/PaperTrading";
+import R2ResearchLab from "./pages/dashboard/R2ResearchLab";
 import { AffiliatePage, AIPage } from "./pages/dashboard/AffiliateAI";
 import AdminLayout from "./pages/admin/AdminLayout";
 import * as AP from "./pages/admin/pages";
@@ -76,7 +77,7 @@ function AppRouter() {
         <Route path="community" element={<DP.CommunityFeed />} />
         <Route path="indicators" element={<DP.Indicators />} />
         <Route path="scripts" element={<DP.Scripts />} />
-        <Route path="backtests" element={<DP.Backtests />} />
+        <Route path="backtests" element={<R2ResearchLab />} />
         <Route path="saved" element={<DP.Saved />} />
         <Route path="following" element={<DP.Following />} />
         <Route path="subscription" element={<DP.Subscription />} />
