@@ -21,9 +21,9 @@ Check:
 - Actual Alpaca Paper credentials must be entered only after reviewing
   the **paper** account details in KAOS, never in GitHub, chat or logs.
 
-## 2. Preserve homepage and deploy compiled portal separately
+## 2. Deploy the matching Python API first, then the portal
 
-After merge to `main`, use the **main push** GitHub Actions React artifact.
+After merge to `main`, update the local cPanel checkout to the exact latest\n`main` commit and run the reviewed `scripts/deploy-kaos-paper-api-cpanel.sh`\nunder the existing cPanel Python virtualenv. It validates/backs up the affected\nbackend modules, patches only the necessary two Alpaca router registrations\nin the existing `server.py`, preserves `passenger_wsgi.py` and `.env`, and\nsets the revision marker `kaos-paper-api-revision.txt`. Verify\n`https://api.tradingwithkaos.com/api/health` returns healthy before the\nReact portal step. If the API entrypoint or configured Python virtualenv\ndiffers, stop and review rather than guessing.\n\nOnly then use the **main push** GitHub Actions React artifact.
 A PR artifact has a test-merge SHA, and must not be used in production.
 
 In GitHub Actions → CI → successful **main** run, download its
@@ -31,7 +31,7 @@ In GitHub Actions → CI → successful **main** run, download its
 directory on hosting: it must contain `index.html`, `static/`,
 and `kaos-build-revision.txt` at the top level.
 
-The release script verifies the artifact revision exactly matches
+The portal release script verifies both the deployed Python API revision\nand the artifact revision exactly match
 `origin/main`, snapshots the live homepage and `.htaccess`,
 copies the compiled assets into `/static/`, publishes the SPA only to
 `/portal/index.html` and adds known-route rewrites. No Python Passenger
