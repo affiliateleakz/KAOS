@@ -243,3 +243,34 @@ async def r2_lab_promote(req:R2LabPromoteRequest,user=Depends(owner)):
          "execution_enabled":False})
     return {"ok":True,"model_id":req.model_id,"status":"research_active",
             "live_trading_enabled":False,"production_ai_changed":False}
+
+
+# ---- Codex candlestick pattern observatory (R2 research only) --------------
+@router.get("/r2-lab/patterns/catalog")
+async def r2_lab_pattern_catalog(user=Depends(owner)):
+    from kaos_candlestick_patterns import catalog
+    patterns=catalog()
+    return {"patterns":patterns,"catalog_count":len(patterns),
+            "implemented_count":sum(int(p["implemented"]) for p in patterns),
+            "research_only":True,"execution_enabled":False}
+
+@router.get("/r2-lab/patterns/status")
+async def r2_lab_pattern_status(user=Depends(owner)):
+    docs=await db.kaos_r2_pattern_market_state.find(
+        {},{"_id":0}).sort("symbol",1).limit(50).to_list(length=50)
+    return {"markets":docs,"observer_enabled":os.getenv("KAOS_R2_PATTERN_OBSERVER_ENABLED")=="1",
+            "note":"Scheduled observer must also be enabled by cPanel cron. Status describes archived candle scanning, not executed trades.",
+            "research_only":True,"execution_enabled":False}
+
+@router.get("/r2-lab/patterns/observations")
+async def r2_lab_pattern_observations(
+    symbol:str=Query("BTC-USD",pattern=r"^[A-Z0-9_.-]{2,32}$"),
+    limit:int=Query(50,ge=1,le=100),
+    user=Depends(owner),
+):
+    if symbol not in {s for s,_ in MARKETS}:
+        raise HTTPException(422,"Unsupported market")
+    docs=await db.kaos_r2_pattern_observations.find(
+        {"symbol":symbol},{"_id":0}).sort("observed_ts",-1).limit(limit).to_list(length=limit)
+    return {"symbol":symbol,"observations":docs,"research_only":True,
+            "execution_enabled":False,"based_on_trades":False}
