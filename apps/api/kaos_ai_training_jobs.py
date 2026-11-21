@@ -51,7 +51,10 @@ def source_report(*, archive_status="pending",archive_rows=0,source=None):
         used=key in ("r2_ohlcv","candlestick_features") and archive_status=="ready"
         sources.append({
             "key":key,"label":label,
-            "status":"trained" if used else ("missing" if key in ("r2_ohlcv","candlestick_features") and archive_status=="missing" else "not_integrated"),
+            "status":"trained" if used else (
+                "available_not_trained" if key in ("r2_ohlcv","candlestick_features") and archive_status=="available" else
+                "missing" if key in ("r2_ohlcv","candlestick_features") and archive_status=="missing" else
+                "pending" if key in ("r2_ohlcv","candlestick_features") else "not_integrated"),
             "used_in_training":bool(used),
             "rows":archive_rows if key=="r2_ohlcv" else None,
             "provider":source if key=="r2_ohlcv" else None,
@@ -125,7 +128,7 @@ async def train_one_market(job, market):
     inventory=source_report(archive_status="ready",archive_rows=len(rows),source=source)
     if result["status"]=="insufficient_training_history":
         return {**identity,"status":"insufficient_history","rows":len(rows),
-                "source":source,"training_sources":inventory,
+                "source":source,"training_sources":source_report(archive_status="available",archive_rows=len(rows),source=source),
                 "reason":result["required"]}
     fingerprint=result["dataset_fingerprint"]
     model_filter={"owner_id":job["owner_id"],"symbol":symbol,
