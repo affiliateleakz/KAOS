@@ -9,11 +9,21 @@ for each of the 20 configured stock, ETF and crypto markets (from
 `kaos_r2_market_audit.MARKETS`) and fits one independent chronological
 OHLCV logistic research model per market.
 
-Market history and derived candle features are the **only actual model
-features**. The job reports source identity, training sample counts,
-model validity, and data gaps. News/social/insider/short interest/options flow,
-macros and observer features are visibly **not integrated**, not silently
-assumed to have been trained. Forex/options/binary coverage is **not** yet
+The primary model uses archived candle history and derived candle features.
+The worker also audits **already-ingested** historical `kaos_intelligence`
+observations (including news, social, filings, insider, institutional, short
+interest, options flow and macro categories). If at least two valid directional
+source categories have adequate independently timestamped historical coverage
+across training, validation and held-out test periods, it fits an **additional
+enriched research-only model**. Features are joined at each completed candle
+cutoff using BOTH `observed_at` and `published_at`; a headline collected
+later cannot be backfilled into an earlier training feature. Neutral context
+does not become fabricated bullish/bearish evidence. Per-market job status
+reports any missing or insufficient sources rather than claiming they trained.
+Nothing automatically downloads historical articles, insider data or options
+feeds from the internet when the button is clicked; those collectors must
+actually have ingested historical records first. Pattern-observer output is
+not yet a model feature. Forex/options/binary OHLC training is **not** yet
 available in the configured training universe.
 
 The button does not place paper or live orders and does not activate
@@ -73,11 +83,15 @@ concurrent workers from modifying the same job. Expired leases are reclaimed
 on future cron ticks. If archive reads or model fitting fail, the affected
 market records an error and the job continues.
 
-This worker does **not** auto-train on news/insider data because reliable
-historical feature joins and source schemas are not connected yet. Do not
-promote research results to order-execution authority without separate
-model validation, source provenance review, out-of-sample trading tests,
-broker fill verification and independent risk controls.
+The enriched model **only** uses research observations which were already
+persisted before their corresponding historical candle cutoff, and only if
+there are sufficient valid records. It never silently substitutes fresh
+headlines for missing historical features. The enriched model schema is
+`kaos_r2_intelligence_logistic_v1`; it is NOT compatible with production
+inference, has no trading authority, and must not be promoted into an order
+router. Do not promote any research result to execution without independent
+validation, source provenance review, complete out-of-sample trading tests,
+broker fill verification and risk controls.
 
 To pause future training, remove the marked cron entry
 `KAOS_R2_RESEARCH_TRAINING_CRON_V1` and set
