@@ -177,6 +177,31 @@ async def status(user=Depends(member)):
             'sources':sorted(SOURCES),'asset_classes':sorted(SUPPORTED),'live_feeds_included':False,'collector_available_separately':True}
 
 
+@router.get('/ai-evidence-snapshot')
+async def ai_evidence_snapshot(
+    symbol: str=Query(min_length=1,max_length=32),
+    asset_class: str=Query(min_length=2,max_length=16),
+    user=Depends(member),
+):
+    """Read source-aware evidence as of now, no predictions or orders."""
+    from kaos_ai_evidence_features import make_feature_snapshot
+    if asset_class not in ('stock','etf','crypto','forex','option'):
+        raise HTTPException(422,'Unsupported asset class')
+    ticker=symbol.strip().upper()
+    decision=datetime.now(timezone.utc)
+    cutoff=(decision-timedelta(days=90)).isoformat()
+    records=await db.kaos_intelligence.find(
+        {'asset':ticker,'asset_class':asset_class,
+         'observed_at':{'$gte':cutoff,'$lte':decision.isoformat()}},
+        {'_id':0,'asset':1,'asset_class':1,'source':1,
+         'direction':1,'strength':1,'event_id':1,
+         'observed_at':1,'published_at':1,'event_at':1}
+    ).sort('observed_at',-1).limit(5000).to_list(length=5000)
+    return make_feature_snapshot(
+        symbol=ticker, asset_class=asset_class,
+        decision_at=decision, observations=records)
+
+
 @router.get('/health')
 async def health(user=Depends(member)):
     """Shows sampled feed observation recency, never promises that a provider is live."""

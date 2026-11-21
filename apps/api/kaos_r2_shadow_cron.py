@@ -16,6 +16,8 @@ from db import db, now_iso
 from kaos_r2_archive import read_archive, configured, ArchiveUnavailable
 from kaos_r2_market_audit import MARKETS
 from kaos_r2_shadow_predict import prediction, settle
+from kaos_ai_evidence_features import make_feature_snapshot
+from datetime import datetime, timezone
 
 async def _market(symbol,asset_class):
     # Only act on existing fitted candidates, NEVER fabricate a trained model.
@@ -52,6 +54,34 @@ async def _market(symbol,asset_class):
     except ValueError as exc:
         return {"symbol":symbol,"status":"no_eligible_forecast",
                 "reason":str(exc),"new_settlements":settled}
+    # Attach an immutable evidence snapshot at the exact forecast decision
+    # cutoff. This is NOT an intelligence-trained model and does not change
+    # the OHLC-only forecast direction or its probability.
+    cutoff=datetime.fromtimestamp(forecast["candle_end_ts"]/1000,timezone.utc)
+    start=cutoff.replace(microsecond=0)
+    from datetime import timedelta
+    min_iso=(start-timedelta(days=90)).isoformat()
+    end_iso=cutoff.isoformat()
+    evidence=await db.kaos_intelligence.find(
+        {"asset":symbol,"asset_class":asset_class,
+         "observed_at":{"$gte":min_iso,"$lte":end_iso}},
+        {"_id":0,"asset":1,"asset_class":1,"source":1,
+         "event_id":1,"provider":1,"direction":1,"strength":1,
+         "observed_at":1,"published_at":1,"event_at":1}
+    ).sort("observed_at",-1).limit(5000).to_list(length=5000)
+    snapshot=make_feature_snapshot(
+        symbol=symbol,asset_class=asset_class,decision_at=cutoff,
+        observations=evidence,candle_source=source,candle_end_at=cutoff)
+    forecast["evidence_context"]={
+        "schema":snapshot["schema"],
+        "decision_at":snapshot["decision_at"],
+        "source_coverage":snapshot["source_coverage"],
+        "categories":snapshot["categories"],
+        "rejected":snapshot["rejected"],
+        "affects_direction":False,
+        "trained_on_intelligence":False,
+        "research_only":True,
+    }
     import hashlib
     forecast["id"]=hashlib.sha256(
         f'{model["id"]}|{symbol}|{source}|{forecast["observed_ts"]}|{forecast["horizon_bars"]}'.encode()
