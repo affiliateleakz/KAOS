@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import ChartImageAnalyzer from "./ChartImageAnalyzer";
 import { api, errMsg } from "../../lib/api";
 import { StatusBadge } from "../../components/Brand";
 import { Button } from "../../components/ui/button";
@@ -177,6 +178,7 @@ export function AIPage() {
             <td className="p-2">{g.performance_validated?"100+ evaluated":"Insufficient samples"}</td>
           </tr>)}</tbody></table></div>}
       </div>
+      <ChartImageAnalyzer />
       <div className="card-surface mt-6 p-0 overflow-x-auto"><div className="border-b border-[#2E2E2E] p-4"><h3 className="font-heading font-semibold">Recent Predictions</h3></div>
         <Table><TableHeader><TableRow className="border-[#2E2E2E]"><TableHead>Asset</TableHead><TableHead>Prediction</TableHead><TableHead>Confidence</TableHead><TableHead>Model</TableHead><TableHead>Outcome</TableHead></TableRow></TableHeader>
           <TableBody>{d.recentPredictions.length === 0 && <TableRow><TableCell colSpan={5} className="py-6 text-center text-slate-500">No predictions yet</TableCell></TableRow>}
