@@ -292,6 +292,26 @@ async def alpaca_paper_fill_audit(user:dict=Depends(get_current_user)):
     return report
 
 
+@router.get("/fifo-gross-research")
+async def alpaca_paper_fifo_gross_research(user:dict=Depends(get_current_user)):
+    """Owner-only analysis of provisional FIFO gross PnL, not realized net PnL."""
+    from alpaca_paper_fill_audit import fetch_broker_fills
+    from alpaca_paper_fifo import reconstruct_fifo_gross
+    key,secret=await guard(user,reconciliation=True)
+    try:
+        history=await fetch_broker_fills(key,secret)
+    except AlpacaPaperUnavailable as exc:
+        raise HTTPException(503,"Alpaca paper fills unavailable") from exc
+    result=reconstruct_fifo_gross(
+        history["fills"],
+        partial_history=history["partial_history"],
+        rejected_records=history["rejected_records"],
+    )
+    result["broker_account_scope"]="full_alpaca_paper_account_bounded_history"
+    result["source"]=history["source"]
+    return result
+
+
 @router.get("/risk-ledger-readiness")
 async def alpaca_paper_risk_ledger_readiness(user:dict=Depends(get_current_user)):
     """Read-only ledger completeness audit; never treat equity delta as P&L."""
