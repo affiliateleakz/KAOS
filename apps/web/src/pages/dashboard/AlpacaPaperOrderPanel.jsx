@@ -11,12 +11,29 @@ export default function AlpacaPaperOrderPanel(){
   const [orders,setOrders]=useState([]);
   const [result,setResult]=useState(null);
   const [error,setError]=useState("");
+  const [review,setReview]=useState(null);
+  const [reviewError,setReviewError]=useState("");
   const [busy,setBusy]=useState(false);
   const load=useCallback(async()=>{
     try {const r=await api.get("/api/v1/alpaca-paper/orders/kaos");setOrders(r.data.orders||[]);}
     catch(e){if(e?.response?.status!==503&&e?.response?.status!==403)setError(errMsg(e));}
   },[]);
   useEffect(()=>{load();},[load]);
+  const loadReview=useCallback(async()=>{
+    try{
+      const {data}=await api.get("/api/v1/alpaca-paper/research-review");
+      setReview(data);setReviewError("");
+    }catch(e){
+      setReview(null);
+      if(e?.response?.status!==403&&e?.response?.status!==503){
+        setReviewError(errMsg(e)||"AI paper research review unavailable");
+      }else{
+        setReviewError("AI review is available only to the KAOS owner during beta.");
+      }
+    }
+  },[]);
+  useEffect(()=>{loadReview();},[loadReview]);
+
   const previewOrder=async(e)=>{
     e.preventDefault();setBusy(true);setError("");setPreview(null);setResult(null);
     try {
@@ -88,6 +105,29 @@ export default function AlpacaPaperOrderPanel(){
         </div>)}
       </div>
     </div>
+    <section className="space-y-3 rounded border border-[#48402E] p-4" data-testid="alpaca-paper-ai-research-review">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h3 className="font-semibold text-[#D4AF37]">KAOS AI versus Alpaca Paper</h3>
+          <p className="text-xs text-slate-400">Compare independent research forecasts to your manually placed paper orders</p>
+        </div>
+        <button className="rounded border border-[#D4AF37] px-2 py-1 text-xs text-[#D4AF37]" onClick={loadReview} type="button">Refresh review</button>
+      </div>
+      {reviewError&&<p role="status" className="text-xs text-amber-300">{reviewError}</p>}
+      {review&&<>
+        <p className="text-xs text-slate-300">{review.orders_reviewed} manual orders · {review.matched_prior_research_forecasts} with an earlier matching AI forecast · {review.broker_reported_filled_orders} broker-reported filled</p>
+        {!review.rows.length&&<p className="text-sm text-slate-400">No eligible manual Alpaca paper orders yet.</p>}
+        <div className="max-h-64 space-y-2 overflow-auto">
+          {review.rows.slice(0,15).map((r,i)=><div key={r.client_order_id||i} className="rounded border border-[#35302B] p-2 text-xs">
+            <p className="font-semibold">{r.symbol} · {r.broker_status} · Manual paper order</p>
+            {r.research_forecast
+              ? <p className="mt-1 text-slate-300">Prior AI research: {r.research_forecast.bias} · P(up): {(100*Number(r.research_forecast.prob_up)).toFixed(1)}% · outcome: {r.research_forecast.outcome_status||"unknown"}</p>
+              : <p className="mt-1 text-slate-400">No eligible earlier research forecast was available.</p>}
+          </div>)}
+        </div>
+        <p className="text-xs text-amber-300">These manual paper orders were not placed by the AI. A matching forecast does not establish a profitable trade; fees, realized P&amp;L and execution attribution are not verified here.</p>
+      </>}
+    </section>
     <p className="text-xs text-amber-300">Disabled until owner explicitly enables the server flag. An ambiguous broker response is never retried automatically; reconcile it first. This does not place real trades or execute AI signals.</p>
   </section>;
 }
