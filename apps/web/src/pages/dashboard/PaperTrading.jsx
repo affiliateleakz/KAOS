@@ -69,7 +69,7 @@ export default function PaperTrading({embedded=false}) {
       {!embedded&&<h1 className="mb-2 font-heading text-2xl font-bold tracking-wide">Paper Trading</h1>}
       <div className="mb-6 flex items-start gap-2 rounded border border-[#D4AF37]/40 bg-[#D4AF37]/5 p-3 text-sm text-slate-300" data-testid="paper-disclaimer">
         <FlaskConical className="mt-0.5 h-4 w-4 shrink-0 text-[#D4AF37]" />
-        <span>Simulation only. Orders never reach a broker and no money moves. Coinbase crypto can use server-fetched market bid/ask for simulated fills; other markets still require manual prices. No simulated fill is a broker-confirmed execution.</span>
+        <span>The KAOS internal simulator uses simulated fills and no money moves. Alpaca Paper is a separate broker-operated simulated account; its orders reach Alpaca PAPER only after explicit owner confirmation. Coinbase quotes can price internal crypto simulations. Simulated results must not be combined with real-money performance.</span>
       </div>
       {data.kill_switch && (
         <div className="mb-6 flex items-center gap-2 rounded border border-red-500/50 bg-red-500/10 p-3 text-sm text-red-300" data-testid="kill-switch-banner">
@@ -78,7 +78,7 @@ export default function PaperTrading({embedded=false}) {
       )}
       <div className={`mb-6 grid gap-4 ${embedded?"grid-cols-1":"xl:grid-cols-3"}`}>
         {!embedded&&<div className="xl:col-span-2"><PaperMarketChart symbol={form.symbol} assetClass={form.asset_class}/></div>}
-        <section className="card-surface space-y-3 p-4" data-testid="kaos-paper-signal-feed">
+        {!embedded&&<section className="card-surface space-y-3 p-4" data-testid="kaos-paper-signal-feed">
           <div className="flex items-center justify-between gap-2">
             <h2 className="font-semibold text-[#D4AF37]">KAOS AI Signals</h2>
             <button type="button" className="text-xs text-[#D4AF37]" onClick={loadSignals}>Refresh</button>
@@ -92,7 +92,7 @@ export default function PaperTrading({embedded=false}) {
             <p className="mt-1 text-amber-300">Blocked: {(s.block_reasons||[]).join(", ")}</p>
           </article>)}
           <p className="text-xs text-slate-500">A market paper order is your separate manual decision, never authorized by these research signals.</p>
-        </section>
+        </section>}
       </div>
       <section className="card-surface mb-6 p-5 space-y-3" data-testid="alpaca-paper-account">
         <div className="flex flex-wrap items-center justify-between gap-3">
