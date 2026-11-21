@@ -52,7 +52,7 @@ def review_signal(forecast,model,*,now_ms=None):
         block("asset_class_not_supported")
     if model.get("symbol")!=symbol or model.get("source")!=forecast.get("source"):
         block("model_market_or_source_mismatch")
-    if forecast.get("model_schema")!=MODEL_SCHEMA or model.get("model",{}).get("schema")!=MODEL_SCHEMA:
+    if forecast.get("model_schema")!=MODEL_SCHEMA or not isinstance(model.get("model"),dict) or model["model"].get("schema")!=MODEL_SCHEMA:
         block("unsupported_prediction_model")
     if model.get("validation_status")!="validated_research_candidate" or model.get("promotion_blockers"):
         block("unvalidated_model")
