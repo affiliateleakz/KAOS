@@ -49,6 +49,44 @@ jobs:
           path: apps/web/build/
           if-no-files-found: error
           retention-days: 14
+  publish_cpanel_portal:
+    name: Publish compiled cPanel portal to Git branch
+    needs: [python, web, secrets]
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download validated React build
+        uses: actions/download-artifact@v4
+        with:
+          name: kaos-react-portal-${{ github.sha }}
+          path: compiled
+      - name: Verify compiled portal revision and production API target
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s compiled/index.html
+          test -d compiled/static/js
+          test -s compiled/kaos-build-revision.txt
+          test "$(cat compiled/kaos-build-revision.txt)" = "$GITHUB_SHA"
+          grep -Rlq --include='*.js' 'api.tradingwithkaos.com' compiled/static/js
+      - name: Publish static files ONLY to dedicated Git build branch
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          cd compiled
+          git init -q
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -q -b kaos-cpanel-build
+          git add -A
+          git commit -qm "Compiled KAOS portal for ${GITHUB_SHA}"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push --force origin HEAD:refs/heads/kaos-cpanel-build
+
   secrets:
     runs-on: ubuntu-latest
     permissions: { contents: read, pull-requests: read }
