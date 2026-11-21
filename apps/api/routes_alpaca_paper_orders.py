@@ -203,6 +203,7 @@ async def paper_reconcile(req:ReconcileReq,user:dict=Depends(get_current_user)):
     await db.alpaca_paper_manual_orders.update_one(
         {"_id":req.client_order_id},
         {"$set":{"state":"BROKER_REPORTED","broker_status":status,
+                 "broker_id":result.get("id") or row.get("broker_id"),
                  "filled_qty":result.get("filled_qty"),
                  "filled_avg_price":result.get("filled_avg_price")}})
     if status in ("filled","canceled","expired","rejected","done_for_day"):
@@ -256,6 +257,7 @@ async def alpaca_paper_recovery_audit(user:dict=Depends(get_current_user)):
                 {"_id":cid,"user_id":user["id"]},
                 {"$set":{"state":"BROKER_REPORTED",
                          "broker_status":report["broker_status"],
+                         "broker_id":report.get("broker_order_id") or row.get("broker_id"),
                          "filled_qty":report.get("filled_qty"),
                          "filled_avg_price":report.get("filled_avg_price"),
                          "reconciled_at":now_iso()}})
