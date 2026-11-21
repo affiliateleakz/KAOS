@@ -10,7 +10,7 @@ import { FlaskConical, ShieldAlert } from "lucide-react";
 
 const field = "w-full rounded border border-[#2E2E2E] bg-[#080808] px-3 py-2 font-mono text-sm text-white";
 
-export default function PaperTrading() {
+export default function PaperTrading({embedded=false}) {
   const [data, setData] = useState(null);
   const [form, setForm] = useState({ symbol: "BTC-USD", asset_class: "CRYPTO_SPOT", side: "BUY", quantity: "10", quote_price: "" });
   const [busy, setBusy] = useState(false);
@@ -66,7 +66,7 @@ export default function PaperTrading() {
 
   return (
     <div>
-      <h1 className="mb-2 font-heading text-2xl font-bold tracking-wide">Paper Trading</h1>
+      {!embedded&&<h1 className="mb-2 font-heading text-2xl font-bold tracking-wide">Paper Trading</h1>}
       <div className="mb-6 flex items-start gap-2 rounded border border-[#D4AF37]/40 bg-[#D4AF37]/5 p-3 text-sm text-slate-300" data-testid="paper-disclaimer">
         <FlaskConical className="mt-0.5 h-4 w-4 shrink-0 text-[#D4AF37]" />
         <span>Simulation only. Orders never reach a broker and no money moves. Coinbase crypto can use server-fetched market bid/ask for simulated fills; other markets still require manual prices. No simulated fill is a broker-confirmed execution.</span>
@@ -76,8 +76,8 @@ export default function PaperTrading() {
           <ShieldAlert className="h-4 w-4" /> Emergency stop is active. All paper orders are blocked by an administrator.
         </div>
       )}
-      <div className="mb-6 grid gap-4 xl:grid-cols-3">
-        <div className="xl:col-span-2"><PaperMarketChart symbol={form.symbol} assetClass={form.asset_class}/></div>
+      <div className={`mb-6 grid gap-4 ${embedded?"grid-cols-1":"xl:grid-cols-3"}`}>
+        {!embedded&&<div className="xl:col-span-2"><PaperMarketChart symbol={form.symbol} assetClass={form.asset_class}/></div>}
         <section className="card-surface space-y-3 p-4" data-testid="kaos-paper-signal-feed">
           <div className="flex items-center justify-between gap-2">
             <h2 className="font-semibold text-[#D4AF37]">KAOS AI Signals</h2>
