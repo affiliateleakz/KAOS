@@ -74,3 +74,30 @@ async def r2_archive_status(
             "seconds":seconds,"source":source,"closed_bars":len(rows),
             "last_ts":rows[-1]["ts"] if rows else None,
             "research_only":True,"orders_enabled":False}
+
+
+@router.get("/r2-structure-replay")
+async def r2_structure_replay(
+    symbol:str=Query("BTC-USD",pattern=r"^[A-Z0-9_.-]{2,32}$"),
+    asset_class:str=Query("crypto",pattern="^(crypto|stock|etf|forex)$"),
+    seconds:int=Query(60),
+    limit:int=Query(300,ge=100,le=5000),
+    expiry_bars:int=Query(4,ge=1,le=240),
+    lookback:int=Query(12,ge=5,le=100),
+    user=Depends(owner),
+):
+    """Owner-only historical replay from archived, completed provider candles."""
+    from kaos_r2_archive import read_archive, configured, ArchiveUnavailable
+    from kaos_r2_research import structure_replay_from_archive
+    if not configured():
+        raise HTTPException(503,"Private R2 archive not configured")
+    try:
+        rows,source=await read_archive(symbol,asset_class,seconds,limit=limit)
+        result=structure_replay_from_archive(rows,seconds,expiry_bars=expiry_bars,lookback=lookback)
+    except ValueError as exc:
+        raise HTTPException(422,str(exc)) from exc
+    except ArchiveUnavailable as exc:
+        raise HTTPException(503,"Private R2 archive unavailable") from exc
+    return {"strategy":"KAOS_STRUCTURE_RESEARCH_V1","symbol":symbol,
+            "asset_class":asset_class,"seconds":seconds,"source":source,
+            "data_origin":"cloudflare_r2_private_archive",**result}
