@@ -8,7 +8,7 @@ const DEFAULTS=[
  {broker:"kaos_paper",symbol:"SOL-USD",seconds:60},
  {broker:"kaos_paper",symbol:"BTC-USD",seconds:300},
 ];
-function CandleChart({candles}){
+export function CandleChart({candles}){
  const bars=(candles||[]).slice(-70).map(c=>({o:Number(c.open),h:Number(c.high),l:Number(c.low),c:Number(c.close)}))
    .filter(c=>Object.values(c).every(Number.isFinite)&&c.h>=Math.max(c.o,c.c)&&c.l<=Math.min(c.o,c.c));
  if(!bars.length)return <div className="flex h-44 items-center justify-center text-xs text-slate-500">No validated candle data</div>;
