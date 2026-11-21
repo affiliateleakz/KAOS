@@ -196,7 +196,7 @@ export function AIPage() {
         {!trainingWorker&&<p className="text-xs text-amber-300">cPanel training worker is not yet enabled. Training cannot start until the worker is installed.</p>}
         {trainingError&&<p role="alert" className="text-xs text-amber-300">{trainingError}</p>}
         {trainingJob&&<p className="text-sm text-slate-300">Latest job: {trainingJob.status} · {trainingJob.completed||0} / {trainingJob.total||0} markets · {trainingJob.trained||0} trained · {trainingJob.failed||0} unavailable</p>}
-        <p className="text-xs text-amber-300">Current model inputs: verified R2 OHLCV and derived candle features only. News, social, insider activity, options flow and macro-event training are not integrated; the research lab lists coverage by source. Trading remains disabled.</p>
+        <p className="text-xs text-amber-300">Train AI fits R2 candle-only models and optionally separate enriched research models from existing, time-safe ingested news, social, insider and other observations. It shows which data actually trained. Unavailable sources are not claimed as learned; trading remains disabled.</p>
         <a href="/dashboard/backtests" className="text-xs text-[#D4AF37] underline">View full training progress and source coverage</a>
       </section>}
       <div className="grid gap-4 md:grid-cols-4">
