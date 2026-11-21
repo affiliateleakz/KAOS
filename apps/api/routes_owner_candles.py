@@ -343,7 +343,7 @@ async def r2_lab_shadow(
     user=Depends(owner),
 ):
     """Private prediction evidence. A forecast NEVER authorizes an order."""
-    if symbol not in {s for s,_ in MARKETS}:
+    if symbol not in {s for s,_ in CATALOG}:
         raise HTTPException(422,"Unsupported market")
     rows=await db.kaos_r2_shadow_predictions.find(
         {"symbol":symbol},{"_id":0}).sort("observed_ts",-1).limit(limit).to_list(length=limit)
