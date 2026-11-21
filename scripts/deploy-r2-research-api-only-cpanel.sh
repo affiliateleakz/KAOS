@@ -12,6 +12,7 @@ FILES=(
   routes_owner_candles.py
   kaos_r2_ai_lab.py
   kaos_ai_evidence_features.py
+  kaos_ai_evidence_compare.py
   kaos_opportunity.py
   kaos_source_health.py
   kaos_r2_ai_cron.py
