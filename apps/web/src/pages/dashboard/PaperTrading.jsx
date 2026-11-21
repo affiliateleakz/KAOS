@@ -37,7 +37,7 @@ export default function PaperTrading() {
       const r = priceMode==="market" && form.asset_class==="CRYPTO_SPOT"
         ? await api.post("/api/v1/paper/orders/market", {
             symbol:form.symbol,asset_class:"CRYPTO_SPOT",side:form.side,
-            quantity:form.quantity,client_order_id:(globalThis.crypto?.randomUUID?.()||String(Date.now()))
+            quantity:form.quantity,client_order_id:("paper-"+Date.now()+"-"+Math.random().toString(36).slice(2,12))
           })
         : await api.post("/api/v1/paper/orders", form);
       toast.success(`Paper order ${r.data.state}`);
