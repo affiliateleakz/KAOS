@@ -192,6 +192,13 @@ async def r2_lab_train(req:R2LabTrainRequest,user=Depends(owner)):
         raise HTTPException(422,"R2 training data failed validation") from exc
     if result["status"]=="insufficient_training_history":
         return {"ok":False,**result,"symbol":req.symbol,"asset_class":req.asset_class}
+    existing=await db.kaos_r2_research_models.find_one({
+        "owner_id":user["id"],"symbol":req.symbol,
+        "horizon_bars":req.horizon_bars,
+        "dataset_fingerprint":result["dataset_fingerprint"]},
+        {"_id":0,"model":0,"test_predictions":0})
+    if existing:
+        return {"ok":True,"reused_existing":True,**existing}
     model=result.pop("model")
     record={"id":new_id("r2model"),"owner_id":user["id"],
             "symbol":req.symbol,"asset_class":req.asset_class,
