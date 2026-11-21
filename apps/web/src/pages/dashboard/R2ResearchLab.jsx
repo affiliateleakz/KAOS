@@ -185,7 +185,7 @@ export default function R2ResearchLab() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-semibold text-[#D4AF37]">KAOS AI Shadow Predictions</h2>
-            <p className="text-xs text-slate-400">Trained-model forecasts on completed R2 candles · independently verified later · no orders</p>
+            <p className="text-xs text-slate-400">Trained-model forecasts on completed R2 candles · point-in-time news/social context where available · independently verified later · no orders</p>
           </div>
           <button type="button" onClick={() => loadShadow(market)} className="rounded border border-[#D4AF37] px-3 py-2 text-xs text-[#D4AF37]">Refresh forecasts</button>
         </div>
@@ -203,12 +203,18 @@ export default function R2ResearchLab() {
         {!shadow.predictions?.length && <p className="text-sm text-slate-500">No shadow predictions for {market} yet. Run training and activate the research prediction schedule after deployment.</p>}
         <div className="max-h-64 overflow-auto">
           <table className="w-full min-w-[730px] text-left text-xs">
-            <thead><tr className="border-b border-[#444]">{["Observation UTC","Direction","P(up)","Horizon","Validation","Actual outcome","Result"].map(h=><th key={h} className="p-2">{h}</th>)}</tr></thead>
+            <thead><tr className="border-b border-[#444]">{["Observation UTC","Direction","P(up)","Horizon","AI evidence","Validation","Actual outcome","Result"].map(h=><th key={h} className="p-2">{h}</th>)}</tr></thead>
             <tbody>{(shadow.predictions || []).map(p => <tr key={p.id} className="border-b border-[#282828]">
               <td className="p-2">{new Date(p.observed_ts).toISOString()}</td>
               <td className="p-2">{p.direction}</td>
               <td className="p-2">{ratio(p.prob_up)}</td>
               <td className="p-2">{p.horizon_bars} bars</td>
+              <td className="p-2" title="Evidence is observational only; this price model has not been trained on news or social features.">
+                {p.evidence_context
+                  ? (p.evidence_context.source_coverage?.fresh?.length || 0) + " fresh sources / " +
+                    (p.evidence_context.source_coverage?.stale?.length || 0) + " stale"
+                  : "Not recorded"}
+              </td>
               <td className="p-2">{p.validation_status}</td>
               <td className="p-2">{p.outcome_status === "settled" ? p.outcome_direction : "Pending"}</td>
               <td className="p-2">{p.correct === true ? "Matched" : p.correct === false ? "Missed" : "—"}</td>
