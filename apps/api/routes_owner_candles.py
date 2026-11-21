@@ -274,3 +274,39 @@ async def r2_lab_pattern_observations(
         {"symbol":symbol},{"_id":0}).sort("observed_ts",-1).limit(limit).to_list(length=limit)
     return {"symbol":symbol,"observations":docs,"research_only":True,
             "execution_enabled":False,"based_on_trades":False}
+
+
+# ---- R2 AI shadow predictions: forecast -> future-candle verification -------
+@router.get("/r2-lab/shadow")
+async def r2_lab_shadow(
+    symbol:str=Query("BTC-USD",pattern=r"^[A-Z0-9_.-]{2,32}$"),
+    limit:int=Query(60,ge=1,le=100),
+    user=Depends(owner),
+):
+    """Private prediction evidence. A forecast NEVER authorizes an order."""
+    if symbol not in {s for s,_ in MARKETS}:
+        raise HTTPException(422,"Unsupported market")
+    rows=await db.kaos_r2_shadow_predictions.find(
+        {"symbol":symbol},{"_id":0}).sort("observed_ts",-1).limit(limit).to_list(length=limit)
+    settled=[x for x in rows if x.get("outcome_status")=="settled"]
+    triggered=[x for x in settled if x.get("direction") in ("UP","DOWN")
+               and x.get("outcome_direction") in ("UP","DOWN")]
+    correct=sum(x.get("correct") is True for x in triggered)
+    return {
+        "symbol":symbol,"predictions":rows,
+        "summary":{
+            "shown":len(rows),
+            "settled":len(settled),
+            "pending":sum(x.get("outcome_status")=="pending" for x in rows),
+            "hold":sum(x.get("direction")=="HOLD" for x in rows),
+            "evaluated_directional":len(triggered),
+            "correct":correct,
+            "incorrect":len(triggered)-correct,
+            "directional_accuracy":round(correct/len(triggered),4) if triggered else None,
+            "warning":"Research accuracy on overlapping shadow signals; NOT executable strategy win rate or profitability.",
+        },
+        "research_only":True,"execution_enabled":False,"based_on_trades":False,
+        "auto_train_configured":os.getenv("KAOS_R2_AI_RESEARCH_AUTO_TRAIN")=="1",
+        "shadow_configured":os.getenv("KAOS_R2_SHADOW_PREDICT_ENABLED")=="1",
+        "note":"These schedules run in separate cPanel cron environments; toggles here are process defaults, not proof of scheduled execution.",
+    }
