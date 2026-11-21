@@ -83,7 +83,7 @@ def join_asof_samples(rows,events,seconds,horizon):
             active.append(event)
             count[event["source"]]+=1
             total[event["source"]]+=event["vote"]
-            hit.add(event["key"])
+            if event["observed_ms"]>=cutoff-LOOKBACK_MS: hit.add(event["key"])
             current_directional_count+=1
         while active and active[0]["observed_ms"]<cutoff-LOOKBACK_MS:
             event=active.popleft()
