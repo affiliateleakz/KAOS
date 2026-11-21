@@ -1,3 +1,4 @@
+import AlpacaPaperOrderPanel from "./AlpacaPaperOrderPanel";
 import React, { useCallback, useEffect, useState } from "react";
 import { api, errMsg } from "../../lib/api";
 import { StatusBadge } from "../../components/Brand";
@@ -89,6 +90,7 @@ export default function PaperTrading() {
           <p className="text-xs text-amber-300">This Alpaca account is separate from KAOS's internal $100 simulator below. Their balances, orders and performance are never combined. AI trading is disabled.</p>
         </>}
       </section>
+      <AlpacaPaperOrderPanel />
       <div className="grid gap-6 lg:grid-cols-3">
         <form onSubmit={submit} className="card-surface space-y-3 p-5" data-testid="paper-order-form">
           <h3 className="font-heading font-semibold">New paper order</h3>
