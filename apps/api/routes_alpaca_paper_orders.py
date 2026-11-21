@@ -51,7 +51,7 @@ def _notional(value):
     return result
 
 
-async def guard(user):
+async def guard(user, *, reconciliation=False):
     if os.getenv("KAOS_ALPACA_PAPER_ORDERS_ENABLED")!="1":
         raise HTTPException(503,"Alpaca paper orders are not enabled on KAOS")
     owner=os.getenv("KAOS_CANDLE_OWNER_USER_ID","")
@@ -61,7 +61,7 @@ async def guard(user):
         raise HTTPException(403,"Account disabled")
     if not (await get_entitlements(user)).get("botAccess"):
         raise HTTPException(403,"Bot access required")
-    if await get_setting("paper_kill_switch",False):
+    if not reconciliation and await get_setting("paper_kill_switch",False):
         raise HTTPException(403,"Paper emergency stop active")
     return await credentials(user)
 
@@ -86,7 +86,7 @@ async def preflight(key,secret,user,symbol,notional):
     if not all(v.is_finite() and v>=0 for v in (equity,last,cash)) or not last:
         raise HTTPException(503,"Cannot verify Alpaca paper account risk balances")
     exposure=sum(
-        (max(Decimal(str(x.get("market_value","0"))),Decimal("0")) for x in pos),
+        (abs(Decimal(str(x.get("market_value","0")))) for x in pos),
         Decimal("0"))
     if len(pos)>=LIMITS.max_open_positions:
         raise HTTPException(409,"Paper position count limit reached")
@@ -188,7 +188,7 @@ async def paper_confirm(req:ConfirmReq,user:dict=Depends(get_current_user)):
 
 @router.post("/orders/reconcile")
 async def paper_reconcile(req:ReconcileReq,user:dict=Depends(get_current_user)):
-    key,secret=await guard(user)
+    key,secret=await guard(user,reconciliation=True)
     row=await db.alpaca_paper_manual_orders.find_one({"_id":req.client_order_id,
                                                        "user_id":user["id"]})
     if not row:raise HTTPException(404,"No KAOS-owned paper order")
@@ -215,7 +215,7 @@ async def paper_reconcile(req:ReconcileReq,user:dict=Depends(get_current_user)):
 
 @router.get("/orders/kaos")
 async def kaos_paper_orders(user:dict=Depends(get_current_user)):
-    await guard(user)
+    await guard(user,reconciliation=True)
     rows=await db.alpaca_paper_manual_orders.find(
         {"user_id":user["id"]},{"_id":0}).sort("created_at",-1).limit(30).to_list(length=30)
     return {"orders":rows,"paper_only":True,"ai_execution_enabled":False}
