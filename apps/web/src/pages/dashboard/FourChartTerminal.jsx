@@ -8,7 +8,7 @@ const DEFAULTS=[
  {broker:"kaos_paper",symbol:"SOL-USD",seconds:60},
  {broker:"kaos_paper",symbol:"BTC-USD",seconds:300},
 ];
-function CandleChart({candles}){
+export function CandleChart({candles}){
  const bars=(candles||[]).slice(-70).map(c=>({o:Number(c.open),h:Number(c.high),l:Number(c.low),c:Number(c.close)}))
    .filter(c=>Object.values(c).every(Number.isFinite)&&c.h>=Math.max(c.o,c.c)&&c.l<=Math.min(c.o,c.c));
  if(!bars.length)return <div className="flex h-44 items-center justify-center text-xs text-slate-500">No validated candle data</div>;
@@ -21,10 +21,13 @@ function CandleChart({candles}){
 function Tile({index,config,onChange,onSave}){
  const [response,setResponse]=useState(null),[error,setError]=useState(""),[loading,setLoading]=useState(false);
  const load=useCallback(async()=>{
-  if(config.broker!=="kaos_paper"){setResponse(null);setError("Broker chart integration not verified; no substitute prices shown.");return;}
+  if(!["kaos_paper","alpaca_paper"].includes(config.broker)){setResponse(null);setError("Broker chart integration not verified; no substitute prices shown.");return;}
   setLoading(true);
   try{
-   const r=await api.get("/api/v1/paper/candles/"+encodeURIComponent(config.symbol)+"?granularity="+config.seconds);
+   const url=config.broker==="alpaca_paper"
+     ? "/api/v1/alpaca-paper/candles/"+encodeURIComponent(config.symbol)+"?seconds="+config.seconds
+     : "/api/v1/paper/candles/"+encodeURIComponent(config.symbol)+"?granularity="+config.seconds;
+   const r=await api.get(url);
    if(!Array.isArray(r.data?.candles))throw new Error("Invalid candle response");
    setResponse(r.data);setError("");
   }catch(e){setResponse(null);setError(e?.response?.data?.detail||"Candle feed unavailable");}
@@ -34,7 +37,7 @@ function Tile({index,config,onChange,onSave}){
  return <article className="rounded-lg border border-slate-700 bg-[#101010] p-3" data-testid={`kaos-chart-${index+1}`}>
   <div className="mb-3 flex flex-wrap items-center gap-2">
    <strong className="text-sm">Chart {index+1}</strong>
-   <select aria-label={`Chart ${index+1} broker`} value={config.broker} onChange={e=>onChange({...config,broker:e.target.value})} className="rounded bg-[#222] p-1 text-xs"><option value="kaos_paper">KAOS market data</option><option value="coinbase">Coinbase (pending chart verification)</option><option value="alpaca">Alpaca (pending live chart data)</option><option value="oanda">OANDA (pending live chart data)</option></select>
+   <select aria-label={`Chart ${index+1} broker`} value={config.broker} onChange={e=>onChange({...config,broker:e.target.value})} className="rounded bg-[#222] p-1 text-xs"><option value="kaos_paper">KAOS market data</option><option value="alpaca_paper">Alpaca Paper · US stocks</option><option value="coinbase">Coinbase (pending chart verification)</option><option value="alpaca">Alpaca (pending live chart data)</option><option value="oanda">OANDA (pending live chart data)</option></select>
    <input aria-label={`Chart ${index+1} symbol`} value={config.symbol} onChange={e=>onChange({...config,symbol:e.target.value.toUpperCase().slice(0,32)})} className="w-28 rounded bg-[#222] p-1 text-xs"/>
    <select aria-label={`Chart ${index+1} timeframe`} value={config.seconds} onChange={e=>onChange({...config,seconds:Number(e.target.value)})} className="rounded bg-[#222] p-1 text-xs"><option value={60}>1m</option><option value={300}>5m</option><option value={900}>15m</option></select>
    <button type="button" onClick={load} className="ml-auto rounded border border-slate-600 px-2 py-1 text-xs">Refresh</button>
@@ -62,7 +65,7 @@ export default function FourChartTerminal({entitlements}){
    api.put("/api/v1/trading/charts/"+i,v).then(()=>setMessage("Chart "+(i+1)+" settings saved.")).catch(()=>setMessage("Chart settings not saved; verify symbol, timeframe and membership."));
  };
  return <section className="mb-6 space-y-3" data-testid="kaos-four-chart-terminal">
-  <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-semibold">KAOS Multi-Chart Terminal</h2><p className="text-xs text-slate-400">Independent chart settings (press Save chart to sync) · current source supports 1m, 5m and 15m Coinbase public candles only. Other feeds are unavailable. No real orders.</p></div>
+  <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-semibold">KAOS Multi-Chart Terminal</h2><p className="text-xs text-slate-400">Independent chart settings (press Save chart to sync) · Coinbase crypto and connected Alpaca Paper IEX stocks support read-only 1m, 5m and 15m candles. Other feeds are unavailable. No real orders.</p></div>
    <label className="text-sm">Charts <select value={Math.min(count,maxCharts)} onChange={e=>setCount(Number(e.target.value))} className="ml-2 rounded bg-[#222] p-2">{Array.from({length:maxCharts},(_,i)=><option key={i} value={i+1}>{i+1}</option>)}</select></label>
   </div>
   {message && <p role="status" className="text-xs text-slate-400">{message}</p>}

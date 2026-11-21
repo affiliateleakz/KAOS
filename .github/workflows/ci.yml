@@ -36,6 +36,15 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - run: npm run build
         env: { CI: "false" }
+      - name: Version compiled portal
+        run: printf '%s\\n' "$GITHUB_SHA" > build/kaos-build-revision.txt
+      - name: Package static React portal for isolated hosting
+        uses: actions/upload-artifact@v4
+        with:
+          name: kaos-react-portal-${{ github.sha }}
+          path: apps/web/build/
+          if-no-files-found: error
+          retention-days: 14
   secrets:
     runs-on: ubuntu-latest
     permissions: { contents: read, pull-requests: read }

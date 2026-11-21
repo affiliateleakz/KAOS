@@ -277,6 +277,45 @@ async def r2_lab_pattern_observations(
 
 
 # ---- R2 AI shadow predictions: forecast -> future-candle verification -------
+@router.get("/r2-lab/bot-signal-preview")
+async def r2_lab_bot_signal_preview(
+    symbol:str=Query("BTC-USD",pattern=r"^[A-Z0-9_.-]{2,32}$"),
+    limit:int=Query(10,ge=1,le=30),
+    user=Depends(owner),
+):
+    """Versioned AI->bot signal preview, explicitly non-executable.
+
+    The real bot must NEVER submit these preview records to an order route.
+    """
+    from kaos_ai_bot_signal import signal_preview
+    candidates=await db.kaos_r2_shadow_predictions.find(
+        {"symbol":symbol},{"_id":0}).sort("observed_ts",-1).limit(limit).to_list(length=limit)
+    model_cache={}
+    previews=[]
+    for doc in candidates:
+        model_id=doc.get("model_id")
+        if not model_id:
+            continue
+        if model_id not in model_cache:
+            model_cache[model_id]=await db.kaos_r2_research_models.find_one(
+                {"id":model_id,"owner_id":user["id"],
+                 "research_only":True,"execution_enabled":False},
+                {"_id":0})
+        model=model_cache[model_id]
+        if not model:
+            continue
+        try:
+            previews.append(signal_preview(doc,model))
+        except (ValueError,TypeError,KeyError):
+            # Invalid rows fail closed and are not exposed to the bot.
+            continue
+    return {"schema":"kaos_ai_bot_signal_preview_collection_v1",
+            "symbol":symbol,"signals":previews,
+            "research_only":True,"execution_enabled":False,
+            "bot_order_authorized":False,
+            "note":"Owner-visible research feed only; never submit as a paper or live order."}
+
+
 @router.get("/r2-lab/shadow")
 async def r2_lab_shadow(
     symbol:str=Query("BTC-USD",pattern=r"^[A-Z0-9_.-]{2,32}$"),

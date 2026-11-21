@@ -10,21 +10,23 @@ const H = ({ children }) => <h1 className="mb-6 font-heading text-2xl font-bold 
 
 export function TradingOps() {
   const [t, setT] = useState(null);
+  const [loadError, setLoadError] = useState("");
   const [trades, setTrades] = useState([]);
   const [strat, setStrat] = useState(null);
   const [models, setModels] = useState([]);
   useEffect(() => {
-    api.get("/api/admin/trading/telemetry").then((r) => setT(r.data)).catch(() => {});
+    api.get("/api/admin/trading/telemetry").then((r) => {setT(r.data);setLoadError("");}).catch((e) => setLoadError(errMsg(e)||"Trading telemetry unavailable"));
     api.get("/api/admin/trading/trades").then((r) => setTrades(r.data)).catch(() => {});
     api.get("/api/admin/official-strategy").then((r) => setStrat(r.data)).catch(() => {});
     api.get("/api/admin/ai-models").then((r) => setModels(r.data)).catch(() => {});
   }, []);
-  if (!t) return <p className="text-slate-500">Loading…</p>;
+  if (!t) return <div className="space-y-3"><H>Trading Operations</H><p role="status" className="text-amber-300">{loadError||"Loading trading telemetry…"}</p><a className="text-[#D4AF37] underline" href="/dashboard/paper">Open KAOS Paper Trading</a></div>;
   const cards = [["Signals", t.signals], ["Order Attempts", t.orderAttempts], ["Broker Confirmed", t.brokerConfirmed],
     ["Failed", t.failed], ["Results", t.results], ["Win Rate", t.winRate != null ? t.winRate + "%" : "—"], ["Net P/L", t.netPnl]];
   return (
     <div>
       <H>Trading Operations</H>
+      <div className="mb-4"><a className="inline-flex rounded border border-[#D4AF37] px-3 py-2 text-sm text-[#D4AF37]" href="/dashboard/paper">Open Paper Trading &amp; Market Charts</a></div>
       <div className="mb-4 rounded-lg border border-[#2E2E2E] bg-[#0c0c0c] p-3 text-xs text-slate-500">Aggregate telemetry across all members. Records flagged SIM are simulated demo data.</div>
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-7">
         {cards.map(([l, v]) => (<div key={l} className="card-surface p-4"><div className="label-mono">{l}</div><div className="mt-1 font-mono text-2xl font-bold text-[#D4AF37]">{v}</div></div>))}
