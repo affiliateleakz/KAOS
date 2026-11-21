@@ -18,6 +18,7 @@ FILES=(
   kaos_ai_paper_review.py
   kaos_ai_bot_signal.py
   kaos_ai_training_jobs.py
+  kaos_ai_paper_loop.py
   kaos_ai_intelligence_training.py
   routes_alpaca_paper.py
   routes_alpaca_paper_orders.py
