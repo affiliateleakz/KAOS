@@ -15,6 +15,10 @@ export default function AlpacaPaperOrderPanel(){
   const [reviewError,setReviewError]=useState("");
   const [readiness,setReadiness]=useState(null);
   const [readinessError,setReadinessError]=useState("");
+  const [recovery,setRecovery]=useState(null);
+  const [ledger,setLedger]=useState(null);
+  const [safetyError,setSafetyError]=useState("");
+  const [safetyBusy,setSafetyBusy]=useState(false);
   const [busy,setBusy]=useState(false);
   const load=useCallback(async()=>{
     try {const r=await api.get("/api/v1/alpaca-paper/orders/kaos");setOrders(r.data.orders||[]);}
@@ -47,6 +51,18 @@ export default function AlpacaPaperOrderPanel(){
     }
   },[symbol]);
   useEffect(()=>{loadReadiness();},[loadReadiness]);
+  const checkPaperSafety=async()=>{
+    setSafetyBusy(true);setSafetyError("");
+    try{
+      const results=await Promise.all([
+        api.post("/api/v1/alpaca-paper/orders/recovery-audit",{}),
+        api.get("/api/v1/alpaca-paper/risk-ledger-readiness")
+      ]);
+      setRecovery(results[0].data);setLedger(results[1].data);
+      await load();
+    }catch(e){setSafetyError(errMsg(e)||"Paper recovery or ledger checks unavailable");}
+    finally{setSafetyBusy(false);}
+  };
   const previewOrder=async(e)=>{
     e.preventDefault();setBusy(true);setError("");setPreview(null);setResult(null);
     try {
@@ -83,6 +99,26 @@ export default function AlpacaPaperOrderPanel(){
       <p className="mt-1 text-xs text-slate-400">Owner-only beta · manual BUY · US equities only · $1–$25 · market hours · real IEX quote, Alpaca simulated execution</p>
     </div>
     <AlpacaPaperStockChart symbol={symbol}/>
+    <section className="space-y-3 rounded border border-[#48402E] p-3" data-testid="alpaca-paper-safety-audit">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h3 className="font-semibold text-[#D4AF37]">Broker recovery &amp; daily risk ledger</h3>
+          <p className="text-xs text-slate-400">Read-only broker reconciliation · no order resubmissions</p>
+        </div>
+        <button type="button" disabled={safetyBusy} onClick={checkPaperSafety}
+          className="rounded border border-[#D4AF37] px-3 py-2 text-xs text-[#D4AF37] disabled:opacity-50">
+          {safetyBusy?"Checking…":"Audit paper safety"}
+        </button>
+      </div>
+      {safetyError&&<p role="alert" className="text-xs text-amber-300">{safetyError}</p>}
+      {recovery&&<p className="text-xs text-slate-300">Orders reconciled: {recovery.checked} · still unresolved: {recovery.unresolved} · new orders sent: {recovery.orders_submitted}</p>}
+      {ledger&&<>
+        <p className="text-xs text-amber-300">Verified daily realized loss: {ledger.realized_loss_limit_verified?"Yes":"Not yet"} · automated paper trading disabled</p>
+        <p className="text-xs text-slate-400">Risk ledger missing: {ledger.incomplete_requirements?.join(", ")}</p>
+        <p className="text-xs text-slate-500">{ledger.note}</p>
+      </>}
+    </section>
+
     <section className="rounded border border-[#48402E] p-3 space-y-2" data-testid="kaos-alpaca-ai-paper-readiness">
       <div className="flex flex-wrap justify-between gap-2">
         <div><h3 className="font-semibold text-[#D4AF37]">AI-to-Alpaca Paper Readiness</h3>
