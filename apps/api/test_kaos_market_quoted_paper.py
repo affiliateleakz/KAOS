@@ -9,9 +9,10 @@ from market_data import Quote, QuoteUnavailable
 NOW=datetime.now(timezone.utc)
 
 def quote(time=None):
+    captured=datetime.now(timezone.utc)
     return Quote(symbol="BTC-USD",bid=Decimal("69999"),ask=Decimal("70001"),
-                 last=Decimal("70000"),quote_time=time or NOW,
-                 fetched_at=NOW,source="coinbase_exchange_public_ticker")
+                 last=Decimal("70000"),quote_time=time if time is not None else captured,
+                 fetched_at=captured,source="coinbase_exchange_public_ticker")
 
 def test_market_paper_uses_server_ask_not_client_price(monkeypatch):
     observed={}
