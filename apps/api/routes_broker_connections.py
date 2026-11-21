@@ -18,7 +18,7 @@ from services import audit_log
 
 router = APIRouter(prefix="/api/v1/broker-connections", tags=["broker-connections"])
 
-SUPPORTED = ("coinbase",)
+SUPPORTED = ("coinbase", "alpaca_paper")
 
 
 class CoinbaseCredentials(BaseModel):
@@ -55,6 +55,46 @@ async def _verify_coinbase(key_name: str, private_key: str) -> None:
         raise HTTPException(503, "Coinbase verification is unavailable on this server")
     except Exception:
         raise HTTPException(400, "Coinbase rejected these credentials")
+
+
+class AlpacaPaperCredentials(BaseModel):
+    key_id: str = Field(min_length=8,max_length=512)
+    secret_key: str = Field(min_length=16,max_length=2048)
+
+
+@router.put("/alpaca-paper")
+async def save_alpaca_paper(body: AlpacaPaperCredentials, user:dict=Depends(get_current_user)):
+    """Verify paper credentials against the fixed Alpaca paper hostname."""
+    from alpaca_paper_client import verify_paper_account, AlpacaPaperUnavailable
+    if user.get("account_status","active")!="active" or user.get("extension_access_revoked"):
+        raise HTTPException(403,"Account disabled")
+    crypt=vault()
+    try:
+        verified=await verify_paper_account(body.key_id,body.secret_key)
+    except AlpacaPaperUnavailable as exc:
+        raise HTTPException(400,str(exc)) from exc
+    row={
+        "user_id":user["id"],"broker":"alpaca_paper",
+        "verified":True,"saved":True,"paper_only":True,
+        "key_name_enc":crypt.encrypt(body.key_id.strip().encode()).decode(),
+        "private_key_enc":crypt.encrypt(body.secret_key.strip().encode()).decode(),
+        "key_hint":_hint(body.key_id),"updated_at":now_iso()
+    }
+    await db.broker_connections.update_one(
+        {"user_id":user["id"],"broker":"alpaca_paper"},
+        {"$set":row},upsert=True)
+    await audit_log(user,"broker_connection_saved","broker","alpaca_paper")
+    return {**_public(row),"paper_only":True,"account":verified}
+
+
+@router.delete("/alpaca-paper")
+async def delete_alpaca_paper(user:dict=Depends(get_current_user)):
+    deleted=await db.broker_connections.delete_one(
+        {"user_id":user["id"],"broker":"alpaca_paper"})
+    if not deleted.deleted_count:
+        raise HTTPException(404,"No saved Alpaca paper account")
+    await audit_log(user,"broker_connection_removed","broker","alpaca_paper")
+    return {"broker":"alpaca_paper","saved":False}
 
 
 @router.get("")
