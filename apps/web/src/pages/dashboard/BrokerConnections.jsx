@@ -6,7 +6,8 @@ const BROKERS = [
   ["pocketoption", "Pocket Option", "https://pocketoption.com/", "Extension integration"],
   ["kraken", "Kraken", "https://www.kraken.com/", "Adapter pending"],
   ["ibkr", "Interactive Brokers", "https://www.interactivebrokers.com/", "Gateway adapter pending"],
-  ["alpaca", "Alpaca", "https://alpaca.markets/", "Adapter pending"],
+  ["alpaca", "Alpaca", "https://alpaca.markets/", "Live adapter pending"],
+  ["alpaca_paper", "Alpaca Paper", "https://app.alpaca.markets/", "Paper account connection"],
   ["oanda", "OANDA", "https://www.oanda.com/", "Adapter pending"],
   ["tradier", "Tradier", "https://tradier.com/", "Adapter pending"],
   ["tastytrade", "tastytrade", "https://tastytrade.com/", "Adapter pending"],
@@ -26,6 +27,8 @@ export default function BrokerConnections() {
   const [saved, setSaved] = useState({});
   const [form, setForm] = useState({key_name:"", private_key:""});
   const [busy, setBusy] = useState(false);
+  const [alpacaForm,setAlpacaForm] = useState({key_id:"",secret_key:""});
+  const [alpacaBusy,setAlpacaBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const load = useCallback(async () => {
@@ -51,6 +54,24 @@ export default function BrokerConnections() {
     try { await api.delete("/api/v1/broker-connections/coinbase"); await load(); setNotice("Coinbase disconnected."); }
     catch(e) { setError(errMsg(e)); }
     finally { setBusy(false); }
+  }
+  async function saveAlpaca(event) {
+    event.preventDefault();setAlpacaBusy(true);setError("");setNotice("");
+    try {
+      await api.put("/api/v1/broker-connections/alpaca-paper",alpacaForm);
+      setAlpacaForm({key_id:"",secret_key:""});
+      setNotice("Alpaca Paper verified and saved. This connection cannot place live trades.");
+      await load();
+    } catch(e) {setError("Alpaca Paper connection failed: "+errMsg(e));}
+    finally {setAlpacaBusy(false);}
+  }
+  async function disconnectAlpaca() {
+    if (!window.confirm("Disconnect your Alpaca paper account from KAOS?")) return;
+    setAlpacaBusy(true);setError("");
+    try {
+      await api.delete("/api/v1/broker-connections/alpaca-paper");
+      setNotice("Alpaca Paper disconnected.");await load();
+    } catch(e){setError(errMsg(e));} finally{setAlpacaBusy(false);}
   }
   return <section className="mx-auto max-w-4xl space-y-6 text-white" data-testid="member-broker-connections">
     <div><h1 className="text-2xl font-bold">KAOS Broker Connections</h1><p className="mt-2 text-sm text-slate-400">Manage broker access for your KAOS membership. Saved credentials remain encrypted on the website backend and are not returned to your extension.</p></div>
@@ -78,6 +99,25 @@ export default function BrokerConnections() {
         {saved.coinbase?.saved && <button type="button" disabled={busy} onClick={disconnect} className="ml-3 rounded border border-red-700 px-4 py-2 text-red-300 disabled:opacity-50">Disconnect</button>}
       </form>
       <p className="mt-4 text-xs text-slate-400">Use View + Trade permissions; disable transfers. Never include keys in diagnostic exports.</p>
+    </div>
+    <div className="rounded-lg border border-[#D4AF37]/40 bg-[#111] p-5" data-testid="alpaca-paper-connection">
+      <h2 className="text-xl font-semibold text-[#D4AF37]">Alpaca Paper Trading</h2>
+      <p className="mt-2 text-sm text-slate-400">Connect an Alpaca paper account to view its paper portfolio and order history in KAOS. Use paper API credentials only; live Alpaca keys will not work against the paper endpoint.</p>
+      <p className="mt-2 text-xs text-amber-300">This first stage is read-only. Connecting does not authorize AI or manual order submission.</p>
+      <form onSubmit={saveAlpaca} className="mt-4 space-y-3">
+        <label className="block text-sm">Paper API key ID
+          <input autoComplete="off" maxLength={512} className="mt-1 w-full rounded border border-slate-600 bg-[#080808] p-3"
+            value={alpacaForm.key_id} onChange={e=>setAlpacaForm({...alpacaForm,key_id:e.target.value})} required />
+        </label>
+        <label className="block text-sm">Paper API secret
+          <input type="password" autoComplete="off" maxLength={2048} className="mt-1 w-full rounded border border-slate-600 bg-[#080808] p-3"
+            value={alpacaForm.secret_key} onChange={e=>setAlpacaForm({...alpacaForm,secret_key:e.target.value})} required />
+        </label>
+        <button type="submit" disabled={alpacaBusy} className="rounded bg-[#D4AF37] px-4 py-2 font-semibold text-black disabled:opacity-50">{alpacaBusy?"Verifying…":"Verify & save paper account"}</button>
+        {saved.alpaca_paper?.saved&&<button type="button" disabled={alpacaBusy} onClick={disconnectAlpaca} className="ml-3 rounded border border-red-700 px-4 py-2 text-red-300">Disconnect</button>}
+      </form>
+      {saved.alpaca_paper?.verified&&<a href="/dashboard/paper" className="mt-3 inline-block text-sm text-[#D4AF37] underline">Go to Paper Trading</a>}
+      <p className="mt-3 text-xs text-slate-500">Credentials are verified on Alpaca's dedicated paper API and encrypted on the KAOS server. Never paste keys into public chat or screenshots.</p>
     </div>
     <p className="text-xs text-slate-400">Broker names marked “Adapter pending” are not available for automated trading yet. Selecting a broker does not imply that live trading is supported.</p>
   </section>;
