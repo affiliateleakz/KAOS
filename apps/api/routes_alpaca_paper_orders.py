@@ -74,8 +74,9 @@ async def preflight(key,secret,user,symbol,notional):
     if await get_setting("paper_kill_switch",False):
         raise HTTPException(403,"Paper emergency stop active")
     quote=await latest_stock_quote(key,secret,symbol)
-    now=datetime.now(timezone.utc)
     pos=await paper_request(key,secret,"GET","/v2/positions")
+    # Recheck quote age after any slow broker position response.
+    now=datetime.now(timezone.utc)
     if not isinstance(pos,list):
         raise HTTPException(503,"Alpaca paper positions unavailable")
     # Conservative account-equity loss proxy; true realized daily P&L
