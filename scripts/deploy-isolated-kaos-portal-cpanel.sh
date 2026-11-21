@@ -28,6 +28,18 @@ else
 fi
 test -s "$STAGE/index.html" || { echo "Compiled portal missing"; exit 1; }
 test -d "$STAGE/static" || { echo "Compiled assets missing"; exit 1; }
+# The front-end includes new Alpaca and research API routes; do not deploy
+# until the Python Passenger API installer has staged the same revision.
+LIVE_API="${KAOS_LIVE_API_ROOT:-$HOME/tradingwithkaos.com/backend}"
+test -s "$LIVE_API/kaos-paper-api-revision.txt" || {
+  echo "Missing matching paper API install marker. Deploy verified API first."
+  exit 1
+}
+API_BUILT="$(cat "$LIVE_API/kaos-paper-api-revision.txt")"
+test "$API_BUILT" = "$MAIN" || {
+  echo "API deployment revision ($API_BUILT) does not match main ($MAIN). Stop."
+  exit 1
+}
 BUILT="$(cat "$STAGE/kaos-build-revision.txt")"
 test "$BUILT" = "$MAIN" || {
   echo "Compiled portal build ($BUILT) differs from main ($MAIN). Stop safely."
