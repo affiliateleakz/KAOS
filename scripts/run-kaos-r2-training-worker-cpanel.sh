@@ -8,8 +8,13 @@ test -x "$PY"
 test -s "$LIVE/.env"
 test -s "$LIVE/apps/api/kaos_ai_training_jobs.py"
 test -s "$LIVE/kaos-paper-api-revision.txt"
+test -s "$LIVE/apps/api/kaos_ai_paper_loop.py"
+# A single flock protects training and paper prediction ticks. Neither calls a broker.
+run_once() {
+  "$PY" "$LIVE/apps/api/kaos_ai_training_jobs.py"
+  "$PY" "$LIVE/apps/api/kaos_ai_paper_loop.py"
+}
 if command -v flock >/dev/null; then
-  # Stagger overlapping runs during slow archive reads. Mongo also leases jobs.
-  exec flock -n "$HOME/.kaos-r2-training.lock" "$PY" "$LIVE/apps/api/kaos_ai_training_jobs.py"
+  exec flock -n "$HOME/.kaos-r2-training.lock" /bin/bash -c '"$1" "$2"; "$1" "$3"' kaos "$PY" "$LIVE/apps/api/kaos_ai_training_jobs.py" "$LIVE/apps/api/kaos_ai_paper_loop.py"
 fi
-exec "$PY" "$LIVE/apps/api/kaos_ai_training_jobs.py"
+run_once
