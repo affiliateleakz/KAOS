@@ -17,6 +17,7 @@ export default function AlpacaPaperOrderPanel(){
   const [readinessError,setReadinessError]=useState("");
   const [recovery,setRecovery]=useState(null);
   const [ledger,setLedger]=useState(null);
+  const [fillAudit,setFillAudit]=useState(null);
   const [safetyError,setSafetyError]=useState("");
   const [safetyBusy,setSafetyBusy]=useState(false);
   const [busy,setBusy]=useState(false);
@@ -56,9 +57,10 @@ export default function AlpacaPaperOrderPanel(){
     try{
       const results=await Promise.all([
         api.post("/api/v1/alpaca-paper/orders/recovery-audit",{}),
-        api.get("/api/v1/alpaca-paper/risk-ledger-readiness")
+        api.get("/api/v1/alpaca-paper/risk-ledger-readiness"),
+        api.get("/api/v1/alpaca-paper/fill-audit")
       ]);
-      setRecovery(results[0].data);setLedger(results[1].data);
+      setRecovery(results[0].data);setLedger(results[1].data);setFillAudit(results[2].data);
       await load();
     }catch(e){setSafetyError(errMsg(e)||"Paper recovery or ledger checks unavailable");}
     finally{setSafetyBusy(false);}
@@ -112,6 +114,13 @@ export default function AlpacaPaperOrderPanel(){
       </div>
       {safetyError&&<p role="alert" className="text-xs text-amber-300">{safetyError}</p>}
       {recovery&&<p className="text-xs text-slate-300">Orders reconciled: {recovery.checked} · still unresolved: {recovery.unresolved} · new orders sent: {recovery.orders_submitted}</p>}
+      {fillAudit&&<>
+        <p className="text-xs text-slate-300">Broker fill audit: {fillAudit.matched_fills} KAOS-matched fill activities across {fillAudit.matched_orders} orders · {fillAudit.unmatched_broker_fills} unrelated broker fills</p>
+        <p className="text-xs text-amber-300">Historical completeness: {fillAudit.partial_history?"Incomplete: broker pagination limit reached":"Returned activity pages exhausted"} · rejected records: {fillAudit.rejected_records} · realized P&amp;L: not verified</p>
+        <div className="max-h-40 overflow-auto space-y-1">
+          {(fillAudit.rows||[]).slice(0,12).map((r,i)=><p key={r.client_order_id||i} className="border-b border-[#292929] py-1 font-mono text-xs">{r.symbol}: {r.fills} fills · qty {r.filled_qty} · gross buy ${r.gross_buy_notional} · gross sell ${r.gross_sell_notional}</p>)}
+        </div>
+      </>}
       {ledger&&<>
         <p className="text-xs text-amber-300">Verified daily realized loss: {ledger.realized_loss_limit_verified?"Yes":"Not yet"} · automated paper trading disabled</p>
         <p className="text-xs text-slate-400">Risk ledger missing: {ledger.incomplete_requirements?.join(", ")}</p>
