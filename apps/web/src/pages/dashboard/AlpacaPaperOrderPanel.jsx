@@ -13,6 +13,8 @@ export default function AlpacaPaperOrderPanel(){
   const [error,setError]=useState("");
   const [review,setReview]=useState(null);
   const [reviewError,setReviewError]=useState("");
+  const [readiness,setReadiness]=useState(null);
+  const [readinessError,setReadinessError]=useState("");
   const [busy,setBusy]=useState(false);
   const load=useCallback(async()=>{
     try {const r=await api.get("/api/v1/alpaca-paper/orders/kaos");setOrders(r.data.orders||[]);}
@@ -34,6 +36,17 @@ export default function AlpacaPaperOrderPanel(){
   },[]);
   useEffect(()=>{loadReview();},[loadReview]);
 
+  const loadReadiness=useCallback(async()=>{
+    try{
+      const r=await api.get("/api/v1/alpaca-paper/ai-paper-readiness",{params:{symbol:symbol.trim().toUpperCase()}});
+      setReadiness(r.data);setReadinessError("");
+    }catch(e){
+      setReadiness(null);
+      setReadinessError(e?.response?.status===403?"Owner-only AI readiness view":
+        errMsg(e)||"AI readiness unavailable");
+    }
+  },[symbol]);
+  useEffect(()=>{loadReadiness();},[loadReadiness]);
   const previewOrder=async(e)=>{
     e.preventDefault();setBusy(true);setError("");setPreview(null);setResult(null);
     try {
@@ -70,6 +83,25 @@ export default function AlpacaPaperOrderPanel(){
       <p className="mt-1 text-xs text-slate-400">Owner-only beta · manual BUY · US equities only · $1–$25 · market hours · real IEX quote, Alpaca simulated execution</p>
     </div>
     <AlpacaPaperStockChart symbol={symbol}/>
+    <section className="rounded border border-[#48402E] p-3 space-y-2" data-testid="kaos-alpaca-ai-paper-readiness">
+      <div className="flex flex-wrap justify-between gap-2">
+        <div><h3 className="font-semibold text-[#D4AF37]">AI-to-Alpaca Paper Readiness</h3>
+          <p className="text-xs text-slate-400">Bot-controlled research checks · no automatic order submission</p></div>
+        <button type="button" onClick={loadReadiness} className="rounded border border-[#D4AF37] px-2 py-1 text-xs text-[#D4AF37]">Check readiness</button>
+      </div>
+      {readinessError&&<p className="text-xs text-amber-300">{readinessError}</p>}
+      {readiness&&<>
+        <p className="text-xs text-slate-300">{readiness.checked} historical forecasts checked · AI paper execution disabled</p>
+        {!readiness.evaluations?.length&&<p className="text-sm text-slate-400">No matching, trained stock AI forecasts are recorded yet.</p>}
+        {(readiness.evaluations||[]).slice(0,8).map((r,i)=><article key={r.forecast_id||i} className="rounded border border-[#302F2C] p-2 text-xs">
+          <p><strong>{r.symbol} · {r.direction||"Unknown"}</strong> · {r.candidate_action} · {r.paper_status}</p>
+          <p className="mt-1 text-slate-300">Research gates: {r.observational_checks_passed?"Pass":"Not passed"}</p>
+          <p className="mt-1 text-amber-300">Blocked by: {r.reasons?.join(", ")}</p>
+        </article>)}
+        <p className="text-xs text-amber-300">Passing research checks does not authorize a trade. The bot must independently verify live paper quotes, risk limits, daily loss and fees before future automated testing.</p>
+      </>}
+    </section>
+
     <form onSubmit={previewOrder} className="flex flex-wrap items-end gap-3">
       <label className="text-xs">Stock ticker
         <input className={textBox+" mt-1"} value={symbol} maxLength={6} onChange={e=>{setSymbol(e.target.value.toUpperCase());setPreview(null);}} required placeholder="AAPL"/>
