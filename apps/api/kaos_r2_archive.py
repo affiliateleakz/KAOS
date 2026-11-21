@@ -15,6 +15,10 @@ import boto3
 from botocore.config import Config
 from botocore.exceptions import ClientError, BotoCoreError
 
+# Cron entry points import this module directly, so the baked-in R2 settings
+# must be installed here rather than only in server.py.
+import kaos_credentials  # noqa: F401
+
 SYMBOL_STOCK=re.compile(r"^[A-Z][A-Z0-9.]{0,11}$")
 SYMBOL_CRYPTO=re.compile(r"^[A-Z0-9]{2,10}-[A-Z]{3,5}$")
 SYMBOL_FOREX=re.compile(r"^[A-Z]{3}_[A-Z]{3}$")

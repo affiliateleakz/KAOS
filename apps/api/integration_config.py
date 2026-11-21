@@ -7,6 +7,7 @@ applied to the process environment, so every existing provider call
 Nothing here invents data: a provider with no key keeps reporting "not configured"
 until an admin supplies one.
 """
+import asyncio
 import base64
 import hashlib
 import os
@@ -66,6 +67,52 @@ INTEGRATIONS = (
             {"env": "OANDA_API_TOKEN", "label": "Practice API Token", "secret": True, "hint": "practice token"},
             {"env": "OANDA_ENV", "label": "Environment (practice or live)", "secret": False,
              "hint": "practice", "optional": True, "default": "practice", "public": True},
+        ],
+    },
+    {
+        "id": "alpha_vantage",
+        "name": "Alpha Vantage",
+        "category": "Market data",
+        "powers": ["Equity/ETF/FX quotes", "Technical indicators", "Fundamental data"],
+        "purpose": "Second market-data source for quotes, indicators and symbol search.",
+        "get_it_at": "https://www.alphavantage.co/support/#api-key",
+        "docs": "https://www.alphavantage.co/documentation/",
+        "cost": "Free key: 25 requests/day. Premium plans raise the limit.",
+        "fields": [
+            {"env": "ALPHA_VANTAGE_API_KEY", "label": "API Key", "secret": True, "hint": "16-character key"},
+        ],
+    },
+    {
+        "id": "fred",
+        "name": "St. Louis Fed (FRED)",
+        "category": "Market data",
+        "powers": ["Macro series (rates, CPI, unemployment)", "AI macro context"],
+        "purpose": "Official US macro and rate series for research context and regime features.",
+        "get_it_at": "https://fred.stlouisfed.org/docs/api/api_key.html",
+        "docs": "https://fred.stlouisfed.org/docs/api/fred/",
+        "cost": "Free. No request cap for normal research use.",
+        "fields": [
+            {"env": "FRED_API_KEY", "label": "API Key", "secret": True, "hint": "32-character key"},
+        ],
+    },
+    {
+        "id": "cloudflare_r2",
+        "name": "Cloudflare R2 candle archive",
+        "category": "Internal",
+        "powers": ["AI training data", "Paper-loop candle source", "Backtest archives"],
+        "purpose": "Private S3-compatible bucket holding the closed-candle history used by the "
+                   "training worker and the AI paper loop.",
+        "get_it_at": "https://dash.cloudflare.com/?to=/:account/r2/api-tokens",
+        "docs": "https://developers.cloudflare.com/r2/api/s3/api/",
+        "cost": "R2 storage is billed per GB-month; egress is free.",
+        "fields": [
+            {"env": "KAOS_R2_ACCOUNT_ID", "label": "Account ID", "secret": True, "hint": "32 hex characters"},
+            {"env": "KAOS_R2_ACCESS_KEY_ID", "label": "Access Key ID", "secret": True, "hint": "R2 S3 token"},
+            {"env": "KAOS_R2_SECRET_ACCESS_KEY", "label": "Secret Access Key", "secret": True, "hint": "shown once"},
+            {"env": "KAOS_R2_BUCKET", "label": "Bucket", "secret": False, "hint": "kaos-candle-archive",
+             "optional": True, "default": "kaos-candle-archive", "public": True},
+            {"env": "KAOS_R2_ENABLED", "label": "Enabled", "secret": False,
+             "toggle": {"on": "true", "off": "false"}, "hint": "true", "optional": True},
         ],
     },
     {
@@ -405,9 +452,41 @@ async def _get(client, url, **kwargs):
     return response
 
 
+async def _probe_r2():
+    """Signed S3 list against the configured bucket. Read-only."""
+    account = os.getenv("KAOS_R2_ACCOUNT_ID", "")
+    key = os.getenv("KAOS_R2_ACCESS_KEY_ID", "")
+    secret = os.getenv("KAOS_R2_SECRET_ACCESS_KEY", "")
+    bucket = os.getenv("KAOS_R2_BUCKET", "kaos-candle-archive")
+    if not (account and key and secret and bucket):
+        return _fail("Add the account ID, access key, secret and bucket first")
+
+    def _list():
+        import boto3
+        from botocore.config import Config
+        client = boto3.client(
+            "s3",
+            endpoint_url=f"https://{account}.r2.cloudflarestorage.com",
+            aws_access_key_id=key, aws_secret_access_key=secret,
+            region_name="auto",
+            config=Config(signature_version="s3v4", connect_timeout=8, read_timeout=12))
+        page = client.list_objects_v2(Bucket=bucket, MaxKeys=1)
+        return int(page.get("KeyCount", 0))
+
+    try:
+        count = await asyncio.to_thread(_list)
+    except Exception as exc:  # noqa: BLE001 - surfaced to the admin panel
+        return _fail(f"R2 rejected the request: {type(exc).__name__}")
+    return {"ok": True,
+            "detail": f"Bucket '{bucket}' is readable" + (" and contains objects" if count else " (currently empty)"),
+            "checked_at": _now()}
+
+
 async def probe(provider):
     """One bounded live call against the provider using the currently active values."""
     entry, _allowed = _fields_for(provider)
+    if provider == "cloudflare_r2":
+        return await _probe_r2()
     timeout = httpx.Timeout(12.0, connect=8.0)
     async with httpx.AsyncClient(timeout=timeout, follow_redirects=False) as client:
         try:
@@ -435,6 +514,25 @@ async def probe(provider):
                 host = "https://api-fxpractice.oanda.com" if os.getenv("OANDA_ENV", "practice").lower() != "live" else "https://api-fxtrade.oanda.com"
                 r = await _get(client, host + "/v3/accounts", headers={"Authorization": f"Bearer {token}"})
                 return _result(r, {200}, "OANDA accepted the token")
+            if provider == "alpha_vantage":
+                key = os.getenv("ALPHA_VANTAGE_API_KEY", "")
+                if not key:
+                    return _fail("Add an API key first")
+                r = await _get(client, "https://www.alphavantage.co/query",
+                               params={"function": "GLOBAL_QUOTE", "symbol": "AAPL", "apikey": key})
+                if r.status_code == 200 and "Global Quote" in r.text:
+                    return {"ok": True, "detail": "Alpha Vantage returned a live AAPL quote", "checked_at": _now()}
+                if "Information" in r.text or "Note" in r.text:
+                    return _fail("Alpha Vantage accepted the key but the daily request limit is exhausted")
+                return _result(r, {200}, "Alpha Vantage answered")
+            if provider == "fred":
+                key = os.getenv("FRED_API_KEY", "")
+                if not key:
+                    return _fail("Add an API key first")
+                r = await _get(client, "https://api.stlouisfed.org/fred/series/observations",
+                               params={"series_id": "DFF", "api_key": key, "file_type": "json",
+                                       "limit": 1, "sort_order": "desc"})
+                return _result(r, {200}, "FRED returned the latest effective fed funds rate")
             if provider == "openai":
                 key = os.getenv("OPENAI_API_KEY", "")
                 if not key:

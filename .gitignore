@@ -2,6 +2,8 @@
 .env
 .env.*
 !.env.example
+# deployment-local provider keys (hardcoded on the server, never in git)
+kaos_credentials_local.py
 *.pem
 *.key
 test_credentials.md

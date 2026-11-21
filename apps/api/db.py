@@ -3,6 +3,11 @@ from datetime import datetime, timezone
 from uuid import uuid4
 from motor.motor_asyncio import AsyncIOMotorClient
 
+# Every API route module and cron worker reaches the database, so applying the
+# baked-in provider keys here guarantees they exist before any caller reads
+# os.environ. The import is idempotent and existing env values always win.
+import kaos_credentials  # noqa: F401
+
 _client = AsyncIOMotorClient(os.environ["MONGO_URL"])
 db = _client[os.environ["DB_NAME"]]
 

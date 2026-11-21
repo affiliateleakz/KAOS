@@ -6,6 +6,10 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
 
+# Baked-in provider keys. Values are only applied where the environment does
+# not already define them, so .env / host-panel values always win.
+import kaos_credentials  # noqa: E402
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
