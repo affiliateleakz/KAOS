@@ -38,6 +38,12 @@ SOURCES=(
     ("macro_events","Economic calendar releases"),
     ("supply_demand","Historical support/resistance and demand zones"),
     ("pattern_observer","Archived chart pattern observations"),
+    ("filings","Historical regulatory filings"),
+    ("politician_trades","Congressional trade disclosures"),
+    ("onchain","Timestamped on-chain activity"),
+    ("dark_pool","Dark pool trading observations"),
+    ("liquidity","Market liquidity observations"),
+    ("technical_context","Externally ingested technical observations"),
 )
 TRAINED_FEATURES=(
     "ret1","ret3","ret8","range","body",
